@@ -40,6 +40,9 @@ public class CeylonReferenceResolver {
         else if (node instanceof Tree.Declaration) {
             return ((Tree.Declaration) node).getDeclarationModel();
         }
+        else if (node instanceof Tree.ParameterDeclaration) { // Todo: this was addded for Intellij; how does Eclipse work without this?
+            return ((Tree.ParameterDeclaration) node).getTypedDeclaration().getDeclarationModel();
+        }
         else if (node instanceof Tree.NamedArgument) {
             Parameter p = ((Tree.NamedArgument) node).getParameter();
             return p==null ? null : p.getModel();
