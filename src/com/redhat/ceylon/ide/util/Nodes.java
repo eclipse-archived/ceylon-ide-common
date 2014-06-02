@@ -1,4 +1,4 @@
-package com.redhat.ceylon.ide.code.resolve;
+package com.redhat.ceylon.ide.util;
 
 import com.redhat.ceylon.compiler.typechecker.model.Declaration;
 import com.redhat.ceylon.compiler.typechecker.model.Parameter;
@@ -7,7 +7,8 @@ import com.redhat.ceylon.compiler.typechecker.tree.Tree;
 
 import java.util.List;
 
-public class CeylonReferenceResolver {
+// TODO: This is not complete since com.redhat.ceylon.eclipse.util.Nodes in ceylon-ide-eclipse contains many eclipse-specific dependencies.
+public class Nodes {
     public static Declaration getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
         Declaration dec = getReferencedDeclaration(node);
         if (dec!=null && dec.getUnit().equals(node.getUnit())) {
@@ -17,9 +18,9 @@ public class CeylonReferenceResolver {
             if (decNode instanceof Tree.Variable) {
                 Tree.Variable var = (Tree.Variable) decNode;
                 if (var.getType() instanceof Tree.SyntheticVariable) {
-                    return getReferencedExplicitDeclaration(
-                            var.getSpecifierExpression().getExpression().getTerm(),
-                            rn);
+                    Tree.Term term = var.getSpecifierExpression()
+                            .getExpression().getTerm();
+                    return getReferencedExplicitDeclaration(term, rn);
                 }
             }
         }
