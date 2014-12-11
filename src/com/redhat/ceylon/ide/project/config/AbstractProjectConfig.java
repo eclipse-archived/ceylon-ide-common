@@ -53,7 +53,7 @@ public abstract class AbstractProjectConfig<P> {
         File projectConfigFile = getProjectConfigFile();
         if (projectConfigFile.exists() && projectConfigFile.isFile()) {
             try {
-                projectConfig = ConfigParser.loadConfigFromFile(projectConfigFile);
+                projectConfig = new ConfigParser(projectConfigFile).parse(false);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
