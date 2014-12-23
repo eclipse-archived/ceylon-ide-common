@@ -53,7 +53,7 @@ public abstract class AbstractProjectConfig<P> {
         File projectConfigFile = getProjectConfigFile();
         if (projectConfigFile.exists() && projectConfigFile.isFile()) {
             try {
-                projectConfig = new ConfigParser(projectConfigFile).parse(false);
+                projectConfig = CeylonConfigFinder.loadConfigFromFile(projectConfigFile);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
