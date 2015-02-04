@@ -10,8 +10,18 @@
 			<arguments>
 			</arguments>
 		</buildCommand>
+		<buildCommand>
+			<name>com.redhat.ceylon.eclipse.ui.ceylonBuilder</name>
+			<arguments>
+				<dictionary>
+					<key>explodeModules</key>
+					<value>true</value>
+				</dictionary>
+			</arguments>
+		</buildCommand>
 	</buildSpec>
 	<natures>
+		<nature>com.redhat.ceylon.eclipse.ui.ceylonNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
 </projectDescription>
