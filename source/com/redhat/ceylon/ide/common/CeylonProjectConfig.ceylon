@@ -15,15 +15,24 @@ import java.io {
 import ceylon.interop.java {
     javaStringArray,
     javaObjectArray,
-    toStringArray
+    toStringArray,
+    javaClass,
+    CeylonIterable
 }
 import java.lang {
     ObjectArray,
     JBoolean = Boolean,
-    JString = String
+    JString = String,
+    IllegalArgumentException
 }
 import com.redhat.ceylon.common {
     Constants
+}
+import java.util {
+    EnumSet
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    Warning
 }
 
 /*
@@ -44,15 +53,20 @@ shared {String*} sourceDirectoriesFromCeylonConfig(CeylonConfig config)
 shared String removeCurrentDirPrefix(String url) 
         => if (url.startsWith("./") || url.startsWith(".\\")) then url.spanFrom(2) else url;
 
-{String*} getConfigValuesAsList(CeylonConfig config, String optionKey, String defaultKey)
+{String*}|Default getConfigValuesAsList<Default=Nothing>(CeylonConfig config, String optionKey, String|Default defaultKey)
+        given Default satisfies Null
         => let (ObjectArray<JString>? values = config.getOptionValues(optionKey))
                 if (exists values)
                     then toStringArray(values.array).coalesced
-                    else { defaultKey };
+                    else if (is Default defaultKey) then defaultKey else { defaultKey };
 
-void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*} values) 
-        => config.setOptionValues(optionKey, javaStringArray(Array<String>(values)));
-
+void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? values) {
+        if (exists values) {
+            config.setOptionValues(optionKey, javaStringArray(Array<String>(values)));
+        } else {
+            config.removeOption(optionKey);
+        }
+}
 
 
 shared class CeylonProjectConfig<IdeArtifact>(project)
@@ -77,6 +91,8 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     variable {String*}? transientSourceDirectories = null;
     variable {String*}? transientResourceDirectories = null;
     
+    variable {String*}? transientSuppressWarnings = null;
+    variable Boolean isSuppressWarningsChanged = false;
     
     
     File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
@@ -160,12 +176,70 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         transientResourceDirectories = projectResourceDirectories;
     }
     
+    shared EnumSet<Warning> suppressWarningsEnum 
+        => let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, null))
+                buildSuppressWarningsEnum(suppressWarnings);
+    
+    shared {String*}? projectSuppressWarnings 
+        => getConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, null);
+    
+     assign projectSuppressWarnings {
+        transientSuppressWarnings = projectSuppressWarnings;
+        isSuppressWarningsChanged = true;
+    }
+    
+    shared EnumSet<Warning> projectSuppressWarningsEnum
+        => buildSuppressWarningsEnum(projectSuppressWarnings);
+    
+    "CAUTION : When assigned from Java code, take care of not passing a null value"
+    assign projectSuppressWarningsEnum {
+        {String*}? ws;
+        if (projectSuppressWarningsEnum.empty) {
+            ws = null;
+        } else if (projectSuppressWarningsEnum.containsAll(EnumSet<Warning>.allOf(javaClass<Warning>()))) {
+            ws = {};
+        } else {
+            ws = { for (w in CeylonIterable(projectSuppressWarningsEnum)) w.name() };
+        }
+        transientSuppressWarnings = ws;
+        isSuppressWarningsChanged = true;
+    }
+
+
+    EnumSet<Warning> buildSuppressWarningsEnum({String*}? suppressWarnings) {
+        if (! exists suppressWarnings) {
+            return EnumSet<Warning>.noneOf(javaClass<Warning>());
+        }
+        else if (suppressWarnings.empty) {
+            return EnumSet<Warning>.allOf(javaClass<Warning>());
+        }
+        else if ([*suppressWarnings] == [""]) {
+            //special case because all warnings is encoded as the empty string
+            return EnumSet<Warning>.allOf(javaClass<Warning>());
+        }
+        else {
+            EnumSet<Warning> suppressedWarnings = EnumSet<Warning>.noneOf(javaClass<Warning>());
+            for (name in suppressWarnings) {
+                try {
+                    suppressedWarnings.add(Warning.valueOf(name.trimmed));
+                }
+                catch (IllegalArgumentException iae) {}
+            }
+            return suppressedWarnings;
+        }
+    }
+    
+    
+    
+    
+    
     shared void refresh() {
         
         initMergedConfig();
         initProjectConfig();
         isOfflineChanged = false;
         isEncodingChanged = false;
+        isSuppressWarningsChanged = false;
         transientEncoding = null;
         transientOffline = null;
         transientOutputRepo = null;
@@ -173,6 +247,7 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         transientProjectRemoteRepos = null;
         transientSourceDirectories = null;
         transientResourceDirectories = null;
+        transientSuppressWarnings = null;
     }
     
     shared void save() {
@@ -208,7 +283,8 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
                 || changedSourceDirs exists 
                 || changedResourceDirs exists 
                 || isOfflineChanged 
-                || isEncodingChanged;
+                || isEncodingChanged
+                || isSuppressWarningsChanged;
         
         if (! project.hasConfigFile || 
             someSettingsChanged) {
@@ -236,6 +312,9 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
                 }
                 if (exists changedResourceDirs) {
                     setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_RESOURCE, changedResourceDirs);
+                }
+                if (isSuppressWarningsChanged, exists changedTransientSuppressWarnings = transientSuppressWarnings) {
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, changedTransientSuppressWarnings);
                 }
                 
                 ConfigWriter.write(projectConfig, projectConfigFile);
