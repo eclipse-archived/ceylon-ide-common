@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="com.redhat.ceylon.eclipse.ui.cpcontainer.RUNTIME_CONTAINER/default"/>
 	<classpathentry kind="con" path="com.redhat.ceylon.eclipse.ui.cpcontainer.CEYLON_CONTAINER/default"/>
 	<classpathentry kind="src" path="source"/>
+	<classpathentry kind="src" path="test-source"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
