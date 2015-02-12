@@ -21,7 +21,6 @@ public final class synchronize_ {
     
     @TypeParameters({@TypeParameter(value="Return")})
     @TypeInfo("Return")
-    @FunctionalParameter("(args)")
     public static <Return> Return synchronize(
             @Ignore TypeDescriptor $reifiedReturn,
             @Name("on")
