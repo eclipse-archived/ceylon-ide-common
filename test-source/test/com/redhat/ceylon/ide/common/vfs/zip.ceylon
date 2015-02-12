@@ -1,18 +1,20 @@
-import java.io {
-    JFile = File
-}
 import ceylon.file {
     Path,
     createZipFileSystem,
     Directory,
     File
 }
+import ceylon.test {
+    test
+}
+
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
     ZipFileVirtualFile
 }
-import ceylon.test {
-    test
+
+import java.io {
+    JFile=File
 }
 
 shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
@@ -35,6 +37,6 @@ shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
     shared actual String nameFromCeylonResource(File|Directory fileOrDir) 
             => fileOrDir.path.elements.last?.trimTrailing('/'.equals) else "";
 
-        test
+    test
     shared void testZipResources() => testResourceTree();
 }
