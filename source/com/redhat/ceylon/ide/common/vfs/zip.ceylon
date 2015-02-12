@@ -1,19 +1,10 @@
+import ceylon.collection {
+    TreeSet
+}
 import ceylon.interop.java {
-    CeylonIterable,
-    JavaCollection
+    CeylonIterable
 }
-import java.util {
-    Collections,
-    ArrayList,
-    LinkedList,
-    JList=List
-}
-import java.io {
-    InputStream,
-    IOException,
-    FilterInputStream,
-    File
-}
+
 import com.redhat.ceylon.compiler.typechecker.io {
     ClosableVirtualFile,
     VirtualFile
@@ -21,19 +12,28 @@ import com.redhat.ceylon.compiler.typechecker.io {
 import com.redhat.ceylon.compiler.typechecker.io.impl {
     Helper
 }
-import java.util.zip {
-    ZipEntry,
-    ZipFile
+import com.redhat.ceylon.ide.common.util {
+    synchronize
+}
+
+import java.io {
+    InputStream,
+    IOException,
+    FilterInputStream,
+    File
 }
 import java.lang {
     RuntimeException
 }
-import ceylon.collection {
-    SortedSet,
-    TreeSet
+import java.util {
+    Collections,
+    ArrayList,
+    LinkedList,
+    JList=List
 }
-import com.redhat.ceylon.ide.common.util {
-    synchronize
+import java.util.zip {
+    ZipEntry,
+    ZipFile
 }
 
 shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies FolderVirtualFile {
