@@ -86,9 +86,13 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     variable Boolean isOfflineChanged = false;
     variable Boolean isEncodingChanged = false;
     variable Boolean isOverridesChanged = false;
+    variable Boolean isFlatClasspathChanged = false;
+    variable Boolean isAutoExportMavenDependenciesChanged = false;
     variable Boolean? transientOffline = null;
     variable String? transientEncoding = null;
     variable String? transientOverrides = null;
+    variable Boolean? transientFlatClasspath = null;
+    variable Boolean? transientAutoExportMavenDependencies = null;
 
     variable {String*}? transientSourceDirectories = null;
     variable {String*}? transientResourceDirectories = null;
@@ -171,6 +175,21 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         this.transientOverrides = projectOverrides;
     }
 
+    shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
+
+    shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH)) option?.booleanValue();
+    assign projectFlatClasspath {
+        this.isFlatClasspathChanged = true;
+        this.transientFlatClasspath = projectFlatClasspath;
+    }
+
+    shared Boolean autoExportMavenDependencies => DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
+
+    shared Boolean? projectAutoExportMavenDependencies => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES)) option?.booleanValue();
+    assign projectAutoExportMavenDependencies {
+        this.isAutoExportMavenDependenciesChanged = true;
+        this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
+    }
 
     shared {String*} sourceDirectories => sourceDirectoriesFromCeylonConfig(mergedConfig);
 
@@ -251,10 +270,14 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         isOfflineChanged = false;
         isEncodingChanged = false;
         isOverridesChanged = false;
+        isFlatClasspathChanged = false;
+        isAutoExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
         transientEncoding = null;
         transientOffline = null;
         transientOverrides = null;
+        transientFlatClasspath = null;
+        transientAutoExportMavenDependencies = null;
         transientOutputRepo = null;
         transientProjectLocalRepos = null;
         transientProjectRemoteRepos = null;
@@ -298,6 +321,8 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
                 || isOfflineChanged
                 || isEncodingChanged
                 || isOverridesChanged
+                || isFlatClasspathChanged
+                || isAutoExportMavenDependenciesChanged
                 || isSuppressWarningsChanged;
 
         if (! project.hasConfigFile ||
@@ -320,6 +345,20 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
                 }
                 if (isOverridesChanged) {
                     projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, transientOverrides);
+                }
+                if (isFlatClasspathChanged) {
+                    if (exists nonNullFlatClasspath = transientFlatClasspath) {
+                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH, nonNullFlatClasspath);
+                    } else {
+                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH, null);
+                    }
+                }
+                if (isAutoExportMavenDependenciesChanged) {
+                    if (exists nonNullAutoExportMavenDependencies = transientAutoExportMavenDependencies) {
+                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES, nonNullAutoExportMavenDependencies);
+                    } else {
+                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES, null);
+                    }
                 }
                 if (isEncodingChanged) {
                     projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_ENCODING, transientEncoding);
