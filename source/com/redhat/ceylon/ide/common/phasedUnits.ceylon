@@ -47,7 +47,7 @@ shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile>
     
     variable WeakReference<TypeChecker>? typeCheckerRef = null;
     
-    shared new IdePhasedUnit(
+    shared new(
         FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile, 
         FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
         Tree.CompilationUnit cu, 
@@ -137,7 +137,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     value theWorkingCopies = WeakHashMap<EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>, String>();
     WeakReference<CeylonProject<NativeProject>> ceylonProject;
     
-    shared new ProjectPhasedUnit(
+    shared new(
         CeylonProject<NativeProject> project,
         FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile, 
         FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
@@ -146,7 +146,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         ModuleManager moduleManager,
         TypeChecker typeChecker, 
         JList<CommonToken> tokenStream)
-        extends IdePhasedUnit(unitFile, srcDir, cu, p, moduleManager, typeChecker, tokenStream) {
+        extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>(unitFile, srcDir, cu, p, moduleManager, typeChecker, tokenStream) {
         ceylonProject = WeakReference(project);
     }
     
