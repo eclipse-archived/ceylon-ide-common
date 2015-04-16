@@ -1,0 +1,224 @@
+<project name="Ceylon IDE Common code" basedir="." default="test">
+
+    <property file="build.properties" />
+    <property name="ceylon.verbosity" value="false"/>
+    <property name="ceylon.executable" value="${dist.bin.dir}/ceylon"/>
+    <property name="out.repo" location="modules"/>
+    
+    <property name="osgi" location="${basedir}/osgi" />
+    <property name="osgi.p2" location="${osgi}/p2" />
+    <property name="osgi.dist" location="${osgi}/dist" />
+    <property name="osgi.build" location="${osgi}/build" />
+    <property name="osgi.dist.plugins" location="${osgi.dist}/plugins" />
+    
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="${dist.root.dir}/lib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <taskdef resource="taskdef.properties">
+        <classpath>
+            <pathelement path="${dist.root.dir}/osgi/lib/org.osgi.impl.bundle.repoindex.ant-2.1.2.jar" />
+        </classpath>
+    </taskdef>
+
+    
+    <!-- Local repository -->
+    <property name="ceylon.repo.dir" location="${user.home}/.ceylon/repo" />
+    
+    <path id="ant-tasks">
+        <pathelement location="${ceylon.ant.lib}"/>
+    </path>
+    
+    <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+
+    <reposet id="reposet.compile.source">
+        <repo url="${out.repo}"/>
+    </reposet>
+
+    <reposet id="reposet.compile.test">
+        <repo url="${out.repo}"/>
+    </reposet>
+    
+    <reposet id="reposet.run.test">
+        <reposet refid="reposet.compile.test"/>
+        <repo url="${out.repo}"/>
+    </reposet>
+    
+    <moduleset id="modules.source">
+        <module name="com.redhat.ceylon.ide.common"/>
+    </moduleset>
+    
+    <moduleset id="modules.test">
+        <module name="test.com.redhat.ceylon.ide.common"/>
+    </moduleset>
+    
+    <target name="clean"
+        description="Deletes the test-modules and modules directories">
+        <delete dir="${out.repo}"/>
+        <delete dir="${osgi.dist}"/>
+    </target>
+    
+    <target name="compile-source"
+            description="Compiles the Ceylon IDE Common modules">
+        <ceylon-compile executable="${ceylon.executable}"
+            verbose="${ceylon.verbosity}"
+            encoding="UTF-8"
+            pack200="true"
+            out="${out.repo}">
+            <moduleset refid="modules.source"/>
+        </ceylon-compile>
+    </target>
+
+    <target name="compile" depends="compile-source"
+            description="Compiles the Ceylon IDE Common module to the 'modules' repository" />
+
+    <path id="test-sources-path">
+        <pathelement location="test-source"/>
+    </path>
+    
+    <property name="test-sources" refid="test-sources-path"/>
+    
+    <target name="compile-test"
+        description="Compiles the test module" >
+        <ceylon-compile executable="${ceylon.executable}"
+            src="${test-sources}"
+            out="${out.repo}"
+            verbose="${ceylon.verbosity}"
+            encoding="UTF-8">
+            <reposet refid="reposet.compile.test"/> 
+            <moduleset refid="modules.test"/>
+        </ceylon-compile>
+    </target>
+
+    <target name="test" depends="compile,compile-test"
+        description="Runs the compiled test module">
+        <ceylon-test>
+            <reposet refid="reposet.run.test"/>
+            <moduleset refid="modules.test"/>
+        </ceylon-test>
+    </target>
+
+    <target name="publish" depends="compile"
+            description="Copies the Ceylon IDE Common modules to the user's repository">
+        <copy todir="${ceylon.repo.dir}" overwrite="true">
+            <fileset dir="${out.repo}">
+                <include name="com/redhat/ceylon/ide/common/**"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="copyModuleArchiveForOSGI">
+        <loadproperties>
+            <zipentry zipfile="${currentFile}" name="META-INF/MANIFEST.MF"/>
+             <filterchain>
+                <linecontainsregexp>
+                    <regexp pattern="^(Bundle-SymbolicName|Bundle-Version)"/>
+                </linecontainsregexp>
+                 <replaceregex pattern="\s+$" replace=""/>
+                 <replaceregex pattern="^\s+" replace=""/>
+              </filterchain>
+        </loadproperties>
+        <if>
+            <isset property="Bundle-SymbolicName"/>
+            <then>
+                <copy file="${currentFile}" 
+                    tofile="${osgi.dist.plugins}/${Bundle-SymbolicName}_${Bundle-Version}.jar" 
+                    overwrite="true"/>
+            </then>
+        </if>
+    </target>
+    
+    <target name="osgi-quick">
+        <mkdir dir="${osgi.dist.plugins}" />
+        <foreach target="copyModuleArchiveForOSGI" param="currentFile">
+            <path>
+                <fileset dir="${out.repo}" includes="**/*.car"/>
+            </path>
+        </foreach>
+        <makeurl property="rootUrl" file="${osgi.dist}"/>
+        <repoindex name="Ceylon Distribution Bundles"
+            out="${osgi.dist}/repository.xml" 
+            compressed="false"
+            rooturl="${rootUrl}">
+            <fileset dir="${osgi.dist.plugins}" includes="*.jar"/>
+        </repoindex>
+    </target>
+
+    <!-- Rule to setup a plugins directory with required bundles -->
+    <target name="osgi-p2-quick" depends="osgi-quick">
+        <makeurl property="destinationRepository" file="${osgi.dist}"/>
+        <makeurl property="categoryDefinition" file="${osgi.p2}/category.xml"/>
+        <mkdir dir="${osgi.build}"/>
+        <touch file="${osgi.build}/bundles.info"/>
+        <makeurl property="bundlesInfoUrl" file="${osgi.build}/bundles.info"/>
+        <loadfile srcfile="${basedir}/../ceylon-dist/osgi/p2/bundlesToStart" property="bundlesToStart">
+          <filterchain>
+              <striplinebreaks/>
+          </filterchain>
+        </loadfile>
+        <exec dir="${basedir}" executable="eclipse" failonerror="true">
+            <arg value="-noSplash"/>
+            <arg value="-clean"/>
+            <arg value="-console"/>
+            <arg value="-consolelog"/>
+            <arg value="--launcher.suppressErrors"/>
+            <arg value="-application"/>
+            <arg value="org.eclipse.equinox.p2.publisher.FeaturesAndBundlesPublisher"/>
+            <arg value="-metadataRepositoryName"/>
+            <arg value="Ceylon SDK Bundles"/>
+            <arg value="-metadataRepository"/>
+            <arg value="${destinationRepository}"/>
+            <arg value="-artifactRepositoryName"/>
+            <arg value="Ceylon SDK Bundles"/>
+            <arg value="-artifactRepository"/>
+            <arg value="${destinationRepository}"/>
+            <arg value="-source"/>
+            <arg file="${osgi.dist}"/>
+            <arg value="-publishArtifacts"/>
+            <arg value="-append"/>
+            <arg value="-vmargs"/>
+            <arg value="-Dorg.eclipse.equinox.simpleconfigurator.configUrl=${bundlesInfoUrl}"/>
+            <arg value="-Dosgi.bundles=${bundlesToStart}"/>
+        </exec>
+        <exec dir="${basedir}" executable="eclipse">
+            <arg value="-noSplash"/>
+            <arg value="-clean"/>
+            <arg value="-console"/>
+            <arg value="-consolelog"/>
+            <arg value="--launcher.suppressErrors"/>
+            <arg value="-application"/>
+            <arg value="org.eclipse.equinox.p2.publisher.CategoryPublisher"/>
+            <arg value="-metadataRepository"/>
+            <arg value="${destinationRepository}"/>
+            <arg value="-categoryDefinition"/>
+            <arg value="${categoryDefinition}"/>
+            <arg value="-categoryQualifier"/>
+            <arg value="ceylon.sdk"/>
+            <arg value="-vmargs"/>
+            <arg value="-Dorg.eclipse.equinox.simpleconfigurator.configUrl=${bundlesInfoUrl}"/>
+            <arg value="-Dosgi.bundles=${bundlesToStart}"/>
+        </exec>
+    </target>
+
+    <target name="osgi" depends="compile,osgi-quick"/>
+    <target name="osgi-p2" depends="compile,osgi-p2-quick"/>
+
+    <target name="ide" depends="osgi-p2"/>
+    <target name="ide-quick" depends="osgi-p2-quick">
+        <property name="archivePath" 
+            value="${out.repo}/com/redhat/ceylon/ide/common/${module.com.redhat.ceylon.ide.common.version}/com.redhat.ceylon.ide.common-${module.com.redhat.ceylon.ide.common.version}.car"/>
+        <basename file="${archivePath}" property="archiveFileName"/>
+        <property name="proxy-project" value="../ceylon-ide-eclipse/required-bundle-proxies/${archiveFileName}"/>
+        <mkdir dir="${proxy-project}"/>
+        <delete failonerror="false" dir="${proxy-project}/META-INF"/>
+        <copy toDir="${proxy-project}" overwrite="true">
+            <zipfileset src="${archivePath}" includes="META-INF/**"/>
+            <fileset file="${archivePath}"/>
+        </copy>
+        <manifest file="${proxy-project}/META-INF/MANIFEST.MF" mode="update">
+            <attribute name="Bundle-Classpath" value="${archiveFileName}"/>
+        </manifest>
+    </target>
+</project>

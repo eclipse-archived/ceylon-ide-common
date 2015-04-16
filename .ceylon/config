@@ -1,6 +1,8 @@
 
 [defaults]
 encoding=UTF-8
+flatclasspath=false
+autoexportmavendependencies=false
 
 [compiler]
 source=source
