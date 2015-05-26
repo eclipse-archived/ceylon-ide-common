@@ -75,7 +75,7 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     shared CeylonProject<IdeArtifact> project;
 
     late variable CeylonConfig mergedConfig;
-    late variable CeylonConfig projectConfig;
+    late shared variable CeylonConfig projectConfig;
     late shared Repositories mergedRepositories;
     late shared Repositories projectRepositories;
 
