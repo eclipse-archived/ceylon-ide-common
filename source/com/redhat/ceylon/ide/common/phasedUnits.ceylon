@@ -5,14 +5,15 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
+import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit,
-    PhasedUnits
+    PhasedUnits,
+    TypecheckerUnit
 }
-import com.redhat.ceylon.compiler.typechecker.model {
+import com.redhat.ceylon.model.typechecker.model {
     Package,
     Unit
 }
@@ -38,6 +39,9 @@ import org.antlr.runtime {
 import com.redhat.ceylon.ide.common.util {
     synchronize
 }
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleSourceMapper
+}
 
 shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile> 
         extends PhasedUnit 
@@ -53,8 +57,9 @@ shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile>
         Tree.CompilationUnit cu, 
         Package p, 
         ModuleManager moduleManager,
+        ModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker, 
-        JList<CommonToken> tokenStream) extends PhasedUnit(unitFile, srcDir, cu, p, moduleManager, typeChecker.context, tokenStream) {
+        JList<CommonToken> tokenStream) extends PhasedUnit(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker.context, tokenStream) {
         typeCheckerRef = WeakReference<TypeChecker>(typeChecker);
     }
     
@@ -78,7 +83,7 @@ shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile>
         return typeCheckerRef?.get();
     }
     
-    shared actual default Unit createUnit() {
+    shared actual default TypecheckerUnit createUnit() {
         Unit? oldUnit = unit;
         value theNewUnit = newUnit();
         if (exists oldUnit) {
@@ -92,7 +97,7 @@ shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile>
     }
     
     
-    shared formal Unit newUnit();
+    shared formal TypecheckerUnit newUnit();
 }
 
 "Provisional version of the class, in order to be able to compile ModulesScanner"
@@ -103,6 +108,7 @@ shared class EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>(
     Tree.CompilationUnit cu, 
     Package p, 
     ModuleManager moduleManager,
+    ModuleSourceMapper moduleSourceMapper,
     TypeChecker typeChecker, 
     JList<CommonToken> tokens) 
         extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>(
@@ -111,17 +117,18 @@ shared class EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>(
         cu,
         p,
         moduleManager,
+        moduleSourceMapper,
         typeChecker,
         tokens)
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
-    shared actual Unit newUnit() => nothing;
+    shared actual TypecheckerUnit newUnit() => nothing;
 }
 
 class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(
     ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> projectPhasedUnit) 
-        extends Unit()
+        extends TypecheckerUnit()
         given NativeProject satisfies Object
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
@@ -144,9 +151,10 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         Tree.CompilationUnit cu, 
         Package p, 
         ModuleManager moduleManager,
+        ModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker, 
         JList<CommonToken> tokenStream)
-        extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>(unitFile, srcDir, cu, p, moduleManager, typeChecker, tokenStream) {
+        extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
         ceylonProject = WeakReference(project);
     }
     
@@ -161,7 +169,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     shared CeylonProject<NativeProject> sourceProject 
         => ceylonProject.get();
     
-    shared actual Unit newUnit() 
+    shared actual TypecheckerUnit newUnit() 
         => ProjectSourceFile(this);
     
     shared void addWorkingCopy(EditedPhasedUnit<NativeResource, NativeFolder, NativeFile> workingCopy) {

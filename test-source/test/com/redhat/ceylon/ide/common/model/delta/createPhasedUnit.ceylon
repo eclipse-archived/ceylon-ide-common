@@ -29,7 +29,7 @@ import com.redhat.ceylon.compiler.typechecker.io {
     VFS,
     VirtualFile
 }
-import com.redhat.ceylon.compiler.typechecker.model {
+import com.redhat.ceylon.model.typechecker.model {
     Module
 }
 import com.redhat.ceylon.ide.common.model.delta {
@@ -65,6 +65,8 @@ PhasedUnit? createPhasedUnit(String contents, String path) {
         shared default actual InputStream inputStream => nothing;
         shared actual String name => path.split('/'.equals, true, true).last;
         shared actual String path;
+        suppressWarnings("expressionTypeNothing")
+        shared actual Integer compareTo(VirtualFile? t) => nothing;
     }
 
     class TestFile(String path, String contents) extends TestVirtualFile(path) {

@@ -3,7 +3,6 @@ package com.redhat.ceylon.ide.common.util;
 import ceylon.language.Callable;
 
 import com.redhat.ceylon.compiler.java.metadata.Ceylon;
-import com.redhat.ceylon.compiler.java.metadata.FunctionalParameter;
 import com.redhat.ceylon.compiler.java.metadata.Ignore;
 import com.redhat.ceylon.compiler.java.metadata.Method;
 import com.redhat.ceylon.compiler.java.metadata.Name;

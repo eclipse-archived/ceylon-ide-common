@@ -3,19 +3,19 @@ import ceylon.interop.java {
     javaString
 }
 
-import com.redhat.ceylon.compiler.loader {
+import com.redhat.ceylon.model.loader {
     AbstractModelLoader
 }
-import com.redhat.ceylon.compiler.loader.model {
+import com.redhat.ceylon.model.loader.model {
     LazyModuleManager
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
+import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
-import com.redhat.ceylon.compiler.typechecker.model {
+import com.redhat.ceylon.model.typechecker.model {
     Module,
     Package
 }
@@ -35,6 +35,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleSourceMapper
+}
 
 "Provisional version of the class, in order to be able to compile ModulesScanner"
 // TODO Finish the class
@@ -43,7 +46,7 @@ shared abstract class IdeModelLoader() extends AbstractModelLoader() {
 
 "Provisional version of the class, in order to be able to compile ModulesScanner"
 // TODO Finish the class
-shared abstract class IdeModuleManager() extends LazyModuleManager(nothing) {
+shared abstract class IdeModuleManager() extends LazyModuleManager() {
     shared void addTopLevelModuleError() { throw Exception(); }
 }
 
@@ -67,6 +70,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     defaultModule,
     modelLoader,
     moduleManager,
+    moduleSourceMapper,
     srcDir,
     typeChecker,
     monitor)
@@ -79,6 +83,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     IdeModule defaultModule;
     IdeModelLoader modelLoader;
     IdeModuleManager moduleManager;
+    ModuleSourceMapper moduleSourceMapper;
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     TypeChecker typeChecker;
     late variable IdeModule currentModule;
@@ -92,11 +97,13 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
         FileVirtualFile<NativeResource, NativeFolder, NativeFile> moduleFile,
         FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
         IdeModuleManager moduleManager,
+        ModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker) extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
                         ceylonProject,
                         moduleFile,
                         srcDir,
                         moduleManager,
+                        moduleSourceMapper,
                         typeChecker) {
 
         shared actual ProjectPhasedUnitAlias createPhasedUnit(
@@ -110,6 +117,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
                 cu, 
                 pkg, 
                 moduleManager, 
+                moduleSourceMapper,
                 outer.typeChecker, 
                 theTokens) {
 
@@ -165,6 +173,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
                         moduleFile,
                         srcDir,
                         moduleManager,
+                        moduleSourceMapper,
                         typeChecker
                     ).parseFileToPhasedUnit(moduleManager, typeChecker, moduleFile, srcDir, pkg);
                     

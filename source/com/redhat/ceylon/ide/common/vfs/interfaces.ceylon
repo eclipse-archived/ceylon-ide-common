@@ -31,6 +31,12 @@ shared interface ResourceVirtualFile<NativeResource=Nothing, NativeFolder=Nothin
     then that.path == path
     else false;
     
+    shared actual Integer compareTo(VirtualFile t)
+            => switch(path <=> t.path) 
+    case (smaller) -1
+    case (equal) 0
+    case (larger) 1;
+    
     shared formal actual InputStream? inputStream;
     
     shared formal actual JList<out ResourceVirtualFile<NativeResource, NativeFolder, NativeFile>> children;

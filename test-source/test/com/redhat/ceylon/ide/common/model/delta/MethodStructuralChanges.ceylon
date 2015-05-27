@@ -1,7 +1,5 @@
 import com.redhat.ceylon.ide.common.model.delta {
-    structuralChange,
-    TopLevelDeclarationAdded,
-    invisibleOutside
+    structuralChange
 }
 import ceylon.test {
     test

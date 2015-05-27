@@ -5,13 +5,13 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
+import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
-import com.redhat.ceylon.compiler.typechecker.model {
+import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -45,6 +45,9 @@ import org.antlr.runtime {
 }
 import java.util {
     List
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleSourceMapper
 }
 
 shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFolder, NativeFile> 
@@ -122,6 +125,7 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
     unitFile,
     srcDir,
     moduleManager, 
+    moduleSourceMapper,
     typeChecker)
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
@@ -132,13 +136,14 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
     shared FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile;
     shared FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     shared IdeModuleManager moduleManager;
+    shared ModuleSourceMapper moduleSourceMapper;
     shared TypeChecker typeChecker;
     
     shared actual default ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> createPhasedUnit(
         Tree.CompilationUnit cu,
         Package pkg,
         List<CommonToken> tokens)
-        => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg, moduleManager, typeChecker, tokens);
+        => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg, moduleManager, moduleSourceMapper, typeChecker, tokens);
             
     shared actual default String charset(FileVirtualFile<NativeResource,NativeFolder,NativeFile> file)
         => file.charset else ceylonProject.defaultCharset;

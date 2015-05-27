@@ -18,11 +18,13 @@ import java.io {
 }
 
 shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
+     suppressWarnings("expressionTypeNothing")
      value sourceZip = if (is Directory zipDir = resourcesRoot.childResource("zip"),
                             is File sz = zipDir.childResource("source.zip"))
                                 then sz
                                 else nothing;
                         
+    suppressWarnings("expressionTypeNothing")
     shared actual Path rootCeylonPath = createZipFileSystem(sourceZip).rootPaths.first else nothing;
     
     shared actual FolderVirtualFile<Nothing,Nothing,Nothing> rootVirtualFile =

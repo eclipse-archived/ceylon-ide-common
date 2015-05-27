@@ -71,7 +71,7 @@ shared class LocalFileVirtualFile(file)
     
     shared actual Integer hash
             => (super of FileVirtualFile<File,File,File>).hash;
-    
+
     shared actual String string
         => StringBuilder()
             .append("FileSystemVirtualFile")

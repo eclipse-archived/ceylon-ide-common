@@ -11,17 +11,20 @@ import ceylon.interop.java {
     javaClassFromInstance
 }
 
-import com.redhat.ceylon.compiler.typechecker.analyzer {
+import com.redhat.ceylon.model.typechecker.util {
     ModuleManager {
         moduleDescriptorFileName=MODULE_FILE,
         packageDescriptorFileName=PACKAGE_FILE
     },
+    ProducedTypeNamePrinter
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
-import com.redhat.ceylon.compiler.typechecker.model {
+import com.redhat.ceylon.model.typechecker.model {
     ModelDeclaration=Declaration,
     Method,
     ModuleImport,
@@ -37,9 +40,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     },
     Message,
     NaturalVisitor
-}
-import com.redhat.ceylon.compiler.typechecker.util {
-    ProducedTypeNamePrinter
 }
 import java.util {
     JList=List
