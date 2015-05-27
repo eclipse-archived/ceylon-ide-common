@@ -54,6 +54,7 @@ shared interface AbstractDelta of CompilationUnitDelta | ModuleImportDelta | Dec
 shared interface CompilationUnitDelta of RegularCompilationUnitDelta | ModuleDescriptorDelta | PackageDescriptorDelta satisfies AbstractDelta {}
 
 shared interface ModuleDescriptorDelta satisfies CompilationUnitDelta {
+    shared default actual String changedElementString => if (exists m=changedElement) then"Module[``m.nameAsString``, ``m.version``]" else "<unknown>";
     shared formal actual Module? changedElement;
     shared formal actual {ModuleImportDelta*} childrenDeltas;
     shared alias PossibleChange => StructuralChange|ModuleImportAdded;
@@ -76,6 +77,7 @@ shared interface ModuleImportDelta satisfies AbstractDelta {
 }
 
 shared interface PackageDescriptorDelta satisfies CompilationUnitDelta {
+    shared default actual String changedElementString => if (exists p=changedElement) then"Package[``p.nameAsString``]" else "<unknown>";
     shared formal actual Package? changedElement;
     shared actual [] childrenDeltas => [];
     shared alias PossibleChange => <StructuralChange|MadeVisibleOutsideScope|MadeInvisibleOutsideScope>;
@@ -110,6 +112,7 @@ shared interface NestedDeclarationDelta satisfies DeclarationDelta {
 }
 
 shared interface RegularCompilationUnitDelta satisfies CompilationUnitDelta {
+    shared default actual String changedElementString => "Unit[``changedElement.filename``]";
     shared formal actual Unit changedElement;
     shared alias PossibleChange => TopLevelDeclarationAdded;
     shared formal actual {PossibleChange*} changes;
