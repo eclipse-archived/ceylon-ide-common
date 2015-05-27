@@ -75,9 +75,9 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     shared CeylonProject<IdeArtifact> project;
 
     late variable CeylonConfig mergedConfig;
-    late shared variable CeylonConfig projectConfig;
-    late shared Repositories mergedRepositories;
-    late shared Repositories projectRepositories;
+    late variable CeylonConfig projectConfig;
+    late variable Repositories mergedRepositories;
+    late variable Repositories projectRepositories;
 
     variable String? transientOutputRepo = null;
     variable {String*}? transientProjectLocalRepos = null;
