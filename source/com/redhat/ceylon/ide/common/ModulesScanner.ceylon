@@ -17,7 +17,8 @@ import com.redhat.ceylon.model.typechecker.util {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
-    Package
+    Package,
+    Declaration
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
@@ -121,7 +122,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
                 outer.typeChecker, 
                 theTokens) {
 
-                shared actual Boolean reuseExistingDescriptorModels() => true;
+                shared actual Boolean isAllowedToChangeModel(Declaration? declaration) => false;
             };
     }
     

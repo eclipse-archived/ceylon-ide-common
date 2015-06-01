@@ -16,7 +16,7 @@ import com.redhat.ceylon.model.typechecker.util {
         moduleDescriptorFileName=MODULE_FILE,
         packageDescriptorFileName=PACKAGE_FILE
     },
-    ProducedTypeNamePrinter
+    TypePrinter
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError
@@ -27,7 +27,7 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelDeclaration=Declaration,
-    Method,
+    Function,
     ModuleImport,
     Module
 }
@@ -36,8 +36,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     AstAbstractNode=Node,
     Visitor,
     VisitorAdaptor,
-    Util {
-        formatPath
+    TreeUtil {
+        formatPath,
+        hasAnnotation,
+        getNativeBackend
     },
     Message,
     NaturalVisitor
@@ -57,7 +59,7 @@ shared interface NodeComparisonListener {
 shared class DeltaBuilderFactory(
     Boolean compareAnalysisErrors = false) {
 
-    object producedTypeNamePrinter extends ProducedTypeNamePrinter(true, true, true, true, false) {
+    object producedTypeNamePrinter extends TypePrinter(true, true, true, true, false) {
         printQualifier() => true;
         printFullyQualified() => true;
     }
@@ -264,7 +266,7 @@ shared class DeltaBuilderFactory(
             }
 
             function isShared(Ast.PackageDescriptor descriptor)
-                    => Util.hasAnnotation(descriptor.annotationList, "shared", descriptor.unit);
+                    => hasAnnotation(descriptor.annotationList, "shared", descriptor.unit);
 
             value sharedBefore = isShared(oldNode);
             value sharedNow = isShared(newNode);
@@ -282,8 +284,8 @@ shared class DeltaBuilderFactory(
     }
 
     function sameBackend([Ast.AnnotationList, TypecheckerUnit] oldNode, [Ast.AnnotationList, TypecheckerUnit] newNode)
-            => let (String? oldNative = Util.getNativeBackend(*oldNode),
-                    String? newNative = Util.getNativeBackend(*newNode))
+            => let (String? oldNative = getNativeBackend(*oldNode),
+                    String? newNative = getNativeBackend(*newNode))
                         if (exists oldNative, exists newNative)
                         then oldNative == newNative
                         else
@@ -332,7 +334,7 @@ shared class DeltaBuilderFactory(
             changes.add(ModuleImportAdded(
                 importedModuleName(newChild),
                 newChild.version.text.trim('"'.equals),
-                Util.hasAnnotation(newChild.annotationList, "shared", newChild.unit)
+                hasAnnotation(newChild.annotationList, "shared", newChild.unit)
                 then visibleOutside else invisibleOutside
             ));
         }
@@ -404,7 +406,7 @@ shared class DeltaBuilderFactory(
             assert(exists newNode);
 
             function isOptional(Ast.ImportModule descriptor)
-                    => Util.hasAnnotation(descriptor.annotationList, "optional", descriptor.unit);
+                    => hasAnnotation(descriptor.annotationList, "optional", descriptor.unit);
             
             if (any{
                 isOptional(oldNode) != isOptional(newNode),
@@ -417,7 +419,7 @@ shared class DeltaBuilderFactory(
             }
 
             function isShared(Ast.ImportModule descriptor)
-                    => Util.hasAnnotation(descriptor.annotationList, "shared", descriptor.unit);
+                    => hasAnnotation(descriptor.annotationList, "shared", descriptor.unit);
 
             value sharedBefore = isShared(oldNode);
             value sharedNow = isShared(newNode);
@@ -555,7 +557,7 @@ shared class DeltaBuilderFactory(
         shared Boolean hasStructuralChanges(Ast.Declaration oldAstDeclaration, Ast.Declaration newAstDeclaration, NodeComparisonListener? listener) {
 
             ModelDeclaration? identifierToDeclaration(Ast.Identifier id)
-                    => id.unit?.getImport(Util.name(id))?.declaration;
+                    => id.unit?.getImport(TreeUtil.name(id))?.declaration;
 
             object nodeSigner extends VisitorAdaptor() {
                 variable value builder = StringBuilder();
@@ -579,7 +581,7 @@ shared class DeltaBuilderFactory(
                         title => (node is Ast.StaticType) then "Type" else node.nodeType;
                         void action() {
                             if (exists type = node.typeModel) {
-                                builder.append(producedTypeNamePrinter.getProducedTypeName(type, node.unit));
+                                builder.append(producedTypeNamePrinter.print(type, node.unit));
                             }
                         }
                     };
@@ -602,7 +604,7 @@ shared class DeltaBuilderFactory(
                 }
 
                 shared actual void visitIdentifier(Ast.Identifier node) {
-                    if (is Method method = node.scope,
+                    if (is Function method = node.scope,
                         method.parameter,
                         method.nameAsString != node.text) {
                         // parameters of a method functional parameter are not
@@ -636,7 +638,7 @@ shared class DeltaBuilderFactory(
                 if (exists declaration) {
                     return declaration.name;
                 }
-                return Util.name(identifier);
+                return TreeUtil.name(identifier);
             }
 
             Set<String> annotationsAsStringSet(Ast.AnnotationList annotationList) {
@@ -806,10 +808,7 @@ shared class DeltaBuilderFactory(
                                     },
                                     lookForChanges<Ast.TypeConstraint> {
                                         function between(Ast.TypeConstraint oldTypeConstraint, Ast.TypeConstraint newTypeConstraint) {
-                                            return any {
-                                                nodesDiffer(oldTypeConstraint.abstractedType, newTypeConstraint.abstractedType, "abstractedType"),
-                                                nodesDiffer(oldTypeConstraint.parameterList, newTypeConstraint.parameterList, "parameterList")
-                                            };
+                                            return nodesDiffer(oldTypeConstraint.abstractedType, newTypeConstraint.abstractedType, "abstractedType");
                                         }
                                     }
                                 };
