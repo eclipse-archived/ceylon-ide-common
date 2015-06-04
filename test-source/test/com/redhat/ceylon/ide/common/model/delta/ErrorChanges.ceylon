@@ -27,7 +27,7 @@ test void annotationErrorAdded() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -53,7 +53,7 @@ test void annotationErrorChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -79,7 +79,7 @@ test void typeErrorAdded() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -105,7 +105,7 @@ test void typeErrorChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }

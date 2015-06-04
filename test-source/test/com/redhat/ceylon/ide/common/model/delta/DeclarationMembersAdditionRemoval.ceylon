@@ -64,12 +64,12 @@ test void removeDeclarationMember() {
                     changes = {};
                     childrenDeltas = {
                         NestedDeclarationDeltaMockup {
-                            changedElementString = "Method[test]";
+                            changedElementString = "Function[test]";
                             changes = { removed };
                             childrenDeltas = {};
                         },
                         NestedDeclarationDeltaMockup {
-                            changedElementString = "Method[visible]";
+                            changedElementString = "Function[visible]";
                             changes = { removed };
                             childrenDeltas = {};
                         }
@@ -101,7 +101,7 @@ test void changeDeclarationMemberName() {
                     changes = { DeclarationMemberAdded("testChanged") };
                     childrenDeltas = {
                         NestedDeclarationDeltaMockup {
-                            changedElementString = "Method[test]";
+                            changedElementString = "Function[test]";
                             changes = { removed };
                             childrenDeltas = {};
                         }

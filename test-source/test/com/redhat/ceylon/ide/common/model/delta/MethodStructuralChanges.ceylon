@@ -22,7 +22,7 @@ test void methodParametersChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -54,7 +54,7 @@ test void methodParameterNameChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -85,7 +85,7 @@ test void methodParameterDefaultValueAdded() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -116,7 +116,7 @@ test void methodParameterDefaultValueTypeChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -174,7 +174,7 @@ test void methodFunctionalParameterNameChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -208,7 +208,7 @@ test void methodEquivalentFunctionalParameter() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -245,7 +245,7 @@ test void methodTypeConstraintChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }

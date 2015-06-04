@@ -30,7 +30,7 @@ test void simpleTypeChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -60,7 +60,7 @@ test void parametrizedTypeChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -92,7 +92,7 @@ test void aliasedTypeRecognized() {
             changes = { TopLevelDeclarationAdded ("Integer", invisibleOutside) };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -148,7 +148,7 @@ test void genericTypeChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -179,7 +179,7 @@ test void voidTypeChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -210,7 +210,7 @@ test void typeMadeOptional() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -244,7 +244,7 @@ test void unionOrderChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -278,7 +278,7 @@ test void intersectionOrderChanged() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -309,7 +309,7 @@ test void defaultedTypeAdded() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -317,7 +317,7 @@ test void defaultedTypeAdded() {
         };
         void doWithNodeComparisons({NodeComparison*} comparisons) {
             assert(comparisons.contains(["dir::test", "type",
-                "Type[[ceylon.language::Integer, ceylon.language::Integer]]"
+                "Type[ceylon.language::Integer[2]]"
                         -> "Type[[ceylon.language::Integer, ceylon.language::Integer=]]"]));
         }
     };
@@ -340,7 +340,7 @@ test void useSiteVarianceAdded() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }
@@ -371,7 +371,7 @@ test void useSiteVarianceFlipped() {
             changes = { };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { structuralChange };
                     childrenDeltas = {};
                 }

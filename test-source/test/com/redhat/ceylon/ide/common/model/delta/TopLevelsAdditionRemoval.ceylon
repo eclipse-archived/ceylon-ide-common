@@ -55,11 +55,11 @@ test void removeTopLevel() {
             changes = {};
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { removed };
                 },
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[hidden]";
+                    changedElementString = "Function[hidden]";
                     changes = { removed };
                 }
             };
@@ -84,7 +84,7 @@ test void changeToplevelName() {
             changes = { TopLevelDeclarationAdded("testChanged", visibleOutside) };
             childrenDeltas = {
                 TopLevelDeclarationDeltaMockup {
-                    changedElementString = "Method[test]";
+                    changedElementString = "Function[test]";
                     changes = { removed };
                     childrenDeltas = {};
                 }
