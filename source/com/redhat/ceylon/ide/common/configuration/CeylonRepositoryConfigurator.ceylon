@@ -13,6 +13,66 @@ import ceylon.interop.java {
     createJavaStringArray
 }
 
+/*
+ // Eclipse impl:
+ 
+ @Override
+ public int[] $getSelection() {
+    return lookupRepoTable.getSelectionIndices();
+ }
+ @Override
+ public Object $setRemoveButtonEnabled(boolean enabled) {
+    removeRepoButton.setEnabled(enabled);
+    return null;
+ }
+ 
+ @Override
+ public Object $setUpButtonEnabled(boolean enabled) {
+    upButton.setEnabled(enabled);
+    return null;
+ }
+ 
+ @Override
+ public Object $setDownButtonEnabled(boolean enabled) {
+    downButton.setEnabled(enabled);
+    return null;
+ }
+ 
+ @Override
+ public String removeRepositoryFromList(long index) {
+    String repo = lookupRepoTable.getItem(0).getText()
+    lookupRepoTable.remove((int) index);
+    return repo;
+ }
+ 
+ @Override
+ public Object addRepositoryToList(long index, String repo) {
+    TableItem tableItem = new TableItem(lookupRepoTable, SWT.NONE, index);
+    tableItem.setText(repo);
+    tableItem.setImage(CeylonResources.REPO);
+    lookupRepoTable.setSelection((int) index);
+    
+    return null;
+ }
+ 
+ @Override
+ public Object addAllRepositoriesToList(String[] repos) {
+    for (String repo : repos) {
+        TableItem tableItem = new TableItem(lookupRepoTable, SWT.NONE, index);
+        tableItem.setText(repo);
+        tableItem.setImage(CeylonResources.REPO);
+    }
+    return null;
+ }
+ 
+ // Then delete those fields:
+private List<String> projectLocalRepos;
+private List<String> globalLookupRepos;
+private List<String> projectRemoteRepos;
+private List<String> otherRemoteRepos;
+
+// And update the button listeners to call parent methods
+ */
 shared abstract class CeylonRepositoryConfigurator() {
     
     value projectLocalRepos = ArrayList<String>();
@@ -37,7 +97,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     shared formal IntArray getSelection();
     
     Integer[] getSelectedIndices() { return [*getSelection().iterable]; }
-    
+
     shared formal void setRemoveButtonEnabled(Boolean enabled);
     shared formal void setUpButtonEnabled(Boolean enabled);
     shared formal void setDownButtonEnabled(Boolean enabled);
