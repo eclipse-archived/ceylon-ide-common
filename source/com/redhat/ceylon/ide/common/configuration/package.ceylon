@@ -1,1 +1,1 @@
-package com.redhat.ceylon.ide.common.configuration;
+shared package com.redhat.ceylon.ide.common.configuration;
