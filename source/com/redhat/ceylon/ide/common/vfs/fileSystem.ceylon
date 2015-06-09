@@ -44,7 +44,7 @@ shared interface FileSystemVitualFile satisfies WithParentVirtualFile{
 }    
     
 shared class LocalFileVirtualFile(file)
-            satisfies FileVirtualFile<File, File, File>, 
+            satisfies FileVirtualFile<File, File, File> & 
                        FileSystemVitualFile {
     shared actual File file;
     
@@ -87,7 +87,7 @@ shared class LocalFileVirtualFile(file)
 }
 
 shared class LocalFolderVirtualFile(file) 
-            satisfies FolderVirtualFile<File, File, File>,
+            satisfies FolderVirtualFile<File, File, File> &
                        FileSystemVitualFile {
     shared actual File file;
     

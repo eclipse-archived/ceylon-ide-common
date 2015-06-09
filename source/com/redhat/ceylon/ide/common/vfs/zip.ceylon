@@ -126,7 +126,7 @@ ZipEntryVirtualFile? searchFileChildren(JList<ResourceVirtualFile<>> theChildren
 
 
 
-shared class ZipFileVirtualFile satisfies ClosableVirtualFile, FolderVirtualFile<> {
+shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFile<> {
     ZipFile zipFile;
     shared actual late String name;
     variable JList<ResourceVirtualFile<>> theChildren = ArrayList<ResourceVirtualFile<>>();
