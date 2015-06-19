@@ -18,23 +18,23 @@ import com.redhat.ceylon.ide.common.model {
  // Eclipse impl:
 
  @Override
- public int[] $getSelection() {
+ public int[] getSelection() {
     return lookupRepoTable.getSelectionIndices();
  }
  @Override
- public Object $setRemoveButtonEnabled(boolean enabled) {
+ public Object enableRemoveButton(boolean enabled) {
     removeRepoButton.setEnabled(enabled);
     return null;
  }
 
  @Override
- public Object $setUpButtonEnabled(boolean enabled) {
+ public Object enableUpButton(boolean enabled) {
     upButton.setEnabled(enabled);
     return null;
  }
 
  @Override
- public Object $setDownButtonEnabled(boolean enabled) {
+ public Object enableDownButton(boolean enabled) {
     downButton.setEnabled(enabled);
     return null;
  }
@@ -95,13 +95,11 @@ shared abstract class CeylonRepositoryConfigurator() {
         updateUpDownButtonState();
     }
 
-    shared formal IntArray getSelection();
+    shared formal IntArray selection;
 
-    Integer[] getSelectedIndices() { return [*getSelection().iterable]; }
-
-    shared formal void setRemoveButtonEnabled(Boolean enabled);
-    shared formal void setUpButtonEnabled(Boolean enabled);
-    shared formal void setDownButtonEnabled(Boolean enabled);
+    shared formal void enableRemoveButton(Boolean enable);
+    shared formal void enableUpButton(Boolean enable);
+    shared formal void enableDownButton(Boolean enable);
     shared formal String removeRepositoryFromList(Integer index);
     shared formal void addRepositoryToList(Integer index, String repo);
     shared formal void addAllRepositoriesToList(ObjectArray<JString> repos);
@@ -150,10 +148,10 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void removeSelectedRepo() {
-        value selection = sort(getSelectedIndices());
+        value sortedSelection = sort(selection.iterable);
 
-        for (Integer i in 0:selection.size) {
-            value index = selection[i];
+        for (Integer i in 0:sortedSelection.size) {
+            value index = sortedSelection[i];
 
             if (exists index, !isFixedRepoIndex(index)) {
                 String repo = removeRepositoryFromList(index);
@@ -165,7 +163,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void moveSelectedReposUp() {
-        value index = getSelectedIndices().first;
+        value index = selection.iterable.first;
 
         if (exists index) {
             String repo = removeRepositoryFromList(index);
@@ -186,7 +184,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void moveSelectedReposDown() {
-        value index = getSelectedIndices().first;
+        value index = selection.iterable.first;
 
         if (exists index) {
             String repo = removeRepositoryFromList(index);
@@ -207,23 +205,22 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     void updateRemoveRepoButtonState() {
-        value selectionIndices = getSelectedIndices();
-        for (value index in selectionIndices) {
+        for (value index in selection.iterable) {
             if (!isFixedRepoIndex(index)) {
-                setRemoveButtonEnabled(true);
+                enableRemoveButton(true);
                 return;
             }
         }
-        setRemoveButtonEnabled(false);
+        enableRemoveButton(false);
     }
 
     void updateUpDownButtonState() {
         variable Boolean isUpEnabled = false;
         variable Boolean isDownEnabled = false;
-        value selectionIndices = getSelectedIndices();
+        value selectionIndices = selection.iterable;
 
         if (selectionIndices.size == 1) {
-            value index = selectionIndices[0];
+            value index = selection.iterable.first;
 
             if (exists index) {
                 if (index>0 && !isFixedRepoIndex(index)) {
@@ -235,8 +232,8 @@ shared abstract class CeylonRepositoryConfigurator() {
                 }
             }
         }
-        setUpButtonEnabled(isUpEnabled);
-        setDownButtonEnabled(isDownEnabled);
+        enableUpButton(isUpEnabled);
+        enableDownButton(isDownEnabled);
     }
 
     void addProjectRepo(String repo, Integer index, Boolean isLocalRepo) {

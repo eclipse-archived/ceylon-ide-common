@@ -1,16 +1,5 @@
-import com.redhat.ceylon.ide.common.configuration {
-    CeylonRepositoryConfigurator
-}
-import java.lang {
-    JString=String,
-    IntArray,
-    ObjectArray
-}
 import ceylon.collection {
     ArrayList
-}
-import ceylon.interop.java {
-    createJavaIntArray
 }
 import ceylon.test {
     test,
@@ -18,11 +7,22 @@ import ceylon.test {
     assertTrue
 }
 
+import com.redhat.ceylon.ide.common.configuration {
+    CeylonRepositoryConfigurator
+}
+
+import java.lang {
+    JString=String,
+    ObjectArray,
+    IntArray
+}
+
+
 object dummyConfigurator extends CeylonRepositoryConfigurator() {
     
     shared ArrayList<String> myRepos = ArrayList<String>(10, 1.5, {"my global repo", "other remote repo"});
 
-    shared variable {Integer*} selection = {};
+    shared actual variable IntArray selection = IntArray(1);
     shared variable Boolean isDownEnabled = false;
     shared variable Boolean isUpEnabled = false;
     shared variable Boolean isRemoveEnabled = false;
@@ -36,21 +36,20 @@ object dummyConfigurator extends CeylonRepositoryConfigurator() {
     }
     
     shared actual void addRepositoryToList(Integer index, String repo) {
-        selection = {index};
+        selection.set(0, index);
         myRepos.insert(index, repo);
     }
     
-    shared actual IntArray getSelection() => createJavaIntArray(selection);
     
     shared actual String removeRepositoryFromList(Integer index) {
         return myRepos.delete(index) else "";
     }
     
-    shared actual void setDownButtonEnabled(Boolean enabled) => isDownEnabled = enabled;
+    shared actual void enableDownButton(Boolean enabled) => isDownEnabled = enabled;
     
-    shared actual void setRemoveButtonEnabled(Boolean enabled) => isRemoveEnabled = enabled;
+    shared actual void enableRemoveButton(Boolean enabled) => isRemoveEnabled = enabled;
     
-    shared actual void setUpButtonEnabled(Boolean enabled) => isUpEnabled = enabled;
+    shared actual void enableUpButton(Boolean enabled) => isUpEnabled = enabled;
 }
 
 test shared void testRepositoryConfiguration() {
@@ -63,7 +62,7 @@ test shared void testRepositoryConfiguration() {
     assertFalse(dummyConfigurator.isRemoveEnabled);
 
     // Selecting a pre-configured repo does not enable buttons
-    dummyConfigurator.selection = {0};
+    dummyConfigurator.selection.set(0, 0);
     dummyConfigurator.updateButtonState();
     assertFalse(dummyConfigurator.isDownEnabled);
     assertFalse(dummyConfigurator.isUpEnabled);
@@ -94,7 +93,7 @@ test shared void testRepositoryConfiguration() {
     assertTrue(dummyConfigurator.isRemoveEnabled);
     
     // The last repo can't be moved/removed
-    dummyConfigurator.selection = {dummyConfigurator.myRepos.size - 1};
+    dummyConfigurator.selection.set(0, dummyConfigurator.myRepos.size - 1);
     dummyConfigurator.updateButtonState();
     assertFalse(dummyConfigurator.isDownEnabled);
     assertFalse(dummyConfigurator.isUpEnabled);
