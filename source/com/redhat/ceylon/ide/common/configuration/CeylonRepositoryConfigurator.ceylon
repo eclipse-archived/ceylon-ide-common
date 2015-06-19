@@ -6,16 +6,17 @@ import java.lang {
     ObjectArray,
     JString=String
 }
-import com.redhat.ceylon.ide.common {
-    CeylonProjectConfig
-}
+
 import ceylon.interop.java {
     createJavaStringArray
+}
+import com.redhat.ceylon.ide.common.model {
+    CeylonProjectConfig
 }
 
 /*
  // Eclipse impl:
- 
+
  @Override
  public int[] $getSelection() {
     return lookupRepoTable.getSelectionIndices();
@@ -25,36 +26,36 @@ import ceylon.interop.java {
     removeRepoButton.setEnabled(enabled);
     return null;
  }
- 
+
  @Override
  public Object $setUpButtonEnabled(boolean enabled) {
     upButton.setEnabled(enabled);
     return null;
  }
- 
+
  @Override
  public Object $setDownButtonEnabled(boolean enabled) {
     downButton.setEnabled(enabled);
     return null;
  }
- 
+
  @Override
  public String removeRepositoryFromList(long index) {
     String repo = lookupRepoTable.getItem(0).getText()
     lookupRepoTable.remove((int) index);
     return repo;
  }
- 
+
  @Override
  public Object addRepositoryToList(long index, String repo) {
     TableItem tableItem = new TableItem(lookupRepoTable, SWT.NONE, index);
     tableItem.setText(repo);
     tableItem.setImage(CeylonResources.REPO);
     lookupRepoTable.setSelection((int) index);
-    
+
     return null;
  }
- 
+
  @Override
  public Object addAllRepositoriesToList(String[] repos) {
     for (String repo : repos) {
@@ -64,7 +65,7 @@ import ceylon.interop.java {
     }
     return null;
  }
- 
+
  // Then delete those fields:
 private List<String> projectLocalRepos;
 private List<String> globalLookupRepos;
@@ -74,28 +75,28 @@ private List<String> otherRemoteRepos;
 // And update the button listeners to call parent methods
  */
 shared abstract class CeylonRepositoryConfigurator() {
-    
+
     value projectLocalRepos = ArrayList<String>();
     value globalLookupRepos = ArrayList<String>();
     value projectRemoteRepos = ArrayList<String>();
     value otherRemoteRepos = ArrayList<String>();
-    
+
     shared void addGlobalLookupRepo(String repo) => globalLookupRepos.add(repo);
     shared void addOtherRemoteRepo(String repo) => otherRemoteRepos.add(repo);
-    
+
     shared Boolean isFixedRepoIndex(Integer index) {
         if (!globalLookupRepos.empty && index>=projectLocalRepos.size && index < projectLocalRepos.size+globalLookupRepos.size) { return true; }
         if (!otherRemoteRepos.empty && index >= projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size && index < projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size+otherRemoteRepos.size) { return true; }
         return false;
     }
-    
+
     shared void updateButtonState() {
         updateRemoveRepoButtonState();
         updateUpDownButtonState();
     }
-    
+
     shared formal IntArray getSelection();
-    
+
     Integer[] getSelectedIndices() { return [*getSelection().iterable]; }
 
     shared formal void setRemoveButtonEnabled(Boolean enabled);
@@ -104,14 +105,14 @@ shared abstract class CeylonRepositoryConfigurator() {
     shared formal String removeRepositoryFromList(Integer index);
     shared formal void addRepositoryToList(Integer index, String repo);
     shared formal void addAllRepositoriesToList(ObjectArray<JString> repos);
-    
+
     shared void addExternalRepo(String repo) => addProjectRepo(repo, 0, true);
-    
+
     shared void addRemoteRepo(String repo) {
         Integer index = projectLocalRepos.size + globalLookupRepos.size + projectRemoteRepos.size;
         addProjectRepo(repo, index, false);
     }
-    
+
     shared void addAetherRepo(String repo) {
         Integer index = projectLocalRepos.size + globalLookupRepos.size + projectRemoteRepos.size;
         if (repo.empty) {
@@ -120,40 +121,40 @@ shared abstract class CeylonRepositoryConfigurator() {
             addProjectRepo("aether:" + repo, index, false);
         }
     }
-    
+
     shared void applyToConfiguration(CeylonProjectConfig<out Object> config) {
         config.projectLocalRepos = projectLocalRepos;
         config.projectRemoteRepos = projectRemoteRepos;
     }
-    
+
     shared void loadFromConfiguration(CeylonProjectConfig<out Object> config) {
         projectLocalRepos.clear();
         projectLocalRepos.addAll(config.projectLocalRepos);
         addAllRepositoriesToList(createJavaStringArray(projectLocalRepos));
-        
+
         globalLookupRepos.clear();
         globalLookupRepos.addAll(config.globalLookupRepos);
         addAllRepositoriesToList(createJavaStringArray(globalLookupRepos));
-        
+
         projectRemoteRepos.clear();
         projectRemoteRepos.addAll(config.projectRemoteRepos);
         addAllRepositoriesToList(createJavaStringArray(projectRemoteRepos));
-        
+
         otherRemoteRepos.clear();
         otherRemoteRepos.addAll(config.otherRemoteRepos);
         addAllRepositoriesToList(createJavaStringArray(otherRemoteRepos));
     }
-    
+
     shared Boolean isRepoConfigurationModified(CeylonProjectConfig<out Object> config) {
         return !(projectLocalRepos.equals(config.projectLocalRepos) && projectRemoteRepos.equals(config.projectRemoteRepos));
     }
-    
+
     shared void removeSelectedRepo() {
         value selection = sort(getSelectedIndices());
-        
+
         for (Integer i in 0:selection.size) {
             value index = selection[i];
-            
+
             if (exists index, !isFixedRepoIndex(index)) {
                 String repo = removeRepositoryFromList(index);
                 projectLocalRepos.remove(repo);
@@ -162,13 +163,13 @@ shared abstract class CeylonRepositoryConfigurator() {
         }
         updateButtonState();
     }
-    
+
     shared void moveSelectedReposUp() {
         value index = getSelectedIndices().first;
-        
+
         if (exists index) {
             String repo = removeRepositoryFromList(index);
-            
+
             if (index>0 && index<=projectLocalRepos.size) {
                 projectLocalRepos.delete(index);
                 addProjectRepo(repo, index - 1, true);
@@ -183,13 +184,13 @@ shared abstract class CeylonRepositoryConfigurator() {
             }
         }
     }
-    
+
     shared void moveSelectedReposDown() {
         value index = getSelectedIndices().first;
-        
+
         if (exists index) {
             String repo = removeRepositoryFromList(index);
-            
+
             if (index < projectLocalRepos.size-1 && !projectLocalRepos.empty) {
                 projectLocalRepos.remove(repo);
                 addProjectRepo(repo, index + 1, true);
@@ -204,7 +205,7 @@ shared abstract class CeylonRepositoryConfigurator() {
             }
         }
     }
-    
+
     void updateRemoveRepoButtonState() {
         value selectionIndices = getSelectedIndices();
         for (value index in selectionIndices) {
@@ -215,15 +216,15 @@ shared abstract class CeylonRepositoryConfigurator() {
         }
         setRemoveButtonEnabled(false);
     }
-    
+
     void updateUpDownButtonState() {
         variable Boolean isUpEnabled = false;
         variable Boolean isDownEnabled = false;
         value selectionIndices = getSelectedIndices();
-        
+
         if (selectionIndices.size == 1) {
             value index = selectionIndices[0];
-            
+
             if (exists index) {
                 if (index>0 && !isFixedRepoIndex(index)) {
                     isUpEnabled = true;
@@ -237,7 +238,7 @@ shared abstract class CeylonRepositoryConfigurator() {
         setUpButtonEnabled(isUpEnabled);
         setDownButtonEnabled(isDownEnabled);
     }
-    
+
     void addProjectRepo(String repo, Integer index, Boolean isLocalRepo) {
         if (isLocalRepo && projectLocalRepos.contains(repo)) {
             return;

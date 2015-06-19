@@ -125,6 +125,8 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     initMergedConfig();
     initProjectConfig();
 
+    shared Repositories repositories => mergedRepositories;
+
     shared String outputRepo => mergedRepositories.outputRepository.url;
     assign outputRepo {
         transientOutputRepo = outputRepo;

@@ -49,6 +49,12 @@ import java.util {
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit
+}
 
 shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFolder, NativeFile> 
         given ResultPhasedUnit satisfies PhasedUnit

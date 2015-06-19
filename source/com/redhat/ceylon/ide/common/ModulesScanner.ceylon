@@ -39,6 +39,12 @@ import org.antlr.runtime {
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit
+}
 
 "Provisional version of the class, in order to be able to compile ModulesScanner"
 // TODO Finish the class

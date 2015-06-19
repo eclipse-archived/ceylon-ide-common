@@ -42,6 +42,12 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject
+}
+import com.redhat.ceylon.ide.common {
+    IdeModule
+}
 
 shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile> 
         extends PhasedUnit 
