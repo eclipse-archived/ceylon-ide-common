@@ -133,13 +133,13 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
     variable Boolean childrenInitialized = false;
     Boolean closeable;
     
-    shared new ZipFileVirtualFile(ZipFile aZipFile, Boolean isCloseable = false) {
+    shared new (ZipFile aZipFile, Boolean isCloseable = false) {
         zipFile = aZipFile;
         closeable = isCloseable;
     }
     
     throws(`class IOException`)
-    shared new FromFile(File file) {
+    shared new fromFile(File file) {
         zipFile = ZipFile(file);
         closeable = true;
     }

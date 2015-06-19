@@ -69,7 +69,7 @@ shared abstract class IdePhasedUnit<NativeResource, NativeFolder, NativeFile>
         typeCheckerRef = WeakReference<TypeChecker>(typeChecker);
     }
     
-    shared new Clone(PhasedUnit other) extends PhasedUnit(other) {
+    shared new clone(PhasedUnit other) extends PhasedUnit(other) {
         if (is IdePhasedUnit<NativeResource, NativeFolder, NativeFile> other) {
             typeCheckerRef = WeakReference<TypeChecker>(other.typeChecker);
         }
@@ -164,8 +164,8 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         ceylonProject = WeakReference(project);
     }
     
-    shared new Clone(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> other) 
-            extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>.Clone(other) {
+    shared new clone(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> other) 
+            extends IdePhasedUnit<NativeResource, NativeFolder, NativeFile>.clone(other) {
         ceylonProject = WeakReference(other.ceylonProject.get());
     }
     

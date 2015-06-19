@@ -28,7 +28,7 @@ shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
     shared actual Path rootCeylonPath = createZipFileSystem(sourceZip).rootPaths.first else nothing;
     
     shared actual FolderVirtualFile<Nothing,Nothing,Nothing> rootVirtualFile =
-            ZipFileVirtualFile.FromFile(JFile(sourceZip.path.absolutePath.string));
+            ZipFileVirtualFile.fromFile(JFile(sourceZip.path.absolutePath.string));
 
     shared actual String pathFromCeylonResource(File|Directory fileOrDir) 
             => let(innerPath = fileOrDir.path.string.trimTrailing('/'.equals))
