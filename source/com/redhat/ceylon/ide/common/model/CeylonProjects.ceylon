@@ -2,28 +2,57 @@ import ceylon.collection {
     HashMap
 }
 
+import java.util.concurrent.locks { ReentrantReadWriteLock,
+    Lock }
+
 shared abstract class CeylonProjects<IdeArtifact>()
         given IdeArtifact satisfies Object {
     value projectMap = HashMap<IdeArtifact, CeylonProject<IdeArtifact>>();
-    shared {CeylonProject<IdeArtifact>*} ceylonProjects => projectMap.items;
-    
-    shared CeylonProject<IdeArtifact> getProject(IdeArtifact ideArtifact) {
-        value searchedProject = projectMap[ideArtifact];
-        if (exists searchedProject) {
-            return searchedProject;
-        } else {
-            value theNewProject = newIdeArtifact(ideArtifact);
-            projectMap.put(ideArtifact, theNewProject);
-            return theNewProject;
-            
+
+    value lock = ReentrantReadWriteLock();
+    T withLocking<T=Anything>(Boolean write, T do()) {
+        Lock l = if (write) then lock.writeLock() else lock.readLock();
+        l.tryLock();
+        try {
+            return do();
+        } finally {
+            l.unlock();
         }
     }
-    
+
     shared formal CeylonProject<IdeArtifact> newIdeArtifact(IdeArtifact ideArtifact);
-    shared void removeProject(IdeArtifact ideArtifact)
-            => projectMap.remove(ideArtifact);
-    shared void addProject(IdeArtifact ideArtifact)
-            => projectMap.put(ideArtifact, newIdeArtifact(ideArtifact));
+
+    shared {CeylonProject<IdeArtifact>*} ceylonProjects
+        => withLocking {
+            write=false;
+            do() => projectMap.items.sequence();
+        };
+
+
+    shared CeylonProject<IdeArtifact>? getProject(IdeArtifact? ideArtifact)
+        => withLocking {
+            write=false;
+            do() => if (exists ideArtifact) then projectMap[ideArtifact] else null;
+        };
+
+    shared Boolean removeProject(IdeArtifact ideArtifact)
+        => withLocking {
+            write=true;
+            do() => projectMap.remove(ideArtifact) exists;
+        };
+
+    shared Boolean addProject(IdeArtifact ideArtifact)
+        => withLocking {
+            write=true;
+            do() => if (projectMap.defines(ideArtifact))
+                    then false
+                    else let(old=projectMap.put(ideArtifact, newIdeArtifact(ideArtifact))) true;
+        };
+
     shared void clearProjects()
-            => projectMap.clear();
+        => withLocking {
+            write=true;
+            do() => projectMap.clear();
+        };
+
 }
