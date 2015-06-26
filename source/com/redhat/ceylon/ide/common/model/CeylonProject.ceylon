@@ -28,6 +28,17 @@ shared abstract class CeylonProject<IdeArtifact>()
     }
 
     shared String defaultCharset
-        => configuration.encoding;
+        => configuration.encoding else defaultDefaultCharset;
+
+    shared default String defaultDefaultCharset
+        => "utf8";
+
+    shared formal Boolean synchronizedWithConfiguration;
+
+    shared {String*} ceylonRepositories
+        => let (c = configuration) c.projectLocalRepos
+            .chain(c.globalLookupRepos)
+            .chain(c.projectRemoteRepos)
+            .chain(c.otherRemoteRepos);
 }
 

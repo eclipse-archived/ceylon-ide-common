@@ -152,9 +152,9 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         transientProjectRemoteRepos = projectRemoteRepos;
     }
 
-    shared String encoding => mergedConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
+    shared String? encoding => mergedConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
 
-    shared String projectEncoding => projectConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
+    shared String? projectEncoding => projectConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
     assign projectEncoding {
         isEncodingChanged = true;
         transientEncoding = projectEncoding;
@@ -229,7 +229,7 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         if (projectSuppressWarningsEnum.empty) {
             ws = null;
         } else if (projectSuppressWarningsEnum.containsAll(EnumSet<Warning>.allOf(javaClass<Warning>()))) {
-            ws = {};
+            ws = [""];
         } else {
             ws = { for (w in CeylonIterable(projectSuppressWarningsEnum)) w.name() };
         }
@@ -342,11 +342,16 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
                     value newRemoteRepos = toRepositoriesArray(transientProjectRemoteRepos);
                     projectRepositories.setRepositoriesByType(Repositories.\iREPO_TYPE_REMOTE_LOOKUP, newRemoteRepos);
                 }
-                if (isOfflineChanged, exists changedOffline = transientOffline) {
-                    projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, changedOffline);
+                if (isOfflineChanged) {
+                    if (exists nonNullOffline = transientOffline) {
+                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, nonNullOffline);
+                    } else {
+                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, null);
+                    }
+
                 }
                 if (isOverridesChanged) {
-                    projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, transientOverrides);
+                    projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OVERRIDES, transientOverrides);
                 }
                 if (isFlatClasspathChanged) {
                     if (exists nonNullFlatClasspath = transientFlatClasspath) {
