@@ -7,9 +7,6 @@ import com.redhat.ceylon.model.typechecker.model {
 	Parameter,
     Unit
 }
-import ceylon.language.meta.declaration {
-	Declaration
-}
 import ceylon.interop.java {
 	CeylonList
 }
