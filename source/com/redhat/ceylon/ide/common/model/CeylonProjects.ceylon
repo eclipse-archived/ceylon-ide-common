@@ -9,10 +9,10 @@ shared abstract class CeylonProjects<IdeArtifact>()
         given IdeArtifact satisfies Object {
     value projectMap = HashMap<IdeArtifact, CeylonProject<IdeArtifact>>();
 
-    value lock = ReentrantReadWriteLock();
+    value lock = ReentrantReadWriteLock(true);
     T withLocking<T=Anything>(Boolean write, T do()) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
-        l.tryLock();
+        l.lockInterruptibly();
         try {
             return do();
         } finally {
@@ -44,9 +44,14 @@ shared abstract class CeylonProjects<IdeArtifact>()
     shared Boolean addProject(IdeArtifact ideArtifact)
         => withLocking {
             write=true;
-            do() => if (projectMap.defines(ideArtifact))
-                    then false
-                    else let(old=projectMap.put(ideArtifact, newIdeArtifact(ideArtifact))) true;
+            function do() {
+                 if (projectMap[ideArtifact] exists) {
+                     return false;
+                 } else {
+                     projectMap.put(ideArtifact, newIdeArtifact(ideArtifact));
+                     return true;
+                 }
+            }
         };
 
     shared void clearProjects()
