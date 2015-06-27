@@ -6,7 +6,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Class,
     TypedDeclaration,
-    ImportList
+    ImportList,
+    Unit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
@@ -27,7 +28,13 @@ shared abstract class IdeCompletionManager() {
     shared Map<JString,DeclarationWithProximity> getProposals(Node node, Scope? scope, String prefix,
         Boolean memberOp, Tree.CompilationUnit rootNode) {
         
-        value unit = node.unit;
+        Unit? unit = node.unit;
+        
+        if (!exists unit) {
+            return emptyMap;
+        }
+        
+        assert (exists unit);
         
         if (is Tree.MemberLiteral node) {
             if (exists mlt = node.type) {
