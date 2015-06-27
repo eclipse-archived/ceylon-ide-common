@@ -150,7 +150,7 @@ shared abstract class IdeCompletionManager() {
         if (is TypeDeclaration d) {
             if (is Class d) {
                 if (!d.abstract) {
-                    return (d of TypeDeclaration).type;
+                    return d.type;
                 }
             }
         } else if (is TypedDeclaration d) {
