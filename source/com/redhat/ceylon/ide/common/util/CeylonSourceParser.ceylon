@@ -50,24 +50,25 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    CeylonProject,
+    IdeModuleManager
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit
 }
 
-shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFolder, NativeFile> 
+shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFolder, NativeFile>
         given ResultPhasedUnit satisfies PhasedUnit
-        given NativeResource satisfies Object 
+        given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared default CeylonLexer buildLexer(ANTLRStringStream stringStream) 
+    shared default CeylonLexer buildLexer(ANTLRStringStream stringStream)
             => CeylonLexer(stringStream);
 
-    shared default CommonTokenStream buildTokenStream(CeylonLexer lexer) 
+    shared default CommonTokenStream buildTokenStream(CeylonLexer lexer)
             => CommonTokenStream(lexer);
-    
-    shared default CeylonParser buildParser(CommonTokenStream tokenStream) 
+
+    shared default CeylonParser buildParser(CommonTokenStream tokenStream)
             => CeylonParser(tokenStream);
 
     shared ResultPhasedUnit parseSourceCodeToPhasedUnit(
@@ -86,7 +87,7 @@ shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFold
         }
         CeylonLexer lexer = buildLexer(input);
         CommonTokenStream tokenStream = buildTokenStream(lexer);
-        
+
         CeylonParser parser = buildParser(tokenStream);
         Tree.CompilationUnit cu;
         try {
@@ -95,13 +96,13 @@ shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFold
         catch (RecognitionException e) {
             throw RuntimeException(e);
         }
-        
+
         value lexerErrors = lexer.errors;
         for (le in CeylonIterable(lexerErrors)) {
             cu.addLexError(le);
         }
         lexerErrors.clear();
-        
+
         value parserErrors = parser.errors;
         for (pe in CeylonIterable(parserErrors)) {
             cu.addParseError(pe);
@@ -118,10 +119,10 @@ shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFold
         FileVirtualFile<NativeResource, NativeFolder, NativeFile> file,
         FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
         Package pkg)
-            => parseSourceCodeToPhasedUnit(moduleManager, 
-            InputStreamReader(file.inputStream, charset(file)), 
+            => parseSourceCodeToPhasedUnit(moduleManager,
+            InputStreamReader(file.inputStream, charset(file)),
             pkg);
-    
+
     shared formal ResultPhasedUnit createPhasedUnit(Tree.CompilationUnit cu, Package pkg, List<CommonToken> tokenStream);
     shared formal String charset(FileVirtualFile<NativeResource, NativeFolder, NativeFile> file);
 }
@@ -129,28 +130,26 @@ shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFold
 shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile>(
     ceylonProject,
     unitFile,
-    srcDir,
-    moduleManager, 
-    moduleSourceMapper,
-    typeChecker)
+    srcDir)
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object 
-        given NativeResource satisfies Object 
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     shared CeylonProject<NativeProject> ceylonProject;
     shared FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile;
     shared FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
-    shared IdeModuleManager moduleManager;
-    shared ModuleSourceMapper moduleSourceMapper;
-    shared TypeChecker typeChecker;
-    
+
     shared actual default ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> createPhasedUnit(
         Tree.CompilationUnit cu,
         Package pkg,
         List<CommonToken> tokens)
-        => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg, moduleManager, moduleSourceMapper, typeChecker, tokens);
-            
+        => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg,
+            ceylonProject.modules.manager,
+            ceylonProject.modules.sourceMapper,
+            ceylonProject.typechecker,
+            tokens);
+
     shared actual default String charset(FileVirtualFile<NativeResource,NativeFolder,NativeFile> file)
         => file.charset else ceylonProject.defaultCharset;
 }
