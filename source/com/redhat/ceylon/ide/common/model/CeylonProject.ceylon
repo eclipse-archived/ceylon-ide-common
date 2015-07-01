@@ -7,9 +7,6 @@ import com.redhat.ceylon.compiler.typechecker {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits
 }
-import ceylon.interop.java {
-    CeylonIterator
-}
 
 shared abstract class CeylonProject<IdeArtifact>()
         given IdeArtifact satisfies Object {
@@ -28,10 +25,10 @@ shared abstract class CeylonProject<IdeArtifact>()
      [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
      should be managed in a modular way in each [[IdeModule]] object accessible from the
      [[PhasedUnits]]"
-    shared formal TypeChecker typechecker;
+    shared TypeChecker typechecker=>nothing;
 
     "Should be hidden in the future, when implemented directy here in Ceylon"
-    shared formal PhasedUnits phasedUnits;
+    shared PhasedUnits phasedUnits=>nothing;
 
     shared CeylonProjectConfig<IdeArtifact> configuration {
         if (exists config = ceylonConfig) {
@@ -70,6 +67,13 @@ shared abstract class CeylonProject<IdeArtifact>()
             value it = phasedUnits.moduleManager.modules.listOfModules.iterator();
             next() => let(m=it.next()) if (is IdeModule m) then m else nothing;
         };
+
+        shared {IdeModule*} fromProject
+                => filter((m) => m.projectModule);
+
+        shared {IdeModule*} external
+                => filter((m) => ! m.projectModule);
+
         shared IdeModuleManager manager => if (is IdeModuleManager mm=phasedUnits.moduleManager) then mm else nothing;
         shared IdeModuleSourceMapper sourceMapper => if (is IdeModuleSourceMapper msm=phasedUnits.moduleSourceMapper) then msm else nothing;
     }
