@@ -11,7 +11,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
-    Tree
+    Tree,
+    Visitor
 }
 import java.lang {
     JString=String
@@ -19,6 +20,9 @@ import java.lang {
 import java.util {
     Map,
     HashMap
+}
+import ceylon.interop.java {
+    CeylonIterable
 }
 
 shared abstract class IdeCompletionManager() {
@@ -177,5 +181,31 @@ shared abstract class IdeCompletionManager() {
         }
         
         return emptyMap;
+    }
+}
+
+shared class FindScopeVisitor(Node node) extends Visitor() {
+    variable Scope? myScope = null;
+
+    shared Scope? scope => myScope else node.scope;
+
+    shared actual void visit(Tree.Declaration that) {
+        super.visit(that);
+        
+        if (exists al = that.annotationList) {
+            for (ann in CeylonIterable(al.annotations)) {
+                if (ann.primary.startIndex.equals(node.startIndex)) {
+                    myScope = that.declarationModel.scope;
+                }
+            }
+        }
+    }
+
+    shared actual void visit(Tree.DocLink that) {
+        super.visit(that);
+        
+        if (is Tree.DocLink node) {
+            myScope = node.pkg;
+        }
     }
 }
