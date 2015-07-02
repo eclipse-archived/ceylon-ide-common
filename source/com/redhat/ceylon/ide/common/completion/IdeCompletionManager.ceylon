@@ -7,7 +7,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Class,
     TypedDeclaration,
     ImportList,
-    Unit
+    Unit,
+    ModelUtil {
+        isTypeUnknown
+    },
+    Function
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
@@ -29,7 +33,9 @@ shared abstract class IdeCompletionManager() {
 
     value emptyMap = HashMap<JString,DeclarationWithProximity>();
     
-    shared Map<JString,DeclarationWithProximity> getProposals(Node node, Scope? scope, String prefix,
+    shared alias Proposals => Map<JString,DeclarationWithProximity>;
+    
+    shared Proposals getProposals(Node node, Scope? scope, String prefix,
         Boolean memberOp, Tree.CompilationUnit rootNode) {
         
         Unit? unit = node.unit;
@@ -138,6 +144,49 @@ shared abstract class IdeCompletionManager() {
         }
     }
     
+    shared Proposals getFunctionProposals(Node node, Scope scope, String prefix, Boolean memberOp) {
+        value unit = node.unit;
+        
+        if (is Tree.QualifiedMemberOrTypeExpression node, exists type = getPrimaryType(node), 
+            !node.staticMethodReference, !isTypeUnknown(type)) {
+            return collectUnaryFunctions(type, scope.getMatchingDeclarations(unit, "", 0));
+        } else if (memberOp, is Tree.Term node, exists type = node.typeModel) {
+            return collectUnaryFunctions(type, scope.getMatchingDeclarations(unit, "", 0));
+        }
+        
+        return emptyMap;
+    }
+    
+    Proposals collectUnaryFunctions(Type type, Proposals candidates) {
+        Proposals matches = HashMap<JString,DeclarationWithProximity>();
+        
+        CeylonIterable(candidates.entrySet()).each(void (candidate) {
+            if (is Function declaration = candidate.\ivalue.declaration, !declaration.annotation) {
+                if (!declaration.parameterLists.empty) {
+                    value params = declaration.firstParameterList.parameters;
+                    
+                    if (!params.empty) {
+                        variable Boolean unary = true;
+                        if (params.size() > 1) {
+                            for (i in 1..params.size()-1) {
+                                if (!params.get(i).defaulted) {
+                                    unary = false;
+                                }
+                            }
+                        }
+                        
+                        value t = params.get(0).type;
+                        if (unary, !isTypeUnknown(t), type.isSubtypeOf(t)) {
+                            matches.put(candidate.key, candidate.\ivalue);
+                        }
+                    }
+                }
+            }
+        });
+        
+        return matches;
+    }
+    
     Type? getPrimaryType(Tree.QualifiedMemberOrTypeExpression qme) {
         Type? type = qme.primary.typeModel;
         
@@ -181,6 +230,16 @@ shared abstract class IdeCompletionManager() {
         }
         
         return emptyMap;
+    }
+    
+    shared Boolean isQualifiedType(Node node) {
+        if (is Tree.QualifiedType node) {
+            return true;
+        } else if (is Tree.QualifiedMemberOrTypeExpression node) {
+            return node.staticMethodReference;
+        }
+        
+        return false;
     }
 }
 

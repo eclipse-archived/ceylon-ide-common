@@ -46,12 +46,8 @@ import org.antlr.runtime {
 import java.util {
     List
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
-    IdeModuleManager
+    CeylonProject
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit
