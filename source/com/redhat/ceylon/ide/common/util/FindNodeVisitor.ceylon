@@ -11,15 +11,7 @@ shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Vis
 	
 	shared variable Node? node = null;
 	
-	Boolean inBounds(Node? that) {
-		if (exists that) {
-			return inBoundsLR(that, that);
-		}
-		
-		return false;
-	}
-	
-	Boolean inBoundsLR(Node? left, Node? right) {
+	Boolean inBounds(Node? left, Node? right = left) {
 		if (exists left) {
 			value rightNode = right else left; 
 			Integer? tokenStartIndex = left.startIndex?.intValue();
@@ -94,7 +86,7 @@ shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Vis
 		Term right = that.rightTerm else that;
 		Term left = that.leftTerm else that;
 		
-		if (inBoundsLR(left, right)) {
+		if (inBounds(left, right)) {
 			node=that;
 		}
 		super.visit(that);
@@ -102,7 +94,7 @@ shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Vis
 	
 	shared actual void visit(Tree.UnaryOperatorExpression that) {
 		Term term = that.term else that;
-		if (inBoundsLR(that, term) || inBoundsLR(term, that)) {
+		if (inBounds(that, term) || inBounds(term, that)) {
 			node=that;
 		}
 		super.visit(that);
@@ -137,7 +129,7 @@ shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Vis
 	}
 	
 	shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
-		if (inBoundsLR(that.memberOperator, that.identifier)) {
+		if (inBounds(that.memberOperator, that.identifier)) {
 			node=that;
 		}
 		else {
