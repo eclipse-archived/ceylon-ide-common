@@ -136,18 +136,11 @@ shared abstract class IdeCompletionManager() {
             }
         } else {
             if (memberOp, is Tree.Term|Tree.DocLink node) {
-                Type? type;
-                if (is Tree.DocLink node) {
-                    if (exists d = node.base) {
-                        type = getResultType(d) 
-                            else d.reference.fullType;
-                    }
-                    else {
-                        type = null;
-                    }
-                } else {
-                    type = node.typeModel;
-                }
+                value type = switch (node)
+                    case (is Tree.Term)
+                        node.typeModel
+                    case (is Tree.DocLink)
+                        docLinkType(node);
                 
                 if (exists type) {
                     return type.resolveAliases()
@@ -247,15 +240,25 @@ shared abstract class IdeCompletionManager() {
         }
     }
     
-    Type? getResultType(Declaration d) {
-        switch (d)
+    Type? docLinkType(Tree.DocLink node) {
+        if (exists base = node.base) {
+            return resultType(base)
+                else base.reference.fullType;
+        }
+        else {
+            return null;
+        }
+    }
+    
+    Type? resultType(Declaration declaration) {
+        switch (declaration)
         case (is TypedDeclaration) {
-            return d.type;
+            return declaration.type;
         }
         case (is TypeDeclaration) {
-            if (is Class d) {
-                if (!d.abstract) {
-                    return d.type;
+            if (is Class declaration) {
+                if (!declaration.abstract) {
+                    return declaration.type;
                 }
             }
             return null;
