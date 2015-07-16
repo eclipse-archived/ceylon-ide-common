@@ -5,10 +5,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
 	Referenceable,
 	Parameter,
-    Unit
+    Unit,
+    ModelUtil
 }
 import ceylon.interop.java {
-	CeylonList
+	CeylonList,
+    CeylonIterable
 }
 
 shared object nodes {
@@ -21,6 +23,18 @@ shared object nodes {
         }
         
         return null;
+    }
+    
+    shared Tree.Statement? findStatement(Tree.CompilationUnit cu, Node node) {
+        value fsv = FindStatementVisitor(node, false);
+        cu.visit(fsv);
+        return fsv.statement;
+    }
+
+    shared Tree.Statement? findTopLebelStatement(Tree.CompilationUnit cu, Node node) {
+        value fsv = FindStatementVisitor(node, true);
+        cu.visit(fsv);
+        return fsv.statement;
     }
     
 	shared Node? findNode(Tree.CompilationUnit cu, Integer offset) {
@@ -83,5 +97,28 @@ shared object nodes {
 		}
 
 		return null;
+	}
+	
+	shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit) {
+		for (pl in CeylonIterable(fa.parameterLists)) {
+			result.append("(");
+			variable Boolean first = true;
+			
+			for (p in CeylonIterable(pl.parameters)) {
+				if (first) {
+					first = false;
+				} else {
+					result.append(", ");
+				}
+				
+				if (is Tree.InitializerParameter p) {
+					if (!ModelUtil.isTypeUnknown(p.parameterModel.type)) {
+						result.append(p.parameterModel.type.asSourceCodeString(unit)).append(" ");
+					}
+				}
+				result.append(p.text); // TODO toString
+			}
+			result.append(")");
+		}
 	}
 }
