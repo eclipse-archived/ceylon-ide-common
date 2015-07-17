@@ -84,7 +84,7 @@ shared interface CommonExtractValueRefactoring satisfies CommonRefactoring {
         }
     }
 
-    shared default RefactoringResult extractValue(Tree.Term node, Tree.CompilationUnit cu, String newName, Boolean explicitType, Boolean getter) {
+    shared default ExtractValueResult extractValue(Tree.Term node, Tree.CompilationUnit cu, String newName, Boolean explicitType, Boolean getter) {
         value unit = node.unit;
         value myStatement = nodes.findStatement(cu, node);
         Boolean toplevel = if (is Tree.Declaration myStatement, myStatement.declarationModel.toplevel) then true else false;
@@ -99,7 +99,7 @@ shared interface CommonExtractValueRefactoring satisfies CommonRefactoring {
             StringBuilder sb = StringBuilder();
             
             mod = if (is Tree.VoidModifier t = unparened.type) then "void " else "function";
-            nodes.appendParameters(sb, unparened, unit);
+            nodes.appendParameters(sb, unparened, unit, toString);
             
             if (exists block = unparened.block) {
                 sb.append(" ").append(toString(block));
@@ -127,20 +127,20 @@ shared interface CommonExtractValueRefactoring satisfies CommonRefactoring {
         then ""
         else if (getter) then " => " else " = ";
         
-        value myDeclaration = "``myTypeDec`` newName``operator````exp``";
+        value myDeclaration = "``myTypeDec`` ``newName````operator````exp``";
  
-        return object satisfies RefactoringResult {
+        return object satisfies ExtractValueResult {
             shared actual String declaration => myDeclaration;
             shared actual Set<Declaration> declarationsToImport => declarations;
             shared actual Tree.Statement? statement => myStatement;
             shared actual String typeDec => myTypeDec;
         };
     }
-    
-    shared interface RefactoringResult {
-        shared formal String declaration;
-        shared formal Set<Declaration> declarationsToImport;
-        shared formal Tree.Statement? statement;
-        shared formal String typeDec;
-    }
+}
+
+shared interface ExtractValueResult {
+    shared formal String declaration;
+    shared formal Set<Declaration> declarationsToImport;
+    shared formal Tree.Statement? statement;
+    shared formal String typeDec;
 }

@@ -26,7 +26,7 @@ shared interface CommonRefactoring {
     shared formal Boolean searchInEditor();
     shared formal Tree.CompilationUnit rootNode;
     
-    Integer countDeclarationOccurrences() {
+    shared default Integer countDeclarationOccurrences() {
         variable Integer count = 0;
         for (pu in CeylonIterable(getAllUnits())) {
             if (searchInFile(pu)) {
@@ -39,7 +39,7 @@ shared interface CommonRefactoring {
         return count;
     }
     
-    Integer countReferences(Tree.CompilationUnit cu) {
+    shared default Integer countReferences(Tree.CompilationUnit cu) {
         return 0;
     }
 
