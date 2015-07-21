@@ -1,23 +1,28 @@
-import com.redhat.ceylon.compiler.typechecker.tree {
-	Node,
-	Tree
-}
-import com.redhat.ceylon.model.typechecker.model {
-	Referenceable,
-	Parameter,
-    Unit,
-    ModelUtil,
-    Type
-}
-import ceylon.interop.java {
-	CeylonList,
-    CeylonIterable,
-    javaString
-}
 import ceylon.collection {
     HashSet,
     MutableSet
 }
+import ceylon.interop.java {
+    CeylonList,
+    CeylonIterable,
+    javaString
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Node,
+    Tree,
+    Visitor
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Referenceable,
+    Parameter,
+    Unit,
+    ModelUtil,
+    Type,
+    Declaration,
+    Scope
+}
+
 import java.util.regex {
     Pattern
 }
@@ -32,14 +37,41 @@ shared object nodes {
         "try", "catch", "finally", "this", "outer", "super", "is", "exists", "nonempty", "then",
         "dynamic", "new", "let"];
     
-    shared Node? getReferencedNode(Referenceable? model) {
-        if (exists model) {
-            if (is Unit unit = model.unit) {
-                
+    shared Tree.Declaration? findDeclaration(Tree.CompilationUnit cu, Node node) {
+        value visitor = FindDeclarationVisitor(node);
+        cu.visit(visitor);
+        return visitor.declaration;
+    }
+    
+    shared Tree.Declaration? findDeclarationWithBody(Tree.CompilationUnit cu, Node node) {
+        value visitor = FindBodyContainerVisitor(node);
+        cu.visit(visitor);
+        return visitor.declaration;
+    }
+    
+    shared Tree.NamedArgument? findArgument(Tree.CompilationUnit cu, Node node) {
+        value visitor = FindArgumentVisitor(node);
+        cu.visit(visitor);
+        return visitor.declaration;
+    }
+    
+    shared Tree.BinaryOperatorExpression? findBinaryOperator(Tree.CompilationUnit cu, Node node) {
+        class FindBinaryVisitor() extends Visitor() {
+            shared late variable Tree.BinaryOperatorExpression? result;
+            
+            shared actual void visit(Tree.BinaryOperatorExpression that) {
+                if (node.startIndex.intValue() >= that.startIndex.intValue() && 
+                    node.stopIndex.intValue() <= that.stopIndex.intValue()) {
+                    result = that;
+                }
+                super.visit(that);
             }
         }
         
-        return null;
+        FindBinaryVisitor fcv = FindBinaryVisitor();
+        cu.visit(fcv);
+        
+        return fcv.result;
     }
     
     shared Tree.Statement? findStatement(Tree.CompilationUnit cu, Node node) {
@@ -47,22 +79,109 @@ shared object nodes {
         cu.visit(fsv);
         return fsv.statement;
     }
-
-    shared Tree.Statement? findTopLebelStatement(Tree.CompilationUnit cu, Node node) {
+    
+    shared Tree.Statement? findTopLevelStatement(Tree.CompilationUnit cu, Node node) {
         value fsv = FindStatementVisitor(node, true);
         cu.visit(fsv);
         return fsv.statement;
     }
+
+    shared Declaration getAbstraction(Declaration d) {
+        return if (ModelUtil.isOverloadedVersion(d))
+            then d.container.getDirectMember(d.name, null, false)
+            else d;
+    }
     
-	shared Node? findNode(Tree.CompilationUnit cu, Integer offset) {
-		FindNodeVisitor visitor = FindNodeVisitor(offset, offset + 1);
+    shared Tree.Declaration? getContainer(Tree.CompilationUnit cu, Declaration dec) {
+        class FindContainer() extends Visitor() {
+            Scope container = dec.container;
+            shared late variable Tree.Declaration? result;
+            
+            shared actual void visit(Tree.Declaration that) {
+                super.visit(that);
+                if (that.declarationModel.equals(container)) {
+                    result = that;
+                }
+            }
+        }
+        
+        FindContainer fc = FindContainer();
+        cu.visit(fc);
+        return fc.result;
+    }
+
+    shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit cu, Node node) {
+        if (is Tree.ImportMemberOrType node) {
+            return node;
+        }
+        
+        variable Declaration? declaration;
+        
+        if (is Tree.MemberOrTypeExpression node) {
+            declaration = node.declaration;
+        } else if (is Tree.SimpleType node) {
+            declaration = node.declarationModel;
+        } else if (is Tree.MemberLiteral node) {
+            declaration = node.declaration;
+        } else { 
+            return null;
+        }
+        
+        class FindImportVisitor() extends Visitor() {
+            shared late variable Tree.ImportMemberOrType? result;
+            
+            shared actual void visit(Tree.Declaration that) {}
+            
+            shared actual void visit(Tree.ImportMemberOrType that) {
+                super.visit(that);
+                Declaration? dec = that.declarationModel;
+                if (exists dec, exists d = declaration, dec.equals(d)) {
+                    result = that;
+                }
+            }
+        }
+
+        if (exists d = declaration) {
+            value visitor = FindImportVisitor();
+            visitor.visit(cu);
+            return visitor.result;
+        }
+        return null;
+    }
+    
+	shared Node? findNode(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset = startOffset + 1) {
+		FindNodeVisitor visitor = FindNodeVisitor(startOffset, endOffset);
 		
 		cu.visit(visitor);
 		
 		return visitor.node;
 	}
 	
-	shared Referenceable? getReferencedDeclaration(Node node, Tree.CompilationUnit rn) {
+	shared Node? findScope(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset) {
+		value visitor = FindScopeVisitor(endOffset, endOffset);
+		cu.visit(visitor);
+		return visitor.scope;
+	}
+	
+	shared Referenceable? getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
+        Referenceable? dec = getReferencedDeclaration(node);
+        
+        if (exists dec, exists unit = dec.unit, unit.equals(node.unit)) {
+            FindDeclarationNodeVisitor fdv = 
+                    FindDeclarationNodeVisitor(dec);
+            fdv.visit(rn);
+            
+            if (is Tree.Variable decNode = fdv.declarationNode) {
+                if (is Tree.SyntheticVariable type = decNode.type) {
+                    Tree.Term term = decNode.specifierExpression.expression.term;
+                    return getReferencedExplicitDeclaration(term, rn);
+                }
+            }
+        }
+        return dec;
+    }
+    
+	shared Referenceable? getReferencedDeclaration(Node node) {
 		//NOTE: this must accept a null node, returning null!
 		if (is Tree.MemberOrTypeExpression node) {
 			return node.declaration;
@@ -146,6 +265,17 @@ shared object nodes {
 	shared Integer getNodeEndOffset(Node? node) {
 		return (node?.stopIndex?.intValue() else -1) + 1;
 	}
+
+	shared Node? getReferencedNode(Referenceable? model) {
+		if (exists model) {
+			if (is Unit unit = model.unit) {
+				// TODO!
+			}
+		}
+		
+		return null;
+	}
+	
 
     shared String[] nameProposals(Node node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
