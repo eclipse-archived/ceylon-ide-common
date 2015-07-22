@@ -15,20 +15,23 @@ import com.redhat.ceylon.ide.common.util {
     NodePrinter
 }
 
-shared interface CommonRefactoring satisfies NodePrinter {
+shared interface Refactoring {
+    shared formal Boolean enabled;
+}
 
-    Tree.Term unparenthesize(Tree.Term term) {
+shared interface AbstractRefactoring satisfies NodePrinter & Refactoring {
+    shared Tree.Term unparenthesize(Tree.Term term) {
         if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
             return unparenthesize(term.term);
         }
         return term;
     }
-    
+
     shared formal List<PhasedUnit> getAllUnits();
     shared formal Boolean searchInFile(PhasedUnit pu);
     shared formal Boolean searchInEditor();
-    shared formal Tree.CompilationUnit rootNode;
-    
+    shared formal Tree.CompilationUnit? rootNode;
+
     shared default Integer countDeclarationOccurrences() {
         variable Integer count = 0;
         for (pu in CeylonIterable(getAllUnits())) {
@@ -36,15 +39,13 @@ shared interface CommonRefactoring satisfies NodePrinter {
                 count += countReferences(pu.compilationUnit);
             }
         }
-        if (searchInEditor()) {
-            count += countReferences(rootNode);
+        if (searchInEditor(), exists existingRoot=rootNode) {
+            count += countReferences(existingRoot);
         }
         return count;
     }
-    
-    shared default Integer countReferences(Tree.CompilationUnit cu) {
-        return 0;
-    }
+
+    shared default Integer countReferences(Tree.CompilationUnit cu) => 0;
 
     shared actual default String toString(Node node) => node.text;
 }
