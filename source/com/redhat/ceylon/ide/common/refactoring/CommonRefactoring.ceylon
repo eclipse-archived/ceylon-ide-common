@@ -11,8 +11,11 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import ceylon.interop.java {
     CeylonIterable
 }
+import com.redhat.ceylon.ide.common.util {
+    NodePrinter
+}
 
-shared interface CommonRefactoring {
+shared interface CommonRefactoring satisfies NodePrinter {
 
     Tree.Term unparenthesize(Tree.Term term) {
         if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
@@ -43,5 +46,5 @@ shared interface CommonRefactoring {
         return 0;
     }
 
-    shared default String toString(Node node) => node.text;
+    shared actual default String toString(Node node) => node.text;
 }

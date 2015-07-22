@@ -1,3 +1,7 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -10,12 +14,13 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     Module
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
+
 import java.util {
     Set,
     HashSet
+}
+import java.lang {
+    StringBuilder
 }
 
 shared interface CommonExtractValueRefactoring satisfies CommonRefactoring {
@@ -99,7 +104,7 @@ shared interface CommonExtractValueRefactoring satisfies CommonRefactoring {
             StringBuilder sb = StringBuilder();
             
             mod = if (is Tree.VoidModifier t = unparened.type) then "void " else "function";
-            nodes.appendParameters(sb, unparened, unit, toString);
+            nodes.appendParameters(sb, unparened, unit, this);
             
             if (exists block = unparened.block) {
                 sb.append(" ").append(toString(block));

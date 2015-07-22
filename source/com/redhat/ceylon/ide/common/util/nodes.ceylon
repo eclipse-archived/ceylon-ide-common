@@ -22,7 +22,8 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.lang {
     ObjectArray,
-    JString=String
+    JString=String,
+    StringBuilder
 }
 import java.util {
     Set,
@@ -361,7 +362,7 @@ shared object nodes {
 		return null;
 	}
 	
-	shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, String toString(Node node)) {
+	shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
 		for (pl in CeylonIterable(fa.parameterLists)) {
 			result.append("(");
 			variable Boolean first = true;
@@ -378,7 +379,7 @@ shared object nodes {
 						result.append(p.parameterModel.type.asSourceCodeString(unit)).append(" ");
 					}
 				}
-				result.append(toString(p));
+				result.append(printer.toString(p));
 			}
 			result.append(")");
 		}
@@ -477,4 +478,8 @@ shared object nodes {
             }
         }
     }
+}
+
+shared interface NodePrinter {
+    shared formal String toString(Node node);
 }
