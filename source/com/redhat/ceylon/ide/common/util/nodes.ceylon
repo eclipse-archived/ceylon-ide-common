@@ -1,7 +1,3 @@
-import ceylon.collection {
-    HashSet,
-    MutableSet
-}
 import ceylon.interop.java {
     CeylonList,
     CeylonIterable,
@@ -11,7 +7,8 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
-    Visitor
+    Visitor,
+    CustomTree
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -23,8 +20,21 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope
 }
 
+import java.lang {
+    ObjectArray,
+    JString=String
+}
+import java.util {
+    Set,
+    HashSet
+}
 import java.util.regex {
     Pattern
+}
+
+import org.antlr.runtime {
+    Token,
+    CommonToken
 }
 
 shared object nodes {
@@ -149,10 +159,10 @@ shared object nodes {
         return null;
     }
     
-	shared Node? findNode(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset = startOffset + 1) {
+	shared Node? findNode(Node node, Integer startOffset, Integer endOffset = startOffset + 1) {
 		FindNodeVisitor visitor = FindNodeVisitor(startOffset, endOffset);
 		
-		cu.visit(visitor);
+		node.visit(visitor);
 		
 		return visitor.node;
 	}
@@ -163,14 +173,130 @@ shared object nodes {
 		return visitor.scope;
 	}
 	
+	shared Integer getIdentifyingStartOffset(Node node) {
+		return getNodeStartOffset(getIdentifyingNode(node));
+	}
+	
+	shared Integer getIdentifyingEndOffset(Node node) {
+		return getNodeEndOffset(getIdentifyingNode(node));
+	}
+	
+	shared Integer getIdentifyingLength(Node node) {
+		return getIdentifyingEndOffset(node) - 
+				getIdentifyingStartOffset(node);
+	}
+	
+	shared Integer getNodeLength(Node node) {
+		return getNodeEndOffset(node) - 
+				getNodeStartOffset(node);
+	}
+	
+	shared Node? getIdentifyingNode(Node node) {
+		if (is Tree.Declaration declaration = node) {
+			variable Tree.Identifier? identifier = declaration.identifier;
+
+			if (!exists i = identifier, !is Tree.MissingDeclaration node) {
+				//TODO: whoah! this is really ugly!
+				Token? tok = node.mainToken;
+				if (!exists tok) {
+					return null;
+				}
+				else {
+					CommonToken fakeToken = CommonToken(tok);
+					identifier = Tree.Identifier(fakeToken);
+				}
+			}
+			return identifier;
+		}
+		else if (is Tree.ModuleDescriptor node) {
+			return node.importPath;
+		}
+		else if (is Tree.PackageDescriptor node) {
+			return node.importPath;
+		}
+		else if (is Tree.Import node) {
+			return node.importPath;
+		}
+		else if (is Tree.ImportModule node) {
+			return node.importPath;
+		}
+		else if (is Tree.NamedArgument node) {
+			Tree.Identifier? id = node.identifier;
+			
+			return if (exists t = id?.token) then id else node;
+		}
+		else if (is Tree.StaticMemberOrTypeExpression node) {
+			return node.identifier;
+		}
+		else if (is CustomTree.ExtendedTypeExpression node) {
+			//TODO: whoah! this is really ugly!
+			return node.type.identifier;
+		}
+		else if (is Tree.SimpleType node) {
+			return node.identifier;
+		}
+		else if (is Tree.ImportMemberOrType node) {
+			return node.identifier;
+		}
+		else if (is Tree.InitializerParameter node) {
+			return node.identifier;
+		}
+		else if (is Tree.MemberLiteral node) {
+			return node.identifier;
+		}
+		else if (is Tree.TypeLiteral node) {
+			return getIdentifyingNode(node.type);
+		}
+		//TODO: this would be better for navigation to refinements
+		//      so I guess we should split this method into two
+		//      versions :-/
+		/*else if (node instanceof Tree.SpecifierStatement) {
+		    Tree.SpecifierStatement st = (Tree.SpecifierStatement) node;
+		    if (st.getRefinement()) {
+		        Tree.Term lhs = st.getBaseMemberExpression();
+		        while (lhs instanceof Tree.ParameterizedExpression) {
+		            lhs = ((Tree.ParameterizedExpression) lhs).getPrimary();
+		        }
+		        if (lhs instanceof Tree.StaticMemberOrTypeExpression) {
+		            return ((Tree.StaticMemberOrTypeExpression) lhs).getIdentifier();
+		        }
+		    }
+		    return node;
+		 }*/
+		else {    
+			return node;
+		}
+	}
+
+	// TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)	
+	
+	shared Integer getNodeStartOffset(Node? node) {
+		return node?.startIndex?.intValue() else 0;
+	}
+	
+	shared Integer getNodeEndOffset(Node? node) {
+		return (node?.stopIndex?.intValue() else -1) + 1;
+	}
+	
+	shared Node? getReferencedNode(Referenceable? model) {
+		if (exists model) {
+			if (is Unit unit = model.unit) {
+				// TODO!
+			}
+		}
+		
+		return null;
+	}
+	
+	
 	shared Referenceable? getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
         Referenceable? dec = getReferencedDeclaration(node);
-        
+
         if (exists dec, exists unit = dec.unit, unit.equals(node.unit)) {
-            FindDeclarationNodeVisitor fdv = 
+            FindDeclarationNodeVisitor fdv =
                     FindDeclarationNodeVisitor(dec);
             fdv.visit(rn);
-            
+
             if (is Tree.Variable decNode = fdv.declarationNode) {
                 if (is Tree.SyntheticVariable type = decNode.type) {
                     Tree.Term term = decNode.specifierExpression.expression.term;
@@ -180,7 +306,7 @@ shared object nodes {
         }
         return dec;
     }
-    
+
 	shared Referenceable? getReferencedDeclaration(Node node) {
 		//NOTE: this must accept a null node, returning null!
 		if (is Tree.MemberOrTypeExpression node) {
@@ -257,29 +383,10 @@ shared object nodes {
 			result.append(")");
 		}
 	}
-	
-	shared Integer getNodeStartOffset(Node? node) {
-		return node?.startIndex?.intValue() else 0;
-	}
-	
-	shared Integer getNodeEndOffset(Node? node) {
-		return (node?.stopIndex?.intValue() else -1) + 1;
-	}
 
-	shared Node? getReferencedNode(Referenceable? model) {
-		if (exists model) {
-			if (is Unit unit = model.unit) {
-				// TODO!
-			}
-		}
-		
-		return null;
-	}
-	
-
-    shared String[] nameProposals(Node node, Boolean unplural = false) {
+    shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
-        MutableSet<String> names = HashSet<String>();
+        Set<String> names = HashSet<String>();
         variable Node identifyingNode = myNode;
         
         if (is Tree.Expression n = identifyingNode) {
@@ -348,10 +455,10 @@ shared object nodes {
             names.add("it");
         }
 
-        return names.sequence();
+        return names.toArray(ObjectArray<JString>(0));
     }
     
-    shared void addNameProposals(MutableSet<String> names, Boolean plural, String tn) {
+    shared void addNameProposals(Set<String>|Set<JString> names, Boolean plural, String tn) {
         value name = (tn.first?.lowercased?.string else "") + tn.spanFrom(1);
         value matcher = idPattern.matcher(javaString(name));
         
@@ -359,11 +466,14 @@ shared object nodes {
             value loc = matcher.start(2);
             value initial = name.span(matcher.start(1), loc - 1).lowercased;
             value subname = initial + name.spanFrom(loc + 1) + (if (plural) then "s" else "");
-
-            if (keywords.contains(subname)) {
-                names.add("\\i" + subname);
+            value escaped = if (keywords.contains(subname))
+                then "\\i" + subname
+                else subname;
+            
+            if (is Set<String> names) {
+                names.add(escaped);
             } else {
-                names.add(subname);
+                names.add(javaString(escaped));
             }
         }
     }
