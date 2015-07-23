@@ -1,7 +1,12 @@
+import ceylon.collection {
+    HashSet,
+    MutableSet
+}
 import ceylon.interop.java {
     CeylonList,
     CeylonIterable,
-    javaString
+    javaString,
+    createJavaStringArray
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -26,8 +31,7 @@ import java.lang {
     StringBuilder
 }
 import java.util {
-    Set,
-    HashSet
+    JSet=Set
 }
 import java.util.regex {
     Pattern
@@ -387,7 +391,7 @@ shared object nodes {
 
     shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
-        Set<String> names = HashSet<String>();
+        MutableSet<String> names = HashSet<String>();
         variable Node identifyingNode = myNode;
         
         if (is Tree.Expression n = identifyingNode) {
@@ -456,10 +460,10 @@ shared object nodes {
             names.add("it");
         }
 
-        return names.toArray(ObjectArray<JString>(0));
+        return createJavaStringArray(names);
     }
     
-    shared void addNameProposals(Set<String>|Set<JString> names, Boolean plural, String tn) {
+    shared void addNameProposals(MutableSet<String>|JSet<JString> names, Boolean plural, String tn) {
         value name = (tn.first?.lowercased?.string else "") + tn.spanFrom(1);
         value matcher = idPattern.matcher(javaString(name));
         
@@ -471,7 +475,7 @@ shared object nodes {
                 then "\\i" + subname
                 else subname;
             
-            if (is Set<String> names) {
+            if (is MutableSet<String> names) {
                 names.add(escaped);
             } else {
                 names.add(javaString(escaped));
