@@ -4,18 +4,23 @@ import ceylon.collection {
 
 import java.util.concurrent.locks { ReentrantReadWriteLock,
     Lock }
+import java.lang {
+    InterruptedException
+}
 
 shared abstract class CeylonProjects<IdeArtifact>()
         given IdeArtifact satisfies Object {
     value projectMap = HashMap<IdeArtifact, CeylonProject<IdeArtifact>>();
 
     value lock = ReentrantReadWriteLock(true);
-    T withLocking<T=Anything>(Boolean write, T do()) {
+    T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
         l.lockInterruptibly();
         try {
             return do();
-        } finally {
+        } catch(InterruptedException e) {
+            return interrupted();
+        }finally {
             l.unlock();
         }
     }
@@ -26,6 +31,7 @@ shared abstract class CeylonProjects<IdeArtifact>()
         => withLocking {
             write=false;
             do() => projectMap.items.sequence();
+            interrupted() => {};
         };
 
 
@@ -33,12 +39,14 @@ shared abstract class CeylonProjects<IdeArtifact>()
         => withLocking {
             write=false;
             do() => if (exists ideArtifact) then projectMap[ideArtifact] else null;
+            interrupted() => null;
         };
 
     shared Boolean removeProject(IdeArtifact ideArtifact)
         => withLocking {
             write=true;
             do() => projectMap.remove(ideArtifact) exists;
+            interrupted() => false;
         };
 
     shared Boolean addProject(IdeArtifact ideArtifact)
@@ -52,12 +60,14 @@ shared abstract class CeylonProjects<IdeArtifact>()
                      return true;
                  }
             }
+            interrupted() => false;
         };
 
     shared void clearProjects()
         => withLocking {
             write=true;
             do() => projectMap.clear();
+            interrupted() => null;
         };
 
 }
