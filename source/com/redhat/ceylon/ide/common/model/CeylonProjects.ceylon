@@ -15,13 +15,15 @@ shared abstract class CeylonProjects<IdeArtifact>()
     value lock = ReentrantReadWriteLock(true);
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
-        l.lockInterruptibly();
         try {
-            return do();
+            l.lockInterruptibly();
+            try {
+                return do();
+            }finally {
+                l.unlock();
+            }
         } catch(InterruptedException e) {
             return interrupted();
-        }finally {
-            l.unlock();
         }
     }
 
