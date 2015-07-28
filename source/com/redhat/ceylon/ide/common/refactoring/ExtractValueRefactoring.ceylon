@@ -23,81 +23,122 @@ import java.lang {
     StringBuilder
 }
 
-shared interface ExtractValueRefactoring satisfies AbstractRefactoring {
-
-    Declaration getAbstraction(Declaration d) {
-        if (ModelUtil.isOverloadedVersion(d)) {
-            return d.container.getDirectMember(d.name, null, false);
+Boolean isImported(Declaration declaration, Tree.CompilationUnit cu) {
+    for (i in CeylonIterable(cu.unit.imports)) {
+        if (i.declaration.equals(getAbstraction(declaration))) {
+            return true;
         }
-
-        return d;
     }
 
-    Boolean isImported(Declaration declaration, Tree.CompilationUnit cu) {
-        for (i in CeylonIterable(cu.unit.imports)) {
-            if (i.declaration.equals(getAbstraction(declaration))) {
-                return true;
+    return false;
+}
+
+void importDeclaration(Set<Declaration> declarations, Declaration declaration, Tree.CompilationUnit cu) {
+    if (!declaration.parameter) {
+        value p = declaration.unit.\ipackage;
+        value pkg = cu.unit.\ipackage;
+
+        if (!p.nameAsString.empty, !p.equals(pkg), !p.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME),
+            (!declaration.classOrInterfaceMember || declaration.staticallyImportable),
+            !isImported(declaration, cu)) {
+            declarations.add(declaration);
+        }
+    }
+}
+
+void importType(Set<Declaration> declarations, Type? type, Tree.CompilationUnit cu) {
+    if (exists type) {
+        if (type.unknown || type.nothing) {
+
+        } else if (type.union) {
+            for (t in CeylonIterable(type.caseTypes)) {
+                importType(declarations, t, cu);
             }
-        }
-
-        return false;
-    }
-
-    void importDeclaration(Set<Declaration> declarations, Declaration declaration, Tree.CompilationUnit cu) {
-        if (!declaration.parameter) {
-            value p = declaration.unit.\ipackage;
-            value pkg = cu.unit.\ipackage;
-
-            if (!p.nameAsString.empty, !p.equals(pkg), !p.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME),
-                (!declaration.classOrInterfaceMember || declaration.staticallyImportable),
-                !isImported(declaration, cu)) {
-                declarations.add(declaration);
+        } else if (type.intersection) {
+            for (t in CeylonIterable(type.satisfiedTypes)) {
+                importType(declarations, t, cu);
             }
-        }
-    }
+        } else {
+            importType(declarations, type.qualifyingType, cu);
 
-    void importType(Set<Declaration> declarations, Type? type, Tree.CompilationUnit cu) {
-        if (exists type) {
-            if (type.unknown || type.nothing) {
+            if (type.classOrInterface, type.declaration.toplevel) {
+                importDeclaration(declarations, type.declaration, cu);
 
-            } else if (type.union) {
-                for (t in CeylonIterable(type.caseTypes)) {
+                for (t in CeylonIterable(type.typeArgumentList)) {
                     importType(declarations, t, cu);
                 }
-            } else if (type.intersection) {
-                for (t in CeylonIterable(type.satisfiedTypes)) {
-                    importType(declarations, t, cu);
-                }
-            } else {
-                importType(declarations, type.qualifyingType, cu);
-
-                if (type.classOrInterface, type.declaration.toplevel) {
-                    importDeclaration(declarations, type.declaration, cu);
-
-                    for (t in CeylonIterable(type.typeArgumentList)) {
-                        importType(declarations, t, cu);
-                    }
-                }
             }
         }
     }
+}
 
-    Tree.FunctionArgument? asFunctionArgument(Tree.Term term)
-            => if (is Tree.FunctionArgument term) then term else null;
+Declaration getAbstraction(Declaration d) {
+    if (ModelUtil.isOverloadedVersion(d)) {
+        return d.container.getDirectMember(d.name, null, false);
+    }
 
-    shared default ExtractValueResult extractValue(Tree.Term node, Tree.CompilationUnit cu, String newName, Boolean explicitType, Boolean getter) {
+    return d;
+}
+
+
+shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefactoring & NewNameRefactoring {
+    shared interface Result {
+        shared formal String declaration;
+        shared formal Set<Declaration> declarationsToImport;
+        shared formal Tree.Statement? statement;
+        shared formal String typeDec;
+    }
+
+    shared formal actual variable Boolean canBeInferred;
+    shared formal actual variable Type? type;
+    shared formal variable Boolean getter;
+
+    shared actual String initialNewName()
+            => if (exists node = editorData?.node)
+                then nodes.nameProposals(node).get(0).string
+                else "";
+
+    shared actual default Boolean editable
+            => true;
+            /*
+             TODO : This should be uncommented and implemented here when EditedSourceFile
+             will be made available.
+
+             rootNode?.unit is EditedSourceFile<Nothing, Nothing, Nothing, Nothing> ||
+             rootNode?.unit is ProjectSourceFile<Nothing, Nothing, Nothing, Nothing>;
+             */
+
+    shared actual Boolean enabled
+            => if (exists data=editorData,
+                    exists sourceFile=data.sourceVirtualFile,
+                    editable &&
+                    sourceFile.name != "module.ceylon" &&
+                    sourceFile.name != "package.ceylon" &&
+                    data.node is Tree.Term)
+    then true
+    else false;
+
+    shared default Result extractValue() {
+        assert(exists data=editorData,
+            exists sourceFile=data.sourceVirtualFile,
+            exists cu=data.rootNode,
+            is Tree.Term node=data.node);
+
         value unit = node.unit;
         value myStatement = nodes.findStatement(cu, node);
         value toplevel = if (is Tree.Declaration myStatement)
                             then myStatement.declarationModel.toplevel
                             else false;
-        variable Type? type = unit.denotableType(node.typeModel);
+        type = unit.denotableType(node.typeModel);
         value unparened = unparenthesize(node);
 
         String mod;
         String exp;
 
-        Tree.FunctionArgument? anonFunction = asFunctionArgument(unparened);
+        Tree.FunctionArgument? anonFunction =
+                if (is Tree.FunctionArgument unparened)
+                then unparened
+                else null;
 
         if (exists fa = anonFunction) {
             type = unit.getCallableReturnType(type);
@@ -138,7 +179,7 @@ shared interface ExtractValueRefactoring satisfies AbstractRefactoring {
                     else if (getter) then " => " else " = "
                     ````exp``";
 
-        return object satisfies ExtractValueResult {
+        return object satisfies Result {
             shared actual String declaration => myDeclaration;
             shared actual Set<Declaration> declarationsToImport => declarations;
             shared actual Tree.Statement? statement => myStatement;
@@ -146,12 +187,4 @@ shared interface ExtractValueRefactoring satisfies AbstractRefactoring {
         };
     }
 
-    shared variable formal Boolean canBeInferred;
-}
-
-shared interface ExtractValueResult {
-    shared formal String declaration;
-    shared formal Set<Declaration> declarationsToImport;
-    shared formal Tree.Statement? statement;
-    shared formal String typeDec;
 }

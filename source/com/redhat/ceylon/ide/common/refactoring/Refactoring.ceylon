@@ -14,12 +14,29 @@ import ceylon.interop.java {
 import com.redhat.ceylon.ide.common.util {
     NodePrinter
 }
+import org.antlr.runtime {
+    CommonToken
+}
+import com.redhat.ceylon.compiler.typechecker.io {
+    VirtualFile
+}
 
 shared interface Refactoring {
     shared formal Boolean enabled;
 }
 
-shared interface AbstractRefactoring satisfies NodePrinter & Refactoring {
+shared interface AbstractRefactoring satisfies Refactoring & NodePrinter {
+    shared interface EditorData {
+        shared formal List<CommonToken>? tokens;
+        shared formal Tree.CompilationUnit? rootNode;
+        shared formal Node? node;
+        shared formal VirtualFile? sourceVirtualFile;
+    }
+
+    shared formal EditorData? editorData;
+
+    shared formal Boolean editable;
+
     shared Tree.Term unparenthesize(Tree.Term term) {
         if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
             return unparenthesize(term.term);
