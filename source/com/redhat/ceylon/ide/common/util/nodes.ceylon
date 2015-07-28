@@ -72,8 +72,8 @@ shared object nodes {
     
     shared Tree.BinaryOperatorExpression? findBinaryOperator(Tree.CompilationUnit cu, Node node) {
         class FindBinaryVisitor() extends Visitor() {
-            shared late variable Tree.BinaryOperatorExpression? result;
-            
+            shared variable Tree.BinaryOperatorExpression? result=null;
+
             shared actual void visit(Tree.BinaryOperatorExpression that) {
                 if (node.startIndex.intValue() >= that.startIndex.intValue() && 
                     node.stopIndex.intValue() <= that.stopIndex.intValue()) {
@@ -110,8 +110,8 @@ shared object nodes {
     shared Tree.Declaration? getContainer(Tree.CompilationUnit cu, Declaration dec) {
         class FindContainer() extends Visitor() {
             Scope container = dec.container;
-            shared late variable Tree.Declaration? result;
-            
+            shared variable Tree.Declaration? result=null;
+
             shared actual void visit(Tree.Declaration that) {
                 super.visit(that);
                 if (that.declarationModel.equals(container)) {
@@ -143,8 +143,8 @@ shared object nodes {
         }
         
         class FindImportVisitor() extends Visitor() {
-            shared late variable Tree.ImportMemberOrType? result;
-            
+            shared variable Tree.ImportMemberOrType? result=null;
+
             shared actual void visit(Tree.Declaration that) {}
             
             shared actual void visit(Tree.ImportMemberOrType that) {
@@ -163,138 +163,138 @@ shared object nodes {
         }
         return null;
     }
-    
-	shared Node? findNode(Node node, Integer startOffset, Integer endOffset = startOffset + 1) {
-		FindNodeVisitor visitor = FindNodeVisitor(startOffset, endOffset);
-		
-		node.visit(visitor);
-		
-		return visitor.node;
-	}
-	
-	shared Node? findScope(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset) {
-		value visitor = FindScopeVisitor(endOffset, endOffset);
-		cu.visit(visitor);
-		return visitor.scope;
-	}
-	
-	shared Integer getIdentifyingStartOffset(Node node) {
-		return getNodeStartOffset(getIdentifyingNode(node));
-	}
-	
-	shared Integer getIdentifyingEndOffset(Node node) {
-		return getNodeEndOffset(getIdentifyingNode(node));
-	}
-	
-	shared Integer getIdentifyingLength(Node node) {
-		return getIdentifyingEndOffset(node) - 
-				getIdentifyingStartOffset(node);
-	}
-	
-	shared Integer getNodeLength(Node node) {
-		return getNodeEndOffset(node) - 
-				getNodeStartOffset(node);
-	}
-	
-	shared Node? getIdentifyingNode(Node node) {
-		if (is Tree.Declaration declaration = node) {
-			variable Tree.Identifier? identifier = declaration.identifier;
 
-			if (!exists i = identifier, !is Tree.MissingDeclaration node) {
-				//TODO: whoah! this is really ugly!
-				Token? tok = node.mainToken;
-				if (!exists tok) {
-					return null;
-				}
-				else {
-					CommonToken fakeToken = CommonToken(tok);
-					identifier = Tree.Identifier(fakeToken);
-				}
-			}
-			return identifier;
-		}
-		else if (is Tree.ModuleDescriptor node) {
-			return node.importPath;
-		}
-		else if (is Tree.PackageDescriptor node) {
-			return node.importPath;
-		}
-		else if (is Tree.Import node) {
-			return node.importPath;
-		}
-		else if (is Tree.ImportModule node) {
-			return node.importPath;
-		}
-		else if (is Tree.NamedArgument node) {
-			Tree.Identifier? id = node.identifier;
-			
-			return if (exists t = id?.token) then id else node;
-		}
-		else if (is Tree.StaticMemberOrTypeExpression node) {
-			return node.identifier;
-		}
-		else if (is CustomTree.ExtendedTypeExpression node) {
-			//TODO: whoah! this is really ugly!
-			return node.type.identifier;
-		}
-		else if (is Tree.SimpleType node) {
-			return node.identifier;
-		}
-		else if (is Tree.ImportMemberOrType node) {
-			return node.identifier;
-		}
-		else if (is Tree.InitializerParameter node) {
-			return node.identifier;
-		}
-		else if (is Tree.MemberLiteral node) {
-			return node.identifier;
-		}
-		else if (is Tree.TypeLiteral node) {
-			return getIdentifyingNode(node.type);
-		}
-		//TODO: this would be better for navigation to refinements
-		//      so I guess we should split this method into two
-		//      versions :-/
-		/*else if (node instanceof Tree.SpecifierStatement) {
-		    Tree.SpecifierStatement st = (Tree.SpecifierStatement) node;
-		    if (st.getRefinement()) {
-		        Tree.Term lhs = st.getBaseMemberExpression();
-		        while (lhs instanceof Tree.ParameterizedExpression) {
-		            lhs = ((Tree.ParameterizedExpression) lhs).getPrimary();
-		        }
-		        if (lhs instanceof Tree.StaticMemberOrTypeExpression) {
-		            return ((Tree.StaticMemberOrTypeExpression) lhs).getIdentifier();
-		        }
-		    }
-		    return node;
-		 }*/
-		else {    
-			return node;
-		}
-	}
+    shared Node? findNode(Node node, Integer startOffset, Integer endOffset = startOffset + 1) {
+        FindNodeVisitor visitor = FindNodeVisitor(startOffset, endOffset);
 
-	// TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)	
-	
-	shared Integer getNodeStartOffset(Node? node) {
-		return node?.startIndex?.intValue() else 0;
-	}
-	
-	shared Integer getNodeEndOffset(Node? node) {
-		return (node?.stopIndex?.intValue() else -1) + 1;
-	}
-	
-	shared Node? getReferencedNode(Referenceable? model) {
-		if (exists model) {
-			if (is Unit unit = model.unit) {
-				// TODO!
-			}
-		}
-		
-		return null;
-	}
-	
-	
-	shared Referenceable? getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
+        node.visit(visitor);
+
+        return visitor.node;
+    }
+
+    shared Node? findScope(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset) {
+        value visitor = FindScopeVisitor(endOffset, endOffset);
+        cu.visit(visitor);
+        return visitor.scope;
+    }
+
+    shared Integer getIdentifyingStartOffset(Node node) {
+        return getNodeStartOffset(getIdentifyingNode(node));
+    }
+
+    shared Integer getIdentifyingEndOffset(Node node) {
+        return getNodeEndOffset(getIdentifyingNode(node));
+    }
+
+    shared Integer getIdentifyingLength(Node node) {
+        return getIdentifyingEndOffset(node) -
+                getIdentifyingStartOffset(node);
+    }
+
+    shared Integer getNodeLength(Node node) {
+        return getNodeEndOffset(node) -
+                getNodeStartOffset(node);
+    }
+
+    shared Node? getIdentifyingNode(Node node) {
+        if (is Tree.Declaration declaration = node) {
+            variable Tree.Identifier? identifier = declaration.identifier;
+
+            if (!exists i = identifier, !is Tree.MissingDeclaration node) {
+                //TODO: whoah! this is really ugly!
+                Token? tok = node.mainToken;
+                if (!exists tok) {
+                    return null;
+                }
+                else {
+                    CommonToken fakeToken = CommonToken(tok);
+                    identifier = Tree.Identifier(fakeToken);
+                }
+            }
+            return identifier;
+        }
+        else if (is Tree.ModuleDescriptor node) {
+            return node.importPath;
+        }
+        else if (is Tree.PackageDescriptor node) {
+            return node.importPath;
+        }
+        else if (is Tree.Import node) {
+            return node.importPath;
+        }
+        else if (is Tree.ImportModule node) {
+            return node.importPath;
+        }
+        else if (is Tree.NamedArgument node) {
+            Tree.Identifier? id = node.identifier;
+
+            return if (exists t = id?.token) then id else node;
+        }
+        else if (is Tree.StaticMemberOrTypeExpression node) {
+            return node.identifier;
+        }
+        else if (is CustomTree.ExtendedTypeExpression node) {
+            //TODO: whoah! this is really ugly!
+            return node.type.identifier;
+        }
+        else if (is Tree.SimpleType node) {
+            return node.identifier;
+        }
+        else if (is Tree.ImportMemberOrType node) {
+            return node.identifier;
+        }
+        else if (is Tree.InitializerParameter node) {
+            return node.identifier;
+        }
+        else if (is Tree.MemberLiteral node) {
+            return node.identifier;
+        }
+        else if (is Tree.TypeLiteral node) {
+            return getIdentifyingNode(node.type);
+        }
+        //TODO: this would be better for navigation to refinements
+        //      so I guess we should split this method into two
+        //      versions :-/
+        /*else if (node instanceof Tree.SpecifierStatement) {
+            Tree.SpecifierStatement st = (Tree.SpecifierStatement) node;
+            if (st.getRefinement()) {
+                Tree.Term lhs = st.getBaseMemberExpression();
+                while (lhs instanceof Tree.ParameterizedExpression) {
+                    lhs = ((Tree.ParameterizedExpression) lhs).getPrimary();
+                }
+                if (lhs instanceof Tree.StaticMemberOrTypeExpression) {
+                    return ((Tree.StaticMemberOrTypeExpression) lhs).getIdentifier();
+                }
+            }
+            return node;
+         }*/
+        else {
+            return node;
+        }
+    }
+
+    // TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)
+
+    shared Integer getNodeStartOffset(Node? node) {
+        return node?.startIndex?.intValue() else 0;
+    }
+
+    shared Integer getNodeEndOffset(Node? node) {
+        return (node?.stopIndex?.intValue() else -1) + 1;
+    }
+
+    shared Node? getReferencedNode(Referenceable? model) {
+        if (exists model) {
+            if (is Unit unit = model.unit) {
+                // TODO!
+            }
+        }
+
+        return null;
+    }
+
+
+    shared Referenceable? getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
         Referenceable? dec = getReferencedDeclaration(node);
 
         if (exists dec, exists unit = dec.unit, unit.equals(node.unit)) {
@@ -312,96 +312,96 @@ shared object nodes {
         return dec;
     }
 
-	shared Referenceable? getReferencedDeclaration(Node node) {
-		//NOTE: this must accept a null node, returning null!
-		if (is Tree.MemberOrTypeExpression node) {
-			return node.declaration;
-		} 
-		else if (is Tree.SimpleType node) {
-			return node.declarationModel;
-		} 
-		else if (is Tree.ImportMemberOrType node) {
-			return node.declarationModel;
-		} 
-		else if (is Tree.Declaration node) {
-			return node.declarationModel;
-		} 
-		else if (is Tree.NamedArgument node) {
-			Parameter? p = node.parameter;
-			if (exists p) {
-				return p.model;
-			}
-		}
-		else if (is Tree.InitializerParameter node) {
-			Parameter? p = node.parameterModel;
-			if (exists p) {
-				return p.model;
-			}
-		}
-		else if (is Tree.MetaLiteral node) {
-			return node.declaration;
-		}
-		else if (is Tree.SelfExpression node) {
-			return node.declarationModel;
-		}
-		else if (is Tree.Outer node) {
-			return node.declarationModel;
-		}
-		else if (is Tree.Return node) {
-			return node.declaration;
-		}
-		else if (is Tree.DocLink node) {
-			value qualified = CeylonList(node.qualified);
-			if (!qualified.empty) {
-				return qualified.last;
-			}
-			else {
-				return node.base;
-			}
-		}
-		else if (is Tree.ImportPath node) {
-			return node.model;
-		}
+    shared Referenceable? getReferencedDeclaration(Node node) {
+        //NOTE: this must accept a null node, returning null!
+        if (is Tree.MemberOrTypeExpression node) {
+            return node.declaration;
+        }
+        else if (is Tree.SimpleType node) {
+            return node.declarationModel;
+        }
+        else if (is Tree.ImportMemberOrType node) {
+            return node.declarationModel;
+        }
+        else if (is Tree.Declaration node) {
+            return node.declarationModel;
+        }
+        else if (is Tree.NamedArgument node) {
+            Parameter? p = node.parameter;
+            if (exists p) {
+                return p.model;
+            }
+        }
+        else if (is Tree.InitializerParameter node) {
+            Parameter? p = node.parameterModel;
+            if (exists p) {
+                return p.model;
+            }
+        }
+        else if (is Tree.MetaLiteral node) {
+            return node.declaration;
+        }
+        else if (is Tree.SelfExpression node) {
+            return node.declarationModel;
+        }
+        else if (is Tree.Outer node) {
+            return node.declarationModel;
+        }
+        else if (is Tree.Return node) {
+            return node.declaration;
+        }
+        else if (is Tree.DocLink node) {
+            value qualified = CeylonList(node.qualified);
+            if (!qualified.empty) {
+                return qualified.last;
+            }
+            else {
+                return node.base;
+            }
+        }
+        else if (is Tree.ImportPath node) {
+            return node.model;
+        }
 
-		return null;
-	}
-	
-	shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
-		for (pl in CeylonIterable(fa.parameterLists)) {
-			result.append("(");
-			variable Boolean first = true;
-			
-			for (p in CeylonIterable(pl.parameters)) {
-				if (first) {
-					first = false;
-				} else {
-					result.append(", ");
-				}
-				
-				if (is Tree.InitializerParameter p) {
-					if (!ModelUtil.isTypeUnknown(p.parameterModel.type)) {
-						result.append(p.parameterModel.type.asSourceCodeString(unit)).append(" ");
-					}
-				}
-				result.append(printer.toString(p));
-			}
-			result.append(")");
-		}
-	}
+        return null;
+    }
 
-    shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
+    shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
+        for (pl in CeylonIterable(fa.parameterLists)) {
+            result.append("(");
+            variable Boolean first = true;
+
+            for (p in CeylonIterable(pl.parameters)) {
+                if (first) {
+                    first = false;
+                } else {
+                    result.append(", ");
+                }
+
+                if (is Tree.InitializerParameter p) {
+                    if (!ModelUtil.isTypeUnknown(p.parameterModel.type)) {
+                        result.append(p.parameterModel.type.asSourceCodeString(unit)).append(" ");
+                    }
+                }
+                result.append(printer.toString(p));
+            }
+            result.append(")");
+        }
+    }
+
+    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
         MutableSet<String> names = HashSet<String>();
-        variable Node identifyingNode = myNode;
-        
+        variable Node? identifyingNode = myNode;
+
         if (is Tree.Expression n = identifyingNode) {
             identifyingNode = n.term;
         }
         if (is Tree.InvocationExpression n = identifyingNode) {
             identifyingNode = n.primary;
         }
-        
-        if (is Tree.QualifiedMemberOrTypeExpression qmte = identifyingNode, 
+
+        if (is Tree.QualifiedMemberOrTypeExpression qmte = identifyingNode,
                 exists decl = qmte.declaration) {
             addNameProposals(names, false, decl.name);
             //TODO: propose a compound name like personName for person.name
@@ -415,7 +415,7 @@ shared object nodes {
                 addNameProposals(names, false, name.spanTo(name.size - 2));
             }
         }
-        
+
         if (is Tree.SumOp n=identifyingNode) {
             names.add ("sum");
         } else if (is Tree.DifferenceOp n=identifyingNode) {
@@ -440,33 +440,33 @@ shared object nodes {
 
         if (is Tree.Term term = identifyingNode) {
             value type = term.typeModel;
-            
+
             if (!ModelUtil.isTypeUnknown(type)) {
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
             }
-            value unit = myNode.unit;
+            assert (exists unit = myNode?.unit);
             if (unit.isIterableType(type)) {
                 Type? iter = unit.getIteratedType(type);
-                
+
                 if (exists iter, iter.classOrInterface || iter.typeParameter) {
                     addNameProposals(names, !unplural, iter.declaration.name);
                 }
             }
         }
-        
+
         if (names.empty) {
             names.add("it");
         }
 
         return createJavaStringArray(names);
     }
-    
+
     shared void addNameProposals(MutableSet<String>|JSet<JString> names, Boolean plural, String tn) {
         value name = (tn.first?.lowercased?.string else "") + tn.spanFrom(1);
         value matcher = idPattern.matcher(javaString(name));
-        
+
         while (matcher.find()) {
             value loc = matcher.start(2);
             value initial = name.span(matcher.start(1), loc - 1).lowercased;
@@ -474,7 +474,7 @@ shared object nodes {
             value escaped = if (keywords.contains(subname))
                 then "\\i" + subname
                 else subname;
-            
+
             if (is MutableSet<String> names) {
                 names.add(escaped);
             } else {
