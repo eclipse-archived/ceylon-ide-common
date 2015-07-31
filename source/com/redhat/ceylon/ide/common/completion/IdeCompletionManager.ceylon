@@ -32,33 +32,33 @@ import java.util {
 
 shared abstract class IdeCompletionManager() {
 
-    shared alias Proposals 
+    shared alias Proposals
             => Map<JString,DeclarationWithProximity>;
-    
+
     Proposals noProposals
             = HashMap<JString,DeclarationWithProximity>();
-    
+
     shared Proposals getProposals(
-            Node node, Scope? scope, 
-            String prefix, Boolean memberOp, 
+            Node node, Scope? scope,
+            String prefix, Boolean memberOp,
             Tree.CompilationUnit rootNode) {
-        
+
         Unit? unit = node.unit;
-        
+
         if (!exists unit) {
             return noProposals;
         }
-        
+
         assert (exists unit);
-        
+
         switch (node)
         case (is Tree.MemberLiteral) {
             if (exists mlt = node.type) {
-                return if (exists type = mlt.typeModel) 
+                return if (exists type = mlt.typeModel)
                     then type.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0) 
+                            unit, scope, prefix, 0)
                     else noProposals;
             }
         } case (is Tree.TypeLiteral) {
@@ -70,23 +70,23 @@ shared abstract class IdeCompletionManager() {
                 }
             }
             if (exists tlt = node.type) {
-                return if (exists type = tlt.typeModel) 
+                return if (exists type = tlt.typeModel)
                     then type.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0) 
+                            unit, scope, prefix, 0)
                     else noProposals;
             }
         }
         else {}
-        
+
         switch (node)
         case (is Tree.QualifiedMemberOrTypeExpression) {
-            value type = let (pt = getPrimaryType(node)) 
-                if (node.staticMethodReference) 
-                    then unit.getCallableReturnType(pt) 
+            value type = let (pt = getPrimaryType(node))
+                if (node.staticMethodReference)
+                    then unit.getCallableReturnType(pt)
                     else pt;
-            
+
             if (exists type, !type.unknown) {
                 return type.resolveAliases()
                         .declaration
@@ -94,14 +94,14 @@ shared abstract class IdeCompletionManager() {
                             unit, scope, prefix, 0);
             } else {
                 switch (primary = node.primary)
-                case (is Tree.MemberOrTypeExpression) { 
-                    if (is TypeDeclaration td 
+                case (is Tree.MemberOrTypeExpression) {
+                    if (is TypeDeclaration td
                             = primary.declaration) {
-                        return if (exists t = td.type) 
+                        return if (exists t = td.type)
                             then t.resolveAliases()
                                 .declaration
                                 .getMatchingMemberDeclarations(
-                                    unit, scope, prefix, 0) 
+                                    unit, scope, prefix, 0)
                             else noProposals;
                     } else {
                         return noProposals;
@@ -109,11 +109,11 @@ shared abstract class IdeCompletionManager() {
                 } case (is Tree.Package) {
                     return unit.\ipackage
                             .getMatchingDirectDeclarations(
-                                prefix, 0);    
+                                prefix, 0);
                 } else {
                     return noProposals;
                 }
-            }            
+            }
         } case (is Tree.QualifiedType) {
             if (exists qt = node.outerType.typeModel) {
                 return qt.resolveAliases()
@@ -141,7 +141,7 @@ shared abstract class IdeCompletionManager() {
                         node.typeModel
                     case (is Tree.DocLink)
                         docLinkType(node);
-                
+
                 if (exists type) {
                     return type.resolveAliases()
                             .declaration
@@ -150,20 +150,20 @@ shared abstract class IdeCompletionManager() {
                 } else if (exists scope) {
                     return scope.getMatchingDeclarations(
                         unit, prefix, 0);
-                } else { 
+                } else {
                     return noProposals;
                 }
             } else if (exists scope) {
                 return scope.getMatchingDeclarations(
                     unit, prefix, 0);
             }
-            else { 
+            else {
                 return getUnparsedProposals(
                     rootNode, prefix);
             }
         }
     }
-    
+
     shared Proposals getFunctionProposals(
             Node node, Scope scope,
             String prefix, Boolean memberOp) {
@@ -172,32 +172,32 @@ shared abstract class IdeCompletionManager() {
             exists type = getPrimaryType(node),
             !node.staticMethodReference,
             !isTypeUnknown(type)) {
-            return collectUnaryFunctions(type, 
+            return collectUnaryFunctions(type,
                 scope.getMatchingDeclarations(unit, "", 0));
-        } else if (memberOp, 
+        } else if (memberOp,
             is Tree.Term node,
             exists type = node.typeModel) {
-            return collectUnaryFunctions(type, 
+            return collectUnaryFunctions(type,
                 scope.getMatchingDeclarations(unit, "", 0));
         }
         else {
             return noProposals;
         }
     }
-    
-    Proposals collectUnaryFunctions(Type type, 
+
+    Proposals collectUnaryFunctions(Type type,
             Proposals candidates) {
-        value matches 
+        value matches
                 = HashMap<JString,DeclarationWithProximity>();
-        
+
         CeylonIterable(candidates.entrySet())
                 .each(void (candidate) {
-            if (is Function declaration 
-                    = candidate.\ivalue.declaration, 
-                !declaration.annotation, 
+            if (is Function declaration
+                    = candidate.\ivalue.declaration,
+                !declaration.annotation,
                 !declaration.parameterLists.empty) {
-                
-                value params = 
+
+                value params =
                         declaration.firstParameterList
                             .parameters;
                 if (!params.empty) {
@@ -209,21 +209,21 @@ shared abstract class IdeCompletionManager() {
                             }
                         }
                     }
-                    
-                    value t = params.get(0).type;
-                    if (unary, 
-                            !isTypeUnknown(t), 
+
+                    Type? t = params.get(0).type;
+                    if (unary,
+                            !isTypeUnknown(t),
                             type.isSubtypeOf(t)) {
-                        matches.put(candidate.key, 
+                        matches.put(candidate.key,
                             candidate.\ivalue);
                     }
                 }
             }
         });
-        
+
         return matches;
     }
-    
+
     Type? getPrimaryType(
             Tree.QualifiedMemberOrTypeExpression qme) {
         if (exists type = qme.primary.typeModel) {
@@ -239,7 +239,7 @@ shared abstract class IdeCompletionManager() {
             return null;
         }
     }
-    
+
     Type? docLinkType(Tree.DocLink node) {
         if (exists base = node.base) {
             return resultType(base)
@@ -249,7 +249,7 @@ shared abstract class IdeCompletionManager() {
             return null;
         }
     }
-    
+
     Type? resultType(Declaration declaration) {
         switch (declaration)
         case (is TypedDeclaration) {
@@ -267,17 +267,17 @@ shared abstract class IdeCompletionManager() {
             return null;
         }
     }
-    
-    Proposals getUnparsedProposals(Node? node, String prefix) 
-            => if (exists node, 
+
+    Proposals getUnparsedProposals(Node? node, String prefix)
+            => if (exists node,
                     exists pkg = node.unit?.\ipackage)
                 then pkg.\imodule
                     .getAvailableDeclarations(prefix)
                 else noProposals;
-    
-    shared Boolean isQualifiedType(Node node) 
-            => if (is Tree.QualifiedMemberOrTypeExpression node) 
-                then node.staticMethodReference 
+
+    shared Boolean isQualifiedType(Node node)
+            => if (is Tree.QualifiedMemberOrTypeExpression node)
+                then node.staticMethodReference
                 else node is Tree.QualifiedType;
 }
 
@@ -288,7 +288,7 @@ shared class FindScopeVisitor(Node node) extends Visitor() {
 
     shared actual void visit(Tree.Declaration that) {
         super.visit(that);
-        
+
         if (exists al = that.annotationList) {
             for (ann in CeylonIterable(al.annotations)) {
                 if (ann.primary.startIndex==node.startIndex) {
@@ -300,7 +300,7 @@ shared class FindScopeVisitor(Node node) extends Visitor() {
 
     shared actual void visit(Tree.DocLink that) {
         super.visit(that);
-        
+
         if (is Tree.DocLink node) {
             myScope = node.pkg;
         }
