@@ -38,9 +38,8 @@ shared abstract class IdeCompletionManager() {
     Proposals noProposals
             = HashMap<JString,DeclarationWithProximity>();
 
-    shared Proposals getProposals(
-            Node node, Scope? scope,
-            String prefix, Boolean memberOp,
+    shared Proposals getProposals(Node node, 
+            Scope? scope, String prefix, Boolean memberOp,
             Tree.CompilationUnit rootNode) {
 
         Unit? unit = node.unit;
@@ -164,27 +163,33 @@ shared abstract class IdeCompletionManager() {
         }
     }
 
-    shared Proposals getFunctionProposals(
-            Node node, Scope scope,
-            String prefix, Boolean memberOp) {
-        value unit = node.unit;
+    Type? getFunctionProposalType(Node node, 
+            Boolean memberOp) {
         if (is Tree.QualifiedMemberOrTypeExpression node,
-            exists type = getPrimaryType(node),
             !node.staticMethodReference,
-            !isTypeUnknown(type)) {
-            return collectUnaryFunctions(type,
-                scope.getMatchingDeclarations(unit, "", 0));
-        } else if (memberOp,
+            exists type = getPrimaryType(node)) {
+            return type;
+        }
+        else if (memberOp,
             is Tree.Term node,
             exists type = node.typeModel) {
-            return collectUnaryFunctions(type,
-                scope.getMatchingDeclarations(unit, "", 0));
+            return type;
         }
         else {
-            return noProposals;
+            return null;
         }
     }
-
+    
+    shared Proposals getFunctionProposals(Node node, 
+            Scope scope, String prefix, Boolean memberOp) 
+            => if (exists type 
+                    = getFunctionProposalType(node, memberOp), 
+                    !isTypeUnknown(type)) 
+            then collectUnaryFunctions(type,
+                scope.getMatchingDeclarations(node.unit, 
+                    prefix, 0))
+            else noProposals;
+    
     Proposals collectUnaryFunctions(Type type,
             Proposals candidates) {
         value matches
