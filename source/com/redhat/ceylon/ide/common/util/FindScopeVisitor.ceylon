@@ -1,6 +1,5 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    NaturalVisitor,
     Node,
     Tree
 }
@@ -8,7 +7,7 @@ import java.lang {
     JInteger = Integer
 }
 
-class FindScopeVisitor(Integer startOffset, Integer endOffset) extends Visitor() satisfies NaturalVisitor {
+class FindScopeVisitor(Integer startOffset, Integer endOffset) extends Visitor() {
     
     variable Node? node = null;
     shared Node? scope => node;

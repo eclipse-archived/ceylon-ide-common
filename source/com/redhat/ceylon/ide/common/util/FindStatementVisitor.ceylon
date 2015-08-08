@@ -1,11 +1,10 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    NaturalVisitor,
     Node,
     Tree
 }
 
-class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() satisfies NaturalVisitor {
+class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     
     variable Boolean inParameter = false;
     variable Boolean currentlyToplevel = true;

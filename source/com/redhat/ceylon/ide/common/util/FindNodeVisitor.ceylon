@@ -1,13 +1,12 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
 	Visitor,
-	NaturalVisitor,
 	Node,
 	Tree {
 		Term
 	}
 }
 
-shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Visitor() satisfies NaturalVisitor {
+shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Visitor() {
 	
 	shared variable Node? node = null;
 	

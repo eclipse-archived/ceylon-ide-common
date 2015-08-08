@@ -1,11 +1,10 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    NaturalVisitor,
     Node,
     Tree
 }
 
-class FindBodyContainerVisitor(Node node) extends Visitor() satisfies NaturalVisitor {
+class FindBodyContainerVisitor(Node node) extends Visitor() {
     
     shared variable Tree.Declaration? declaration = null;
     variable Tree.Declaration? currentDeclaration = null;

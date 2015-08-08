@@ -41,8 +41,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
         hasAnnotation,
         getNativeBackend
     },
-    Message,
-    NaturalVisitor
+    Message
 }
 import java.util {
     JList=List
@@ -502,7 +501,7 @@ shared class DeltaBuilderFactory(
 
         shared actual Ast.Declaration[] getChildren(AstNode astNode) {
             value children = ArrayList<Ast.Declaration>(5);
-            object visitor extends Visitor() satisfies NaturalVisitor {
+            object visitor extends Visitor() {
                 shared actual void visitAny(AstAbstractNode? node) {
                     if (is Ast.Declaration declaration = node) {
                         assert(declaration.declarationModel.toplevel);
@@ -538,7 +537,7 @@ shared class DeltaBuilderFactory(
 
         shared actual Ast.Declaration[] getChildren(AstNode astNode) {
             value children = ArrayList<Ast.Declaration>(5);
-            object visitor extends Visitor() satisfies NaturalVisitor {
+            object visitor extends Visitor() {
                 shared actual void visitAny(AstAbstractNode? node) {
                     if (is Ast.Declaration declaration = node) {
                         assert(!declaration.declarationModel.toplevel);
@@ -754,17 +753,17 @@ shared class DeltaBuilderFactory(
                         lookForChanges<Ast.TypeDeclaration> {
                             function between(Ast.TypeDeclaration oldType, Ast.TypeDeclaration newType) {
                                 return any {
-                                    nodesDiffer(oldType.caseTypes, newType.caseTypes, "caseTypes"),
-                                    nodesDiffer(oldType.satisfiedTypes, newType.satisfiedTypes, "satisfiedTypes"),
                                     nodesDiffer(oldType.typeParameterList, newType.typeParameterList, "typeParameterList"),
                                     lookForChanges<Ast.ClassOrInterface> {
                                         function between(Ast.ClassOrInterface oldClassOrInterface, Ast.ClassOrInterface newClassOrInterface) {
                                             return any {
-                                                nodesDiffer(oldClassOrInterface.typeConstraintList, newClassOrInterface.typeConstraintList, "typeConstraintList"),
                                                 lookForChanges<Ast.AnyClass> {
                                                     function between(Ast.AnyClass oldClass, Ast.AnyClass newClass) {
                                                         return any {
+                                                            nodesDiffer(oldClass.typeConstraintList, newClass.typeConstraintList, "typeConstraintList"),
                                                             nodesDiffer(oldClass.extendedType, newClass.extendedType, "extendedType"),
+                                                            nodesDiffer(oldClass.caseTypes, newClass.caseTypes, "caseTypes"),
+                                                            nodesDiffer(oldClass.satisfiedTypes, newClass.satisfiedTypes, "satisfiedTypes"),
                                                             nodesDiffer(oldClass.parameterList, newClass.parameterList, "parameterList"),
                                                             lookForChanges<Ast.ClassDeclaration> {
                                                                 function between(Ast.ClassDeclaration oldClassDecl, Ast.ClassDeclaration newClassDecl) {
@@ -779,6 +778,9 @@ shared class DeltaBuilderFactory(
                                                 lookForChanges<Ast.AnyInterface> {
                                                     function between(Ast.AnyInterface oldInterface, Ast.AnyInterface newInterface) {
                                                         return any {
+                                                            nodesDiffer(oldInterface.typeConstraintList, newInterface.typeConstraintList, "typeConstraintList"),
+                                                            nodesDiffer(oldInterface.caseTypes, newInterface.caseTypes, "caseTypes"),
+                                                            nodesDiffer(oldInterface.satisfiedTypes, newInterface.satisfiedTypes, "satisfiedTypes"),
                                                             lookForChanges<Ast.InterfaceDeclaration> {
                                                                 function between(Ast.InterfaceDeclaration oldInterfaceDecl, Ast.InterfaceDeclaration newInterfaceDecl) {
                                                                     return any {
@@ -808,7 +810,11 @@ shared class DeltaBuilderFactory(
                                     },
                                     lookForChanges<Ast.TypeConstraint> {
                                         function between(Ast.TypeConstraint oldTypeConstraint, Ast.TypeConstraint newTypeConstraint) {
-                                            return nodesDiffer(oldTypeConstraint.abstractedType, newTypeConstraint.abstractedType, "abstractedType");
+                                            return any {
+                                                nodesDiffer(oldTypeConstraint.caseTypes, newTypeConstraint.caseTypes, "caseTypes"),
+                                                nodesDiffer(oldTypeConstraint.satisfiedTypes, newTypeConstraint.satisfiedTypes, "satisfiedTypes"),
+                                                nodesDiffer(oldTypeConstraint.abstractedType, newTypeConstraint.abstractedType, "abstractedType")
+                                            };
                                         }
                                     }
                                 };

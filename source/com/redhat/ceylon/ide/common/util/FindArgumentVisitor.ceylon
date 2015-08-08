@@ -1,11 +1,10 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    NaturalVisitor,
     Node,
     Tree
 }
 
-class FindArgumentVisitor(Node term) extends Visitor() satisfies NaturalVisitor {
+class FindArgumentVisitor(Node term) extends Visitor() {
     
     shared variable Tree.NamedArgument? declaration = null;
     variable Tree.NamedArgument? current = null;
