@@ -187,4 +187,7 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
         };
     }
 
+    shared Boolean isFunction
+        => editorData?.node is Tree.FunctionArgument;
+
 }
