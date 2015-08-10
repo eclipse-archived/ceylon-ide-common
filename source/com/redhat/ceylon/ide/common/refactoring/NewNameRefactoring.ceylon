@@ -25,5 +25,6 @@ shared interface NewNameRefactoring {
         };
     }
     shared formal String initialNewName();
+    shared formal Boolean forceWizardMode();
 }
 
