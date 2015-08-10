@@ -190,4 +190,11 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
     shared Boolean isFunction
         => editorData?.node is Tree.FunctionArgument;
 
+    shared actual Boolean forceWizardMode()
+            => if (exists data = editorData,
+        exists node = data.node,
+        exists scope = node.scope)
+    then scope.getMemberOrParameter(node.unit, newName, null, false) exists
+    else false;
+
 }
