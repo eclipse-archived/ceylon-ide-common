@@ -21,7 +21,9 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     
     shared actual void visit(Tree.Statement that) {
         if ((!toplevel || currentlyToplevel) && !inParameter) {
-            if (that is Tree.Variable || that is Tree.TypeConstraint || that is Tree.TypeParameterDeclaration) {
+            if (! (that is Tree.Variable ||
+                    that is Tree.TypeConstraint ||
+                    that is Tree.TypeParameterDeclaration)) {
                 currentStatement = that;
                 resultIsToplevel = currentlyToplevel;
             }
@@ -34,12 +36,12 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     }
     
     shared actual void visitAny(Node node) {
-        if (node == term) {
+        if (node === term) {
             statement = currentStatement;
             resultIsToplevel = currentlyToplevel;
         }
-        
-        if (!exists s = statement) {
+
+        if (! statement exists) {
             super.visitAny(node);
         }
     }
