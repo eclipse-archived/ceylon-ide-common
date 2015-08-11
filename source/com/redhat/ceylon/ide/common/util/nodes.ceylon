@@ -389,6 +389,12 @@ shared object nodes {
         }
     }
 
+    shared OccurrenceLocation? getOccurrenceLocation(Tree.CompilationUnit cu, Node node, Integer offset) {
+        value visitor = FindOccurrenceLocationVisitor(offset, node);
+        cu.visit(visitor);
+        return visitor.occurrence;
+    }
+    
     shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
         MutableSet<String> names = HashSet<String>();
