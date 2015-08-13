@@ -101,8 +101,8 @@ shared object nodes {
         return fsv.statement;
     }
 
-    shared Declaration getAbstraction(Declaration d) {
-        return if (ModelUtil.isOverloadedVersion(d))
+    shared Declaration? getAbstraction(Declaration? d) {
+        return if (exists d, ModelUtil.isOverloadedVersion(d))
             then d.container.getDirectMember(d.name, null, false)
             else d;
     }
@@ -125,7 +125,7 @@ shared object nodes {
         return fc.result;
     }
 
-    shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit cu, Node node) {
+    shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit? cu, Node? node) {
         if (is Tree.ImportMemberOrType node) {
             return node;
         }
@@ -178,27 +178,27 @@ shared object nodes {
         return visitor.scope;
     }
 
-    shared Integer getIdentifyingStartOffset(Node node) {
+    shared Integer getIdentifyingStartOffset(Node? node) {
         return getNodeStartOffset(getIdentifyingNode(node));
     }
 
-    shared Integer getIdentifyingEndOffset(Node node) {
+    shared Integer getIdentifyingEndOffset(Node? node) {
         return getNodeEndOffset(getIdentifyingNode(node));
     }
 
-    shared Integer getIdentifyingLength(Node node) {
+    shared Integer getIdentifyingLength(Node? node) {
         return getIdentifyingEndOffset(node) -
                 getIdentifyingStartOffset(node);
     }
 
-    shared Integer getNodeLength(Node node) {
+    shared Integer getNodeLength(Node? node) {
         return getNodeEndOffset(node) -
                 getNodeStartOffset(node);
     }
 
-    shared Node? getIdentifyingNode(Node node) {
-        if (is Tree.Declaration declaration = node) {
-            variable Tree.Identifier? identifier = declaration.identifier;
+    shared Node? getIdentifyingNode(Node? node) {
+        if (is Tree.Declaration node) {
+            variable Tree.Identifier? identifier = node.identifier;
 
             if (!exists i = identifier, !is Tree.MissingDeclaration node) {
                 //TODO: whoah! this is really ugly!
@@ -294,10 +294,10 @@ shared object nodes {
     }
 
 
-    shared Referenceable? getReferencedExplicitDeclaration(Node node, Tree.CompilationUnit rn) {
+    shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
         Referenceable? dec = getReferencedDeclaration(node);
 
-        if (exists dec, exists unit = dec.unit, unit.equals(node.unit)) {
+        if (exists dec, exists node, exists unit = dec.unit, unit.equals(node.unit)) {
             FindDeclarationNodeVisitor fdv =
                     FindDeclarationNodeVisitor(dec);
             fdv.visit(rn);
@@ -312,7 +312,7 @@ shared object nodes {
         return dec;
     }
 
-    shared Referenceable? getReferencedDeclaration(Node node) {
+    shared Referenceable? getReferencedDeclaration(Node? node) {
         //NOTE: this must accept a null node, returning null!
         if (is Tree.MemberOrTypeExpression node) {
             return node.declaration;
