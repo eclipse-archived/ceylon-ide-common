@@ -353,7 +353,7 @@ shared object nodes {
             return 
                 if (exists qualified = node.qualified,
                     !qualified.empty)
-                then qualified.get(0)
+                then qualified.get(qualified.size()-1)
                 else node.base;
         }
         case (is Tree.ImportPath) {
