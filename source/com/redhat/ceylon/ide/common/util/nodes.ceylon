@@ -3,7 +3,6 @@ import ceylon.collection {
     MutableSet
 }
 import ceylon.interop.java {
-    CeylonList,
     CeylonIterable,
     javaString,
     createJavaStringArray
@@ -17,7 +16,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
-    Parameter,
     Unit,
     ModelUtil,
     Type,
@@ -314,56 +312,56 @@ shared object nodes {
 
     shared Referenceable? getReferencedDeclaration(Node? node) {
         //NOTE: this must accept a null node, returning null!
-        if (is Tree.MemberOrTypeExpression node) {
+        switch (node)
+        case (is Tree.MemberOrTypeExpression) {
             return node.declaration;
         }
-        else if (is Tree.SimpleType node) {
+        case (is Tree.SimpleType) {
             return node.declarationModel;
         }
-        else if (is Tree.ImportMemberOrType node) {
+        case (is Tree.ImportMemberOrType) {
             return node.declarationModel;
         }
-        else if (is Tree.Declaration node) {
+        case (is Tree.Declaration) {
             return node.declarationModel;
         }
-        else if (is Tree.NamedArgument node) {
-            Parameter? p = node.parameter;
-            if (exists p) {
-                return p.model;
-            }
+        case (is Tree.NamedArgument) {
+            return 
+                if (exists p = node.parameter) 
+                then p.model 
+                else null;
         }
-        else if (is Tree.InitializerParameter node) {
-            Parameter? p = node.parameterModel;
-            if (exists p) {
-                return p.model;
-            }
+        case (is Tree.InitializerParameter) {
+            return 
+                if (exists p = node.parameterModel) 
+                then p.model 
+                else null;
         }
-        else if (is Tree.MetaLiteral node) {
+        case (is Tree.MetaLiteral) {
             return node.declaration;
         }
-        else if (is Tree.SelfExpression node) {
+        case (is Tree.SelfExpression) {
             return node.declarationModel;
         }
-        else if (is Tree.Outer node) {
+        case (is Tree.Outer) {
             return node.declarationModel;
         }
-        else if (is Tree.Return node) {
+        case (is Tree.Return) {
             return node.declaration;
         }
-        else if (is Tree.DocLink node) {
-            value qualified = CeylonList(node.qualified);
-            if (!qualified.empty) {
-                return qualified.last;
-            }
-            else {
-                return node.base;
-            }
+        case (is Tree.DocLink) {
+            return 
+                if (exists qualified = node.qualified,
+                    !qualified.empty)
+                then qualified.get(0)
+                else node.base;
         }
-        else if (is Tree.ImportPath node) {
+        case (is Tree.ImportPath) {
             return node.model;
         }
-
-        return null;
+        else {
+            return null;
+        }
     }
 
     shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
