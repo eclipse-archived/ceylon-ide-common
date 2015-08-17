@@ -5,23 +5,71 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 		Term
 	}
 }
+import java.util {
+    List
+}
+import org.antlr.runtime {
+    CommonToken
+}
 
-shared class FindNodeVisitor(Integer startOffset, Integer endOffset) extends Visitor() {
-	
+shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Integer endOffset) extends Visitor() {
+    
 	shared variable Node? node = null;
 	
 	Boolean inBounds(Node? left, Node? right = left) {
 		if (exists left) {
-			value rightNode = right else left; 
-			Integer? tokenStartIndex = left.startIndex?.intValue();
-			Integer? tokenStopIndex = rightNode.stopIndex?.intValue();
+			value rightNode = right else left;
 			
-			if (exists tokenStartIndex, exists tokenStopIndex) {
-				return tokenStartIndex <= startOffset && tokenStopIndex+1 >= endOffset;
+			assert (is CommonToken? startToken = left.token,
+				is CommonToken? endToken = rightNode.endToken else rightNode.token);
+			
+			if (exists startToken, exists endToken) {
+				if (exists tokens) {
+					if (startToken.tokenIndex > 0) {
+						if (startToken.startIndex > startOffset) {
+							// we could still consider this in bounds
+							// if the tokens between startOffset and startToken were only hidden ones
+							for (index in (startToken.tokenIndex-1)..0) {
+								value token = tokens.get(index);
+								if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+									return false;
+								}
+								if (token.startIndex < startOffset) {
+									break;
+								}
+							}
+						}
+					}
+					if (endToken.tokenIndex < tokens.size() - 1) {
+						if (endToken.stopIndex < endOffset) {
+							// we could still consider this in bounds
+							// if the tokens between endToken and endOffset were only hidden ones
+							for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
+								value token = tokens.get(index);
+								if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+									return false;
+								}
+								if (token.stopIndex > endOffset) {
+									break;
+								}
+							}
+						}
+					}
+					return true;
+				} else {
+					if (exists startTokenOffset = left.startIndex?.intValue(),
+						exists endTokenOffset = rightNode.stopIndex?.intValue()) {
+						return startTokenOffset <= startOffset && endOffset <= endTokenOffset+1;
+					} else {
+						return false;
+					}
+				}
+			} else {
+				return false;
 			}
+		} else {
+			return false;
 		}
-		
-		return false;
 	}
 	
 	shared actual void visit(Tree.MemberLiteral that) {

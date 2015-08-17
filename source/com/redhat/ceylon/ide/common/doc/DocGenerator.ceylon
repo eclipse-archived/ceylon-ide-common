@@ -109,7 +109,7 @@ shared abstract class DocGenerator<IdeComponent>() {
     
     // see SourceInfoHover.getHoverNode(IRegion hoverRegion, CeylonParseController parseController)
     Node? getHoverNode(Tree.CompilationUnit rootNode, Integer offset) {
-        return nodes.findNode(rootNode, offset);
+        return nodes.findNode(rootNode, null, offset);
     }
     
     // see getInferredTypeHoverText(Node node, IProject project)
