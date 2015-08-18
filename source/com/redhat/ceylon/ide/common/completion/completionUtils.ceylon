@@ -4,7 +4,11 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
     ParameterList,
-    Value
+    Value,
+    Unit,
+    Declaration,
+    Package,
+    Module
 }
 import java.util {
     List,
@@ -12,6 +16,9 @@ import java.util {
 }
 import ceylon.interop.java {
     CeylonIterable
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
 }
 
 Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -44,3 +51,29 @@ List<Parameter> getParameters(ParameterList pl,
         return list;
     }
 }
+
+Boolean isModuleDescriptor(Tree.CompilationUnit? cu)
+    => (cu?.unit?.filename else "") == "module.ceylon";
+
+Boolean isPackageDescriptor(Tree.CompilationUnit? cu)
+        => (cu?.unit?.filename else "") == "package.ceylon";
+
+String getTextForDocLink(Unit? unit, Declaration decl) {
+    Package? pkg = decl.unit.\ipackage;
+    String qname = decl.qualifiedNameString;
+    
+    if (exists pkg, (Module.\iLANGUAGE_MODULE_NAME.equals(pkg.nameAsString) || (if (exists unit) then pkg.equals(unit.\ipackage) else false))) {
+        if (decl.toplevel) {
+            return decl.nameAsString;
+        } else {
+            if (exists loc = qname.firstOccurrence("::")) {
+                return qname.spanFrom(loc + 2);
+            } else {
+                return qname;
+            }
+        }
+    } else {
+        return qname;
+    }
+}
+

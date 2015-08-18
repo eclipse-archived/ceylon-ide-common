@@ -33,7 +33,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Generic,
     TypeParameter,
     FunctionOrValue,
-    ClassOrInterface
+    ClassOrInterface,
+    Functional,
+    Constructor,
+    Interface,
+    Value,
+    TypeAlias
 }
 
 import java.lang {
@@ -53,11 +58,16 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
 
 shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Document>() 
         satisfies InvocationCompletion<IdeComponent, CompletionComponent>
                 & ParametersCompletion<IdeComponent, CompletionComponent>
-                & MemberNameCompletion<IdeComponent, CompletionComponent>
+                & KeywordCompletion<CompletionComponent>
+                & MemberNameCompletion<CompletionComponent>
+                & BasicCompletion<IdeComponent, CompletionComponent>
                 & RefinementCompletion<IdeComponent, CompletionComponent, Document>
         given CompletionComponent satisfies Object {
 
@@ -321,7 +331,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             Collection<DeclarationWithProximity> sortedProposals, 
             Collection<DeclarationWithProximity> sortedFunctionProposals, 
             IdeComponent cmp, Scope scope, 
-            Node node, CommonToken? token, 
+            Node node, CommonToken token, 
             Boolean memberOp, Document doc, 
             Boolean secondLevel, Boolean inDoc,
             Type? requiredType, Integer previousTokenType, 
@@ -373,19 +383,19 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 else node is Tree.QualifiedMemberOrTypeExpression || node is Tree.QualifiedType;
             
             if (!secondLevel, !inDoc, !memberOp) {
-                // TODO
+                addKeywordProposals(getCompilationUnit(cmp), offset, prefix, result, node, ol, isMember, tokenType);
             }
             if (!secondLevel, !inDoc, !isMember,
-                prefix.empty, !ModelUtil.isTypeUnknown(requiredType), unit.isCallableType(requiredType)) {
-                // TODO
+                    prefix.empty, !ModelUtil.isTypeUnknown(requiredType), unit.isCallableType(requiredType)) {
+                addAnonFunctionProposal(offset, requiredType, result, unit);
             }
             
-            value isPackageOrModuleDescriptor = false; // TODO
+            value isPackageOrModuleDescriptor = isModuleDescriptor(cu) || isPackageDescriptor(cu);
             
             for (dwp in CeylonIterable(sortedProposals)) {
                 value dec = dwp.declaration;
                 
-                if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit.equals(unit)) {
+                if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit) {
                     // TODO
                 }
                 
@@ -395,9 +405,22 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                     continue;
                 }
                 
-                value noParamsFollow = true; // TODO
+                if (!secondLevel, 
+                        isParameterOfNamedArgInvocation(scope, dwp),
+                        isDirectlyInsideNamedArgumentList(cmp, node, token)) {
+                    result.add(newNamedArgumentProposal(offset, prefix, cmp, cu, dec, scope));
+                    addInlineFunctionProposal(offset, dec, scope, 
+                        node, prefix, cmp, doc, result);
+                }
                 
-                if (!secondLevel, !inDoc, noParamsFollow) {
+                value nextToken = getNextToken(cmp, token);
+                value noParamsFollow = noParametersFollow(nextToken);
+                
+                if (!secondLevel, !inDoc, noParamsFollow, isInvocationProposable(dwp, ol, previousTokenType),
+                        !isQualifiedType(node) || ModelUtil.isConstructor(dec) || dec.staticallyImportable,
+                        if (is Constructor scope) 
+                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) && isDelegatableConstructor(scope, dec)
+                        else true) {
                     for (d in overloads(dec)) {
                         value pr = if (isMember)
                             then getQualifiedProducedReference(node, dec)
@@ -406,13 +429,19 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                         addInvocationProposals(cu, offset, prefix, cmp, result, dec, pr, scope, ol, null, isMember);
                     }
                 }
-                if (true) {
+                if (isProposable(dwp, ol, scope, unit, requiredType, previousTokenType),
+                    isProposableBis(node, ol, dec),
+                    (definitelyRequiresType(ol) || noParamsFollow || dec is Functional),
+                    (!scope is Constructor || !isLocation(ol, OccurrenceLocation.\iEXTENDS) || isDelegatableConstructor(scope, dec))) {
+                    
                     if (isLocation(ol, OccurrenceLocation.\iDOCLINK)) {
-                        
+                        // TODO
                     } else if (isLocation(ol, OccurrenceLocation.\iIMPORT)) {
-                        
+                        addImportProposal(offset, prefix, cmp, result, dec, scope);
                     } else if (ol?.reference else false) {
-                        
+                        if (isReferenceProposable(ol, dec)) {
+                            addProgramElementReferenceProposal(offset, prefix, cmp, result, dec, scope, isMember);
+                        }
                     } else {
                         value pr = if (isMember)
                             then getQualifiedProducedReference(node, dec)
@@ -426,10 +455,12 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                     }
                 }
             }
-            
+         
+            // TODO code constructs
+            // TODO overload refinements
         }
         
-        
+        // TODO function proposals
         return createJavaObjectArray(result.sequence());
     }
     
@@ -452,7 +483,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     shared formal Tree.CompilationUnit getCompilationUnit(IdeComponent cmp);
      
     // see CompletionUtil.anonFunctionHeader(Type requiredType, Unit unit)
-    shared String anonFunctionHeader(Type requiredType, Unit unit) {
+    shared String anonFunctionHeader(Type? requiredType, Unit unit) {
         value text = StringBuilder();
         text.append("(");
         
@@ -578,6 +609,303 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 (dec is FunctionOrValue || dec is Class) && 
                 (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
     }
+    
+    shared formal CompletionComponent newAnonFunctionProposal(Integer offset, Type? requiredType,
+        Unit unit, String text, String header, Boolean isVoid);
+    
+    void addAnonFunctionProposal(Integer offset, Type? requiredType, MutableList<CompletionComponent> result, Unit unit){
+        value text = anonFunctionHeader(requiredType, unit);
+        value funtext = text + " => nothing";
+        
+        result.add(newAnonFunctionProposal(offset, requiredType, unit, funtext, text, false));
+        
+        if (unit.getCallableReturnType(requiredType).anything){
+            value voidtext = "void " + text + " {}";
+            result.add(newAnonFunctionProposal(offset, requiredType, unit, voidtext, text, true));
+        }
+    }
+    
+    Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d) {
+        return scope == d.namedArgumentList;
+    }
+    
+    Boolean isDirectlyInsideNamedArgumentList(IdeComponent cmp, Node node, CommonToken token) {
+        return node is Tree.NamedArgumentList ||
+                (!(node is Tree.SequenceEnumeration) &&
+            occursAfterBraceOrSemicolon(token, getTokens(cmp)));
+    }
+    
+    // see CeylonCompletionProcessor.occursAfterBraceOrSemicolon(...)
+    Boolean occursAfterBraceOrSemicolon(CommonToken token, JList<CommonToken> tokens) {
+        if (token.tokenIndex == 0) {
+            return false;
+        } else {
+            value tokenType = token.type;
+            if (tokenType==CeylonLexer.\iLBRACE || 
+                tokenType==CeylonLexer.\iRBRACE || 
+                    tokenType==CeylonLexer.\iSEMICOLON) {
+                return true;
+            }
+
+            value previousTokenType = adjust(token.tokenIndex - 1, 
+                token.startIndex, tokens).type;
+            
+            return previousTokenType==CeylonLexer.\iLBRACE || 
+                    previousTokenType==CeylonLexer.\iRBRACE || 
+                    previousTokenType==CeylonLexer.\iSEMICOLON;
+        }
+    }
+    
+    // see CeylonCompletionProcessor.adjust(...)
+    CommonToken adjust(variable Integer tokenIndex, Integer offset, JList<CommonToken> tokens) {
+        variable CommonToken adjustedToken = tokens.get(tokenIndex);
+
+        while (--tokenIndex >= 0,
+               adjustedToken.type==CeylonLexer.\iWS //ignore whitespace
+            || adjustedToken.type==CeylonLexer.\iEOF
+            || adjustedToken.startIndex==offset) { //don't consider the token to the right of the caret
+            
+            adjustedToken = tokens.get(tokenIndex);
+            if (adjustedToken.type!=CeylonLexer.\iWS &&
+                        adjustedToken.type!=CeylonLexer.\iEOF &&
+                        adjustedToken.channel!=Token.\iHIDDEN_CHANNEL) { //don't adjust to a ws token
+                break;
+            }
+        }
+        return adjustedToken;
+    }
+    
+    shared formal JList<CommonToken> getTokens(IdeComponent cmp);
+    
+    shared formal CommonToken? getNextToken(IdeComponent cmp, CommonToken token);
+    
+    Boolean noParametersFollow(CommonToken? nextToken) {
+        //should we disable this, since a statement
+        //can in fact begin with an LPAREN??
+        return (nextToken?.type else CeylonLexer.\iEOF) != CeylonLexer.\iLPAREN;
+        //disabled now because a declaration can
+        //begin with an LBRACE (an Iterable type)
+        /*&& nextToken.getType()!=CeylonLexer.LBRACE*/
+    }
+    
+    Boolean isInvocationProposable(DeclarationWithProximity dwp, OccurrenceLocation? ol, Integer previousTokenType) {
+        if (is Functional dec = dwp.declaration, previousTokenType != CeylonLexer.\iIS_OP) {
+            variable Boolean isProposable = true;
+            
+            isProposable &&= previousTokenType != CeylonLexer.\iCASE_TYPES || isLocation(ol, OccurrenceLocation.\iOF);
+            
+            variable Boolean isCorrectLocation = ol is Null;
+            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXPRESSION) && (if (is Class dec) then !dec.abstract else true);
+
+            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                    && (if (is Class dec) then (!dec.final && dec.typeParameters.empty) else false);
+
+            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                    && ModelUtil.isConstructor(dec)
+                    && (if (is Class c = dec.container) then (!c.final && c.typeParameters.empty) else false);
+
+            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) && (dec is Class); 
+
+            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iPARAMETER_LIST)
+                    && (if (is Function dec) then dec.annotation else false);
+            
+            isProposable &&= isCorrectLocation;
+            isProposable &&= !dwp.namedArgumentList exists;
+            isProposable &&= !dec.annotation
+                     || (if (is Function dec) 
+                         then (!dec.parameterLists.empty || !dec.parameterLists.get(0).parameters.empty)
+                         else true);
+            
+        }
+        return false;
+    }
+    
+    Boolean isProposable(DeclarationWithProximity dwp, OccurrenceLocation? ol, Scope scope, Unit unit, Type? requiredType, Integer previousTokenType) {
+        value dec = dwp.declaration;
+        variable Boolean isProp = !isLocation(ol, OccurrenceLocation.\iEXTENDS);
+        isProp ||= if (is Class dec) then dec.final else false;
+        
+        variable Boolean isCorrectLocation = ModelUtil.isConstructor(dec) && (if (is Class c = dec.container) then !c.final else false);
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) || dec is Class; 
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iSATISFIES) || dec is Interface;
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iOF) || dec is Class || isAnonymousClassValue(dec);
+        isCorrectLocation &&= (!isLocation(ol, OccurrenceLocation.\iTYPE_ARGUMENT_LIST)
+                                && !isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
+                                && !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)
+                                && !isLocation(ol, OccurrenceLocation.\iCATCH)
+                              ) || dec is TypeDeclaration;
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCATCH) || isExceptionType(unit, dec);
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iPARAMETER_LIST)
+                                || dec is TypeDeclaration
+                                || dec is Function && dec.annotation //i.e. an annotation
+                                || dec is Value && dec.container == scope; //a parameter ref
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iIMPORT) || !dwp.unimported;
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCASE) || isCaseOfSwitch(requiredType, dec, previousTokenType);
+        isCorrectLocation &&= previousTokenType != CeylonLexer.\iIS_OP
+                           && (previousTokenType != CeylonLexer.\iCASE_TYPES || isLocation(ol, OccurrenceLocation.\iOF))
+                           || dec is TypeDeclaration;
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_LIST);
+        isCorrectLocation &&= !dwp.namedArgumentList exists;
+        
+        isProp ||= isCorrectLocation;
+        return isProp;
+    }
+    
+    Boolean isProposableBis(Node node, OccurrenceLocation? ol, Declaration dec) {
+        if (!isLocation(ol, OccurrenceLocation.\iEXISTS), !isLocation(ol, OccurrenceLocation.\iNONEMPTY),
+            !isLocation(ol, OccurrenceLocation.\iIS)) {
+            return true;
+        } else if (is Value val = dec) {
+            Type type = val.type;
+            if (val.variable || val.transient || val.default || val.formal || isTypeUnknown(type)) {
+                return false;
+            } else {
+                variable Unit unit = node.unit;
+                switch (ol)
+                case (OccurrenceLocation.\iEXISTS) {
+                    return unit.isOptionalType(type);
+                }
+                case (OccurrenceLocation.\iNONEMPTY) {
+                    return unit.isPossiblyEmptyType(type);
+                }
+                case (OccurrenceLocation.\iIS) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
+
+    Boolean isCaseOfSwitch(Type? requiredType, Declaration dec, Integer previousTokenType) {
+        return previousTokenType == CeylonLexer.\iIS_OP && isTypeCaseOfSwitch(requiredType, dec) 
+                || previousTokenType != CeylonLexer.\iIS_OP && isValueCaseOfSwitch(requiredType, dec);
+    }
+
+    Boolean isDelegatableConstructor(Scope scope, Declaration dec) {
+        if (ModelUtil.isConstructor(dec)) {
+            Scope? container = dec.container;
+            Scope? outerScope = scope.container;
+            if (container is Null || outerScope is Null) {
+                return false;
+            }
+            assert(exists outerScope);
+            assert(exists container);
+            if (outerScope == container) {
+                return !scope.equals(dec); //local constructor
+            } else {
+                TypeDeclaration? id = scope.getInheritingDeclaration(dec);
+                return if (exists id) then id.equals(outerScope) else false; //inherited constructor
+            }
+        } else if (is Class dec) {
+            Scope outerScope = scope.container;
+            if (is Class outerScope) {
+                Type? sup = outerScope.extendedType;
+                return sup?.declaration?.equals(dec) else false;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    Boolean isAnonymousClassValue(Declaration dec) {
+        if (is Value dec) {
+            return dec.typeDeclaration?.anonymous else false;
+        } else {
+            return false;
+        }
+    }
+
+    Boolean isExceptionType(Unit unit, Declaration dec) {
+        if (is TypeDeclaration dec) {
+            return dec.inherits(unit.exceptionDeclaration);
+        } else {
+            return false;
+        }
+    }
+    
+    Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {
+        if (exists requiredType, requiredType.union) {
+            for (td in CeylonIterable(requiredType.caseTypes)) {
+                if (isValueCaseOfSwitch(td, dec)) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            if (isAnonymousClassValue(dec)) {
+                if (exists requiredType) {
+                    assert(is TypedDeclaration d = dec);
+                    TypeDeclaration td = d.typeDeclaration;
+                    TypeDeclaration rtd = requiredType.declaration;
+                    return td.inherits(rtd);
+                } else {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+    
+    Boolean isTypeCaseOfSwitch(Type? requiredType, Declaration dec) {
+        if (exists requiredType, requiredType.union) {
+            for (Type td in CeylonIterable(requiredType.caseTypes)) {
+                if (isTypeCaseOfSwitch(td, dec)) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            if (is TypeDeclaration dec) {
+                if (exists requiredType) {
+                    TypeDeclaration rtd = requiredType.declaration;
+                    return dec.inherits(rtd);
+                } else {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+
+    Boolean definitelyRequiresType(OccurrenceLocation? ol) {
+        return isLocation(ol, OccurrenceLocation.\iSATISFIES)
+                || isLocation(ol, OccurrenceLocation.\iOF)
+                || isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
+                || isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS);
+    }
+    
+    Boolean isReferenceProposable(OccurrenceLocation? ol, Declaration dec) {
+        return (isLocation(ol, OccurrenceLocation.\iVALUE_REF)
+                || (if (is Value dec) then dec.typeDeclaration.anonymous else true)
+               )
+             && (isLocation(ol, OccurrenceLocation.\iFUNCTION_REF) || !(dec is Function))
+             && (isLocation(ol, OccurrenceLocation.\iALIAS_REF) || !(dec is TypeAlias))
+             && (isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) || !(dec is TypeParameter)) 
+                //note: classes and interfaces are almost always proposable 
+                //      because they are legal qualifiers for other refs
+             && (!isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) || dec is TypeParameter);
+    }
+    
+    void addProgramElementReferenceProposal(Integer offset, String prefix, 
+            IdeComponent cpc, MutableList<CompletionComponent> result, 
+            Declaration dec, Scope scope, Boolean isMember) {
+        
+        Unit? unit = getCompilationUnit(cpc).unit;
+        
+        result.add(newProgramElementReferenceCompletion(offset, prefix, dec, unit, dec.reference, scope, cpc, isMember));
+    }
+    
+    shared formal CompletionComponent newProgramElementReferenceCompletion(Integer offset, String prefix,
+        Declaration dec, Unit? u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember);
 }
 
 shared class FindScopeVisitor(Node node) extends Visitor() {

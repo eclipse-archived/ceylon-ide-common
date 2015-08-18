@@ -6,10 +6,13 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Unit,
     Type,
-    Generic
+    Generic,
+    FunctionOrValue,
+    Parameter
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node
+    Node,
+    Tree
 }
 import ceylon.collection {
     MutableList
@@ -28,6 +31,13 @@ shared interface RefinementCompletion<IdeComponent, CompletionComponent, Documen
         Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isInterface,
         ClassOrInterface ci, Node node, Unit unit, Document doc, Boolean preamble);
 
+    // see RefinementCompletionProposal.addNamedArgumentProposal(...)
+    shared formal CompletionComponent newNamedArgumentProposal(Integer offset, String prefix, 
+        IdeComponent cmp, Tree.CompilationUnit unit, Declaration dec, Scope scope);
+    
+    shared formal CompletionComponent newInlineFunctionProposal(Integer offset, FunctionOrValue dec,
+        Scope scope, Node node, String prefix, IdeComponent cmp, Document doc);
+
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
         ClassOrInterface ci, Node node, Scope scope, String prefix, 
@@ -41,7 +51,7 @@ shared interface RefinementCompletion<IdeComponent, CompletionComponent, Documen
         result.add(newRefinementCompletionProposal(offset, prefix, dec, pr, scope, cpc, isInterface,
             ci, node, unit, doc, preamble));
     }
-    
+
     // see getRefinedProducedReference(Scope scope, Declaration d)
     Reference getRefinedProducedReference(Scope scope, Declaration d) {
         return refinedProducedReference(scope.getDeclaringType(d), d);
@@ -58,4 +68,13 @@ shared interface RefinementCompletion<IdeComponent, CompletionComponent, Documen
         }
         return d.appliedReference(outerType, params);
     }
+    
+    shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
+            IdeComponent cmp, Document doc, variable MutableList<CompletionComponent> result) {
+
+        if (dec.parameter, is FunctionOrValue dec) {
+            result.add(newInlineFunctionProposal(offset, dec, scope, node, prefix, cmp, doc));
+        }
+    }
+
 }

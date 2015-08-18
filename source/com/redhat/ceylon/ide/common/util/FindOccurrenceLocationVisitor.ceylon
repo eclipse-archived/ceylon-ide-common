@@ -3,6 +3,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import ceylon.language.meta {
+    type
+}
 
 class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor() {
     
@@ -11,7 +14,9 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     
     actual
     shared void visitAny(Node that) {
+        print(type(that).declaration.name);
         if (inBounds(that))  {
+            print("in");
             super.visitAny(that);
         }
         //otherwise, as a performance optimization
@@ -71,7 +76,9 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     }
     
     actual shared void visit(Tree.ImportMemberOrTypeList that) {
+        print("that");
         if (inBounds(that)) {
+            print("is cool");
             occurrence = OccurrenceLocation.\iIMPORT;
         }
         super.visit(that);
