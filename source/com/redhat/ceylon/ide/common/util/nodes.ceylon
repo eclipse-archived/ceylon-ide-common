@@ -44,67 +44,66 @@ shared object nodes {
 
     value idPattern = Pattern.compile("(^|[A-Z])([A-Z]*)([_a-z]+)");
     value keywords = ["import", "assert",
-        "alias", "class", "interface", "object", "given", "value", "assign", "void", "function", 
-        "assembly", "module", "package", "of", "extends", "satisfies", "abstracts", "in", "out", 
-        "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while", 
+        "alias", "class", "interface", "object", "given", "value", "assign", "void", "function",
+        "assembly", "module", "package", "of", "extends", "satisfies", "abstracts", "in", "out",
+        "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while",
         "try", "catch", "finally", "this", "outer", "super", "is", "exists", "nonempty", "then",
         "dynamic", "new", "let"];
-    
+
     shared Tree.Declaration? findDeclaration(Tree.CompilationUnit cu, Node node) {
         value visitor = FindDeclarationVisitor(node);
         cu.visit(visitor);
         return visitor.declaration;
     }
-    
+
     shared Tree.Declaration? findDeclarationWithBody(Tree.CompilationUnit cu, Node node) {
         value visitor = FindBodyContainerVisitor(node);
         cu.visit(visitor);
         return visitor.declaration;
     }
-    
+
     shared Tree.NamedArgument? findArgument(Tree.CompilationUnit cu, Node node) {
         value visitor = FindArgumentVisitor(node);
         cu.visit(visitor);
         return visitor.declaration;
     }
-    
+
     shared Tree.BinaryOperatorExpression? findBinaryOperator(Tree.CompilationUnit cu, Node node) {
         class FindBinaryVisitor() extends Visitor() {
             shared variable Tree.BinaryOperatorExpression? result=null;
 
             shared actual void visit(Tree.BinaryOperatorExpression that) {
-                if (node.startIndex.intValue() >= that.startIndex.intValue() && 
+                if (node.startIndex.intValue() >= that.startIndex.intValue() &&
                     node.stopIndex.intValue() <= that.stopIndex.intValue()) {
                     result = that;
                 }
                 super.visit(that);
             }
         }
-        
+
         FindBinaryVisitor fcv = FindBinaryVisitor();
         cu.visit(fcv);
-        
+
         return fcv.result;
     }
-    
+
     shared Tree.Statement? findStatement(Tree.CompilationUnit cu, Node node) {
         value fsv = FindStatementVisitor(node, false);
         cu.visit(fsv);
         return fsv.statement;
     }
-    
+
     shared Tree.Statement? findTopLevelStatement(Tree.CompilationUnit cu, Node node) {
         value fsv = FindStatementVisitor(node, true);
         cu.visit(fsv);
         return fsv.statement;
     }
 
-    shared Declaration? getAbstraction(Declaration? d) {
-        return if (exists d, ModelUtil.isOverloadedVersion(d))
+    shared Declaration? getAbstraction(Declaration? d)
+        => if (exists d, ModelUtil.isOverloadedVersion(d))
             then d.container.getDirectMember(d.name, null, false)
             else d;
-    }
-    
+
     shared Tree.Declaration? getContainer(Tree.CompilationUnit cu, Declaration dec) {
         class FindContainer() extends Visitor() {
             Scope container = dec.container;
@@ -117,7 +116,7 @@ shared object nodes {
                 }
             }
         }
-        
+
         FindContainer fc = FindContainer();
         cu.visit(fc);
         return fc.result;
@@ -127,24 +126,24 @@ shared object nodes {
         if (is Tree.ImportMemberOrType node) {
             return node;
         }
-        
+
         variable Declaration? declaration;
-        
+
         if (is Tree.MemberOrTypeExpression node) {
             declaration = node.declaration;
         } else if (is Tree.SimpleType node) {
             declaration = node.declarationModel;
         } else if (is Tree.MemberLiteral node) {
             declaration = node.declaration;
-        } else { 
+        } else {
             return null;
         }
-        
+
         class FindImportVisitor() extends Visitor() {
             shared variable Tree.ImportMemberOrType? result=null;
 
             shared actual void visit(Tree.Declaration that) {}
-            
+
             shared actual void visit(Tree.ImportMemberOrType that) {
                 super.visit(that);
                 Declaration? dec = that.declarationModel;
@@ -326,15 +325,15 @@ shared object nodes {
             return node.declarationModel;
         }
         case (is Tree.NamedArgument) {
-            return 
-                if (exists p = node.parameter) 
-                then p.model 
+            return
+                if (exists p = node.parameter)
+                then p.model
                 else null;
         }
         case (is Tree.InitializerParameter) {
-            return 
-                if (exists p = node.parameterModel) 
-                then p.model 
+            return
+                if (exists p = node.parameterModel)
+                then p.model
                 else null;
         }
         case (is Tree.MetaLiteral) {
@@ -350,7 +349,7 @@ shared object nodes {
             return node.declaration;
         }
         case (is Tree.DocLink) {
-            return 
+            return
                 if (exists qualified = node.qualified,
                     !qualified.empty)
                 then qualified.get(qualified.size()-1)
@@ -392,7 +391,7 @@ shared object nodes {
         cu.visit(visitor);
         return visitor.occurrence;
     }
-    
+
     shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
         value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
         MutableSet<String> names = HashSet<String>();
@@ -443,9 +442,10 @@ shared object nodes {
         }
 
         if (is Tree.Term term = identifyingNode) {
-            value type = term.typeModel;
+            Type? type = term.typeModel;
 
             if (!ModelUtil.isTypeUnknown(type)) {
+                assert(exists type);
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
