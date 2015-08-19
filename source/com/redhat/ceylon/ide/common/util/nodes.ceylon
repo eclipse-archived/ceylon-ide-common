@@ -29,6 +29,7 @@ import java.lang {
     StringBuilder
 }
 import java.util {
+    JList=List,
     JSet=Set
 }
 import java.util.regex {
@@ -161,8 +162,8 @@ shared object nodes {
         return null;
     }
 
-    shared Node? findNode(Node node, Integer startOffset, Integer endOffset = startOffset + 1) {
-        FindNodeVisitor visitor = FindNodeVisitor(startOffset, endOffset);
+    shared Node? findNode(Node node, JList<CommonToken>? tokens, Integer startOffset, Integer endOffset = startOffset + 1) {
+        FindNodeVisitor visitor = FindNodeVisitor(tokens, startOffset, endOffset);
 
         node.visit(visitor);
 
