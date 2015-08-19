@@ -1,18 +1,13 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes
+    nodes,
+    Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
-    Declaration,
-    ModelUtil,
-    Module
+    Declaration
 }
 
 import java.util {
@@ -22,66 +17,25 @@ import java.util {
 import java.lang {
     StringBuilder
 }
-
-Boolean isImported(Declaration declaration, Tree.CompilationUnit cu) {
-    for (i in CeylonIterable(cu.unit.imports)) {
-        if (i.declaration.equals(getAbstraction(declaration))) {
-            return true;
-        }
-    }
-
-    return false;
+import com.redhat.ceylon.ide.common.correct {
+    ImportProposals
 }
 
-void importDeclaration(Set<Declaration> declarations, Declaration declaration, Tree.CompilationUnit cu) {
-    if (!declaration.parameter) {
-        value p = declaration.unit.\ipackage;
-        value pkg = cu.unit.\ipackage;
-
-        if (!p.nameAsString.empty, !p.equals(pkg), !p.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME),
-            (!declaration.classOrInterfaceMember || declaration.staticallyImportable),
-            !isImported(declaration, cu)) {
-            declarations.add(declaration);
-        }
-    }
+suppressWarnings("expressionTypeNothing")
+object extractValueImportProposals satisfies ImportProposals<Nothing, Nothing, Nothing, Nothing, Nothing, Nothing> {
+    shared actual void addEditToChange(Nothing change, Nothing edit) {}
+    shared actual Nothing createImportProposal(Tree.CompilationUnit rootNode, Nothing file, Declaration declaration) => nothing;
+    shared actual String getInsertedText(Nothing edit) => nothing;
+    shared actual Indents<Nothing> indents => nothing;
+    shared actual Nothing newDeleteEdit(Integer start, Integer stop) => nothing;
+    shared actual Nothing newInsertEdit(Integer position, String text) => nothing;
+    shared actual Nothing newReplaceEdit(Integer start, Integer stop, String text) => nothing;
 }
-
-void importType(Set<Declaration> declarations, Type? type, Tree.CompilationUnit cu) {
-    if (exists type) {
-        if (type.unknown || type.nothing) {
-
-        } else if (type.union) {
-            for (t in CeylonIterable(type.caseTypes)) {
-                importType(declarations, t, cu);
-            }
-        } else if (type.intersection) {
-            for (t in CeylonIterable(type.satisfiedTypes)) {
-                importType(declarations, t, cu);
-            }
-        } else {
-            importType(declarations, type.qualifyingType, cu);
-
-            if (type.classOrInterface, type.declaration.toplevel) {
-                importDeclaration(declarations, type.declaration, cu);
-
-                for (t in CeylonIterable(type.typeArgumentList)) {
-                    importType(declarations, t, cu);
-                }
-            }
-        }
-    }
-}
-
-Declaration getAbstraction(Declaration d) {
-    if (ModelUtil.isOverloadedVersion(d)) {
-        return d.container.getDirectMember(d.name, null, false);
-    }
-
-    return d;
-}
-
 
 shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefactoring & NewNameRefactoring {
+
+    shared default ImportProposals<Nothing, Nothing, Nothing, Nothing, Nothing, Nothing> importProposals => extractValueImportProposals;
+
     shared interface Result {
         shared formal String declaration;
         shared formal Set<Declaration> declarationsToImport;
@@ -167,7 +121,7 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
             myTypeDec = "dynamic";
         } else if (exists t = type, explicitType || toplevel) {
             myTypeDec = t.asSourceCodeString(unit);
-            importType(declarations, type, cu);
+            importProposals.importType(declarations, type, cu);
         } else {
             canBeInferred = true;
             myTypeDec = mod;
