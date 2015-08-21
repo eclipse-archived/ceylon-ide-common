@@ -5,7 +5,8 @@ import java.util{
     JIterator=Iterator,
     JList=List,
     JMap=Map,
-    JSet=Set
+    JSet=Set,
+    Collections
 }
 import java.lang {
     JIterable=Iterable,
@@ -91,41 +92,46 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                             .coalesced;
                };
 
-    shared formal ICompletionProposal createImportProposal(Tree .CompilationUnit rootNode, IFile file, Declaration declaration);
+    shared formal [TextChange, IDocument] getTextChangeAndDocument(IFile file);
 
-    """Eclipse implementation should be as follows :
+    shared formal ICompletionProposal newImportProposal(String description, TextChange correctionChange);
 
-           => DeleteEdit(start, stop)
+    shared ICompletionProposal? createImportProposal(Tree.CompilationUnit rootNode, IFile file, Declaration declaration) {
+        value [importChange, doc] = getTextChangeAndDocument(file);
+        JList<InsertEdit> ies =
+                importEdits(rootNode,
+            Collections.singleton(declaration),
+            null, null, doc);
 
-       """
+        if (ies.empty) {
+            return null;
+        }
+
+        for (InsertEdit ie in CeylonIterable(ies)) {
+            addEditToChange(importChange, ie);
+        }
+        String proposedName = declaration.name;
+        /*String brokenName = id.getText();
+         if (!brokenName.equals(proposedName)) {
+            change.addEdit(new ReplaceEdit(id.getStartIndex(), brokenName.length(),
+                    proposedName));
+         }*/
+        String pname =
+                declaration.unit.\ipackage
+                .nameAsString;
+        String description =
+                "Add import of '`` proposedName ``' in package '`` pname ``'";
+        return newImportProposal(description, importChange);
+    }
+
     shared formal TextEdit newDeleteEdit(Integer start, Integer stop);
 
-    """Eclipse implementation should be as follows :
-
-           => ReplaceEdit(start, stop, text)
-
-       """
     shared formal TextEdit newReplaceEdit(Integer start, Integer stop, String text);
 
-    """Eclipse implementation should be as follows :
-
-           => InsertEdit(position, text)
-
-       """
     shared formal InsertEdit newInsertEdit(Integer position, String text);
 
-    """Eclipse implementation should be as follows :
-
-           => change.addEdit(edit);
-
-       """
     shared formal void addEditToChange(TextChange change, TextEdit edit);
 
-    """Eclipse implementation should be as follows :
-
-           => edit.text;
-
-       """
     shared formal String getInsertedText(InsertEdit edit);
 
     shared JList <InsertEdit> importEdits(
