@@ -24,17 +24,20 @@ import com.redhat.ceylon.ide.common.correct {
 suppressWarnings("expressionTypeNothing")
 object extractValueImportProposals satisfies ImportProposals<Nothing, Nothing, Nothing, Nothing, Nothing, Nothing> {
     shared actual void addEditToChange(Nothing change, Nothing edit) {}
-    shared actual Nothing createImportProposal(Tree.CompilationUnit rootNode, Nothing file, Declaration declaration) => nothing;
     shared actual String getInsertedText(Nothing edit) => nothing;
     shared actual Indents<Nothing> indents => nothing;
     shared actual Nothing newDeleteEdit(Integer start, Integer stop) => nothing;
     shared actual Nothing newInsertEdit(Integer position, String text) => nothing;
     shared actual Nothing newReplaceEdit(Integer start, Integer stop, String text) => nothing;
+    shared actual Nothing[2] getTextChangeAndDocument(Nothing file) => nothing;
+
+    shared actual Nothing newImportProposal(String description, Nothing correctionChange) => nothing;
+
 }
 
 shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefactoring & NewNameRefactoring {
 
-    shared default ImportProposals<Nothing, Nothing, Nothing, Nothing, Nothing, Nothing> importProposals => extractValueImportProposals;
+    shared default ImportProposals<in Nothing, in Nothing, in Nothing, in Nothing, in Nothing, in Nothing> importProposals => extractValueImportProposals;
 
     shared interface Result {
         shared formal String declaration;
