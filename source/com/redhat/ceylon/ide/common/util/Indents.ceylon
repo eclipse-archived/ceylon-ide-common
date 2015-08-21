@@ -16,7 +16,7 @@ shared interface Indents<IDocument> {
            }
 
      """
-    shared formal String getLine(Node? node, IDocument? doc);
+    shared formal String getLine(Node node, IDocument doc);
 
     shared String getIndent(Node? node, IDocument? doc) {
         if (exists node,
