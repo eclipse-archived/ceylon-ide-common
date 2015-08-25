@@ -38,7 +38,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    JIterable=Iterable
+    JIterable=Iterable,
+    JInteger=Integer,
+    JString=String
 }
 import java.util {
     JArrayList=ArrayList,
@@ -53,6 +55,7 @@ import java.util {
 
 
 shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>
+        satisfies DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {
     shared formal Indents<IDocument> indents;
 
@@ -98,12 +101,14 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                             .coalesced;
                };
 
-    shared formal [TextChange, IDocument] getTextChangeAndDocument(IFile file);
-
+    shared formal TextChange createImportChange(IFile file);
     shared formal ICompletionProposal newImportProposal(String description, TextChange correctionChange);
 
     shared ICompletionProposal? createImportProposal(Tree.CompilationUnit rootNode, IFile file, Declaration declaration) {
-        value [importChange, doc] = getTextChangeAndDocument(file);
+        value importChange=createImportChange(file);
+        initMultiEditChange(importChange);
+
+        value doc=getDocumentForChange(importChange);
         JList<InsertEdit> ies =
                 importEdits(rootNode,
             Collections.singleton(declaration),
@@ -130,20 +135,10 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         return newImportProposal(description, importChange);
     }
 
-    shared formal TextEdit newDeleteEdit(Integer start, Integer stop);
-
-    shared formal TextEdit newReplaceEdit(Integer start, Integer stop, String text);
-
-    shared formal InsertEdit newInsertEdit(Integer position, String text);
-
-    shared formal void addEditToChange(TextChange change, TextEdit edit);
-
-    shared formal String getInsertedText(InsertEdit edit);
-
     shared JList <InsertEdit> importEdits(
         Tree.CompilationUnit rootNode,
         JIterable<Declaration> declarations,
-        JIterable<String>? aliases,
+        JIterable<JString>? aliases,
         Declaration? declarationBeingDeleted,
         IDocument? doc) {
         String delim = indents.getDefaultLineDelimiter(doc);
@@ -162,9 +157,9 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 }
             }
             else {
-                JIterator <String> aliasIter = aliases.iterator();
+                JIterator<JString> aliasIter = aliases.iterator();
                 for(d in CeylonIterable(declarations)){
-                    String? theAlias = aliasIter.next();
+                    String? theAlias = aliasIter.next()?.string;
                     if(d.unit.\ipackage == p){
                         text.append(",").append(delim).append(indents.defaultIndent);
                         if(exists theAlias, theAlias != d.name) {
@@ -209,7 +204,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     shared JList<TextEdit> importEditForMove(
         Tree.CompilationUnit rootNode,
         JIterable<Declaration> declarations,
-        JIterable<String>? aliases,
+        JIterable<JString>? aliases,
         String newPackageName,
         String oldPackageName,
         IDocument? doc) {
@@ -227,9 +222,9 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             }
         }
         else {
-            JIterator<String> aliasIter = aliases.iterator();
+            JIterator<JString> aliasIter = aliases.iterator();
             for(Declaration d in CeylonIterable(declarations)) {
-                String? \ialias = aliasIter.next();
+                String? \ialias = aliasIter.next()?.string;
                 text.append(",").append(delim).append(indents.defaultIndent);
                 if(exists \ialias, \ialias != d.name) {
                     text.append(\ialias).appendCharacter('=');
@@ -348,23 +343,21 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             }
         }
     }
-    shared Integer applyImports(TextChange change, JSet<Declaration>|JMap<Declaration, String> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null){
+
+    shared Integer applyImportsInternal(TextChange change, JIterable<Declaration> declarations, JIterable<JString>? aliases, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted){
         variable Integer il = 0;
-        JIterable<Declaration> decls;
-        JIterable<String>? aliases;
-        if(is JSet<Declaration> declarations) {
-            decls = declarations;
-            aliases = null;
-        } else {
-            decls = declarations.keySet();
-            aliases = declarations.values();
-        }
-        for(ie in CeylonIterable(importEdits(cu, decls, aliases, declarationBeingDeleted, doc))){
+        for(ie in CeylonIterable(importEdits(cu, declarations, aliases, declarationBeingDeleted, doc))){
             il+=getInsertedText(ie).size;
             addEditToChange(change, ie);
         }
         return il;
     }
+
+    shared Integer applyImports(TextChange change, JSet<Declaration> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null)
+        => applyImportsInternal(change, declarations, null, cu, doc, declarationBeingDeleted);
+
+    shared Integer applyImportsWithAliases(TextChange change, JMap<Declaration, JString> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null)
+        => applyImportsInternal(change, declarations.keySet(), declarations.values(), cu, doc, declarationBeingDeleted);
 
     shared void importSignatureTypes(Declaration declaration, Tree .CompilationUnit rootNode, JSet<Declaration> declarations){
         if(is TypedDeclaration declaration){

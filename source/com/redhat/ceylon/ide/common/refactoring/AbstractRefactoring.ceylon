@@ -21,7 +21,7 @@ import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
 
-shared interface AbstractRefactoring satisfies Refactoring & NodePrinter {
+shared interface AbstractRefactoring<RefactoringData> satisfies Refactoring & NodePrinter {
     shared interface EditorData {
         shared formal List<CommonToken>? tokens;
         shared formal Tree.CompilationUnit? rootNode;
@@ -61,4 +61,6 @@ shared interface AbstractRefactoring satisfies Refactoring & NodePrinter {
     shared default Integer countReferences(Tree.CompilationUnit cu) => 0;
 
     shared actual default String toString(Node node) => node.text;
+
+    shared formal Anything build(RefactoringData refactoringData);
 }

@@ -2,8 +2,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
-    Indents
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -11,44 +10,33 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    Set,
     HashSet
 }
 import java.lang {
-    StringBuilder
+    StringBuilder,
+    ObjectArray,
+    JString=String
 }
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals
+    ImportProposals,
+    DocumentChanges
 }
 
-suppressWarnings("expressionTypeNothing")
-object extractValueImportProposals satisfies ImportProposals<Nothing, Nothing, Nothing, Nothing, Nothing, Nothing> {
-    shared actual void addEditToChange(Nothing change, Nothing edit) {}
-    shared actual String getInsertedText(Nothing edit) => nothing;
-    shared actual Indents<Nothing> indents => nothing;
-    shared actual Nothing newDeleteEdit(Integer start, Integer stop) => nothing;
-    shared actual Nothing newInsertEdit(Integer position, String text) => nothing;
-    shared actual Nothing newReplaceEdit(Integer start, Integer stop, String text) => nothing;
-    shared actual Nothing[2] getTextChangeAndDocument(Nothing file) => nothing;
 
-    shared actual Nothing newImportProposal(String description, Nothing correctionChange) => nothing;
+shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, IRegion=DefaultRegion>
+        satisfies ExtractInferrableTypedRefactoring<TextChange>
+        & NewNameRefactoring
+        & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
+        & ExtractLinkedModeEnabled<IRegion>
+        given InsertEdit satisfies TextEdit {
 
-}
-
-shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefactoring & NewNameRefactoring {
-
-    shared default ImportProposals<in Nothing, in Nothing, in Nothing, in Nothing, in Nothing, in Nothing> importProposals => extractValueImportProposals;
-
-    shared interface Result {
-        shared formal String declaration;
-        shared formal Set<Declaration> declarationsToImport;
-        shared formal Tree.Statement? statement;
-        shared formal String typeDec;
-    }
+    shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
 
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
     shared formal variable Boolean getter;
+
+    value indents => importProposals.indents;
 
     shared actual String initialNewName()
             => if (exists node = editorData?.node)
@@ -72,20 +60,24 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
                     sourceFile.name != "module.ceylon" &&
                     sourceFile.name != "package.ceylon" &&
                     data.node is Tree.Term)
-    then true
-    else false;
+                then true
+                else false;
 
-    shared default Result extractValue() {
+    shared actual void build(TextChange tfc) {
+        "This method will only be called when the [[editorData]]is not [[null]]"
         assert(exists data=editorData,
             exists sourceFile=data.sourceVirtualFile,
-            exists cu=data.rootNode,
+            exists rootNode=data.rootNode,
             is Tree.Term node=data.node);
 
+        initMultiEditChange(tfc);
+        value doc = getDocumentForChange(tfc);
+
         value unit = node.unit;
-        value myStatement = nodes.findStatement(cu, node);
-        value toplevel = if (is Tree.Declaration myStatement)
-                            then myStatement.declarationModel.toplevel
-                            else false;
+        value statement = nodes.findStatement(rootNode, node);
+        value toplevel = if (is Tree.Declaration statement)
+        then statement.declarationModel.toplevel
+        else false;
         type = unit.denotableType(node.typeModel);
         value unparened = unparenthesize(node);
 
@@ -94,8 +86,8 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
 
         Tree.FunctionArgument? anonFunction =
                 if (is Tree.FunctionArgument unparened)
-                then unparened
-                else null;
+        then unparened
+        else null;
 
         if (exists fa = anonFunction) {
             type = unit.getCallableReturnType(type);
@@ -117,41 +109,58 @@ shared interface ExtractValueRefactoring satisfies ExtractInferrableTypedRefacto
             exp = toString(unparened) + ";";
         }
 
-        variable String myTypeDec;
-        value declarations = HashSet<Declaration>();
+        variable String typeDec;
 
+        Integer il;
         if (type?.unknown else true) {
-            myTypeDec = "dynamic";
+            typeDec = "dynamic";
+            il = 0;
         } else if (exists t = type, explicitType || toplevel) {
-            myTypeDec = t.asSourceCodeString(unit);
-            importProposals.importType(declarations, type, cu);
+            typeDec = t.asSourceCodeString(unit);
+            value declarations = HashSet<Declaration>();
+            importProposals.importType(declarations, type, rootNode);
+            il = importProposals.applyImports(tfc, declarations, rootNode, doc);
         } else {
             canBeInferred = true;
-            myTypeDec = mod;
+            typeDec = mod;
+            il = 0;
         }
 
-        value myDeclaration = "``myTypeDec`` ``newName````
-                    if (anonFunction exists)
-                    then ""
-                    else if (getter) then " => " else " = "
-                    ````exp``";
+        value myDeclaration =
+            "``typeDec`` ``newName````
+                if (anonFunction exists)
+                then ""
+                else if (getter) then " => " else " = "
+                ````exp``";
 
-        return object satisfies Result {
-            shared actual String declaration => myDeclaration;
-            shared actual Set<Declaration> declarationsToImport => declarations;
-            shared actual Tree.Statement? statement => myStatement;
-            shared actual String typeDec => myTypeDec;
-        };
+        value text = myDeclaration + indents.getDefaultLineDelimiter(doc)
+                + indents.getIndent(statement, doc);
+
+        if (exists st = statement) {
+            Integer start = st.startIndex.intValue();
+
+            addEditToChange(tfc, newInsertEdit(start, text));
+            addEditToChange(tfc, newReplaceEdit(nodes.getNodeStartOffset(node), nodes.getNodeLength(node), newName));
+            typeRegion = newRegion(start+il, typeDec.size);
+            decRegion = newRegion(start+il+typeDec.size+1, newName.size);
+            refRegion = newRegion(nodes.getNodeStartOffset(node)+il+text.size,
+                newName.size);
+        }
     }
 
     shared Boolean isFunction
         => editorData?.node is Tree.FunctionArgument;
 
     shared actual Boolean forceWizardMode()
-            => if (exists data = editorData,
+        => if (exists data = editorData,
         exists node = data.node,
         exists scope = node.scope)
     then scope.getMemberOrParameter(node.unit, newName, null, false) exists
     else false;
 
+    shared actual ObjectArray<JString> nameProposals
+        => nodes.nameProposals(editorData?.node);
+
+    shared actual String name
+        => "Extract Value";
 }
