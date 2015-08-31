@@ -7,3 +7,6 @@ autoexportmavendependencies=false
 [compiler]
 source=source
 source=test-source
+
+[repositories]
+lookup=./repo

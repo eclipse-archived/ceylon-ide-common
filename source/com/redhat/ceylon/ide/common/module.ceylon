@@ -8,4 +8,5 @@ module com.redhat.ceylon.ide.common "1.1.1" {
     shared import com.redhat.ceylon.typechecker "1.1.1";
     shared import com.redhat.ceylon.compiler.java "1.1.1";
     shared import com.redhat.ceylon.common "1.1.1";
+    shared import org.jgrapht.core "0.9.1";
 }
