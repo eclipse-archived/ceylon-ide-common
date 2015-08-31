@@ -87,11 +87,11 @@ shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Int
 			t.visit(this);
 		}
 		Tree.InvocationExpression? ie = that.invocationExpression;
-		if (exists ie) {
-			ie.positionalArgumentList.visit(this);
+		if (exists ie, exists args = ie.positionalArgumentList) {
+			args.visit(this);
 		}
 		
-		if (!exists t, exists ie) {
+		if (!exists t, !exists ie) {
 			super.visit(that);
 		}
 	}
@@ -102,11 +102,11 @@ shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Int
 			t.visit(this);
 		}
 		Tree.InvocationExpression? ie = that.invocationExpression;
-		if (exists ie) {
-			ie.positionalArgumentList.visit(this);
+		if (exists ie, exists args = ie.positionalArgumentList) {
+			args.visit(this);
 		}
 		
-		if (!exists t, exists ie) {
+		if (!exists t, !exists ie) {
 			super.visit(that);
 		}
 	}
@@ -118,6 +118,8 @@ shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Int
 			}
 			super.visitAny(that);
 		}
+		//otherwise, as a performance optimization
+		//don't go any further down this branch
 	}
 	
 	shared actual void visit(Tree.ImportPath that) {
