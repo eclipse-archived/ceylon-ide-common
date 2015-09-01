@@ -13,6 +13,6 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
     shared formal InsertEdit newInsertEdit(Integer position, String text);
 
-    shared formal TextEdit newReplaceEdit(Integer start, Integer stop, String text);
+    shared formal TextEdit newReplaceEdit(Integer start, Integer length, String text);
 
 }
