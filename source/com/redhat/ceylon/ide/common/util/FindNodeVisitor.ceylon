@@ -12,8 +12,34 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Integer endOffset) extends Visitor() {
-    
+"Finds the smallest (most specific) node where a given selection
+ is completely within bounds of that node (plus whitespace)."
+shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
+	
+	"""The list of all tokens in the compilation unit.
+	   If this is non-[[null]], it's used to improve the search:
+	   
+	       print(    "Hello, World!"    );
+	       //      <----------------->
+	   
+	   With tokens, we can determine that the string literal is the selected node,
+	   even though the selection is not within bounds of the literal itself."""
+	List<CommonToken>? tokens;
+	
+	"The index of the first selected character."
+	Integer startOffset;
+	
+	"The index of the first character past the selection,
+	 or (equivalently) [[startOffset]] plus the length of the selection,
+	 or (equivalently) the index of the last selected character *plus one*.
+	 
+	 For example, if the selection is empty, this is the same as [[startOffset]];
+	 if a single character is selected, this is `startOffset + 1`."
+	Integer endOffset;
+	
+	"The result: the most specific node for which the selection
+	 specified by [[startOffset]] and [[endOffset]]
+	 is contained within this [[node]] and whitespace surrounding it."
 	shared variable Node? node = null;
 	
 	Boolean inBounds(Node? left, Node? right = left) {

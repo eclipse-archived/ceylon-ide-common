@@ -162,7 +162,13 @@ shared object nodes {
         return null;
     }
 
-    shared Node? findNode(Node node, JList<CommonToken>? tokens, Integer startOffset, Integer endOffset = startOffset + 1) {
+    "Finds the most specific node within [[node]] for which the selection given by [[startOffset]] and [[endOffset]]
+     is contained within the node plus surrounding whitespace.
+     
+     [[startOffset]] is the index of the first selected character,
+     and [[endOffset]] is the index of the first character past the selection.
+     Thus, the length of the selection is `endOffset - startOffset`."
+    shared Node? findNode(Node node, JList<CommonToken>? tokens, Integer startOffset, Integer endOffset = startOffset) {
         FindNodeVisitor visitor = FindNodeVisitor(tokens, startOffset, endOffset);
 
         node.visit(visitor);
