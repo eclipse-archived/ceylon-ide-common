@@ -34,14 +34,14 @@ shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Int
 								if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
 									return false;
 								}
-								if (token.startIndex < startOffset) {
+								if (token.startIndex <= startOffset) {
 									break;
 								}
 							}
 						}
 					}
 					if (endToken.tokenIndex < tokens.size() - 1) {
-						if (endToken.stopIndex < endOffset) {
+						if (endToken.stopIndex+1 < endOffset) {
 							// we could still consider this in bounds
 							// if the tokens between endToken and endOffset were only hidden ones
 							for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
@@ -49,7 +49,7 @@ shared class FindNodeVisitor(List<CommonToken>? tokens, Integer startOffset, Int
 								if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
 									return false;
 								}
-								if (token.stopIndex > endOffset) {
+								if (token.stopIndex+1 >= endOffset) {
 									break;
 								}
 							}
