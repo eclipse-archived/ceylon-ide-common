@@ -4,17 +4,25 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     CeylonIterable,
-    createJavaObjectArray
+    javaString
 }
 
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
     Visitor
 }
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    OccurrenceLocation
+    OccurrenceLocation,
+    types,
+    escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
@@ -42,8 +50,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    JString=String,
-    ObjectArray
+    JString=String
 }
 import java.util {
     Map,
@@ -51,17 +58,21 @@ import java.util {
     JList=List,
     Collection,
     Collections,
-    JArrayList=ArrayList
+    JArrayList=ArrayList,
+    JIterator=Iterator,
+    TreeSet,
+    Set
+}
+import java.util.regex {
+    Pattern
 }
 
 import org.antlr.runtime {
     CommonToken,
     Token
 }
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
-}
 
+// TODO change IdeComponent to LocalAnalysisResult
 shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Document>()
         satisfies InvocationCompletion<IdeComponent, CompletionComponent>
                 & ParametersCompletion<IdeComponent, CompletionComponent>
@@ -78,6 +89,277 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             = HashMap<JString,DeclarationWithProximity>();
 
     shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
+
+    // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
+    shared CompletionComponent[] getContentProposals(LocalAnalysisResult<Document> analysisResult, 
+            Integer offset, Integer line, Boolean secondLevel, /* TODO use analysisResult instead */IdeComponent cmp) {
+        value tokens = analysisResult.tokens;
+        value rn = analysisResult.rootNode;
+        value document = analysisResult.document;
+
+        // TODO perhaps we should make it non optional in LocalAnalysisResult?
+        assert(exists tokens);
+        
+        //adjust the token to account for unclosed blocks
+        //we search for the first non-whitespace/non-comment
+        //token to the left of the caret
+        variable Integer tokenIndex = nodes.getTokenIndexAtCharacter(tokens, offset);
+        if (tokenIndex < 0) {
+            tokenIndex = -tokenIndex;
+        }
+        CommonToken adjustedToken = adjust(tokenIndex, offset, tokens);
+        Integer tt = adjustedToken.type;
+        if (offset <= adjustedToken.stopIndex, offset > adjustedToken.startIndex,
+                isCommentOrCodeStringLiteral(adjustedToken)) {
+            return [];
+        }
+        if (isLineComment(adjustedToken), offset > adjustedToken.startIndex, adjustedToken.line == line + 1) {
+            return [];
+        }
+
+        //find the node at the token
+        Node node = getTokenNode(adjustedToken.startIndex, adjustedToken.stopIndex + 1, tt, rn, offset);
+
+        //it's useful to know the type of the preceding token, if any
+        variable Integer index = adjustedToken.tokenIndex;
+        if (offset <= adjustedToken.stopIndex+1, offset > adjustedToken.startIndex) {
+            index--;
+        }
+        Integer tokenType = adjustedToken.type;
+        Integer previousTokenType = if (index >= 0) then adjust(index, offset, tokens).type else -1;
+
+        //find the type that is expected in the current
+        //location so we can prioritize proposals of that
+        //type
+        //TODO: this breaks as soon as the user starts typing
+        //      an expression, since RequiredTypeVisitor
+        //      doesn't know how to search up the tree for
+        //      the containing InvocationExpression
+        Type? requiredType = types.getRequiredType(rn, node, adjustedToken);
+        variable String prefix = "";
+        variable String fullPrefix = "";
+        if (isIdentifierOrKeyword(adjustedToken)) {
+            String text = adjustedToken.text;
+            //work from the end of the token to
+            //compute the offset, in order to
+            //account for quoted identifiers, where
+            //the \i or \I is not in the token text 
+            Integer offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
+            Integer realOffsetInToken = offset - adjustedToken.startIndex;
+            if (offsetInToken <= text.size) {
+                prefix = text.span(0, offsetInToken);
+                fullPrefix = getRealText(adjustedToken).span(0, realOffsetInToken);
+            }
+        }
+        variable Boolean isMemberOp = isMemberOperator(adjustedToken);
+        variable String qualified = "";
+        
+        // special handling for doc links
+        Boolean inDoc = isAnnotationStringLiteral(adjustedToken)
+                && offset>adjustedToken.startIndex
+                && offset<=adjustedToken.stopIndex;
+        if (inDoc) {
+            if (is Tree.DocLink node) {
+            Tree.DocLink docLink = node;
+            Integer offsetInLink = offset - docLink.startIndex.intValue();
+            String text = docLink.token.text;
+            Integer bar = (text.firstOccurrence('|') else -1) + 1;
+            if (offsetInLink < bar) { 
+                return [];
+            }
+            qualified = text.span(bar, offsetInLink);
+            Integer dcolon = qualified.firstOccurrence("::") else -1;
+            variable String? pkg = null;
+            if (dcolon >= 0) {
+                pkg = qualified.span(0, dcolon + 2);
+                qualified = qualified.spanFrom(dcolon + 2);
+            }
+            Integer dot = (qualified.firstOccurrence('.') else -1) + 1;
+            isMemberOp = dot > 0;
+            prefix = qualified.spanFrom(dot);
+            if (dcolon >= 0) {
+                assert(exists p = pkg); 
+                qualified = p + qualified;
+            }
+            fullPrefix = prefix;
+            } else { 
+                return [];
+            }
+        }
+        
+        FindScopeVisitor fsv = FindScopeVisitor(node);
+        fsv.visit(rn);
+        Scope? scope = fsv.scope;
+
+        // I think the rest of this function assumes the scope always exists
+        if (!exists scope) {
+            return [];
+        }
+        assert(exists scope);
+        
+        //construct completions when outside ordinary code
+        variable CompletionComponent[]? completions = null;
+                // TODO
+                //constructCompletions(offset, fullPrefix, 
+                //        controller, node, adjustedToken,
+                //        scope, returnedParamInfo, isMemberOp,
+                //        document, tokenType, monitor);
+        if (!exists c = completions) {
+            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, rn);
+            Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
+            filterProposals(proposals);
+            filterProposals(functionProposals);
+            value sortedProposals = sortProposals(prefix, requiredType, proposals);
+            value sortedFunctionProposals = sortProposals(prefix, requiredType, functionProposals);
+            completions = constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
+                sortedFunctionProposals, cmp, scope, node, adjustedToken, isMemberOp, document,
+                secondLevel, inDoc, requiredType, previousTokenType, tokenType);
+        }
+
+        assert(exists c = completions);
+        return c; 
+    }
+    
+    // see CeylonCompletionProcessor.
+    void filterProposals(Proposals proposals) {
+        List<Pattern> filters = proposalFilters;
+
+        if (!filters.empty) {
+            JIterator<DeclarationWithProximity> iterator = proposals.values().iterator();
+            while (iterator.hasNext()) {
+                DeclarationWithProximity dwp = iterator.next();
+                String name = dwp.declaration.qualifiedNameString;
+                for (Pattern filter in filters) {
+                    if (filter.matcher(javaString(name)).matches()) {
+                        iterator.remove();
+                    }
+                }
+            }
+        }
+    }
+
+    shared formal List<Pattern> proposalFilters;
+    
+    // see CeylonCompletionProcessor.sortProposals()
+    Set<DeclarationWithProximity> sortProposals(String prefix, Type? type, Proposals proposals) {
+        Set<DeclarationWithProximity> set = TreeSet<DeclarationWithProximity>(ProposalComparator(prefix, type));
+        set.addAll(proposals.values());
+        return set;
+    }
+
+    // see CeylonCompletionProcessor.isAnnotationStringLiteral()
+    Boolean isAnnotationStringLiteral(CommonToken token) {
+        Integer type = token.type;
+        return type == CeylonLexer.\iASTRING_LITERAL
+                || type == CeylonLexer.\iAVERBATIM_STRING;
+    }
+
+    // see CeylonCompletionProcessor.isMemberOperator()
+    Boolean isMemberOperator(Token token) {
+        Integer type = token.type;
+        return type == CeylonLexer.\iMEMBER_OP 
+                || type == CeylonLexer.\iSPREAD_OP 
+                || type == CeylonLexer.\iSAFE_MEMBER_OP;
+    }
+    
+    // see CeylonCompletionProcessor.getRealText()
+    String getRealText(CommonToken token) {
+        String text = token.text;
+        Integer type = token.type;
+        Integer len = token.stopIndex - token.startIndex + 1;
+        if (text.size < len) {
+            variable String quote;
+            if (type == CeylonLexer.\iLIDENTIFIER) {
+                quote = "\\i";
+            } else if (type == CeylonLexer.\iUIDENTIFIER) {
+                quote = "\\I";
+            } else {
+                quote = "";
+            }
+            return quote + text;
+        } else {
+            return text;
+        }
+    }
+
+    // see CeylonCompletionProcessor.getTokenNode()
+    Node getTokenNode(Integer adjustedStart, Integer adjustedEnd, Integer tokenType, Tree.CompilationUnit rootNode, Integer offset) {
+        variable Node? node = nodes.findNode(rootNode, null, adjustedStart, adjustedEnd);
+        if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
+            node = nodes.findNode(sl, null, offset, offset);
+        }
+        if (tokenType == CeylonLexer.\iRBRACE && !(node is Tree.IterableType)
+                || tokenType == CeylonLexer.\iSEMICOLON) {
+            //We are to the right of a } or ;
+            //so the returned node is the previous
+            //statement/declaration. Look for the
+            //containing body.
+            class BodyVisitor extends Visitor {
+                Node node;
+                variable Node currentBody;
+                shared variable Node? result = null;
+
+                shared new (Node node, Node root) extends Visitor() {
+                    this.node = node;
+                    currentBody = root;
+                }
+                
+                shared actual void visitAny(Node that) {
+                    if (that === node) {
+                        result = currentBody;
+                    } else {
+                        Node cb = currentBody;
+                        if (is Tree.Body that) {
+                            currentBody = that;
+                        }
+                        if (is Tree.NamedArgumentList that) {
+                            currentBody = that;
+                        }
+                        super.visitAny(that);
+                        currentBody = cb;
+                    }
+                }
+            }
+            
+            if (exists n = node) {
+                BodyVisitor mv = BodyVisitor(n, rootNode);
+                mv.visit(rootNode);
+                node = mv.result;
+            }
+        }
+        
+        return node else rootNode; //we're in whitespace at the start of the file
+    }
+
+    // see CeylonCompletionProcessor.isIdentifierOrKeyword()
+    Boolean isIdentifierOrKeyword(Token token) {
+        value type = token.type;
+        return type == CeylonLexer.\iLIDENTIFIER
+                || type == CeylonLexer.\iUIDENTIFIER 
+                || type == CeylonLexer.\iAIDENTIFIER 
+                || type == CeylonLexer.\iPIDENTIFIER 
+                || escaping.keywords.contains(token.text);
+    }
+
+    // see CeylonCompletionProcessor.isCommentOrCodeStringLiteral()
+    Boolean isCommentOrCodeStringLiteral(CommonToken adjustedToken) {
+        Integer tt = adjustedToken.type;
+        return tt == CeylonLexer.\iMULTI_COMMENT
+                || tt == CeylonLexer.\iLINE_COMMENT 
+                || tt == CeylonLexer.\iSTRING_LITERAL 
+                || tt == CeylonLexer.\iSTRING_END 
+                || tt == CeylonLexer.\iSTRING_MID 
+                || tt == CeylonLexer.\iSTRING_START 
+                || tt == CeylonLexer.\iVERBATIM_STRING 
+                || tt == CeylonLexer.\iCHAR_LITERAL 
+                || tt == CeylonLexer.\iFLOAT_LITERAL 
+                || tt == CeylonLexer.\iNATURAL_LITERAL;
+    }
+    
+    // see CeylonCompletionProcessor.isLineComment()
+    Boolean isLineComment(variable CommonToken adjustedToken) {
+        return adjustedToken.type == CeylonLexer.\iLINE_COMMENT;
+    }
 
     shared Proposals getProposals(Node node,
             Scope? scope, String prefix, Boolean memberOp,
@@ -219,7 +501,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         }
     }
 
-    shared Proposals getFunctionProposals(Node node,
+    Proposals getFunctionProposals(Node node,
             Scope scope, String prefix, Boolean memberOp)
             => if (exists type
                     = getFunctionProposalType(node, memberOp),
@@ -325,7 +607,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 else node is Tree.QualifiedType;
 
     // see CeylonCompletionProcess.constructCompletions(...)
-    shared ObjectArray<CompletionComponent> constructCompletions(Integer offset, String prefix,
+    shared CompletionComponent[] constructCompletions(Integer offset, String prefix,
             Collection<DeclarationWithProximity> sortedProposals,
             Collection<DeclarationWithProximity> sortedFunctionProposals,
             IdeComponent cmp, Scope scope,
@@ -459,7 +741,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         }
 
         // TODO function proposals
-        return createJavaObjectArray(result.sequence());
+        return result.sequence();
     }
 
     // see CompletionUtil.overloads(Declaration dec)
@@ -674,8 +956,6 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     }
 
     shared formal JList<CommonToken> getTokens(IdeComponent cmp);
-
-    shared formal CommonToken? getNextToken(IdeComponent cmp, CommonToken token);
 
     Boolean noParametersFollow(CommonToken? nextToken) {
         //should we disable this, since a statement
@@ -900,6 +1180,26 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         Unit? unit = getCompilationUnit(cpc).unit;
 
         result.add(newProgramElementReferenceCompletion(offset, prefix, dec, unit, dec.reference, scope, cpc, isMember));
+    }
+
+    CommonToken? getNextToken(IdeComponent cmp, CommonToken token) {
+        variable Integer i = token.tokenIndex;
+        variable CommonToken? nextToken=null;
+        JList<CommonToken> tokens = getTokens(cmp);
+        variable Boolean isHiddenChannel = true;
+        
+        while (isHiddenChannel) {
+            if (++i<tokens.size()) {
+                nextToken = tokens.get(i);
+            }
+            else {
+                break;
+            }
+            
+            isHiddenChannel = (nextToken?.channel else -1) == Token.\iHIDDEN_CHANNEL;
+        }
+
+        return nextToken;
     }
 
     shared formal CompletionComponent newProgramElementReferenceCompletion(Integer offset, String prefix,

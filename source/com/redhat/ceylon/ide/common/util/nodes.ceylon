@@ -63,7 +63,7 @@ shared object nodes {
         cu.visit(visitor);
         return visitor.declarationNode;
     }
-    
+
     shared Tree.Declaration? findDeclarationWithBody(Tree.CompilationUnit cu, Node node) {
         value visitor = FindBodyContainerVisitor(node);
         cu.visit(visitor);
@@ -268,6 +268,39 @@ shared object nodes {
 
     // TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)
 
+    //
+    // This function returns the index of the token element
+    // containing the offset specified. If such a token does
+    // not exist, it returns the negation of the index of the
+    // element immediately preceding the offset.
+    //
+    shared Integer getTokenIndexAtCharacter(JList<CommonToken> tokens, Integer offset) {
+        //search using bisection
+        variable Integer low = 0;
+        variable Integer high = tokens.size();
+
+        while (high > low) {
+            variable Integer mid = (high + low) / 2;
+            assert (is CommonToken midElement = tokens.get(mid));
+            if (offset >= midElement.startIndex && offset <= midElement.stopIndex) {
+                return mid;
+            } else if (offset < midElement.startIndex) {
+                high = mid;
+            } else {
+                low = mid + 1;
+            }
+        }
+        return -(low - 1);
+    }
+
+    shared Integer getNodeStartOffset(Node? node) {
+        return node?.startIndex?.intValue() else 0;
+    }
+
+    shared Integer getNodeEndOffset(Node? node) {
+        return (node?.stopIndex?.intValue() else -1) + 1;
+    }
+
     shared Node? getReferencedNode(Referenceable? model) {
         if (exists model) {
             if (exists unit = model.unit) {
@@ -383,25 +416,25 @@ shared object nodes {
 
     shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
         value names = HashSet<String>();
-        
+
         if (is Tree.Term node) {
             Tree.Term term = TreeUtil.unwrapExpressionUntilTerm(node);
-            Tree.Term typedTerm = 
+            Tree.Term typedTerm =
                     //TODO: is this really a good idea?!
                     if (is Tree.FunctionArgument term)
                     then (TreeUtil.unwrapExpressionUntilTerm(term.expression) else term)
                     else term;
             Type? type = typedTerm.typeModel;
             value baseTerm =
-                if (is Tree.InvocationExpression inv = typedTerm) 
-                then TreeUtil.unwrapExpressionUntilTerm(inv.primary) 
+                if (is Tree.InvocationExpression inv = typedTerm)
+                then TreeUtil.unwrapExpressionUntilTerm(inv.primary)
                 else typedTerm;
-            
-            /*if (is Tree.FunctionType ft = baseTerm, 
+
+            /*if (is Tree.FunctionType ft = baseTerm,
                     is Tree.SimpleType returnType = ft.returnType) {
                 addNameProposals(names, false, returnType.declarationModel.name);
             }*/
-            
+
             switch (baseTerm)
             case (is Tree.QualifiedMemberOrTypeExpression) {
                 if (exists decl = baseTerm.declaration) {
@@ -444,36 +477,36 @@ shared object nodes {
                     addNameProposals(names, false, type.declaration.name);
                 }
                 if (exists unit = node.unit) {
-                    if (unit.isOptionalType(type), 
-                        exists def = unit.getDefiniteType(type), 
+                    if (unit.isOptionalType(type),
+                        exists def = unit.getDefiniteType(type),
                         def.classOrInterface || def.typeParameter) {
                         addNameProposals(names, false, def.declaration.name);
                     }
-                    if (unit.isIterableType(type), 
-                        exists iter = unit.getIteratedType(type), 
+                    if (unit.isIterableType(type),
+                        exists iter = unit.getIteratedType(type),
                         iter.classOrInterface || iter.typeParameter) {
                         addNameProposals(names, !unplural, iter.declaration.name);
                     }
                 }
             }
-            
+
         }
 
         if (names.empty) {
             names.add("it");
         }
-        
+
         return createJavaStringArray(names);
     }
 
     shared void addNameProposals(
-            MutableSet<String>|JSet<JString> names, 
+            MutableSet<String>|JSet<JString> names,
             Boolean plural, String name) {
         value matcher = idPattern.matcher(javaString(name));
         while (matcher.find()) {
-            value subname = 
-                    matcher.group(1).lowercased + 
-                    name[matcher.start(2)...] + 
+            value subname =
+                    matcher.group(1).lowercased +
+                    name[matcher.start(2)...] +
                     (plural then "s" else "");
             value escaped = 
                     subname in keywords
@@ -487,7 +520,7 @@ shared object nodes {
         }
         /*matcher.reset();
         while (matcher.find()) {
-            value initials = 
+            value initials =
                     matcher.group(1).lowercased +
                     String(name.skip(matcher.start(2))
                                .filter(Character.uppercase)
