@@ -307,7 +307,9 @@ shared class Path satisfies List<String> {
                     separators = separators.and(_HAS_LEADING.or(_IS_UNC));
                 }
                 //recompute hash because canonicalize affects hash
-                separators = separators.and(_ALL_SEPARATORS).or(computeHashCode().leftLogicalShift(3));
+                value hashCode = computeHashCode();
+                value shiftedHashCode = hashCode.leftLogicalShift(3);
+                separators = separators.and(_ALL_SEPARATORS).or(shiftedHashCode);
                 return true;
             }
         }
@@ -323,16 +325,14 @@ shared class Path satisfies List<String> {
         path = collapseSlashes(path);
         value len = path.size;
 
-        variable Integer seps;
-
         //compute the separators array
         if (len < 2) {
             if (exists first=path.first,
                 path.rest.empty,
                 first == _SEPARATOR) {
-                seps = _HAS_LEADING;
+                separators = _HAS_LEADING;
             } else {
-                seps = 0;
+                separators = 0;
             }
         } else {
             assert (exists first=path.first);
@@ -343,12 +343,12 @@ shared class Path satisfies List<String> {
             //UNC path of length two has no trailing separator
             value hasTrailing = !(isUNC && len == 2) && last == _SEPARATOR;
 
-            seps = if (hasLeading) then _HAS_LEADING else 0;
+            separators = if (hasLeading) then _HAS_LEADING else 0;
             if (isUNC) {
-                seps = seps.or(_IS_UNC);
+                separators = separators.or(_IS_UNC);
             }
             if (hasTrailing) {
-                seps = seps.or(_HAS_TRAILING);
+                separators = separators.or(_HAS_TRAILING);
             }
         }
 
@@ -356,10 +356,8 @@ shared class Path satisfies List<String> {
         _segments = computeSegments(path);
         if (!canonicalize()) {
             //compute hash now because canonicalize didn't need to do it
-            seps = seps.and(_ALL_SEPARATORS).or(computeHashCode().leftLogicalShift(3));
+            separators = separators.and(_ALL_SEPARATORS).or(computeHashCode().leftLogicalShift(3));
         }
-
-        separators = seps;
     }
 
     """
