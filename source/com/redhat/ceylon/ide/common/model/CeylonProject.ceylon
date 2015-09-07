@@ -12,6 +12,7 @@ shared abstract class CeylonProject<IdeArtifact>()
         given IdeArtifact satisfies Object {
 
     variable CeylonProjectConfig<IdeArtifact>? ceylonConfig = null;
+    variable CeylonIdeConfig<IdeArtifact>? ideConfig = null;
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
 
     shared formal IdeArtifact ideArtifact;
@@ -36,6 +37,16 @@ shared abstract class CeylonProject<IdeArtifact>()
         } else {
             value newConfig = CeylonProjectConfig<IdeArtifact>(this);
             ceylonConfig = newConfig;
+            return newConfig;
+        }
+    }
+    
+    shared CeylonIdeConfig<IdeArtifact> ideConfiguration {
+        if (exists config = ideConfig) {
+            return config;
+        } else {
+            value newConfig = CeylonIdeConfig<IdeArtifact>(this);
+            ideConfig = newConfig;
             return newConfig;
         }
     }
