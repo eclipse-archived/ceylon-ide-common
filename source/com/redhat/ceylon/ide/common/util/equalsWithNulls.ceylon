@@ -5,6 +5,6 @@ shared Boolean equalsWithNulls<OneType, OtherType>(OneType? one, OtherType? othe
     if (exists one, exists other) {
         return equals(one)(other);
     } else {
-        return twoNullsAreEqual && one is Null && one is Null;
+        return twoNullsAreEqual && one is Null && other is Null;
     }
 }
