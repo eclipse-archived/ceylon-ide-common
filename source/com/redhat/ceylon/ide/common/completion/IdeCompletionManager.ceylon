@@ -22,7 +22,8 @@ import com.redhat.ceylon.ide.common.util {
     nodes,
     OccurrenceLocation,
     types,
-    escaping
+    escaping,
+    ProgressMonitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
@@ -80,6 +81,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 & MemberNameCompletion<CompletionComponent>
                 & BasicCompletion<IdeComponent, CompletionComponent>
                 & RefinementCompletion<IdeComponent, CompletionComponent, Document>
+                & PackageCompletion<CompletionComponent, Document>
         given CompletionComponent satisfies Object {
 
     shared alias Proposals
@@ -92,7 +94,8 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
     shared CompletionComponent[] getContentProposals(LocalAnalysisResult<Document> analysisResult, 
-            Integer offset, Integer line, Boolean secondLevel, /* TODO use analysisResult instead */IdeComponent cmp) {
+            Integer offset, Integer line, Boolean secondLevel, /* TODO use analysisResult instead */IdeComponent cmp,
+            ProgressMonitor monitor) {
         value tokens = analysisResult.tokens;
         value rn = analysisResult.rootNode;
         value document = analysisResult.document;
@@ -198,12 +201,13 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         assert(exists scope);
         
         //construct completions when outside ordinary code
-        variable CompletionComponent[]? completions = null;
-                // TODO
-                //constructCompletions(offset, fullPrefix, 
-                //        controller, node, adjustedToken,
-                //        scope, returnedParamInfo, isMemberOp,
-                //        document, tokenType, monitor);
+        variable CompletionComponent[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
+                        analysisResult, node, adjustedToken,
+                        scope, /*TODO returnedParamInfo,*/ false, isMemberOp,
+                        tokenType, monitor);
+
+        //print("offset = ``offset``, node = ``node``, completions = ``completions else "null"``");
+        
         if (!exists c = completions) {
             Proposals proposals = getProposals(node, scope, prefix, isMemberOp, rn);
             Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
@@ -220,6 +224,70 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         return c; 
     }
     
+    CompletionComponent[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, LocalAnalysisResult<Document> cpc,
+            Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
+            Integer tokenType, ProgressMonitor monitor) {
+        MutableList<CompletionComponent> result = ArrayList<CompletionComponent>();
+
+        if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
+            // TODO addFakeShowParametersCompletion(node, cpc, result);
+        } else if (is Tree.PackageLiteral node) {
+            // TODO addPackageCompletions(cpc, offset, prefix, null, node, result, false, monitor);
+        } else if (is Tree.ModuleLiteral node) {
+            // TODO addModuleCompletions(cpc, offset, prefix, null, node, result, false, monitor);
+        } else if (isDescriptorPackageNameMissing(node)) {
+            // TODO addCurrentPackageNameCompletion(cpc, offset, prefix, result);
+        } else if (node is Tree.Import, offset > token.stopIndex+1) {
+            addPackageCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);
+        } else if (node is Tree.ImportModule, offset > token.stopIndex+1) {
+            // TODO addModuleCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL, monitor);
+        } else if (is Tree.ImportPath node) {
+            // TODO ImportVisitor(prefix, token, offset, node, cpc, result, monitor).visit(cpc.rootNode);
+        } else if (isEmptyModuleDescriptor(cpc.rootNode)) {
+            // TODO addModuleDescriptorCompletion(cpc, offset, prefix, result);
+            // TODO addKeywordProposals(cpc, offset, prefix, result, node, null, false, tokenType);
+        } else if (isEmptyPackageDescriptor(cpc.rootNode)) {
+            // TODO addPackageDescriptorCompletion(cpc, offset, prefix, result);
+            // TODO addKeywordProposals(cpc, offset, prefix, result, node, null, false, tokenType);
+        } else if (node is Tree.TypeArgumentList, token.type == CeylonLexer.\iLARGER_OP) {
+            if (offset == token.stopIndex+1) {
+                // TODO addTypeArgumentListProposal(offset, cpc, node, scope, cpc.document, result);
+            } else if (isMemberNameProposable(offset, node, memberOp)) {
+                // TODO addMemberNameProposals(offset, cpc, node, result);
+            } else {
+                return null;
+            }
+        } else {
+            return null;
+        }
+        return result.sequence();
+    }
+
+    Boolean isDescriptorPackageNameMissing(Node node) {
+        Tree.ImportPath? path;
+        if (is Tree.ModuleDescriptor node) {
+            path = node.importPath;
+        } else if (is Tree.PackageDescriptor node) {
+            path = node.importPath;
+        } else {
+            return false;
+        }
+        return path?.identifiers?.empty else true;
+    }
+
+
+    Boolean atStartOfPositionalArgument(Node node, CommonToken token) {
+        if (is Tree.PositionalArgumentList node) {
+            variable Integer type = token.type;
+            return type == CeylonLexer.\iLPAREN || type == CeylonLexer.\iCOMMA;
+        } else if (is Tree.NamedArgumentList node) {
+            variable Integer type = token.type;
+            return type == CeylonLexer.\iLBRACE || type == CeylonLexer.\iSEMICOLON;
+        } else {
+            return false;
+        }
+    }
+
     // see CeylonCompletionProcessor.
     void filterProposals(Proposals proposals) {
         List<Pattern> filters = proposalFilters;

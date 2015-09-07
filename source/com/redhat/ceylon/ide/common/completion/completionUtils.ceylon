@@ -18,7 +18,14 @@ import ceylon.interop.java {
     CeylonIterable
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+    Tree,
+    TreeUtil
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
+import org.antlr.runtime {
+    CommonToken
 }
 
 Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -76,4 +83,43 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
         return qname;
     }
 }
+
+Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu) {
+    return if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) then true else false; 
+}
+
+Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) {
+    return if (exists cu, 
+               exists u = cu.unit,
+               u.filename == "package.ceylon",
+               cu.packageDescriptors.empty) then true else false; 
+}
+
+String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
+    StringBuilder fullPath = StringBuilder();
+    
+    if (exists path) {
+        fullPath.append(TreeUtil.formatPath(path.identifiers));
+        fullPath.append(".");
+        value maxLength = offset - path.startIndex.intValue() - prefix.size;
+        if (maxLength > fullPath.size) {
+            fullPath.deleteTerminal(maxLength - fullPath.size);
+        }
+    }
+    return fullPath.string;
+}
+
+Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken token) {
+    variable Integer i = token.tokenIndex + 1;
+    assert(exists tokens = cpc.tokens);
+    while (i < tokens.size()) {
+        CommonToken tok = tokens.get(i);
+        if (tok.channel != CommonToken.\iHIDDEN_CHANNEL) {
+            return tok.type;
+        }
+        i++;
+    }
+    return -1;
+}
+
 
