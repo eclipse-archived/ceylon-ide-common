@@ -33,30 +33,6 @@ import ceylon.test {
     test
 }
 
-void assertSame(String description, Identifiable expected, Identifiable actual)
-    => ceylonAssertEquals {
-        actual = actual;
-        expected = expected;
-        message = description;
-        function compare(Anything val1, Anything val2) {
-            assert(is Identifiable val1,
-                is Identifiable val2);
-            return val1 === val2;
-        }
-    };
-
-void assertEquals(String description, Anything expected, Anything actual)
-    => ceylonAssertEquals(actual, expected, description);
-
-void assertTrue(String description, Boolean boolean)
-    => ceylonAssertTrue(boolean, description);
-
-void fail(String description, Exception e)
-    => ceylonFail(description + e.message);
-
-void assertNull(String description, String? arg)
-    => ceylonAssertNull(arg, description);
-
 """
    This class is a Ceylon port of the following Eclipse class
    ```
@@ -77,6 +53,32 @@ void assertNull(String description, String? arg)
    ```
    """
 shared class PathTests() {
+    void assertSame(String description, Identifiable expected, Identifiable actual)
+            => ceylonAssertEquals {
+        actual = actual;
+        expected = expected;
+        message = description;
+        function compare(Anything val1, Anything val2) {
+            assert(is Identifiable val1,
+                is Identifiable val2);
+            return val1 === val2;
+        }
+    };
+
+    void assertEquals(String description, Anything expected, Anything actual)
+            => ceylonAssertEquals(actual, expected, description);
+
+    void assertTrue(String description, Boolean boolean)
+            => ceylonAssertTrue(boolean, description);
+
+    void fail(String description, Exception e)
+            => ceylonFail(description + e.message);
+
+    void assertNull(String description, String? arg)
+            => ceylonAssertNull(arg, description);
+
+
+
     Boolean \iWINDOWS = JFile.separatorChar == '\\';
 
     test shared void testAddTrailingSeparator(){
