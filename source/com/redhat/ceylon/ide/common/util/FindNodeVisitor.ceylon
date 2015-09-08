@@ -52,6 +52,9 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             if (exists startToken, exists endToken) {
                 if (exists tokens) {
                     if (startToken.tokenIndex > 0) {
+                        if (startToken.startIndex > endOffset) {
+                            return false;
+                        }
                         if (startToken.startIndex > startOffset) {
                             // we could still consider this in bounds
                             // if the tokens between startOffset and startToken were only hidden ones
@@ -67,6 +70,9 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                         }
                     }
                     if (endToken.tokenIndex < tokens.size() - 1) {
+                        if (endToken.stopIndex+1 < startOffset) {
+                            return false;
+                        }
                         if (endToken.stopIndex+1 < endOffset) {
                             // we could still consider this in bounds
                             // if the tokens between endToken and endOffset were only hidden ones
