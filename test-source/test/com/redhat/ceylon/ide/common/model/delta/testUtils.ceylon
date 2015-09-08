@@ -35,8 +35,12 @@ import com.redhat.ceylon.ide.common.model.delta {
 }
 
 import test.com.redhat.ceylon.ide.common.model.delta {
-    CompilationUnitDeltaMockup,
-    createPhasedUnit
+    CompilationUnitDeltaMockup
+}
+
+import test.com.redhat.ceylon.ide.common.testUtils {
+    parseAndTypecheckCode,
+    SourceCode
 }
 
 alias NodeComparison => [String, String, String->String];
@@ -171,12 +175,12 @@ void comparePhasedUnits(String path, String oldContents, String newContents,
     CompilationUnitDeltaMockup expectedDelta,
     Boolean printNodeComparisons = false,
     Anything({[String, String, String->String]*})? doWithNodeComparisons = null) {
-    value oldPasedUnit = createPhasedUnit(oldContents, path);
-    assert (exists oldPasedUnit);
+
+    assert (exists oldPasedUnit = parseAndTypecheckCode { SourceCode(oldContents, path) }.first?.item);
     assertEquals(CeylonIterable(oldPasedUnit.compilationUnit.errors)
             .filter((Message message) => !(message is UsageWarning)).sequence(), []);
-    value newPhasedUnit = createPhasedUnit(newContents, path);
-    assert (exists newPhasedUnit);
+
+    assert (exists newPhasedUnit = parseAndTypecheckCode { SourceCode(newContents, path) }.first?.item);
     assertEquals(CeylonIterable(newPhasedUnit.compilationUnit.errors)
             .filter((Message message) => !(message is UsageWarning)).sequence(), []);
 

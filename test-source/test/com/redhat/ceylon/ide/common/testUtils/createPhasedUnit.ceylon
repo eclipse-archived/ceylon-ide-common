@@ -47,7 +47,12 @@ import java.util {
     }
 }
 
-PhasedUnit? createPhasedUnit(String contents, String path) {
+shared class SourceCode(contents, path) {
+    shared String contents;
+    shared String path;
+}
+
+shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollection) {
     value repositoryManager = repoManager()
                 .offline(true)
 //                .cwd(cwd)
@@ -101,7 +106,9 @@ PhasedUnit? createPhasedUnit(String contents, String path) {
 
 
     value srcDir = TestDirectory("");
-    value file = srcDir.createFile(path, contents);
+    for (code in codeCollection) {
+        srcDir.createFile(code.path, code.contents);
+    }
 
     phasedUnits.parseUnit(srcDir);
 
@@ -142,5 +149,25 @@ PhasedUnit? createPhasedUnit(String contents, String path) {
         pu.analyseUsage();
     }
 
-    return phasedUnits.getPhasedUnit(file);
+    return object satisfies Map<String, PhasedUnit?> {
+        suppressWarnings("expressionTypeNothing")
+        shared actual Map<String,PhasedUnit?> clone() => nothing;
+
+        shared actual Boolean defines(Object key)
+                => codeCollection.any((SourceCode code) => code.path == key);
+
+        shared actual PhasedUnit? get(Object key)
+                => if (is String key)
+                    then phasedUnits.getPhasedUnitFromRelativePath(key)
+                    else null;
+
+        shared actual Iterator<String->PhasedUnit?> iterator()
+                => codeCollection.map(
+                    (SourceCode code)
+                            => code.path->phasedUnits.getPhasedUnitFromRelativePath(code.path))
+                    .iterator();
+
+        shared actual Integer hash => (super of Map<String, PhasedUnit?>).hash;
+        shared actual Boolean equals(Object that) => (super of Map<String, PhasedUnit?>).equals(that);
+    };
 }
