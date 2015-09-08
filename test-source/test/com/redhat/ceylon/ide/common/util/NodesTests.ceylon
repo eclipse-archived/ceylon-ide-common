@@ -153,4 +153,20 @@ shared class NodesTests() {
         endIndexInSearchedText = 8;
         expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
     };
+    
+    test shared void caretWsBeforeStatement()
+            => test {
+        searchedText = "void oneline() {    print(123);    }";
+        startIndexInSearchedText = 17;
+        endIndexInSearchedText = 17;
+        expectedNode = [`Tree.Block`, "{    print(123);    }"];
+    };
+    
+    test shared void caretWsAfterStatement()
+            => test {
+        searchedText = "void oneline() {    print(123);    }";
+        startIndexInSearchedText = 33;
+        endIndexInSearchedText = 33;
+        expectedNode = [`Tree.Block`, "{    print(123);    }"];
+    };
 }
