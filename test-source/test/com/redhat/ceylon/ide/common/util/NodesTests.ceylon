@@ -130,7 +130,7 @@ shared class NodesTests() {
         };
     }
 
-    test shared void justBeforeDot()
+    test shared void methodCall_longValueName_longMemberName_caretBeforeDot()
             => test {
                 searchedText = "    aClass.method();";
                 startIndexInSearchedText = 10;
@@ -138,7 +138,7 @@ shared class NodesTests() {
                 expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
             };
 
-    test shared void variableStart()
+    test shared void methodCall_longValueName_longMemberName_caretAtValueStart()
             => test {
         searchedText = "    aClass.method();";
         startIndexInSearchedText = 4;
@@ -146,14 +146,119 @@ shared class NodesTests() {
         expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
     };
 
-    test shared void insideReference()
+    test shared void methodCall_longValueName_longMemberName_caretInsideValue()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 6;
+        endIndexInSearchedText = 6;
+        expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionInsideValue()
             => test {
         searchedText = "    aClass.method();";
         startIndexInSearchedText = 7;
         endIndexInSearchedText = 8;
         expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
     };
-    
+
+    test shared void methodCall_longValueName_longMemberName_selectionValue()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 4;
+        endIndexInSearchedText = 10;
+        expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionValueWithWSBefore()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 2;
+        endIndexInSearchedText = 10;
+        expectedNode = [`Tree.BaseMemberExpression`, "aClass"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_caretBeforeMemberParameterList()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 17;
+        endIndexInSearchedText = 17;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_caretInsideMemberParameterList()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 18;
+        endIndexInSearchedText = 18;
+        expectedNode = [`Tree.PositionalArgumentList`, "()"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_caretAtMemberStart()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 11;
+        endIndexInSearchedText = 11;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_caretInsideMember()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 13;
+        endIndexInSearchedText = 13;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionInsideMember()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 13;
+        endIndexInSearchedText = 15;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionMemberWithoutParameterList()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 11;
+        endIndexInSearchedText = 17;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionMemberWithParameterListPart()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 11;
+        endIndexInSearchedText = 18;
+        expectedNode = [`Tree.InvocationExpression`, "aClass.method()"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionMemberWithParameterList()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 11;
+        endIndexInSearchedText = 19;
+        expectedNode = [`Tree.InvocationExpression`, "aClass.method()"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionDotOnly()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 10;
+        endIndexInSearchedText = 11;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+    test shared void methodCall_longValueName_longMemberName_selectionValueAndMemberParts()
+            => test {
+        searchedText = "    aClass.method();";
+        startIndexInSearchedText = 8;
+        endIndexInSearchedText = 14;
+        expectedNode = [`Tree.QualifiedMemberExpression`, "aClass.method"];
+    };
+
+
     test shared void caretWsBeforeStatement()
             => test {
         searchedText = "void oneline() {    print(123);    }";
@@ -161,7 +266,7 @@ shared class NodesTests() {
         endIndexInSearchedText = 17;
         expectedNode = [`Tree.Block`, "{    print(123);    }"];
     };
-    
+
     test shared void caretWsAfterStatement()
             => test {
         searchedText = "void oneline() {    print(123);    }";
