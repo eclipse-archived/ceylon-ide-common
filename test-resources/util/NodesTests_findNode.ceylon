@@ -30,3 +30,5 @@ void run() {
     value i4 = aClass.f;
     print(aClass.f);
 }
+
+void oneline() {    print(123);    }
