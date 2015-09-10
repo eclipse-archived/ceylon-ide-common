@@ -44,6 +44,22 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
     
     Boolean inBounds(Node? left, Node? right = left) {
         if (exists left) {
+            function shouldReplacePreviousNode(Boolean isInBounds) {
+                if (isInBounds == false) {
+                    return false;
+                }
+                if (startOffset != endOffset) {
+                    return isInBounds;
+                }
+                if (exists previousNode=node,
+                    exists previousNodeEnd=previousNode.stopIndex?.intValue(),
+                    exists leftNodeStart=left.startIndex?.intValue(),
+                    previousNodeEnd<leftNodeStart) {
+                    return false;
+                }
+                return true;
+            }
+
             value rightNode = right else left;
             
             assert (is CommonToken? startToken = left.token,
@@ -87,11 +103,16 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                             }
                         }
                     }
-                    return true;
+                    return shouldReplacePreviousNode {
+                                isInBounds = true;
+                            };
                 } else {
                     if (exists startTokenOffset = left.startIndex?.intValue(),
                         exists endTokenOffset = rightNode.stopIndex?.intValue()) {
-                        return startTokenOffset <= startOffset && endOffset <= endTokenOffset+1;
+                        return shouldReplacePreviousNode {
+                                    isInBounds = startTokenOffset <= startOffset
+                                            && endOffset <= endTokenOffset+1;
+                                };
                     } else {
                         return false;
                     }
@@ -209,13 +230,14 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
         super.visit(that);
     }
     
+    shared actual void visit(Tree.MemberOperator that) {
+    }
+    
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         if (inBounds(that.memberOperator, that.identifier)) {
             node=that;
         }
-        else {
-            super.visit(that);
-        }
+        super.visit(that);
     }
     
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
