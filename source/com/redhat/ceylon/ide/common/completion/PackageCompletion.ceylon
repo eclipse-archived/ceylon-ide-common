@@ -34,10 +34,12 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface PackageCompletion<CompletionComponent,Document> {
+shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document> 
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
     
     // see PackageCompletions.addPackageCompletions()
-    shared void addPackageCompletions(LocalAnalysisResult<Document> lar, Integer offset, String prefix,
+    shared void addPackageCompletions(IdeComponent lar, Integer offset, String prefix,
         Tree.ImportPath? path, Node node, MutableList<CompletionComponent> result, Boolean withBody,
         ProgressMonitor monitor) {
         
@@ -47,7 +49,7 @@ shared interface PackageCompletion<CompletionComponent,Document> {
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-            LocalAnalysisResult<Document> controller, MutableList<CompletionComponent> result, ProgressMonitor monitor) {
+            IdeComponent controller, MutableList<CompletionComponent> result, ProgressMonitor monitor) {
         if (exists unit) { //a null unit can occur if we have not finished parsing the file
             variable Boolean found = false;
             Module mod = unit.\ipackage.\imodule;
@@ -79,8 +81,8 @@ shared interface PackageCompletion<CompletionComponent,Document> {
                 //}
             }
             if (!found, !unit.\ipackage.nameAsString.empty) {
-                // TODO monitor.subTask("querying module repositories...");
-                value query = moduleQueries.getModuleQuery("", /* TODO */null);
+                monitor.subTask("querying module repositories...");
+                value query = moduleQueries.getModuleQuery("", controller.ceylonProject);
                 query.memberName = fullPrefix;
                 query.memberSearchPackageOnly = true;
                 query.memberSearchExact = false;
@@ -100,13 +102,37 @@ shared interface PackageCompletion<CompletionComponent,Document> {
         }
     }
     
+    shared void addPackageDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, 
+            MutableList<CompletionComponent> result) {
+        if (!"package".startsWith(prefix)) {
+            return;
+        }
+        value packageName = getPackageName(cpc.rootNode);
+        if (exists packageName) {
+            result.add(newPackageDescriptorProposal(offset, prefix, packageName));
+        }
+    }
+
+    shared void addCurrentPackageNameCompletion(IdeComponent cpc, Integer offset, String prefix,
+            MutableList<CompletionComponent> result) {
+        value moduleName = getPackageName(cpc.rootNode);
+        if (exists moduleName) {
+            result.add(newCurrentPackageProposal(offset, prefix, moduleName, cpc));
+        }
+    }
+    
+    shared formal CompletionComponent newPackageDescriptorProposal(Integer offset, String prefix, String packageName);
+
+    shared formal CompletionComponent newCurrentPackageProposal(Integer offset, String prefix, String packageName, IdeComponent cmp);
+
     shared formal CompletionComponent newImportedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
-        String fullPackageName, LocalAnalysisResult<Document> controller,
+        String fullPackageName, IdeComponent controller,
         Package candidate);
     
     shared formal CompletionComponent newQueriedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
-        String fullPackageName, LocalAnalysisResult<Document> controller,
+        String fullPackageName, IdeComponent controller,
         ModuleVersionDetails version, Unit unit, ModuleSearchResult.ModuleDetails md);
+
 }

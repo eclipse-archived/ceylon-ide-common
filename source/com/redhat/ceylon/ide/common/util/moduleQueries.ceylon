@@ -8,10 +8,10 @@ import com.redhat.ceylon.ide.common.model {
 
 shared object moduleQueries {
     
-    shared ModuleQuery getModuleQuery<IdeArtifact>(String prefix, CeylonProject<IdeArtifact>? project) {
+    shared ModuleQuery getModuleQuery<IdeArtifact>(String prefix, CeylonProject<out IdeArtifact>? project) {
         if (exists project) {
-            Boolean compileToJava = true; // TODO take from project
-            Boolean compileToJs = false; // TODO take from project
+            Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
+            Boolean compileToJs = project.ideConfiguration.compileToJs else false;
             if (compileToJava, !compileToJs) {
                 return ModuleQuery(prefix, ModuleQuery.Type.\iJVM);
             }
@@ -27,8 +27,8 @@ shared object moduleQueries {
     
     shared ModuleVersionQuery getModuleVersionQuery<IdeArtifact>(String name, String version, CeylonProject<IdeArtifact>? project) {
         if (exists project) {
-            Boolean compileToJava = true; // TODO take from project
-            Boolean compileToJs = false; // TODO take from project
+            Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
+            Boolean compileToJs = project.ideConfiguration.compileToJs else false;
             if (compileToJava, !compileToJs) {
                 return ModuleVersionQuery(name, version, ModuleQuery.Type.\iJVM);
             }

@@ -12,7 +12,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import ceylon.collection {
     MutableList
 }
-shared interface ParametersCompletion<IdeComponent, CompletionComponent> {
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
+shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
 
     shared formal Boolean showParameterTypes;
     
@@ -24,8 +29,7 @@ shared interface ParametersCompletion<IdeComponent, CompletionComponent> {
     shared void addParametersProposal(Integer offset, Tree.Term node, MutableList<CompletionComponent> result, IdeComponent cmp) {
         value condition = if (is Tree.StaticMemberOrTypeExpression node) then !(node.declaration is Functional) else true;
         
-        if (condition, exists unit = node.unit) {
-            value type = node.typeModel;
+        if (condition, exists unit = node.unit, exists type = node.typeModel) {
             value cd = unit.callableDeclaration;
             
             if (type.classOrInterface, type.declaration.equals(cd)) {

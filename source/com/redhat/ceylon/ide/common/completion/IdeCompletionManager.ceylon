@@ -73,16 +73,20 @@ import org.antlr.runtime {
     Token
 }
 
-// TODO change IdeComponent to LocalAnalysisResult
-shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Document>()
-        satisfies InvocationCompletion<IdeComponent, CompletionComponent>
-                & ParametersCompletion<IdeComponent, CompletionComponent>
+shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionComponent,Document>()
+        satisfies InvocationCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & ParametersCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
                 & KeywordCompletion<CompletionComponent>
-                & MemberNameCompletion<CompletionComponent>
-                & BasicCompletion<IdeComponent, CompletionComponent>
-                & RefinementCompletion<IdeComponent, CompletionComponent, Document>
-                & PackageCompletion<CompletionComponent, Document>
-        given CompletionComponent satisfies Object {
+                & MemberNameCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & BasicCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & RefinementCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+        given CompletionComponent satisfies Object
+        given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
+        given IdeArtifact satisfies Object {
 
     shared alias Proposals
             => Map<JString,DeclarationWithProximity>;
@@ -93,9 +97,8 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
-    shared CompletionComponent[] getContentProposals(LocalAnalysisResult<Document> analysisResult, 
-            Integer offset, Integer line, Boolean secondLevel, /* TODO use analysisResult instead */IdeComponent cmp,
-            ProgressMonitor monitor) {
+    shared CompletionComponent[] getContentProposals(IdeComponent analysisResult, 
+            Integer offset, Integer line, Boolean secondLevel, ProgressMonitor monitor, Boolean returnedParamInfo = false) {
         value tokens = analysisResult.tokens;
         value rn = analysisResult.rootNode;
         value document = analysisResult.document;
@@ -203,11 +206,9 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         //construct completions when outside ordinary code
         variable CompletionComponent[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
                         analysisResult, node, adjustedToken,
-                        scope, /*TODO returnedParamInfo,*/ false, isMemberOp,
+                        scope, returnedParamInfo, isMemberOp,
                         tokenType, monitor);
 
-        //print("offset = ``offset``, node = ``node``, completions = ``completions else "null"``");
-        
         if (!exists c = completions) {
             Proposals proposals = getProposals(node, scope, prefix, isMemberOp, rn);
             Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
@@ -216,7 +217,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             value sortedProposals = sortProposals(prefix, requiredType, proposals);
             value sortedFunctionProposals = sortProposals(prefix, requiredType, functionProposals);
             completions = constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
-                sortedFunctionProposals, cmp, scope, node, adjustedToken, isMemberOp, document,
+                sortedFunctionProposals, analysisResult, scope, node, adjustedToken, isMemberOp, document,
                 secondLevel, inDoc, requiredType, previousTokenType, tokenType);
         }
 
@@ -224,36 +225,36 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         return c; 
     }
     
-    CompletionComponent[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, LocalAnalysisResult<Document> cpc,
+    CompletionComponent[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
             Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
             Integer tokenType, ProgressMonitor monitor) {
         MutableList<CompletionComponent> result = ArrayList<CompletionComponent>();
 
         if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
-            // TODO addFakeShowParametersCompletion(node, cpc, result);
+            addFakeShowParametersCompletion(node, cpc, result);
         } else if (is Tree.PackageLiteral node) {
-            // TODO addPackageCompletions(cpc, offset, prefix, null, node, result, false, monitor);
+            addPackageCompletions(cpc, offset, prefix, null, node, result, false, monitor);
         } else if (is Tree.ModuleLiteral node) {
-            // TODO addModuleCompletions(cpc, offset, prefix, null, node, result, false, monitor);
+            addModuleCompletions(cpc, offset, prefix, null, node, result, false, monitor);
         } else if (isDescriptorPackageNameMissing(node)) {
-            // TODO addCurrentPackageNameCompletion(cpc, offset, prefix, result);
+            addCurrentPackageNameCompletion(cpc, offset, prefix, result);
         } else if (node is Tree.Import, offset > token.stopIndex+1) {
             addPackageCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);
         } else if (node is Tree.ImportModule, offset > token.stopIndex+1) {
-            // TODO addModuleCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL, monitor);
+            addModuleCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL, monitor);
         } else if (is Tree.ImportPath node) {
-            // TODO ImportVisitor(prefix, token, offset, node, cpc, result, monitor).visit(cpc.rootNode);
+            ImportVisitor(prefix, token, offset, node, cpc, result, monitor, this).visit(cpc.rootNode);
         } else if (isEmptyModuleDescriptor(cpc.rootNode)) {
-            // TODO addModuleDescriptorCompletion(cpc, offset, prefix, result);
-            // TODO addKeywordProposals(cpc, offset, prefix, result, node, null, false, tokenType);
+            addModuleDescriptorCompletion(cpc, offset, prefix, result);
+            addKeywordProposals(cpc.rootNode, offset, prefix, result, node, null, false, tokenType);
         } else if (isEmptyPackageDescriptor(cpc.rootNode)) {
-            // TODO addPackageDescriptorCompletion(cpc, offset, prefix, result);
-            // TODO addKeywordProposals(cpc, offset, prefix, result, node, null, false, tokenType);
+            addPackageDescriptorCompletion(cpc, offset, prefix, result);
+            addKeywordProposals(cpc.rootNode, offset, prefix, result, node, null, false, tokenType);
         } else if (node is Tree.TypeArgumentList, token.type == CeylonLexer.\iLARGER_OP) {
             if (offset == token.stopIndex+1) {
-                // TODO addTypeArgumentListProposal(offset, cpc, node, scope, cpc.document, result);
+                addTypeArgumentListProposal(offset, cpc, node, scope, result, this);
             } else if (isMemberNameProposable(offset, node, memberOp)) {
-                // TODO addMemberNameProposals(offset, cpc, node, result);
+                addMemberNameProposals(offset, cpc, node, result);
             } else {
                 return null;
             }
@@ -686,7 +687,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             Integer tokenType) {
 
         MutableList<CompletionComponent> result = ArrayList<CompletionComponent>();
-        value cu = getCompilationUnit(cmp);
+        value cu = cmp.rootNode;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
 
@@ -731,7 +732,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 else node is Tree.QualifiedMemberOrTypeExpression || node is Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
-                addKeywordProposals(getCompilationUnit(cmp), offset, prefix, result, node, ol, isMember, tokenType);
+                addKeywordProposals(cmp.rootNode, offset, prefix, result, node, ol, isMember, tokenType);
             }
             if (!secondLevel, !inDoc, !isMember,
                     prefix.empty, !ModelUtil.isTypeUnknown(requiredType), unit.isCallableType(requiredType)) {
@@ -744,7 +745,11 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                 value dec = dwp.declaration;
 
                 if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit) {
-                    // TODO : not finished compared to the original code.
+                    if (exists decNode = nodes.getReferencedNodeInUnit(dec, cu),
+                            exists id = nodes.getIdentifyingNode(decNode), 
+                            offset < id.startIndex.intValue()) {
+                        continue;
+                    }
                 }
 
                 if (isPackageOrModuleDescriptor, !inDoc, !isLocation(ol, OccurrenceLocation.\iMETA),
@@ -774,7 +779,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                             then getQualifiedProducedReference(node, dec)
                             else getRefinedProducedReference(scope, dec);
 
-                        addInvocationProposals(cu, offset, prefix, cmp, result, dec, pr, scope, ol, null, isMember);
+                        addInvocationProposals(offset, prefix, cmp, result, dec, pr, scope, ol, null, isMember);
                     }
                 }
                 if (isProposable(dwp, ol, scope, unit, requiredType, previousTokenType),
@@ -783,7 +788,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                     (!scope is Constructor || !isLocation(ol, OccurrenceLocation.\iEXTENDS) || isDelegatableConstructor(scope, dec))) {
 
                     if (isLocation(ol, OccurrenceLocation.\iDOCLINK)) {
-                        // TODO
+                        addDocLinkProposal(offset, prefix, cmp, result, dec, scope);
                     } else if (isLocation(ol, OccurrenceLocation.\iIMPORT)) {
                         addImportProposal(offset, prefix, cmp, result, dec, scope);
                     } else if (ol?.reference else false) {
@@ -795,28 +800,38 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                             then getQualifiedProducedReference(node, dec)
                             else getRefinedProducedReference(scope, dec);
 
-                        if (secondLevel) {
-                            // TODO
+                        if (secondLevel, exists pr) {
+                            addSecondLevelProposal(offset, prefix, cmp, result, dec, scope, false, pr, requiredType, ol);
                         } else if (!dec is Function || !ModelUtil.isAbstraction(dec) || !noParamsFollow) {
                             addReferenceProposal(cu, offset, prefix, cmp, result, dec, pr, scope, ol, isMember);
                         }
                     }
                 }
-            }
 
-            // TODO code constructs
-            // TODO overload refinements
+                // TODO code constructs (for, exists, nonempty etc)
+                
+                if (!memberOp, !isMember, !secondLevel) {
+                    for (d in overloads(dec)) {
+                        if (isRefinementProposable(d, ol, scope), is ClassOrInterface scope) {
+                            addRefinementProposal(offset, d, scope, node, scope, prefix, cmp, cmp.document, result, true);
+                        }
+                    }
+                }
+            }
         }
 
-        // TODO function proposals
-        return result.sequence();
-    }
+        if (node is Tree.QualifiedMemberExpression 
+            || memberOp && node is Tree.QualifiedTypeExpression) {
+            
+            assert(is Tree.QualifiedMemberOrTypeExpression node);
+            
+            for (dwp in CeylonIterable(sortedFunctionProposals)) {
+                value primary = node.primary;
+                addFunctionProposal(offset, cmp, primary, result, dwp.declaration, this);
+            }
+        }
 
-    // see CompletionUtil.overloads(Declaration dec)
-    {Declaration*} overloads(Declaration dec) {
-        return if (dec.abstraction)
-            then CeylonIterable(dec.overloads)
-            else {dec};
+        return result.sequence();
     }
 
     // see CeylonParseController.isMemberNameProposable(int offset, Node node, boolean memberOp)
@@ -827,8 +842,6 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         return if(is CommonToken token, !memberOp,
             token.stopIndex >= offset-2) then true else false;
     }
-
-    shared formal Tree.CompilationUnit getCompilationUnit(IdeComponent cmp);
 
     // see CompletionUtil.anonFunctionHeader(Type requiredType, Unit unit)
     shared String anonFunctionHeader(Type? requiredType, Unit unit) {
@@ -978,9 +991,10 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     }
 
     Boolean isDirectlyInsideNamedArgumentList(IdeComponent cmp, Node node, CommonToken token) {
+        assert(exists tokens = cmp.tokens);
         return node is Tree.NamedArgumentList ||
                 (!(node is Tree.SequenceEnumeration) &&
-            occursAfterBraceOrSemicolon(token, getTokens(cmp)));
+            occursAfterBraceOrSemicolon(token, tokens));
     }
 
     // see CeylonCompletionProcessor.occursAfterBraceOrSemicolon(...)
@@ -1023,8 +1037,6 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         return adjustedToken;
     }
 
-    shared formal JList<CommonToken> getTokens(IdeComponent cmp);
-
     Boolean noParametersFollow(CommonToken? nextToken) {
         //should we disable this, since a statement
         //can in fact begin with an LPAREN??
@@ -1062,6 +1074,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                          then (!dec.parameterLists.empty || !dec.parameterLists.get(0).parameters.empty)
                          else true);
 
+            return isProposable;
         }
         return false;
     }
@@ -1245,7 +1258,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             IdeComponent cpc, MutableList<CompletionComponent> result,
             Declaration dec, Scope scope, Boolean isMember) {
 
-        Unit? unit = getCompilationUnit(cpc).unit;
+        Unit? unit = cpc.rootNode.unit;
 
         result.add(newProgramElementReferenceCompletion(offset, prefix, dec, unit, dec.reference, scope, cpc, isMember));
     }
@@ -1253,7 +1266,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     CommonToken? getNextToken(IdeComponent cmp, CommonToken token) {
         variable Integer i = token.tokenIndex;
         variable CommonToken? nextToken=null;
-        JList<CommonToken> tokens = getTokens(cmp);
+        assert(exists tokens = cmp.tokens);
         variable Boolean isHiddenChannel = true;
         
         while (isHiddenChannel) {

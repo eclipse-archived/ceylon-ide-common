@@ -31,7 +31,9 @@ import java.lang {
 }
 import java.util {
     JList=List,
-    JSet=Set
+    JSet=Set,
+    JIterator=Iterator,
+    Collections
 }
 import java.util.regex {
     Pattern
@@ -40,6 +42,15 @@ import java.util.regex {
 import org.antlr.runtime {
     Token,
     CommonToken
+}
+import com.redhat.ceylon.common {
+    Backend
+}
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 
 shared object nodes {
@@ -266,6 +277,28 @@ shared object nodes {
         }
     }
 
+    shared JIterator<CommonToken>? getTokenIterator(JList<CommonToken>? tokens, DefaultRegion region) {
+        value regionOffset = region.start;
+        value regionLength = region.length;
+        if (regionLength <= 0) {
+            return Collections.emptyList<CommonToken>().iterator();
+        }
+        value regionEnd = regionOffset + regionLength - 1;
+        if (exists tokens) {
+            variable Integer firstTokIdx = getTokenIndexAtCharacter(tokens, regionOffset);
+            if (firstTokIdx < 0) {
+                firstTokIdx = -firstTokIdx + 1;
+            }
+            variable Integer lastTokIdx = getTokenIndexAtCharacter(tokens, regionEnd);
+            if (lastTokIdx < 0) {
+                lastTokIdx = -lastTokIdx;
+            }
+            return tokens.subList(firstTokIdx, lastTokIdx + 1).iterator();
+        }
+        return null;
+    }
+
+
     // TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)
 
     //
@@ -385,6 +418,63 @@ shared object nodes {
         }
     }
 
+    shared Node? getReferencedNodeInUnit(variable Referenceable? model, Tree.CompilationUnit? rootNode) {
+        if (exists rootNode, exists m = model) {
+            if (is Declaration decl = model) {
+                Unit? unit = decl.unit;
+                if (exists unit, !unit.filename.lowercased.endsWith(".ceylon")) {
+                    variable Boolean foundTheCeylonDeclaration = false;
+                    // TODO
+                    //if (is CeylonBinaryUnit unit) {
+                    //    value \imodule = (unit.\ipackage.\imodule);
+                    //    value sourceRelativePath = \imodule.toSourceUnitRelativePath(unit.relativePath);
+                    //    if (exists sourceRelativePath) {
+                    //        value ceylonSourceRelativePath = \imodule.getCeylonDeclarationFile(sourceRelativePath);
+                    //        if (exists ceylonSourceRelativePath) {
+                    //            value externalPhasedUnit = \imodule.getPhasedUnitFromRelativePath(ceylonSourceRelativePath);
+                    //            if (exists externalPhasedUnit) {
+                    //                value sourceFile = externalPhasedUnit.unit;
+                    //                if (exists sourceFile) {
+                    //                    for (sourceDecl in sourceFile.declarations) {
+                    //                        if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
+                    //                            model = sourceDecl;
+                    //                            foundTheCeylonDeclaration = true;
+                    //                            break;
+                    //                        }
+                    //                    }
+                    //                }
+                    //            }
+                    //        }
+                    //    }
+                    //}
+                    if (!foundTheCeylonDeclaration) {
+                        if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
+                            Declaration? headerDeclaration = ModelUtil.getNativeHeader(decl.container, decl.name);
+                            if (exists headerDeclaration) {
+                                JList<Declaration>? overloads = headerDeclaration.overloads;
+                                if (exists overloads) {
+                                    for (overload in CeylonIterable(overloads)) {
+                                        if (Backend.None.nativeAnnotation.equals(overload.nativeBackend)) {
+                                            model = overload;
+                                            foundTheCeylonDeclaration = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            value visitor = FindReferencedNodeVisitor(model);
+            rootNode.visit(visitor);
+            return visitor.declarationNode;
+        }
+        
+        return null;
+    }
+
+
     shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
         for (pl in CeylonIterable(fa.parameterLists)) {
             result.append("(");
@@ -412,6 +502,45 @@ shared object nodes {
         value visitor = FindOccurrenceLocationVisitor(offset, node);
         cu.visit(visitor);
         return visitor.occurrence;
+    }
+    
+    shared String? getImportedName(Tree.ImportModule im) {
+        Tree.ImportPath? ip = im.importPath;
+        Tree.QuotedLiteral? ql = im.quotedLiteral;
+        if (exists ip) {
+            return TreeUtil.formatPath(ip.identifiers);
+        } else if (exists ql) {
+            return ql.text;
+        } else {
+            return null;
+        }
+    }
+    
+    shared String toString(Node term, JList<CommonToken>? tokens) {
+        value start = term.startIndex.intValue();
+        value length = term.stopIndex.intValue() - start + 1;
+        value region = DefaultRegion(start, length);
+        value exp = StringBuilder();
+        value ti = getTokenIterator(tokens, region);
+
+        if (exists ti) {
+            while (ti.hasNext()) {
+                value token = ti.next();
+                value type = token.type;
+                value text = token.text;
+                if (type == CeylonLexer.\iLIDENTIFIER, getTokenLength(token) > text.size) {
+                    exp.append("\\i");
+                } else if (type == CeylonLexer.\iUIDENTIFIER, getTokenLength(token) > text.size) {
+                    exp.append("\\I");
+                }
+                exp.append(text);
+            }
+        }
+        return exp.string;
+    }
+
+    shared Integer getTokenLength(CommonToken token) {
+        return token.stopIndex - token.startIndex + 1;
     }
 
     shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {

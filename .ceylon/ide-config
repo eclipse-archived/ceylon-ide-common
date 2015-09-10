@@ -5,3 +5,9 @@ compile-js=false
 system-repository=
 source-attachments=attachments.properties
 
+[converter]
+use-values=true
+use-variable-in-locals=false
+transform-getters=true
+use-variable-in-parameters=false
+

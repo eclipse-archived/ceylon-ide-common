@@ -58,6 +58,12 @@ import java.lang {
 import java.util {
     Collections
 }
+import com.redhat.ceylon.ide.common.completion {
+    getDocDescriptionFor
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
 import com.redhat.ceylon.common {
     Backends
 }
@@ -67,14 +73,16 @@ shared object annotations extends Icon() {}
 
 shared String convertToHTML(String content) => content.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;");
 
-shared abstract class DocGenerator<IdeComponent>() {
+shared abstract class DocGenerator<Document,IdeArtifact>() {
+
+    shared alias IdeComponent => LocalAnalysisResult<Document,IdeArtifact>;
     
     shared formal String buildLink(Referenceable model, String text, String protocol = "doc");
     shared formal TypePrinter printer;
     shared formal String color(Object? what, Colors how);
     shared formal String markdown(String text, IdeComponent cmp, Scope? linkScope = null, Unit? unit = null);
     shared formal void addIconAndText(StringBuilder builder, Icons|Referenceable icon, String text);
-    shared formal String getDefaultValueDescription(Parameter p, IdeComponent cmp);
+    // TODO I think we can migrate the version in CompletionUtil
     shared formal String getInitialValueDescription(Declaration d, IdeComponent cmp);
     shared formal String highlight(String text, IdeComponent cmp);
     shared formal void appendJavadoc(Declaration model, StringBuilder buffer);
@@ -538,165 +546,7 @@ shared abstract class DocGenerator<IdeComponent>() {
         
         return if (exists liveValue) then result + liveValue else result;
     }
-    
-    // see CodeCompletions.getDocDescriptionFor
-    String getDocDescriptionFor(Declaration decl, Reference? pr, Unit unit, IdeComponent cmp) {
-        StringBuilder result = StringBuilder();
-        
-        appendDeclarationHeader(decl, pr, unit, result, true);
-        appendTypeParameters(decl, pr, unit, result, true);
-        appendParametersDescription(decl, pr, unit, result, true, cmp);
-        
-        return result.string;
-    }
-    
-    // see CodeCompletions.appendDeclarationHeader
-    void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit, StringBuilder builder, Boolean descriptionOnly) {
-        if (is TypeAlias decl, decl.anonymous) {
-            return;
-        }
-        
-        if (ModelUtil.isConstructor(decl)) {
-            builder.append("new");
-        } else {
-            switch (decl)
-            case (is Class) {
-                builder.append(if (decl.anonymous) then "object" else "class");
-            }
-            case (is Interface) {
-                builder.append("interface");
-            }
-            case (is TypeAlias) {
-                builder.append("alias");
-            }
-            case (is TypedDeclaration) {
-                value sequenced = if (is FunctionOrValue fov = decl, decl.parameter, fov.initializerParameter.sequenced) 
-                    then true else false;
-                
-                variable Type? type = if (exists pr) then pr.type else decl.type;
-                
-                if (sequenced, exists t = type) {
-                    if (!t.typeArgumentList.empty) {
-                        type = t.typeArgumentList.get(0);
-                    }
-                }
-                
-                if (!exists t = type) {
-                    type = UnknownType(unit).type;
-                }
-                
-                assert(exists t = type);
-                
-                String typeName = if (descriptionOnly) then t.asString(unit) else t.asSourceCodeString(unit);
-                
-                if (decl.dynamicallyTyped) {
-                    builder.append("dynamic");
-                } else if (is Value decl, t.declaration.anonymous, !t.typeConstructor) {
-                    builder.append("object");
-                } else if (is Functional decl) {
-                    builder.append(if (decl.declaredVoid) then "void" else typeName);
-                } else {
-                    builder.append(typeName);
-                }
-                
-                if (sequenced) {
-                    builder.append(if (is FunctionOrValue decl, decl.initializerParameter.atLeastOne) then "+" else "*");
-                }
-            }
-            else {
-            }
-        }
-        
-        builder.append(" ");
-        
-        if (exists name = decl.name) {
-            builder.append(if (descriptionOnly) then name else escaping.escapeName(decl));
-        }
-    }
 
-    // see CodeCompletions.appendTypeParameters
-    void appendTypeParameters(Declaration d, Reference? pr, Unit unit, StringBuilder result, Boolean variances) {
-        if (is Generic d) {
-            value types = d.typeParameters;
-            
-            if (!types.empty) {
-                result.append("&lt;");
-
-                CeylonIterable(types).fold(true)((isFirst, tp) {
-                    if (!isFirst) { result.append(", "); }
-
-                    value arg = if (exists pr) then pr.typeArguments.get(tp) else null;
-                    
-                    if (!exists arg) {
-                        if (variances) {
-                            if (tp.covariant) {
-                                result.append("out ");
-                            } else if (tp.contravariant) {
-                                result.append("in ");
-                            }
-                        }
-                        result.append(tp.name);
-                    } else {
-                        if (is Type pr, variances) {
-                            SiteVariance? variance = pr.varianceOverrides.get(tp);
-                            
-                            if (!exists variance) {
-                                if (tp.covariant) {
-                                    result.append("out ");
-                                } else if (tp.contravariant) {
-                                    result.append("in ");
-                                }
-                            } else if (variance == SiteVariance.\iOUT) {
-                                result.append("out ");
-                            } else if (variance == SiteVariance.\iIN) {
-                                result.append("in ");
-                            }
-                        }
-                        result.append(tp.name);
-                    }
-                    
-                    return false;
-                });
-
-                result.append("&gt;");
-            }
-        }
-    }
-
-    // see CodeCompletions.appendParametersDescription
-    void appendParametersDescription(Declaration decl, Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly, IdeComponent cmp) {
-        if (is Functional decl, exists plists = decl.parameterLists) {
-            CeylonIterable(plists).each(void (params) {
-                if (params.parameters.empty) {
-                    result.append("()");
-                } else {
-                    result.append("(");
-                    
-                    CeylonIterable(params.parameters).fold(true)((isFirst, param) {
-                        if (!isFirst) { result.append(", "); }
-                        
-                        appendParameterDescription(param, pr, unit, result, descriptionOnly, cmp);
-                        result.append(getDefaultValueDescription(param, cmp));
-                        
-                        return false;
-                    });
-
-                    result.append(")");
-                }
-            });
-        }
-    }
-
-    void appendParameterDescription(Parameter param, Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly, IdeComponent cmp) {
-        if (exists model = param.model) {
-            TypedReference? ppr = pr?.getTypedParameter(param) else null;
-            appendDeclarationHeader(model, ppr, unit, result, descriptionOnly);
-            appendParametersDescription(model, ppr, unit, result, descriptionOnly, cmp);
-        } else {
-            result.append(param.name);
-        }
-    }
-    
     // see addInheritanceInfo(Declaration dec, Node node, Reference pr, StringBuilder buffer, Unit unit)
     Boolean addInheritanceInfo(Declaration decl, Node node, Reference? pr, StringBuilder builder, Unit unit) {
         value div = "<div style='padding-left:20px'>";

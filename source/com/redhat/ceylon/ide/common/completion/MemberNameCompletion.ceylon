@@ -3,10 +3,10 @@ import ceylon.collection {
     HashSet,
     MutableSet
 }
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
-    Tree
+    Tree,
+    Visitor
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -15,11 +15,43 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     ModelUtil
 }
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
+import java.lang {
+    JInteger=Integer
+}
 
-shared interface MemberNameCompletion<CompletionComponent> {
+shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
     
     shared formal CompletionComponent newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName);
     
+    shared void addMemberNameProposals(Integer offset, IdeComponent cpc, Node node, MutableList<CompletionComponent> result) {
+        JInteger? startIndex2 = node.startIndex;
+        object extends Visitor() {
+
+            shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
+                Tree.TypeArguments? tal = that.typeArguments;
+                value startIndex = if (!exists tal) then null else tal.startIndex;
+                if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                    addMemberNameProposal(offset, "", that, result);
+                }
+                super.visit(that);
+            }
+
+            shared actual void visit(Tree.SimpleType that) {
+                Tree.TypeArgumentList? tal = that.typeArgumentList;
+                value startIndex = if (!exists tal) then null else tal.startIndex;
+                if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                    addMemberNameProposal(offset, "", that, result);
+                }
+                super.visit(that);
+            }
+        }.visit(cpc.rootNode);
+    }
+
     shared void addMemberNameProposal(Integer offset, String prefix, variable Node? node, MutableList<CompletionComponent> result) {
         MutableSet<String> proposals = HashSet<String>();
         
@@ -80,7 +112,7 @@ shared interface MemberNameCompletion<CompletionComponent> {
             }
         }
         for (String name in proposals) {
-            String unquotedPrefix = if(prefix.startsWith("\\i")) then prefix.spanFrom(2) else prefix;
+            String unquotedPrefix = if (prefix.startsWith("\\i")) then prefix.spanFrom(2) else prefix;
             if (name.startsWith(unquotedPrefix)) {
                 String unquotedName = if (name.startsWith("\\i")) then name.spanFrom(2) else name;
                 result.add(newMemberNameCompletionProposal(offset, prefix, name, unquotedName));
@@ -109,5 +141,4 @@ shared interface MemberNameCompletion<CompletionComponent> {
             nodes.addNameProposals(proposals, true, unit.getIteratedType(type).declaration.getName(unit));
         }
     }
-
 }

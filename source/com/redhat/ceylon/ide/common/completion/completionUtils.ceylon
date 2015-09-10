@@ -1,5 +1,6 @@
 import com.redhat.ceylon.ide.common.util {
-    OccurrenceLocation
+    OccurrenceLocation,
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
@@ -8,7 +9,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Declaration,
     Package,
-    Module
+    Module,
+    Functional,
+    FunctionOrValue
 }
 import java.util {
     List,
@@ -19,7 +22,8 @@ import ceylon.interop.java {
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    TreeUtil
+    TreeUtil,
+    Visitor
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -33,6 +37,13 @@ Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
         return loc1 == loc2;
     }
     return false;
+}
+
+// see CompletionUtil.overloads(Declaration dec)
+{Declaration*} overloads(Declaration dec) {
+    return if (dec.abstraction)
+    then CeylonIterable(dec.overloads)
+    else {dec};
 }
 
 // see CompletionUtil.getParameters
@@ -59,7 +70,7 @@ List<Parameter> getParameters(ParameterList pl,
     }
 }
 
-Boolean isModuleDescriptor(Tree.CompilationUnit? cu)
+shared Boolean isModuleDescriptor(Tree.CompilationUnit? cu)
     => (cu?.unit?.filename else "") == "module.ceylon";
 
 Boolean isPackageDescriptor(Tree.CompilationUnit? cu)
@@ -85,7 +96,7 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
 }
 
 Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu) {
-    return if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) then true else false; 
+    return if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) then true else false;
 }
 
 Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) {
@@ -102,14 +113,12 @@ String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
         fullPath.append(TreeUtil.formatPath(path.identifiers));
         fullPath.append(".");
         value maxLength = offset - path.startIndex.intValue() - prefix.size;
-        if (maxLength > fullPath.size) {
-            fullPath.deleteTerminal(maxLength - fullPath.size);
-        }
+        return fullPath.substring(0, maxLength);
     }
     return fullPath.string;
 }
 
-Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken token) {
+Integer nextTokenType<Document,IdeArtifact>(LocalAnalysisResult<Document,IdeArtifact> cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
     assert(exists tokens = cpc.tokens);
     while (i < tokens.size()) {
@@ -122,4 +131,81 @@ Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken t
     return -1;
 }
 
+String getDefaultValueDescription<Document,IdeArtifact>(Parameter p, LocalAnalysisResult<Document,IdeArtifact>? cpc) {
+    if (p.defaulted) {
+        if (is Functional m = p.model) {
+            return " => ...";
+        } else {
+            return getInitialValueDescription(p.model, cpc);
+        }
+    } else {
+        return "";
+    }
+}
 
+shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, LocalAnalysisResult<Document,IdeArtifact>? cpc) {
+    if (exists cpc) {
+        value refnode = nodes.getReferencedNode(dec);
+        variable Tree.SpecifierOrInitializerExpression? sie = null;
+        variable String arrow = "";
+        if (is Tree.AttributeDeclaration refnode) {
+            value ad = refnode;
+            sie = ad.specifierOrInitializerExpression;
+            arrow = " = ";
+        } else if (is Tree.MethodDeclaration refnode) {
+            value md = refnode;
+            sie = md.specifierExpression;
+            arrow = " => ";
+        }
+        if (!exists s = sie) {
+            class FindInitializerVisitor() extends Visitor() {
+                shared variable Tree.SpecifierOrInitializerExpression? result = null;
+                
+                shared actual void visit(Tree.InitializerParameter that) {
+                    super.visit(that);
+                    FunctionOrValue? d = that.parameterModel.model;
+                    if (exists d, d.equals(dec)) {
+                        result = that.specifierExpression;
+                    }
+                }
+            }
+            value fiv = FindInitializerVisitor();
+            (fiv of Visitor).visit(cpc.rootNode);
+            sie = fiv.result;
+        }
+        if (exists s = sie) {
+            Tree.Expression? e = s.expression;
+            if (exists e) {
+                value term = e.term;
+                if (is Tree.Literal term) {
+                    value text = term.token.text;
+                    if (text.size < 20) {
+                        return arrow + text;
+                    }
+                } else if (is Tree.BaseMemberOrTypeExpression term) {
+                    value bme = term;
+                    Tree.Identifier? id = bme.identifier;
+                    if (exists id, !exists b = bme.typeArguments) {
+                        return arrow + id.text;
+                    }
+                } else if (term.unit.equals(cpc.rootNode.unit)) {
+                    value impl = nodes.toString(term, cpc.tokens);
+                    if (impl.size < 10) {
+                        return arrow + impl;
+                    }
+                }
+                //don't have the token stream :-/
+                //TODO: figure out where to get it from!
+                return arrow + "...";
+            }
+        }
+    }
+    return "";
+}
+
+String? getPackageName(Tree.CompilationUnit cu) {
+    if (is Package pack = cu.scope) {
+        return pack.qualifiedNameString;
+    }
+    return null;
+}

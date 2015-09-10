@@ -9,6 +9,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     ClassOrInterface,
@@ -26,7 +29,9 @@ import java.util {
     ArrayList
 }
 // see RefinementCompletionProposal
-shared interface RefinementCompletion<IdeComponent, CompletionComponent, Document> {
+shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionComponent, Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
     
     shared formal CompletionComponent newRefinementCompletionProposal(Integer offset, String prefix,
         Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isInterface,
@@ -54,7 +59,7 @@ shared interface RefinementCompletion<IdeComponent, CompletionComponent, Documen
     }
 
     // see getRefinedProducedReference(Scope scope, Declaration d)
-    Reference getRefinedProducedReference(Scope scope, Declaration d) {
+    shared Reference getRefinedProducedReference(Scope scope, Declaration d) {
         return refinedProducedReference(scope.getDeclaringType(d), d);
     }
     
