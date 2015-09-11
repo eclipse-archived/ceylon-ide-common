@@ -1,18 +1,17 @@
+import ceylon.collection {
+    ArrayList
+}
+import ceylon.interop.java {
+    createJavaObjectArray
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import ceylon.collection {
-    ArrayList
-}
-import com.redhat.ceylon.ide.common.util {
-    nodes
-}
+
 import java.lang {
     ObjectArray
-}
-import ceylon.interop.java {
-    createJavaObjectArray
 }
 
 shared class FindContainingExpressionsVisitor(Integer offset) extends Visitor() {
@@ -24,8 +23,10 @@ shared class FindContainingExpressionsVisitor(Integer offset) extends Visitor() 
     shared actual void visit(Tree.Term that) {
         super.visit(that);
         
-        if (!is Tree.Expression that, nodes.getNodeStartOffset(that) <= offset,
-                nodes.getNodeEndOffset(that) + 1 >= offset) {
+        if (!is Tree.Expression that,
+                exists start = that.startIndex?.intValue(),
+                exists end = that.endIndex?.intValue(),
+                start <= offset && end >= offset) {
             myElements.add(that);
         }
     }

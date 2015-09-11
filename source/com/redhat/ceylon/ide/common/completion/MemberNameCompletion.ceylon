@@ -31,7 +31,7 @@ shared interface MemberNameCompletion<CompletionComponent> {
             Tree.Identifier? id = td.identifier;
             
             if (exists id) {
-                node = if (offset >= id.startIndex.intValue(), offset <= id.stopIndex.intValue() + 1)
+                node = if (offset >= id.startIndex.intValue(), offset <= id.endIndex.intValue())
                        then type
                        else null;
             } else {

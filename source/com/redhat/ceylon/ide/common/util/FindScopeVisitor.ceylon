@@ -108,11 +108,11 @@ class FindScopeVisitor(Integer startOffset, Integer endOffset) extends Visitor()
         Node newRight = right else left;
         
         JInteger? tokenStart = left.startIndex;
-        JInteger? tokenStop = newRight.stopIndex;
+        JInteger? tokenStop = newRight.endIndex;
         
         return if (exists tokenStart, exists tokenStop)
             then tokenStart.intValue() <= startOffset 
-                && tokenStop.intValue() +1 >= endOffset
+                && tokenStop.intValue() >= endOffset
             else false;
     }
 

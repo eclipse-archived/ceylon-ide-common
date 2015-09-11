@@ -59,7 +59,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
             isInBounds = inBounds(var.identifier);
         }
         else if (exists type = that.type) {
-            isInBounds = inBounds(that) && offset>type.stopIndex.intValue()+1;
+            isInBounds = inBounds(that) && offset>type.endIndex.intValue();
         }
         else {
             isInBounds = false;
@@ -265,13 +265,10 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     Boolean inBounds(Node? left, Node? _right = left) {
         if (exists left) {
             value right = _right else left;
-            
-            Integer? startIndex = left.startIndex?.intValue();
-            Integer? stopIndex = right.stopIndex?.intValue();
-            
-            if (exists startIndex, exists stopIndex) {
+            if (exists startIndex = left.startIndex?.intValue(), 
+                exists stopIndex = right.endIndex?.intValue()) {
                 return startIndex <= node.startIndex.intValue() && 
-                        stopIndex >= node.stopIndex.intValue();
+                        stopIndex >= node.endIndex.intValue();
             }
         }
         return false;

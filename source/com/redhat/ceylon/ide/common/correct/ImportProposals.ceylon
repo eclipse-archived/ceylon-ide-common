@@ -243,18 +243,18 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 }
                 if(remaining == 0){
                     assert(exists startIndex=oldImportNode.startIndex);
-                    assert(exists stopIndex=oldImportNode.stopIndex);
+                    assert(exists endIndex=oldImportNode.endIndex);
                     value start = startIndex.intValue();
-                    value stop = stopIndex.intValue();
-                    result.add(newDeleteEdit(start, stop - start + 1));
+                    value end = endIndex.intValue();
+                    result.add(newDeleteEdit(start, end - start));
                 }
                 else {
                     assert(exists startIndex=imtl.startIndex);
-                    assert(exists stopIndex=imtl.stopIndex);
+                    assert(exists endIndex=imtl.endIndex);
                     value start = startIndex.intValue();
-                    value stop = stopIndex.intValue();
+                    value end = endIndex.intValue();
                     String formattedImport = formatImportMembers(delim, indents.defaultIndent, set, imtl);
-                    result.add(newReplaceEdit(start, stop - start + 1, formattedImport));
+                    result.add(newReplaceEdit(start, end - start, formattedImport));
                 }
             }
         }
@@ -311,11 +311,11 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     }
 
     shared Integer getBestImportInsertPosition(Tree.CompilationUnit cu){
-        JInteger? stopIndex = cu.importList.stopIndex;
-        if(! exists stopIndex) {
+        JInteger? endIndex = cu.importList.endIndex;
+        if(! exists endIndex) {
             return 0;
         } else {
-            return stopIndex.intValue() + 1;
+            return endIndex.intValue();
         }
     }
 
@@ -338,8 +338,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 return startIndex.intValue() + 1;
             }
             else {
-                assert(exists stopIndex=imts.get(imts.size() - 1).stopIndex);
-                return stopIndex.intValue() + 1;
+                assert(exists endIndex=imts.get(imts.size() - 1).endIndex);
+                return endIndex.intValue();
             }
         }
     }

@@ -52,9 +52,9 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                     return isInBounds;
                 }
                 if (exists previousNode=node,
-                    exists previousNodeEnd=previousNode.stopIndex?.intValue(),
+                    exists previousNodeEnd=previousNode.endIndex?.intValue(),
                     exists leftNodeStart=left.startIndex?.intValue(),
-                    previousNodeEnd<leftNodeStart) {
+                    previousNodeEnd<=leftNodeStart) {
                     return false;
                 }
                 return true;
@@ -108,10 +108,10 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                             };
                 } else {
                     if (exists startTokenOffset = left.startIndex?.intValue(),
-                        exists endTokenOffset = rightNode.stopIndex?.intValue()) {
+                        exists endTokenOffset = rightNode.endIndex?.intValue()) {
                         return shouldReplacePreviousNode {
                                     isInBounds = startTokenOffset <= startOffset
-                                            && endOffset <= endTokenOffset+1;
+                                            && endOffset <= endTokenOffset;
                                 };
                     } else {
                         return false;

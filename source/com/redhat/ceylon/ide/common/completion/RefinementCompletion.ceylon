@@ -1,3 +1,14 @@
+import ceylon.collection {
+    MutableList
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Node,
+    Tree
+}
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     ClassOrInterface,
@@ -7,22 +18,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
     Generic,
-    FunctionOrValue,
-    Parameter
+    FunctionOrValue
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Node,
-    Tree
-}
-import ceylon.collection {
-    MutableList
-}
+
 import java.util {
     List,
     ArrayList
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 // see RefinementCompletionProposal
 shared interface RefinementCompletion<IdeComponent, CompletionComponent, Document> {

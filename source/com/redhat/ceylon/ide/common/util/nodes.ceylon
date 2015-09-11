@@ -75,7 +75,7 @@ shared object nodes {
 
             shared actual void visit(Tree.BinaryOperatorExpression that) {
                 if (node.startIndex.intValue() >= that.startIndex.intValue() &&
-                    node.stopIndex.intValue() <= that.stopIndex.intValue()) {
+                    node.endIndex.intValue() <= that.endIndex.intValue()) {
                     result = that;
                 }
                 super.visit(that);
@@ -182,24 +182,6 @@ shared object nodes {
         return visitor.scope;
     }
 
-    shared Integer getIdentifyingStartOffset(Node? node) {
-        return getNodeStartOffset(getIdentifyingNode(node));
-    }
-
-    shared Integer getIdentifyingEndOffset(Node? node) {
-        return getNodeEndOffset(getIdentifyingNode(node));
-    }
-
-    shared Integer getIdentifyingLength(Node? node) {
-        return getIdentifyingEndOffset(node) -
-                getIdentifyingStartOffset(node);
-    }
-
-    shared Integer getNodeLength(Node? node) {
-        return getNodeEndOffset(node) -
-                getNodeStartOffset(node);
-    }
-
     shared Node? getIdentifyingNode(Node? node) {
         if (is Tree.Declaration node) {
             variable Tree.Identifier? identifier = node.identifier;
@@ -278,14 +260,6 @@ shared object nodes {
     }
 
     // TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)
-
-    shared Integer getNodeStartOffset(Node? node) {
-        return node?.startIndex?.intValue() else 0;
-    }
-
-    shared Integer getNodeEndOffset(Node? node) {
-        return (node?.stopIndex?.intValue() else -1) + 1;
-    }
 
     shared Node? getReferencedNode(Referenceable? model) {
         if (exists model) {
