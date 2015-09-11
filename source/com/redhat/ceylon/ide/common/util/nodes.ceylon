@@ -424,18 +424,16 @@ shared object nodes {
 
         if (is Tree.Term term = identifyingNode) {
             Type? type = term.typeModel;
-
             if (!ModelUtil.isTypeUnknown(type)) {
                 assert(exists type);
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
             }
-            assert (exists unit = myNode?.unit);
-            if (unit.isIterableType(type)) {
-                Type? iter = unit.getIteratedType(type);
-
-                if (exists iter, iter.classOrInterface || iter.typeParameter) {
+            if (exists type, exists unit = myNode?.unit, 
+                    unit.isIterableType(type)) {
+                if (exists iter = unit.getIteratedType(type), 
+                    iter.classOrInterface || iter.typeParameter) {
                     addNameProposals(names, !unplural, iter.declaration.name);
                 }
             }
