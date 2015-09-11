@@ -30,7 +30,8 @@ import ceylon.language.meta {
 import test.com.redhat.ceylon.ide.common.testUtils {
     SourceCode,
     parseAndTypecheckCode,
-    resourcesRootForPackage
+    resourcesRootForPackage,
+    findInLines
 }
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
@@ -40,50 +41,6 @@ shared class NodesTests() {
         assert(is File file=resourcesRoot.childResource(fileName));
         return lines(file);
     }
-
-    Integer calculateContentOffset([String*] lines,
-        Boolean findLine(Integer->String line),
-        Integer findColumn(String line)) {
-            value searchedLines = lines.indexed.select(findLine);
-            "Exactly one line should be found"
-            assert(exists searchedLine = searchedLines.first,
-                searchedLines.size == 1);
-            return lines.take(searchedLine.key)
-                         .fold(0)(
-                                  (p, l)
-                                        => p + l.size + 1)
-                        + findColumn(searchedLine.item);
-    }
-
-    suppressWarnings("unusedDeclaration", "expressionTypeNothing")
-    Integer lineColumnToOffset([String*]lines,
-        "0-based line index"
-        Integer line,
-        "0-based column index"
-        Integer column)
-            => calculateContentOffset {
-                lines => lines;
-                function findLine(Integer->String l)
-                        => l.key == line;
-                function findColumn(String l)
-                        => if (column < l.size)
-                                then column
-                                else nothing;
-            };
-
-    suppressWarnings("expressionTypeNothing")
-    Integer findInLines([String*]lines,
-        String searchedText,
-        Integer indexInText)
-            => calculateContentOffset {
-                lines => lines;
-                function findLine(Integer->String l)
-                        => l.item.contains(searchedText);
-                function findColumn(String line)
-                        => if (exists textStart = line.firstInclusion(searchedText))
-                                then textStart + indexInText
-                                else nothing;
-            };
 
     String fileName = "NodesTests_findNode.ceylon";
     [String*] theLines = loadLines(fileName);
@@ -100,8 +57,8 @@ shared class NodesTests() {
 
     String? toString(Node? node)
         => if (exists start=node?.startIndex?.intValue())
-            then if (exists stop=node?.stopIndex?.intValue())
-                    then contents.span(start, stop)
+            then if (exists end=node?.endIndex?.intValue())
+                    then contents.span(start, end-1)
                     else contents.spanFrom(start)
             else null;
 
@@ -109,6 +66,7 @@ shared class NodesTests() {
         value startOffset = findInLines(theLines, searchedText, startIndexInSearchedText);
         value endOffset = findInLines(theLines, searchedText, endIndexInSearchedText);
         value found = nodes.findNode(pu.compilationUnit, pu.tokens, startOffset, endOffset);
+
         function format([ClassOrInterface<Node?>, String?]? result)
                 => if (is [ClassOrInterface<Node>, String] result)
                         then "\n" + "\n".join(result) + "\n"
