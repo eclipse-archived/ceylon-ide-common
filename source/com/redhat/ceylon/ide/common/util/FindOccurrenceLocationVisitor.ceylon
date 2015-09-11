@@ -262,15 +262,14 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
         }
     }
     
-    Boolean inBounds(Node? left, Node? _right = left) {
-        if (exists left) {
-            value right = _right else left;
-            if (exists startIndex = left.startIndex?.intValue(), 
-                exists stopIndex = right.endIndex?.intValue()) {
-                return startIndex <= node.startIndex.intValue() && 
-                        stopIndex >= node.endIndex.intValue();
-            }
+    Boolean inBounds(Node left, Node right = left) {
+        if (exists startIndex = left.startIndex?.intValue(), 
+            exists stopIndex = right.endIndex?.intValue()) {
+            return startIndex <= node.startIndex.intValue() && 
+                    stopIndex >= node.endIndex.intValue();
         }
-        return false;
+        else {
+            return false;
+        }
     }
 }

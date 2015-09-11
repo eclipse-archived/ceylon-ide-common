@@ -42,83 +42,77 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
      is contained within this [[node]] and whitespace surrounding it."
     shared variable Node? node = null;
     
-    Boolean inBounds(Node? left, Node? right = left) {
-        if (exists left) {
-            function shouldReplacePreviousNode(Boolean isInBounds) {
-                if (isInBounds == false) {
-                    return false;
-                }
-                if (startOffset != endOffset) {
-                    return isInBounds;
-                }
-                if (exists previousNode=node,
-                    exists previousNodeEnd=previousNode.endIndex?.intValue(),
-                    exists leftNodeStart=left.startIndex?.intValue(),
-                    previousNodeEnd<=leftNodeStart) {
-                    return false;
-                }
-                return true;
+    Boolean inBounds(Node left, Node right = left) {
+        function shouldReplacePreviousNode(Boolean isInBounds) {
+            if (isInBounds == false) {
+                return false;
             }
+            if (startOffset != endOffset) {
+                return isInBounds;
+            }
+            if (exists previousNode=node,
+                exists previousNodeEnd=previousNode.endIndex?.intValue(),
+                exists leftNodeStart=left.startIndex?.intValue(),
+                previousNodeEnd<=leftNodeStart) {
+                return false;
+            }
+            return true;
+        }
 
-            value rightNode = right else left;
-            
-            assert (is CommonToken? startToken = left.token,
-                is CommonToken? endToken = rightNode.endToken else rightNode.token);
-            
-            if (exists startToken, exists endToken) {
-                if (exists tokens) {
-                    if (startToken.tokenIndex > 0) {
-                        if (startToken.startIndex > endOffset) {
-                            return false;
-                        }
-                        if (startToken.startIndex > startOffset) {
-                            // we could still consider this in bounds
-                            // if the tokens between startOffset and startToken were only hidden ones
-                            for (index in (startToken.tokenIndex-1)..0) {
-                                value token = tokens.get(index);
-                                if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
-                                    return false;
-                                }
-                                if (token.startIndex <= startOffset) {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (endToken.tokenIndex < tokens.size() - 1) {
-                        if (endToken.stopIndex+1 < startOffset) {
-                            return false;
-                        }
-                        if (endToken.stopIndex+1 < endOffset) {
-                            // we could still consider this in bounds
-                            // if the tokens between endToken and endOffset were only hidden ones
-                            for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
-                                value token = tokens.get(index);
-                                if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
-                                    return false;
-                                }
-                                if (token.stopIndex+1 >= endOffset) {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    return shouldReplacePreviousNode {
-                                isInBounds = true;
-                            };
-                } else {
-                    if (exists startTokenOffset = left.startIndex?.intValue(),
-                        exists endTokenOffset = rightNode.endIndex?.intValue()) {
-                        return shouldReplacePreviousNode {
-                                    isInBounds = startTokenOffset <= startOffset
-                                            && endOffset <= endTokenOffset;
-                                };
-                    } else {
+        assert (is CommonToken? startToken = left.token,
+            is CommonToken? endToken = right.endToken else right.token);
+        
+        if (exists startToken, exists endToken) {
+            if (exists tokens) {
+                if (startToken.tokenIndex > 0) {
+                    if (startToken.startIndex > endOffset) {
                         return false;
                     }
+                    if (startToken.startIndex > startOffset) {
+                        // we could still consider this in bounds
+                        // if the tokens between startOffset and startToken were only hidden ones
+                        for (index in (startToken.tokenIndex-1)..0) {
+                            value token = tokens.get(index);
+                            if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+                                return false;
+                            }
+                            if (token.startIndex <= startOffset) {
+                                break;
+                            }
+                        }
+                    }
                 }
+                if (endToken.tokenIndex < tokens.size() - 1) {
+                    if (endToken.stopIndex+1 < startOffset) {
+                        return false;
+                    }
+                    if (endToken.stopIndex+1 < endOffset) {
+                        // we could still consider this in bounds
+                        // if the tokens between endToken and endOffset were only hidden ones
+                        for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
+                            value token = tokens.get(index);
+                            if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+                                return false;
+                            }
+                            if (token.stopIndex+1 >= endOffset) {
+                                break;
+                            }
+                        }
+                    }
+                }
+                return shouldReplacePreviousNode {
+                            isInBounds = true;
+                        };
             } else {
-                return false;
+                if (exists startTokenOffset = left.startIndex?.intValue(),
+                    exists endTokenOffset = right.endIndex?.intValue()) {
+                    return shouldReplacePreviousNode {
+                                isInBounds = startTokenOffset <= startOffset
+                                        && endOffset <= endTokenOffset;
+                            };
+                } else {
+                    return false;
+                }
             }
         } else {
             return false;

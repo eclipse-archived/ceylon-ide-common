@@ -1,4 +1,46 @@
-import java.util{
+import ceylon.collection {
+    HashSet,
+    unlinked
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Node,
+    Tree
+}
+import com.redhat.ceylon.ide.common.completion {
+    FindImportNodeVisitor
+}
+import com.redhat.ceylon.ide.common.util {
+    Escaping {
+        escapeName,
+        escapePackageName
+    },
+    nodes,
+    Indents
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration,
+    Functional,
+    Function,
+    FunctionOrValue,
+    Module {
+        \iLANGUAGE_MODULE_NAME
+    },
+    Package,
+    Parameter,
+    ParameterList,
+    Type,
+    TypeDeclaration,
+    TypedDeclaration
+}
+
+import java.lang {
+    JIterable=Iterable
+}
+import java.util {
     JArrayList=ArrayList,
     JCollection=Collection,
     JHashSet=HashSet,
@@ -7,42 +49,6 @@ import java.util{
     JMap=Map,
     JSet=Set,
     Collections
-}
-import java.lang {
-    JIterable=Iterable,
-    JInteger=Integer
-}
-import com.redhat.ceylon.compiler.typechecker.tree{Node,
-    Tree
-}
-import com.redhat.ceylon.ide.common.completion{
-    FindImportNodeVisitor
-}
-import com.redhat.ceylon.ide.common.util{
-    Escaping { escapeName, escapePackageName },
-    nodes,
-    Indents
-}
-
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
-    Functional,
-    Function,
-    FunctionOrValue,
-    Module { LANGUAGE_MODULE_NAME },
-    Package,
-    Parameter,
-    ParameterList,
-    Type,
-    TypeDeclaration,
-    TypedDeclaration
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
-import ceylon.collection {
-    HashSet,
-    unlinked
 }
 
 
@@ -311,11 +317,10 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     }
 
     shared Integer getBestImportInsertPosition(Tree.CompilationUnit cu){
-        JInteger? endIndex = cu.importList.endIndex;
-        if(! exists endIndex) {
-            return 0;
-        } else {
+        if (exists endIndex = cu.importList.endIndex) {
             return endIndex.intValue();
+        } else {
+            return 0;
         }
     }
 

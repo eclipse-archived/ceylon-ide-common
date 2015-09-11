@@ -3,9 +3,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
-import java.lang {
-    JInteger = Integer
-}
 
 class FindScopeVisitor(Integer startOffset, Integer endOffset) extends Visitor() {
     
@@ -100,20 +97,11 @@ class FindScopeVisitor(Integer startOffset, Integer endOffset) extends Visitor()
         super.visit(that);
     }
     
-    Boolean inBounds(Node? left, Node? right = left) {
-        if (!exists left) {
-             return false;
-        }
-        assert(exists left);
-        Node newRight = right else left;
-        
-        JInteger? tokenStart = left.startIndex;
-        JInteger? tokenStop = newRight.endIndex;
-        
-        return if (exists tokenStart, exists tokenStop)
+    Boolean inBounds(Node node) 
+            => if (exists tokenStart = node.startIndex, 
+                   exists tokenEnd = node.endIndex)
             then tokenStart.intValue() <= startOffset 
-                && tokenStop.intValue() >= endOffset
+                && tokenEnd.intValue() >= endOffset
             else false;
-    }
 
 }
