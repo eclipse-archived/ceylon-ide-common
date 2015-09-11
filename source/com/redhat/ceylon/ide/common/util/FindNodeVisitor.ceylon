@@ -42,7 +42,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
      is contained within this [[node]] and whitespace surrounding it."
     shared variable Node? node = null;
     
-    Boolean inBounds(Node left, Node right = left) {
+    Boolean inBounds(Node? left, Node? right = left) {
         function shouldReplacePreviousNode(Boolean isInBounds) {
             if (isInBounds == false) {
                 return false;
@@ -52,15 +52,15 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             }
             if (exists previousNode=node,
                 exists previousNodeEnd=previousNode.endIndex?.intValue(),
-                exists leftNodeStart=left.startIndex?.intValue(),
+                exists leftNodeStart=left?.startIndex?.intValue(),
                 previousNodeEnd<=leftNodeStart) {
                 return false;
             }
             return true;
         }
 
-        assert (is CommonToken? startToken = left.token,
-            is CommonToken? endToken = right.endToken else right.token);
+        assert (is CommonToken? startToken = left?.token,
+                is CommonToken? endToken = right?.endToken else right?.token);
         
         if (exists startToken, exists endToken) {
             if (exists tokens) {
@@ -104,8 +104,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                             isInBounds = true;
                         };
             } else {
-                if (exists startTokenOffset = left.startIndex?.intValue(),
-                    exists endTokenOffset = right.endIndex?.intValue()) {
+                if (exists startTokenOffset = left?.startIndex?.intValue(),
+                    exists endTokenOffset = right?.endIndex?.intValue()) {
                     return shouldReplacePreviousNode {
                                 isInBounds = startTokenOffset <= startOffset
                                         && endOffset <= endTokenOffset;
