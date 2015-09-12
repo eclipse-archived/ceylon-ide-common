@@ -20,7 +20,7 @@ class FindDeclarationVisitor(Node term) extends Visitor() {
             declaration = current;
         }
         
-        if (!exists d = declaration) {
+        if (!declaration exists) {
             super.visitAny(node);
         }
     }
