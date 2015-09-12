@@ -19,6 +19,30 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
         inParameter = tmp; 
     }
     
+    shared actual void visit(Tree.IfStatement that) {
+        if (!toplevel) {
+            currentStatement = that;
+        }
+        that.ifClause?.visit(this);
+        if (!toplevel) {
+            currentStatement = that;
+        }
+        that.elseClause?.visit(this);
+    }
+    
+    shared actual void visit(Tree.ForStatement that) {
+        if (!toplevel) {
+            currentStatement = that;
+        }
+        that.forClause?.visit(this);
+        if (!toplevel) {
+            currentStatement = that;
+        }
+        that.elseClause?.visit(this);
+    }
+    
+    //TODO: same thing for SwitchStatement and TryStatement!!
+    
     shared actual void visit(Tree.Statement that) {
         if ((!toplevel || currentlyToplevel) && !inParameter) {
             if (! (that is Tree.Variable ||
