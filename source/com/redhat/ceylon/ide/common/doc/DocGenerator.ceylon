@@ -1,5 +1,4 @@
 import ceylon.interop.java {
-    javaString,
     CeylonIterable
 }
 
@@ -89,28 +88,26 @@ shared abstract class DocGenerator<IdeComponent>() {
     
     // see getHoverText(CeylonEditor editor, IRegion hoverRegion)
     shared String? getDocumentation(Tree.CompilationUnit rootNode, Integer offset, IdeComponent cmp) {
-        value node = getHoverNode(rootNode, offset);
-        variable String? doc = null;
-        
-        if (exists node) {
-            if (is Tree.LocalModifier node) {
-                doc = getInferredTypeText(node, cmp);
-            } else if (is Tree.Literal node) {
-                doc = getTermTypeText(node);
-            } else {
-                if (exists model = nodes.getReferencedDeclaration(node)) {
-                    doc = getDocumentationText(model, node, rootNode, cmp);
-                }
-            }
+        switch (node = getHoverNode(rootNode, offset))
+        case (null) {
+            return null;
         }
-        
-        return doc;
+        case (is Tree.LocalModifier) {
+            return getInferredTypeText(node, cmp);
+        }
+        case (is Tree.Literal) {
+            return getTermTypeText(node);
+        }
+        else {
+            return if (exists model = nodes.getReferencedDeclaration(node)) 
+                then getDocumentationText(model, node, rootNode, cmp) 
+                else null;
+        }
     }
     
     // see SourceInfoHover.getHoverNode(IRegion hoverRegion, CeylonParseController parseController)
-    Node? getHoverNode(Tree.CompilationUnit rootNode, Integer offset) {
-        return nodes.findNode(rootNode, null, offset);
-    }
+    Node? getHoverNode(Tree.CompilationUnit rootNode, Integer offset) 
+            => nodes.findNode(rootNode, null, offset);
     
     // see getInferredTypeHoverText(Node node, IProject project)
     String? getInferredTypeText(Tree.LocalModifier node, IdeComponent cmp) {
@@ -129,36 +126,27 @@ shared abstract class DocGenerator<IdeComponent>() {
         return null;
     }
     
-    //see getTermTypeHoverText(Node node, String selectedText, IDocument doc, IProject project)
+    //see getTermTypeHoverText(Node node, String selectedText, IDocument doc, IProject project)        
     String? getTermTypeText(Tree.Term term) {
         if (exists model = term.typeModel) {
             value builder = StringBuilder();
             
             appendPageProlog(builder);
-            value desc = if (is Tree.Literal term) then "Literal of type" else "Expression of type";
+            value desc = 
+                    if (is Tree.Literal term) 
+                    then "Literal of type" 
+                    else "Expression of type";
             addIconAndText(builder, Icons.types, "``desc``&nbsp;<tt>``printer.print(model, term.unit)``</tt>");
             
             if (is Tree.StringLiteral term) {
-                value text = if (term.text.size < 250) 
-                             then escape(term.text)
-                             else escape(term.text.spanTo(250)) + "...";
-                builder.append("<br/>");
-                builder.append(color("\"``text``\"", Colors.strings));
+                appendStringInfo(term, builder);
                 // TODO display info for selected char 
             } else if (is Tree.CharLiteral term, term.text.size > 2) {
-                appendCharacterInfo(builder, term.text.span(1, 1));
+                appendCharacterInfo(term, builder);
             } else if (is Tree.NaturalLiteral term) {
-                value text = term.text.replace("_", "");
-                value int = switch (text.first)
-                    case ('#') parseInteger(text.spanFrom(1), 16)
-                    case ('$') parseInteger(text.spanFrom(1), 2)
-                    else parseInteger(text);
-                
-                builder.append("<br/>");
-                builder.append(color(int, Colors.numbers));
+                appendIntegerInfo(term, builder);
             } else if (is Tree.FloatLiteral term) {
-                builder.append("<br/>");
-                builder.append(color(parseFloat(term.text.replace("_", "")), Colors.numbers));
+                appendFloatInfo(term, builder);
             }
             
             // TODO quick assists
@@ -172,65 +160,136 @@ shared abstract class DocGenerator<IdeComponent>() {
     
     String convertToHTMLContent(String content) => convertToHTML(content);
     
-    String escape(String content) => content
-            .replace("\0", "\\0")
-            .replace("\b", "\\b")
-            .replace("\t", "\\t")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\f", "\\f")
-            .replace("\{#001b}", "\\e");
+    String escape(String content) 
+            => content
+                .replace("\0", "\\0")
+                .replace("\b", "\\b")
+                .replace("\t", "\\t")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\f", "\\f")
+                .replace("\{#001b}", "\\e");
 
+    void appendStringInfo(Tree.StringLiteral term, StringBuilder builder) {
+        value text = 
+                if (term.text.size < 250) 
+                then escape(term.text)
+                else escape(term.text.spanTo(250)) + "...";
+        value html = 
+                convertToHTMLContent(text)
+                    .replace("\\n", "<br/>");
+        builder.append("<br/>");
+        builder.append(color("\"``html``\"", Colors.strings)); 
+    }
+    
+    void appendIntegerInfo(Tree.NaturalLiteral term, StringBuilder builder) {
+        value text = term.text.replace("_", "");
+        value int = 
+                switch (text.first)
+                case ('#') parseInteger(text.spanFrom(1), 16)
+                case ('$') parseInteger(text.spanFrom(1), 2)
+                else parseInteger(text);
+        builder.append("<br/>");
+        builder.append(color(int, Colors.numbers));
+    }
+    
+    void appendFloatInfo(Tree.FloatLiteral term, StringBuilder builder) {
+        value text = term.text.replace("_", "");
+        value float = parseFloat(text);
+        builder.append("<br/>");
+        builder.append(color(float, Colors.numbers));
+    }
+    
     // see appendCharacterHoverInfo(StringBuilder buffer, String character)
-    void appendCharacterInfo(StringBuilder builder, String character) {
+    void appendCharacterInfo(Tree.CharLiteral term, StringBuilder builder) {
+        value character = term.text.span(1, 1);
+        value html = convertToHTMLContent(escape(character));
         builder.append("<br/>")
-            .append(color("'``convertToHTMLContent(escape(character))``'", Colors.strings));
+            .append(color("'``html``'", Colors.strings));
         
-        value codepoint = JCharacter.codePointAt(javaString(character), 0);
-        builder.append("<br/>Unicode name: <code>").append(JCharacter.getName(codepoint)).append("</code>");
-        builder.append("<br/>Codepoint: <code>U+").append(formatInteger(codepoint, 16).uppercased.padLeading(4, '0')).append("</code>");
-        builder.append("<br/>General Category: <code>").append(getCodepointGeneralCategoryName(codepoint)).append("</code>");
-        builder.append("<br/>Script: <code>").append(UnicodeScript.\iof(codepoint).name()).append("</code>");
-        builder.append("<br/>Block: <code>").append(UnicodeBlock.\iof(codepoint).string).append("</code><br/>");
+        assert (exists codepoint = character.first?.integer);
+        builder.append("<br/>Unicode name: <code>")
+                .append(JCharacter.getName(codepoint))
+                .append("</code>");
+        builder.append("<br/>Codepoint: <code>U+")
+                .append(formatInteger(codepoint, 16).uppercased.padLeading(4, '0'))
+                .append("</code>");
+        builder.append("<br/>General Category: <code>")
+                .append(getCodepointGeneralCategoryName(codepoint))
+                .append("</code>");
+        builder.append("<br/>Script: <code>")
+                .append(UnicodeScript.\iof(codepoint).name())
+                .append("</code>");
+        builder.append("<br/>Block: <code>")
+                .append(UnicodeBlock.\iof(codepoint).string)
+                .append("</code><br/>");
     }
     
     // see getCodepointGeneralCategoryName(int codepoint)
-    String getCodepointGeneralCategoryName(Integer codepoint) {
-        // we can't use a switch, see https://github.com/ceylon/ceylon-spec/issues/938
-        value t = JCharacter.getType(codepoint).byte;
-        
-        return if (t == JCharacter.\iCOMBINING_SPACING_MARK) then "Mark, combining spacing"
-            else if (t == JCharacter.\iCONNECTOR_PUNCTUATION) then "Punctuation, connector"
-            else if (t == JCharacter.\iCONTROL) then "Other, control"
-            else if (t == JCharacter.\iCURRENCY_SYMBOL) then "Symbol, currency"
-            else if (t == JCharacter.\iDASH_PUNCTUATION) then "Punctuation, dash"
-            else if (t == JCharacter.\iDECIMAL_DIGIT_NUMBER) then "Number, decimal digit"
-            else if (t == JCharacter.\iENCLOSING_MARK) then "Mark, enclosing"
-            else if (t == JCharacter.\iEND_PUNCTUATION) then "Punctuation, close"
-            else if (t == JCharacter.\iFINAL_QUOTE_PUNCTUATION) then "Punctuation, final quote"
-            else if (t == JCharacter.\iFORMAT) then "Other, format"
-            else if (t == JCharacter.\iINITIAL_QUOTE_PUNCTUATION) then "Punctuation, initial quote"
-            else if (t == JCharacter.\iLETTER_NUMBER) then "Number, letter"
-            else if (t == JCharacter.\iLINE_SEPARATOR) then "Separator, line"
-            else if (t == JCharacter.\iLOWERCASE_LETTER) then "Letter, lowercase"
-            else if (t == JCharacter.\iMATH_SYMBOL) then "Symbol, math"
-            else if (t == JCharacter.\iMODIFIER_LETTER) then "Letter, modifier"
-            else if (t == JCharacter.\iMODIFIER_SYMBOL) then "Symbol, modifier"
-            else if (t == JCharacter.\iNON_SPACING_MARK) then "Mark, nonspacing"
-            else if (t == JCharacter.\iOTHER_LETTER) then "Letter, other"
-            else if (t == JCharacter.\iOTHER_NUMBER) then "Number, other"
-            else if (t == JCharacter.\iOTHER_PUNCTUATION) then "Punctuation, other"
-            else if (t == JCharacter.\iOTHER_SYMBOL) then "Symbol, other"
-            else if (t == JCharacter.\iPARAGRAPH_SEPARATOR) then "Separator, paragraph"
-            else if (t == JCharacter.\iPRIVATE_USE) then "Other, private use"
-            else if (t == JCharacter.\iSPACE_SEPARATOR) then "Separator, space"
-            else if (t == JCharacter.\iSTART_PUNCTUATION) then "Punctuation, open"
-            else if (t == JCharacter.\iSURROGATE) then "Other, surrogate"
-            else if (t == JCharacter.\iTITLECASE_LETTER) then "Letter, titlecase"
-            else if (t == JCharacter.\iUNASSIGNED) then "Other, unassigned"
-            else if (t == JCharacter.\iUPPERCASE_LETTER) then "Letter, uppercase"
+    String getCodepointGeneralCategoryName(Integer codepoint)
+            => let (t = JCharacter.getType(codepoint).byte)
+                 // we can't use a switch, see https://github.com/ceylon/ceylon-spec/issues/938 
+                 if (t == JCharacter.\iCOMBINING_SPACING_MARK) 
+                    then "Mark, combining spacing"
+            else if (t == JCharacter.\iCONNECTOR_PUNCTUATION) 
+                    then "Punctuation, connector"
+            else if (t == JCharacter.\iCONTROL) 
+                    then "Other, control"
+            else if (t == JCharacter.\iCURRENCY_SYMBOL) 
+                    then "Symbol, currency"
+            else if (t == JCharacter.\iDASH_PUNCTUATION) 
+                    then "Punctuation, dash"
+            else if (t == JCharacter.\iDECIMAL_DIGIT_NUMBER) 
+                    then "Number, decimal digit"
+            else if (t == JCharacter.\iENCLOSING_MARK) 
+                    then "Mark, enclosing"
+            else if (t == JCharacter.\iEND_PUNCTUATION) 
+                    then "Punctuation, close"
+            else if (t == JCharacter.\iFINAL_QUOTE_PUNCTUATION) 
+                    then "Punctuation, final quote"
+            else if (t == JCharacter.\iFORMAT) 
+                    then "Other, format"
+            else if (t == JCharacter.\iINITIAL_QUOTE_PUNCTUATION) 
+                    then "Punctuation, initial quote"
+            else if (t == JCharacter.\iLETTER_NUMBER) 
+                    then "Number, letter"
+            else if (t == JCharacter.\iLINE_SEPARATOR) 
+                    then "Separator, line"
+            else if (t == JCharacter.\iLOWERCASE_LETTER) 
+                    then "Letter, lowercase"
+            else if (t == JCharacter.\iMATH_SYMBOL) 
+                    then "Symbol, math"
+            else if (t == JCharacter.\iMODIFIER_LETTER) 
+                    then "Letter, modifier"
+            else if (t == JCharacter.\iMODIFIER_SYMBOL) 
+                    then "Symbol, modifier"
+            else if (t == JCharacter.\iNON_SPACING_MARK) 
+                    then "Mark, nonspacing"
+            else if (t == JCharacter.\iOTHER_LETTER) 
+                    then "Letter, other"
+            else if (t == JCharacter.\iOTHER_NUMBER) 
+                    then "Number, other"
+            else if (t == JCharacter.\iOTHER_PUNCTUATION) 
+                    then "Punctuation, other"
+            else if (t == JCharacter.\iOTHER_SYMBOL) 
+                    then "Symbol, other"
+            else if (t == JCharacter.\iPARAGRAPH_SEPARATOR) 
+                    then "Separator, paragraph"
+            else if (t == JCharacter.\iPRIVATE_USE) 
+                    then "Other, private use"
+            else if (t == JCharacter.\iSPACE_SEPARATOR) 
+                    then "Separator, space"
+            else if (t == JCharacter.\iSTART_PUNCTUATION) 
+                    then "Punctuation, open"
+            else if (t == JCharacter.\iSURROGATE) 
+                    then "Other, surrogate"
+            else if (t == JCharacter.\iTITLECASE_LETTER) 
+                    then "Letter, titlecase"
+            else if (t == JCharacter.\iUNASSIGNED) 
+                    then "Other, unassigned"
+            else if (t == JCharacter.\iUPPERCASE_LETTER) 
+                    then "Letter, uppercase"
             else "&lt;Unknown&gt;";
-    }
 
 
     // see getDocumentationHoverText(Referenceable model, CeylonEditor editor, Node node)
