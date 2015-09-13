@@ -69,11 +69,11 @@ shared object nodes {
         return visitor.declaration;
     }
 
-    shared Tree.BinaryOperatorExpression? findBinaryOperator(Tree.CompilationUnit cu, Node node) {
+    shared Tree.OperatorExpression? findOperator(Tree.CompilationUnit cu, Node node) {
         class FindBinaryVisitor() extends Visitor() {
-            shared variable Tree.BinaryOperatorExpression? result=null;
+            shared variable Tree.OperatorExpression? result=null;
 
-            shared actual void visit(Tree.BinaryOperatorExpression that) {
+            shared actual void visit(Tree.OperatorExpression that) {
                 if (node.startIndex.intValue() >= that.startIndex.intValue() &&
                     node.endIndex.intValue() <= that.endIndex.intValue()) {
                     result = that;
