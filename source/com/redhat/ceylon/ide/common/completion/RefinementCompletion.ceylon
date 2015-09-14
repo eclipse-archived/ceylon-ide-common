@@ -6,8 +6,7 @@ import ceylon.interop.java {
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node,
-    Tree
+    Node
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -18,7 +17,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     Interface,
     Reference,
-    Unit,
     Type,
     Generic,
     FunctionOrValue
@@ -28,34 +26,41 @@ import java.util {
     List,
     ArrayList
 }
+import com.redhat.ceylon.ide.common.util {
+    Indents
+}
 // see RefinementCompletionProposal
 shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionComponent, Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
     shared formal CompletionComponent newRefinementCompletionProposal(Integer offset, String prefix,
-        Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isInterface,
-        ClassOrInterface ci, Node node, Unit unit, Document doc, Boolean preamble);
+        Reference? pr, String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
 
     // see RefinementCompletionProposal.addNamedArgumentProposal(...)
-    shared formal CompletionComponent newNamedArgumentProposal(Integer offset, String prefix, 
-        IdeComponent cmp, Tree.CompilationUnit unit, Declaration dec, Scope scope);
+    shared formal CompletionComponent newNamedArgumentProposal(Integer offset, String prefix, Reference? pr,
+        String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
     
-    shared formal CompletionComponent newInlineFunctionProposal(Integer offset, FunctionOrValue dec,
-        Scope scope, Node node, String prefix, IdeComponent cmp, Document doc);
+    shared formal CompletionComponent newInlineFunctionProposal(Integer offset, String prefix, Reference? pr,
+        String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
 
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
-        ClassOrInterface ci, Node node, Scope scope, String prefix, 
-        IdeComponent cpc, Document doc, 
-        MutableList<CompletionComponent> result, Boolean preamble) {
+        ClassOrInterface ci, Node node, Scope scope, String prefix, IdeComponent cpc,
+        MutableList<CompletionComponent> result, Boolean preamble, Indents<Document> indents,
+        Boolean addParameterTypesInCompletions) {
         
         value isInterface = scope is Interface;
         Reference pr = getRefinedProducedReference(scope, dec);
         value unit = node.unit;
+        value doc = cpc.document;
         
-        result.add(newRefinementCompletionProposal(offset, prefix, dec, pr, scope, cpc, isInterface,
-            ci, node, unit, doc, preamble));
+        value desc = getRefinementDescriptionFor(dec, pr, unit);
+        value text = getRefinementTextFor(dec, pr, unit, isInterface, ci, 
+                        indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc), 
+                        true, preamble, indents, addParameterTypesInCompletions);
+        
+        result.add(newRefinementCompletionProposal(offset, prefix, pr, desc, text, cpc, dec, scope));
     }
 
     // see getRefinedProducedReference(Scope scope, Declaration d)
@@ -75,11 +80,28 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionCompone
         return d.appliedReference(outerType, params);
     }
     
+    shared void addNamedArgumentProposal(Integer offset, String prefix, IdeComponent cpc,
+        MutableList<CompletionComponent> result, Declaration dec, Scope scope) {
+        
+        value unit = cpc.rootNode.unit;
+        value desc = getDescriptionFor(dec, unit);
+        value text = getTextFor(dec, unit) + " = nothing;";
+        
+        result.add(newNamedArgumentProposal(offset, prefix, dec.reference, desc, text, cpc, dec, scope));
+    }
+
+
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
-            IdeComponent cmp, Document doc, variable MutableList<CompletionComponent> result) {
+            IdeComponent cmp, Document doc, variable MutableList<CompletionComponent> result, Indents<Document> indents) {
 
         if (dec.parameter, is FunctionOrValue dec) {
-            result.add(newInlineFunctionProposal(offset, dec, scope, node, prefix, cmp, doc));
+            value p = dec.initializerParameter;
+            value unit = node.unit;
+            value desc = getInlineFunctionDescriptionFor(p, null, unit);
+            value text = getInlineFunctionTextFor(p, null, unit, 
+                    indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc));
+            
+            result.add(newInlineFunctionProposal(offset, prefix, dec.reference, desc, text, cmp, dec, scope));
         }
     }
 

@@ -17,7 +17,7 @@ shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent
         given IdeArtifact satisfies Object {
 
     shared formal CompletionComponent newFunctionCompletionProposal(Integer offset, String prefix,
-            String text, Declaration dec, Unit unit, IdeComponent cmp);
+           String desc, String text, Declaration dec, Unit unit, IdeComponent cmp);
     
     shared void addFunctionProposal(Integer offset, IdeComponent cpc, Tree.Primary primary, 
             MutableList<CompletionComponent> result, Declaration dec,
@@ -40,8 +40,7 @@ shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent
             text += ";";
         }
         value unit = cpc.rootNode.unit;
-        result.add(newFunctionCompletionProposal(offset, prefix, text, dec, unit, cpc));
+        value desc = getDescriptionFor(dec, unit) + "(...)";
+        result.add(newFunctionCompletionProposal(offset, prefix, desc, text, dec, unit, cpc));
     }
-
-
 }

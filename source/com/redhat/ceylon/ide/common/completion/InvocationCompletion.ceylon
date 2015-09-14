@@ -8,7 +8,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.util {
-    OccurrenceLocation
+    OccurrenceLocation,
+    escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -43,15 +44,17 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
     
     shared formal String inexactMatches;
     
+    shared formal Boolean addParameterTypesInCompletions;
+    
     shared formal CompletionComponent newPositionalInvocationCompletion(Integer offset, String prefix,
-        Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember,
-        OccurrenceLocation? ol, String? typeArgs, Boolean includeDefaulted, Declaration? qualifyingDec);
+        String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
+        Boolean isMember, String? typeArgs, Boolean includeDefaulted, Declaration? qualifyingDec);
 
     shared formal CompletionComponent newNamedInvocationCompletion(Integer offset, String prefix,
-        Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember,
-        OccurrenceLocation? ol, String? typeArgs, Boolean includeDefaulted);
+        String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
+        Boolean isMember, String? typeArgs, Boolean includeDefaulted);
 
-    shared formal CompletionComponent newReferenceCompletion(Integer offset, String prefix,
+    shared formal CompletionComponent newReferenceCompletion(Integer offset, String prefix, String desc, String text,
         Declaration dec, Unit u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember, Boolean includeTypeArgs);
     
     shared formal CompletionComponent newParameterInfo(Integer offset, Declaration dec, 
@@ -79,32 +82,45 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
                         || "positional".equals(inexactMatches);
                 value named = exact || "both".equals(inexactMatches);
                 
-                if (positional, parameterList.positionalParametersSupported,
+                if (positional, exists pr, 
+                    parameterList.positionalParametersSupported,
                     !isAbstract || isLocation(ol, OccurrenceLocation.\iEXTENDS)
                             || isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS)) {
 
                     value parameters = getParameters(parameterList, false, false);
                     if (ps.size() != parameters.size()) {
-                        result.add(newPositionalInvocationCompletion(offset, prefix, dec, pr, scope, 
-                            cmp, isMember, ol, typeArgs, false, null));
+                        value desc = getPositionalInvocationDescriptionFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        value text = getPositionalInvocationTextFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        
+                        result.add(newPositionalInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, isMember, typeArgs, false, null));
                     }
 
-                    result.add(newPositionalInvocationCompletion(offset, prefix, dec, pr, scope, 
-                        cmp, isMember, ol, typeArgs, true, null));
+                    value desc = getPositionalInvocationDescriptionFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                    value text = getPositionalInvocationTextFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+
+                    result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, dec,
+                        pr, scope, cmp, isMember, typeArgs, true, null));
                 }
-                if (named, parameterList.namedParametersSupported,
+                if (named, parameterList.namedParametersSupported, exists pr,
                     !isAbstract && !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
                             && !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS)
                             && !dec.overloaded) {
                     
                     value parameters = getParameters(parameterList, false, true);
                     if (ps.size() != parameters.size()) {
-                        result.add(newNamedInvocationCompletion(offset, prefix, dec, pr, scope, 
-                            cmp, isMember, ol, typeArgs, false));
+                        value desc = getNamedInvocationDescriptionFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        value text =  getNamedInvocationTextFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        
+                        result.add(newNamedInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, isMember, typeArgs, false));
                     }
                     if (!ps.empty) {
-                        result.add(newNamedInvocationCompletion(offset, prefix, dec, pr, scope, 
-                            cmp, isMember, ol, typeArgs, true));
+                        value desc = getNamedInvocationDescriptionFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                        value text = getNamedInvocationTextFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                        
+                        result.add(newNamedInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, isMember, typeArgs, true));
                     }
                 }
             }
@@ -122,7 +138,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
         
         //proposal with type args
         if (is Generic dec) {
-            result.add(newReferenceCompletion(0, prefix, dec, unit, pr, scope, cmp, isMember, true));
+            value desc = getDescriptionFor(dec, unit);
+            value text = getTextFor(dec, unit);
+            
+            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, true));
             
             if (dec.typeParameters.empty) {
                 // don't add another proposal below!
@@ -137,7 +156,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
             !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS),
             !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)) {
             
-            result.add(newReferenceCompletion(0, prefix, dec, unit, pr, scope, cmp, isMember, false));
+            value desc = dec.getName(unit);
+            value text = escaping.escapeName(dec, unit);
+
+            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, false));
         }
     }
     
@@ -201,7 +223,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
         value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
         
         if (exists mt = ptr.type, (requiredType is Null || mt.isSubtypeOf(requiredType))) {
-            result.add(newPositionalInvocationCompletion(offset, prefix, m, ptr, scope, controller, true, ol, null, true, dec));
+            value qualifier = dec.name + ".";
+            value desc = qualifier + getPositionalInvocationDescriptionFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+            value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+            result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
         }
     }
 

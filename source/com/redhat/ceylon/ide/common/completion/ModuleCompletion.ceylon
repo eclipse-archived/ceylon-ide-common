@@ -59,13 +59,11 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,D
                 String versioned, String name);
 
     shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionComponent> result) {
-        print("coin");
         if (!"module".startsWith(prefix)) {
             return;
         }
         value moduleName = getPackageName(cpc.rootNode);
         if (exists moduleName) {
-            print("coin2--=``moduleName``");
             result.add(newModuleDescriptorProposal(offset, prefix, moduleName));
         }
     }

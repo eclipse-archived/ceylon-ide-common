@@ -299,8 +299,6 @@ shared object nodes {
     }
 
 
-    // TODO? public static Iterator<CommonToken> getTokenIterator(List<CommonToken> tokens, IRegion region)
-
     //
     // This function returns the index of the token element
     // containing the offset specified. If such a token does

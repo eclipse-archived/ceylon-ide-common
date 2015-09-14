@@ -1,0 +1,6 @@
+shared void namedInvocation() {
+    
+    "".any {
+        
+    };
+}

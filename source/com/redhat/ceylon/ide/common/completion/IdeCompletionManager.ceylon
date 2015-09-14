@@ -23,7 +23,8 @@ import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
     types,
     escaping,
-    ProgressMonitor
+    ProgressMonitor,
+    Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
@@ -47,7 +48,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     Interface,
     Value,
-    TypeAlias
+    TypeAlias,
+    Package
 }
 
 import java.lang {
@@ -84,6 +86,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                 & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionComponent,Document>
                 & ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
                 & FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+                & ControlStructureCompletionProposal<IdeComponent, IdeArtifact, CompletionComponent, Document>
         given CompletionComponent satisfies Object
         given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
         given IdeArtifact satisfies Object {
@@ -95,6 +98,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
             = HashMap<JString,DeclarationWithProximity>();
 
     shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
+    
+    shared formal Indents<Document> indents;
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
     shared CompletionComponent[] getContentProposals(IdeComponent analysisResult, 
@@ -761,9 +766,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                 if (!secondLevel,
                         isParameterOfNamedArgInvocation(scope, dwp),
                         isDirectlyInsideNamedArgumentList(cmp, node, token)) {
-                    result.add(newNamedArgumentProposal(offset, prefix, cmp, cu, dec, scope));
+                    addNamedArgumentProposal(offset, prefix, cmp, 
+                        result, dec, scope);
                     addInlineFunctionProposal(offset, dec, scope,
-                        node, prefix, cmp, doc, result);
+                        node, prefix, cmp, doc, result, indents);
                 }
 
                 value nextToken = getNextToken(cmp, token);
@@ -808,12 +814,24 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                     }
                 }
 
-                // TODO code constructs (for, exists, nonempty etc)
+                if (!memberOp, !secondLevel, isProposable(dwp, ol, scope, unit, requiredType, previousTokenType), 
+                        !isLocation(ol, OccurrenceLocation.\iIMPORT),
+                        !isLocation(ol, OccurrenceLocation.\iCASE),
+                        !isLocation(ol, OccurrenceLocation.\iCATCH),
+                        isDirectlyInsideBlock(node, cmp, scope, token)) {
+                    
+                    addForProposal(offset, prefix, cmp, result, dwp, dec);
+                    addIfExistsProposal(offset, prefix, cmp, result, dwp, dec);
+                    addIfNonemptyProposal(offset, prefix, cmp, result, dwp, dec);
+                    addTryProposal(offset, prefix, cmp, result, dwp, dec);
+                    addSwitchProposal(offset, prefix, cmp, result, dwp, dec, node, indents);
+                }
                 
                 if (!memberOp, !isMember, !secondLevel) {
                     for (d in overloads(dec)) {
                         if (isRefinementProposable(d, ol, scope), is ClassOrInterface scope) {
-                            addRefinementProposal(offset, d, scope, node, scope, prefix, cmp, cmp.document, result, true);
+                            addRefinementProposal(offset, d, scope, node, scope, prefix, cmp, result,
+                                true, indents, addParameterTypesInCompletions);
                         }
                     }
                 }
@@ -832,6 +850,15 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
         }
 
         return result.sequence();
+    }
+
+    Boolean isDirectlyInsideBlock(Node node, IdeComponent cpc, Scope scope, CommonToken token) {
+        if (scope is Interface || scope is Package) {
+            return false;
+        } else {
+            assert(exists tokens = cpc.tokens);
+            return !(node is Tree.SequenceEnumeration) && occursAfterBraceOrSemicolon(token, tokens);
+        }
     }
 
     // see CeylonParseController.isMemberNameProposable(int offset, Node node, boolean memberOp)
@@ -954,10 +981,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                         value start = node.startIndex.intValue();
                         String pfx = getDocumentSubstring(doc, 0, offset - start);
 
-                        addRefinementProposal(offset, d,
-                            scope,
-                            node, scope, pfx,
-                            cpc, doc, result, preamble);
+                        addRefinementProposal(offset, d, scope, node, scope, pfx, cpc,
+                            result, preamble, indents, addParameterTypesInCompletions);
                     }
                 }
             }
