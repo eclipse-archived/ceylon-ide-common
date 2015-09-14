@@ -1,32 +1,30 @@
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
-    Scope
-}
 import ceylon.collection {
     MutableList
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     escaping
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration,
+    Scope
 }
-shared interface BasicCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface BasicCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
-    shared formal CompletionComponent newBasicCompletionProposal(Integer offset, String prefix,
+    shared formal CompletionResult newBasicCompletionProposal(Integer offset, String prefix,
         String text, String escapedText, Declaration decl, IdeComponent cmp);
     
-    shared void addImportProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addImportProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope) {
         result.add(newBasicCompletionProposal(offset, prefix, dec.name, escaping.escapeName(dec), dec, cpc));
     }
     
-    shared void addDocLinkProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addDocLinkProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope) {
         String name = dec.name;
         value cu = cpc.rootNode;

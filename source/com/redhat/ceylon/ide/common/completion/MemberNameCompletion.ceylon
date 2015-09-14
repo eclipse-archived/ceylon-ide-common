@@ -22,13 +22,13 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
-    shared formal CompletionComponent newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName);
+    shared formal CompletionResult newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName);
     
-    shared void addMemberNameProposals(Integer offset, IdeComponent cpc, Node node, MutableList<CompletionComponent> result) {
+    shared void addMemberNameProposals(Integer offset, IdeComponent cpc, Node node, MutableList<CompletionResult> result) {
         JInteger? startIndex2 = node.startIndex;
         object extends Visitor() {
 
@@ -51,8 +51,8 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionCompone
             }
         }.visit(cpc.rootNode);
     }
-
-    shared void addMemberNameProposal(Integer offset, String prefix, variable Node? node, MutableList<CompletionComponent> result) {
+    
+    shared void addMemberNameProposal(Integer offset, String prefix, variable Node? node, MutableList<CompletionResult> result) {
         MutableSet<String> proposals = HashSet<String>();
         
         if (is Tree.TypeDeclaration n = node) {

@@ -12,16 +12,16 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     Unit
 }
-shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
 
-    shared formal CompletionComponent newFunctionCompletionProposal(Integer offset, String prefix,
+    shared formal CompletionResult newFunctionCompletionProposal(Integer offset, String prefix,
            String desc, String text, Declaration dec, Unit unit, IdeComponent cmp);
     
     shared void addFunctionProposal(Integer offset, IdeComponent cpc, Tree.Primary primary, 
-            MutableList<CompletionComponent> result, Declaration dec,
-            IdeCompletionManager<IdeComponent, IdeArtifact, CompletionComponent, Document> cm) {
+            MutableList<CompletionResult> result, Declaration dec,
+            IdeCompletionManager<IdeComponent, IdeArtifact, CompletionResult, Document> cm) {
 
         variable Tree.Term arg = primary;
         while (is Tree.Expression a = arg) {

@@ -75,19 +75,19 @@ import org.antlr.runtime {
     Token
 }
 
-shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionComponent,Document>()
-        satisfies InvocationCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & ParametersCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & KeywordCompletion<CompletionComponent>
-                & MemberNameCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & BasicCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & RefinementCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & FunctionCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
-                & ControlStructureCompletionProposal<IdeComponent, IdeArtifact, CompletionComponent, Document>
-        given CompletionComponent satisfies Object
+shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionResult,Document>()
+        satisfies InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & KeywordCompletion<CompletionResult>
+                & MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & BasicCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & ControlStructureCompletionProposal<IdeComponent, IdeArtifact, CompletionResult, Document>
+        given CompletionResult satisfies Object
         given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
         given IdeArtifact satisfies Object {
 
@@ -102,7 +102,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
     shared formal Indents<Document> indents;
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
-    shared CompletionComponent[] getContentProposals(IdeComponent analysisResult, 
+    shared CompletionResult[] getContentProposals(IdeComponent analysisResult, 
             Integer offset, Integer line, Boolean secondLevel, ProgressMonitor monitor, Boolean returnedParamInfo = false) {
         value tokens = analysisResult.tokens;
         value rn = analysisResult.rootNode;
@@ -209,7 +209,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
         assert(exists scope);
         
         //construct completions when outside ordinary code
-        variable CompletionComponent[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
+        variable CompletionResult[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
                         analysisResult, node, adjustedToken,
                         scope, returnedParamInfo, isMemberOp,
                         tokenType, monitor);
@@ -230,10 +230,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
         return c; 
     }
     
-    CompletionComponent[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
+    CompletionResult[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
             Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
             Integer tokenType, ProgressMonitor monitor) {
-        MutableList<CompletionComponent> result = ArrayList<CompletionComponent>();
+        MutableList<CompletionResult> result = ArrayList<CompletionResult>();
 
         if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
             addFakeShowParametersCompletion(node, cpc, result);
@@ -681,7 +681,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                 else node is Tree.QualifiedType;
 
     // see CeylonCompletionProcess.constructCompletions(...)
-    shared CompletionComponent[] constructCompletions(Integer offset, String prefix,
+    shared CompletionResult[] constructCompletions(Integer offset, String prefix,
             Collection<DeclarationWithProximity> sortedProposals,
             Collection<DeclarationWithProximity> sortedFunctionProposals,
             IdeComponent cmp, Scope scope,
@@ -691,7 +691,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
             Type? requiredType, Integer previousTokenType,
             Integer tokenType) {
 
-        MutableList<CompletionComponent> result = ArrayList<CompletionComponent>();
+        MutableList<CompletionResult> result = ArrayList<CompletionResult>();
         value cu = cmp.rootNode;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
@@ -968,7 +968,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
         Collection<DeclarationWithProximity> set,
         IdeComponent cpc, Scope scope,
         Node node, Document doc, Boolean filter,
-        MutableList<CompletionComponent> result,
+        MutableList<CompletionResult> result,
         OccurrenceLocation? ol, Type t,
         Boolean preamble) {
 
@@ -996,10 +996,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
                 (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
     }
 
-    shared formal CompletionComponent newAnonFunctionProposal(Integer offset, Type? requiredType,
+    shared formal CompletionResult newAnonFunctionProposal(Integer offset, Type? requiredType,
         Unit unit, String text, String header, Boolean isVoid);
 
-    void addAnonFunctionProposal(Integer offset, Type? requiredType, MutableList<CompletionComponent> result, Unit unit){
+    void addAnonFunctionProposal(Integer offset, Type? requiredType, MutableList<CompletionResult> result, Unit unit){
         value text = anonFunctionHeader(requiredType, unit);
         value funtext = text + " => nothing";
 
@@ -1280,7 +1280,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
     }
 
     void addProgramElementReferenceProposal(Integer offset, String prefix,
-            IdeComponent cpc, MutableList<CompletionComponent> result,
+            IdeComponent cpc, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Boolean isMember) {
 
         Unit? unit = cpc.rootNode.unit;
@@ -1308,7 +1308,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionCo
         return nextToken;
     }
 
-    shared formal CompletionComponent newProgramElementReferenceCompletion(Integer offset, String prefix,
+    shared formal CompletionResult newProgramElementReferenceCompletion(Integer offset, String prefix,
         Declaration dec, Unit? u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember);
 }
 

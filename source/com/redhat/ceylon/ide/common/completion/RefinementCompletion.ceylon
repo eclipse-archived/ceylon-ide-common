@@ -30,24 +30,24 @@ import com.redhat.ceylon.ide.common.util {
     Indents
 }
 // see RefinementCompletionProposal
-shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionComponent, Document>
+shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult, Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
-    shared formal CompletionComponent newRefinementCompletionProposal(Integer offset, String prefix,
+    shared formal CompletionResult newRefinementCompletionProposal(Integer offset, String prefix,
         Reference? pr, String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
 
     // see RefinementCompletionProposal.addNamedArgumentProposal(...)
-    shared formal CompletionComponent newNamedArgumentProposal(Integer offset, String prefix, Reference? pr,
+    shared formal CompletionResult newNamedArgumentProposal(Integer offset, String prefix, Reference? pr,
         String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
     
-    shared formal CompletionComponent newInlineFunctionProposal(Integer offset, String prefix, Reference? pr,
+    shared formal CompletionResult newInlineFunctionProposal(Integer offset, String prefix, Reference? pr,
         String desc, String text, IdeComponent cmp, Declaration dec, Scope scope);
 
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
         ClassOrInterface ci, Node node, Scope scope, String prefix, IdeComponent cpc,
-        MutableList<CompletionComponent> result, Boolean preamble, Indents<Document> indents,
+        MutableList<CompletionResult> result, Boolean preamble, Indents<Document> indents,
         Boolean addParameterTypesInCompletions) {
         
         value isInterface = scope is Interface;
@@ -81,7 +81,7 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionCompone
     }
     
     shared void addNamedArgumentProposal(Integer offset, String prefix, IdeComponent cpc,
-        MutableList<CompletionComponent> result, Declaration dec, Scope scope) {
+        MutableList<CompletionResult> result, Declaration dec, Scope scope) {
         
         value unit = cpc.rootNode.unit;
         value desc = getDescriptionFor(dec, unit);
@@ -92,7 +92,7 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionCompone
 
 
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
-            IdeComponent cmp, Document doc, variable MutableList<CompletionComponent> result, Indents<Document> indents) {
+            IdeComponent cmp, Document doc, variable MutableList<CompletionResult> result, Indents<Document> indents) {
 
         if (dec.parameter, is FunctionOrValue dec) {
             value p = dec.initializerParameter;

@@ -34,13 +34,13 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document> 
+shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> 
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
     // see PackageCompletions.addPackageCompletions()
     shared void addPackageCompletions(IdeComponent lar, Integer offset, String prefix,
-        Tree.ImportPath? path, Node node, MutableList<CompletionComponent> result, Boolean withBody,
+        Tree.ImportPath? path, Node node, MutableList<CompletionResult> result, Boolean withBody,
         ProgressMonitor monitor) {
         
         String fp = fullPath(offset, prefix, path);
@@ -49,7 +49,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-            IdeComponent controller, MutableList<CompletionComponent> result, ProgressMonitor monitor) {
+            IdeComponent controller, MutableList<CompletionResult> result, ProgressMonitor monitor) {
         if (exists unit) { //a null unit can occur if we have not finished parsing the file
             variable Boolean found = false;
             Module mod = unit.\ipackage.\imodule;
@@ -103,7 +103,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,
     }
     
     shared void addPackageDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, 
-            MutableList<CompletionComponent> result) {
+            MutableList<CompletionResult> result) {
         if (!"package".startsWith(prefix)) {
             return;
         }
@@ -114,23 +114,23 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionComponent,
     }
 
     shared void addCurrentPackageNameCompletion(IdeComponent cpc, Integer offset, String prefix,
-            MutableList<CompletionComponent> result) {
+            MutableList<CompletionResult> result) {
         value moduleName = getPackageName(cpc.rootNode);
         if (exists moduleName) {
             result.add(newCurrentPackageProposal(offset, prefix, moduleName, cpc));
         }
     }
     
-    shared formal CompletionComponent newPackageDescriptorProposal(Integer offset, String prefix, String packageName);
+    shared formal CompletionResult newPackageDescriptorProposal(Integer offset, String prefix, String packageName);
 
-    shared formal CompletionComponent newCurrentPackageProposal(Integer offset, String prefix, String packageName, IdeComponent cmp);
+    shared formal CompletionResult newCurrentPackageProposal(Integer offset, String prefix, String packageName, IdeComponent cmp);
 
-    shared formal CompletionComponent newImportedModulePackageProposal(Integer offset, String prefix,
+    shared formal CompletionResult newImportedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
         String fullPackageName, IdeComponent controller,
         Package candidate);
     
-    shared formal CompletionComponent newQueriedModulePackageProposal(Integer offset, String prefix,
+    shared formal CompletionResult newQueriedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
         String fullPackageName, IdeComponent controller,
         ModuleVersionDetails version, Unit unit, ModuleSearchResult.ModuleDetails md);

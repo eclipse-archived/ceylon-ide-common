@@ -20,14 +20,14 @@ import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
-shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact> 
         given IdeArtifact satisfies Object {
     
-    shared formal CompletionComponent newControlStructureCompletionProposal(Integer offset, String prefix,
+    shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
         String desc, String text, Declaration dec, IdeComponent cpc);
     
-    shared void addForProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addForProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (is Value d) {
@@ -49,7 +49,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
-    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -65,7 +65,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
-    shared void addIfNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addIfNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -80,7 +80,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
-    shared void addTryProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addTryProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
        
         if (!dwp.unimported) {
@@ -97,7 +97,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
-    shared void addSwitchProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionComponent> result,
+    shared void addSwitchProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d, Node node, Indents<Document> indents) {
         
         if (!dwp.unimported) {

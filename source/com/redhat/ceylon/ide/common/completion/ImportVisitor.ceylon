@@ -19,9 +19,9 @@ import org.antlr.runtime {
     CommonToken
 }
 
-class ImportVisitor<IdeComponent,IdeArtifact,CompletionComponent,Document>(String prefix, CommonToken token, Integer offset, Node node,
-    IdeComponent cpc, MutableList<CompletionComponent> result, ProgressMonitor monitor,
-    IdeCompletionManager<IdeComponent,IdeArtifact,CompletionComponent,Document> completionManager)
+class ImportVisitor<IdeComponent,IdeArtifact,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
+    IdeComponent cpc, MutableList<CompletionResult> result, ProgressMonitor monitor,
+    IdeCompletionManager<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
         extends Visitor()
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {

@@ -1,11 +1,17 @@
 import ceylon.collection {
     MutableList
 }
+import ceylon.interop.java {
+    CeylonIterable
+}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
     Node
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
@@ -25,20 +31,15 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     FunctionOrValue
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
+
 import java.lang {
     JInteger=Integer
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 import java.util {
     Collections
 }
 
-shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact> 
         given IdeArtifact satisfies Object {
     
@@ -46,24 +47,24 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
     
     shared formal Boolean addParameterTypesInCompletions;
     
-    shared formal CompletionComponent newPositionalInvocationCompletion(Integer offset, String prefix,
+    shared formal CompletionResult newPositionalInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
         Boolean isMember, String? typeArgs, Boolean includeDefaulted, Declaration? qualifyingDec);
 
-    shared formal CompletionComponent newNamedInvocationCompletion(Integer offset, String prefix,
+    shared formal CompletionResult newNamedInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
         Boolean isMember, String? typeArgs, Boolean includeDefaulted);
 
-    shared formal CompletionComponent newReferenceCompletion(Integer offset, String prefix, String desc, String text,
+    shared formal CompletionResult newReferenceCompletion(Integer offset, String prefix, String desc, String text,
         Declaration dec, Unit u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember, Boolean includeTypeArgs);
     
-    shared formal CompletionComponent newParameterInfo(Integer offset, Declaration dec, 
+    shared formal CompletionResult newParameterInfo(Integer offset, Declaration dec, 
         Reference producedReference, Scope scope, IdeComponent cpc, Boolean namedInvocation);
     
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
         Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionComponent> result, Declaration dec,
+        MutableList<CompletionResult> result, Declaration dec,
         Reference? pr, Scope scope, OccurrenceLocation? ol,
         String? typeArgs, Boolean isMember) {
         
@@ -130,7 +131,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
     // see InvocationCompletionProposal.addReferenceProposal()
     shared void addReferenceProposal(Tree.CompilationUnit cu,
         Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionComponent> result, Declaration dec,
+        MutableList<CompletionResult> result, Declaration dec,
         Reference? pr, Scope scope, OccurrenceLocation? ol,
         Boolean isMember) {
         
@@ -163,7 +164,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
         }
     }
     
-    shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionComponent> result) {
+    shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionResult> result) {
         object extends Visitor() {
             
             shared actual void visit(Tree.InvocationExpression that) {
@@ -185,7 +186,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
         }.visit(cpc.rootNode);
     }
 
-    shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionComponent> result,
+    shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
         
         if (!(dec is Functional), !(dec is TypeDeclaration)) {
@@ -218,7 +219,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionCompone
         }
     }
 
-    void addSecondLevelProposalInternal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionComponent> result,
+    void addSecondLevelProposalInternal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Type? requiredType, OccurrenceLocation? ol, Unit unit, Type type, Declaration m) {
         value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
         

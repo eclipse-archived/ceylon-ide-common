@@ -21,7 +21,7 @@ import com.redhat.ceylon.ide.common.util {
 }
 
 // see KeywordCompletionProposal
-shared interface KeywordCompletion<CompletionComponent> {
+shared interface KeywordCompletion<CompletionResult> {
     
     Set<String> postfixKeywords => HashSet(linked, Hashtable(), {"of", "in", "else", "exists", "nonempty", "then"});
 
@@ -30,10 +30,10 @@ shared interface KeywordCompletion<CompletionComponent> {
                     "of", "in", "else", "for", "if", "is", 
                     "exists", "nonempty", "then", "let"});
     
-    shared formal CompletionComponent newKeywordCompletionProposal(Integer offset, String prefix, String keyword);
+    shared formal CompletionResult newKeywordCompletionProposal(Integer offset, String prefix, String keyword);
     
     // see KeywordCompletionProposal.addKeywordProposals(...)
-    shared void addKeywordProposals(Tree.CompilationUnit cu, Integer offset, String prefix, MutableList<CompletionComponent> result,
+    shared void addKeywordProposals(Tree.CompilationUnit cu, Integer offset, String prefix, MutableList<CompletionResult> result,
             Node node, OccurrenceLocation? ol, Boolean postfix, Integer previousTokenType) {
         
         if (isModuleDescriptor(cu), !isLocation(ol, OccurrenceLocation.\iMETA), !(ol?.reference else false)){
@@ -69,6 +69,6 @@ shared interface KeywordCompletion<CompletionComponent> {
         }
     }
     
-    void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionComponent> result, String keyword)
+    void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionResult> result, String keyword)
         => result.add(newKeywordCompletionProposal(offset, prefix, keyword));
 }

@@ -43,22 +43,22 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,Document>
+shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
     shared formal Boolean supportsLinkedModeInArguments;
             
-    shared formal CompletionComponent newModuleProposal(Integer offset, String prefix, Integer len, 
+    shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, ModuleDetails mod,
                 Boolean withBody, ModuleVersionDetails version, String name, Node node);
 
-    shared formal CompletionComponent newModuleDescriptorProposal(Integer offset, String prefix, String name); 
+    shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String name); 
             
-    shared formal CompletionComponent newJDKModuleProposal(Integer offset, String prefix, Integer len, 
+    shared formal CompletionResult newJDKModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, String name);
 
-    shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionComponent> result) {
+    shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
         if (!"module".startsWith(prefix)) {
             return;
         }
@@ -69,13 +69,13 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionComponent,D
     }
 
     shared void addModuleCompletions(IdeComponent cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
-            MutableList<CompletionComponent> result, Boolean withBody, ProgressMonitor monitor) {
+            MutableList<CompletionResult> result, Boolean withBody, ProgressMonitor monitor) {
         value fp = fullPath(offset, prefix, path);
 
         addModuleCompletionsInternal(offset, prefix, node, result, fp.size, fp + prefix, cpc, withBody, monitor);
     }
 
-    void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionComponent> result, 
+    void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
             Integer len, String pfp, IdeComponent cpc, Boolean withBody, ProgressMonitor monitor) {
 
         if (pfp.startsWith("java.")) {
