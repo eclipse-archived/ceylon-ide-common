@@ -1,17 +1,11 @@
 import ceylon.collection {
     MutableList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
     Node
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
@@ -29,14 +23,21 @@ import com.redhat.ceylon.model.typechecker.model {
     Interface,
     Type,
     ModelUtil,
-    FunctionOrValue
+    FunctionOrValue,
+    ParameterList
 }
-
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
 import java.lang {
     JInteger=Integer
 }
+import ceylon.interop.java {
+    CeylonIterable
+}
 import java.util {
-    Collections
+    Collections,
+    HashSet
 }
 
 shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
@@ -237,6 +238,58 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             return prefix.span(0, prefix.size - typeArgs.size);
         } else {
             return prefix;
+        }
+    }
+    
+    shared abstract class Proposal<IFile,Document,InsertEdit,TextEdit,TextChange,Region>(variable Integer offset, String prefix,
+        String desc, String text, Declaration declaration, Reference? producedReference, Scope scope,
+        IdeComponent cpc, Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation,
+        Boolean qualified, Declaration? qualifyingValue)
+            extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>(offset, prefix, desc, text)
+            given InsertEdit satisfies TextEdit {
+        
+        shared TextChange createChange(TextChange change, Document document) {
+            HashSet<Declaration> decs = HashSet<Declaration>();
+            value cu = cpc.rootNode;
+            initMultiEditChange(change);
+            
+            if (exists qualifyingValue) {
+                importProposals.importDeclaration(decs, qualifyingValue, cu);
+            }
+            if (!qualified) {
+                importProposals.importDeclaration(decs, declaration, cu);
+            }
+            if (positionalInvocation||namedInvocation) {
+                importProposals.importCallableParameterParamTypes(declaration, decs, cu);
+            }
+            value il = importProposals.applyImports(change, decs, cu, document);
+            addEditToChange(change, createEdit(document));
+            offset+=il;
+            return change;
+        }
+        
+       shared void activeLinkedMode(Document document) {
+            if (is Generic declaration) {
+                value generic = declaration;
+                variable ParameterList? paramList = null;
+                if (is Functional fd = declaration, (positionalInvocation || namedInvocation)) {
+                    value pls = fd.parameterLists;
+                    if (!pls.empty, !pls.get(0).parameters.empty) {
+                        paramList = pls.get(0);
+                    }
+                }
+                if (exists pl = paramList) {
+                    value params = getParameters(pl, includeDefaulted, namedInvocation);
+                    if (!params.empty) {
+                        // TODO enterLinkedMode(document, params, null);
+                        return;
+                    }
+                }
+                value typeParams = generic.typeParameters;
+                if (!typeParams.empty) {
+                    // TODO enterLinkedMode(document, null, typeParams);
+                }
+            }
         }
     }
 }
