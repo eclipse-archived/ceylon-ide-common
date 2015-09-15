@@ -105,8 +105,10 @@
         </ceylon-test>
     </target>
 
-    <target name="publish" depends="compile"
+    <target name="publish" depends="publish-internal"
             description="Copies the Ceylon IDE Common modules to the user's repository">
+    </target>
+    <target name="publish-internal" depends="compile">
         <copy todir="${ceylon.repo.dir}" overwrite="true">
             <fileset dir="${out.repo}">
                 <include name="com/redhat/ceylon/ide/common/**"/>
