@@ -202,7 +202,7 @@
             categoryPrefix="com.redhat.ceylon.ide.common"
             categories="${osgi.p2}/category.xml">
             <moduleset refid="modules.source"/>
-	    <rep url="modules"/>
+            <rep url="${basedir}/modules"/>
         </ceylon-p2>
     </target>
 
