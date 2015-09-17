@@ -43,7 +43,7 @@ import org.antlr.runtime {
 
 shared object nodes {
 
-    value idPattern = Pattern.compile("(^|[A-Z])([A-Z]*)([_a-z]+)");
+    value idPattern = Pattern.compile("(^[a-z]|[A-Z])([A-Z]*)([_a-z]+)");
     value keywords = ["import", "assert",
         "alias", "class", "interface", "object", "given", "value", "assign", "void", "function",
         "assembly", "module", "package", "of", "extends", "satisfies", "abstracts", "in", "out",
@@ -446,17 +446,17 @@ shared object nodes {
         return createJavaStringArray(names);
     }
 
-    shared void addNameProposals(MutableSet<String>|JSet<JString> names, Boolean plural, String tn) {
-        value name = (tn.first?.lowercased?.string else "") + tn.spanFrom(1);
+    shared void addNameProposals(MutableSet<String>|JSet<JString> names, Boolean plural, String name) {
         value matcher = idPattern.matcher(javaString(name));
-
         while (matcher.find()) {
-            value loc = matcher.start(2);
-            value initial = name.span(matcher.start(1), loc - 1).lowercased;
-            value subname = initial + name.spanFrom(loc + 1) + (if (plural) then "s" else "");
-            value escaped = if (keywords.contains(subname))
-                then "\\i" + subname
-                else subname;
+            value subname = 
+                    matcher.group(1).lowercased + 
+                    name[matcher.start(2)...] + 
+                    (plural then "s" else "");
+            value escaped = 
+                    keywords.contains(subname)
+                        then "\\i" + subname
+                        else subname;
 
             if (is MutableSet<String> names) {
                 names.add(escaped);
