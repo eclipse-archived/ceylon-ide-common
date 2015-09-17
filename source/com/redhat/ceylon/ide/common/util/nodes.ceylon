@@ -12,7 +12,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
     Visitor,
-    CustomTree
+    CustomTree,
+    TreeUtil
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -373,76 +374,82 @@ shared object nodes {
         return visitor.occurrence;
     }
 
-    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
-        value myNode = if (is Tree.FunctionArgument node, exists e = node.expression) then e else node;
-        MutableSet<String> names = HashSet<String>();
-        variable Node? identifyingNode = myNode;
-
-        if (is Tree.Expression n = identifyingNode) {
-            identifyingNode = n.term;
-        }
-        if (is Tree.InvocationExpression n = identifyingNode) {
-            identifyingNode = n.primary;
-        }
-
-        if (is Tree.QualifiedMemberOrTypeExpression qmte = identifyingNode,
-                exists decl = qmte.declaration) {
-            addNameProposals(names, false, decl.name);
-            //TODO: propose a compound name like personName for person.name
-        }
-        if (is Tree.FunctionType tf = identifyingNode, is Tree.SimpleType type = tf.returnType) {
-            addNameProposals(names, false, type.declarationModel.name);
-        }
-        if (is Tree.BaseMemberOrTypeExpression bmte = identifyingNode, unplural) {
-            value name = bmte.declaration.name;
-            if (name.endsWith("s") && name.size > 1) {
-                addNameProposals(names, false, name.spanTo(name.size - 2));
+    shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
+        value names = HashSet<String>();
+        
+        if (is Tree.Term node) {
+            Tree.Term term = TreeUtil.unwrapExpressionUntilTerm(node);
+            Tree.Term typedTerm = 
+                    //TODO: is this really a good idea?!
+                    if (is Tree.FunctionArgument term)
+                    then (TreeUtil.unwrapExpressionUntilTerm(term.expression) else term)
+                    else term;
+            Type? type = typedTerm.typeModel;
+            value baseTerm =
+                if (is Tree.InvocationExpression inv = typedTerm) 
+                then TreeUtil.unwrapExpressionUntilTerm(inv.primary) 
+                else typedTerm;
+            
+            /*if (is Tree.FunctionType ft = baseTerm, 
+                    is Tree.SimpleType returnType = ft.returnType) {
+                addNameProposals(names, false, returnType.declarationModel.name);
+            }*/
+            
+            switch (baseTerm)
+            case (is Tree.QualifiedMemberOrTypeExpression) {
+                if (exists decl = baseTerm.declaration) {
+                    addNameProposals(names, false, decl.name);
+                    //TODO: propose a compound name like personName for person.name
+                }
+            } case (is Tree.BaseMemberOrTypeExpression) {
+                if (unplural) {
+                    value name = baseTerm.declaration.name;
+                    if (name.endsWith("s") && name.size > 1) {
+                        addNameProposals(names, false, name[...name.size-1]);
+                    }
+                }
+            } case (is Tree.SumOp) {
+                names.add ("sum");
+            } case (is Tree.DifferenceOp) {
+                names.add ("difference");
+            } case (is Tree.ProductOp) {
+                names.add ("product");
+            } case (is Tree.QuotientOp) {
+                names.add ("ratio");
+            } case (is Tree.RemainderOp) {
+                names.add ("remainder");
+            } case (is Tree.UnionOp) {
+                names.add ("union");
+            } case (is Tree.IntersectionOp) {
+                names.add ("intersection");
+            } case (is Tree.ComplementOp) {
+                names.add ("complement");
+            } case (is Tree.RangeOp) {
+                names.add ("range");
+            } case (is Tree.EntryOp) {
+                names.add ("entry");
             }
-        }
+            else {}
 
-        if (is Tree.SumOp n=identifyingNode) {
-            names.add ("sum");
-        } else if (is Tree.DifferenceOp n=identifyingNode) {
-            names.add ("difference");
-        } else if (is Tree.ProductOp n=identifyingNode) {
-            names.add ("product");
-        } else if (is Tree.QuotientOp n=identifyingNode) {
-            names.add ("ratio");
-        } else if (is Tree.RemainderOp n=identifyingNode) {
-            names.add ("remainder");
-        } else if (is Tree.UnionOp n=identifyingNode) {
-            names.add ("union");
-        } else if (is Tree.IntersectionOp n=identifyingNode) {
-            names.add ("intersection");
-        } else if (is Tree.ComplementOp n=identifyingNode) {
-            names.add ("complement");
-        } else if (is Tree.RangeOp n=identifyingNode) {
-            names.add ("range");
-        } else if (is Tree.EntryOp n=identifyingNode) {
-            names.add ("entry");
-        }
-
-        if (is Tree.Term term = identifyingNode) {
-            Type? type = term.typeModel;
             if (!ModelUtil.isTypeUnknown(type)) {
-                assert(exists type);
+                assert (exists type);
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
-            }
-            if (exists type, exists unit = myNode?.unit, 
-                    unit.isIterableType(type)) {
-                if (exists iter = unit.getIteratedType(type), 
+                if (exists unit = node.unit, 
+                    unit.isIterableType(type), 
+                    exists iter = unit.getIteratedType(type), 
                     iter.classOrInterface || iter.typeParameter) {
                     addNameProposals(names, !unplural, iter.declaration.name);
                 }
             }
+            
         }
 
         if (names.empty) {
             names.add("it");
         }
-
+        
         return createJavaStringArray(names);
     }
 
