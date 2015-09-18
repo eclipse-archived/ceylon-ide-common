@@ -436,11 +436,17 @@ shared object nodes {
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
-                if (exists unit = node.unit, 
-                    unit.isIterableType(type), 
-                    exists iter = unit.getIteratedType(type), 
-                    iter.classOrInterface || iter.typeParameter) {
-                    addNameProposals(names, !unplural, iter.declaration.name);
+                if (exists unit = node.unit) {
+                    if (unit.isOptionalType(type), 
+                        exists def = unit.getDefiniteType(type), 
+                        def.classOrInterface || def.typeParameter) {
+                        addNameProposals(names, false, def.declaration.name);
+                    }
+                    if (unit.isIterableType(type), 
+                        exists iter = unit.getIteratedType(type), 
+                        iter.classOrInterface || iter.typeParameter) {
+                        addNameProposals(names, !unplural, iter.declaration.name);
+                    }
                 }
             }
             
