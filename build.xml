@@ -1,9 +1,9 @@
-<project name="Ceylon IDE Common code" basedir="." default="test">
+<project name="Ceylon IDE Common code" default="test">
 
     <property file="build.properties" />
     <property name="ceylon.verbosity" value="false"/>
     <property name="ceylon.executable" value="${dist.bin.dir}/ceylon"/>
-    <property name="out.repo" location="modules"/>
+    <property name="out.repo" location="${basedir}/modules"/>
     
     <property name="osgi" location="${basedir}/osgi" />
     <property name="osgi.p2" location="${osgi}/p2" />
