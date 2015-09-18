@@ -36,28 +36,30 @@
         <pathelement location="${ceylon.ant.lib}"/>
     </path>
     
-    <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+    <target name="ceylondefs">
+        <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
 
-    <reposet id="reposet.compile.source">
-        <repo url="${out.repo}"/>
-    </reposet>
+        <reposet id="reposet.compile.source">
+            <repo url="${out.repo}"/>
+        </reposet>
 
-    <reposet id="reposet.compile.test">
-        <repo url="${out.repo}"/>
-    </reposet>
+        <reposet id="reposet.compile.test">
+            <repo url="${out.repo}"/>
+        </reposet>
     
-    <reposet id="reposet.run.test">
-        <reposet refid="reposet.compile.test"/>
-        <repo url="${out.repo}"/>
-    </reposet>
+        <reposet id="reposet.run.test">
+            <reposet refid="reposet.compile.test"/>
+            <repo url="${out.repo}"/>
+        </reposet>
     
-    <moduleset id="modules.source">
-        <module name="com.redhat.ceylon.ide.common"/>
-    </moduleset>
+        <moduleset id="modules.source">
+            <module name="com.redhat.ceylon.ide.common"/>
+        </moduleset>
     
-    <moduleset id="modules.test">
-        <module name="test.com.redhat.ceylon.ide.common"/>
-    </moduleset>
+        <moduleset id="modules.test">
+            <module name="test.com.redhat.ceylon.ide.common"/>
+        </moduleset>
+    </target>
     
     <target name="clean"
         description="Deletes the test-modules and modules directories">
@@ -65,7 +67,7 @@
         <delete dir="${osgi.dist}"/>
     </target>
     
-    <target name="compile-source"
+    <target name="compile-source" depends="ceylondefs"
             description="Compiles the Ceylon IDE Common modules">
         <ceylon-compile executable="${ceylon.executable}"
             verbose="${ceylon.verbosity}"
@@ -85,7 +87,7 @@
     
     <property name="test-sources" refid="test-sources-path"/>
     
-    <target name="compile-test"
+    <target name="compile-test" depends="ceylondefs"
         description="Compiles the test module" >
         <ceylon-compile executable="${ceylon.executable}"
             src="${test-sources}"
@@ -137,7 +139,7 @@
         </if>
     </target>
     
-    <target name="retrieveDependencies">
+    <target name="retrieveDependencies" depends="ceylondefs">
             <ceylon-copy executable="${ceylon.executable}"
                     offline="true"
                     verbose="${ceylon.verbosity}"
@@ -178,7 +180,7 @@
     </target>
     
     <!-- Rule to setup a plugins directory with required bundles -->
-    <target name="osgi-p2-quick" depends="osgi-quick">
+    <target name="osgi-p2-quick" depends="ceylondefs,osgi-quick">
         <mkdir dir="${osgi.dist.features}"/>
         <ant target="generateFeatures" inheritall="true">
             <property name="feature.id" value="com.redhat.ceylon.ide.common.feature"/>
