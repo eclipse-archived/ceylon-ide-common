@@ -58,6 +58,12 @@ shared object nodes {
         return visitor.declaration;
     }
 
+    shared Node? findReferencedNode(Tree.CompilationUnit cu, Referenceable model) {
+        value visitor = FindReferencedNodeVisitor(model);
+        cu.visit(visitor);
+        return visitor.declarationNode;
+    }
+    
     shared Tree.Declaration? findDeclarationWithBody(Tree.CompilationUnit cu, Node node) {
         value visitor = FindBodyContainerVisitor(node);
         cu.visit(visitor);

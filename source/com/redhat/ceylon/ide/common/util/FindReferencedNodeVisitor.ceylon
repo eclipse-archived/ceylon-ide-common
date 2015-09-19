@@ -14,16 +14,21 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     shared variable Node? declarationNode = null;
     
     Boolean isDeclaration(Declaration? dec) {
-        if (exists dec, is Declaration declaration, dec.equals(declaration)) {
-            if (dec.native, !dec.nativeBackend.equals(declaration.nativeBackend)) {
+        if (exists dec, exists declaration,
+                dec.equals(declaration)) {
+            if (is Declaration declaration, dec.native, 
+                !dec.nativeBackend.equals(declaration.nativeBackend)) {
                 return false;
             }
-            
-            if (is Function declaration, declaration.overloaded) {
-                return declaration == dec;
+            else if (is Function declaration) {
+                return !declaration.overloaded ||
+                        declaration === dec;
             }
-            return true;
-        } else {
+            else {
+                return true;
+            }
+        }
+        else {
             return false;
         }
     }
@@ -67,14 +72,23 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     
     actual shared void visit(Tree.AttributeSetterDefinition that) {
         value setter = that.declarationModel;
-        if (isDeclaration(setter.getDirectMember(setter.name, null, false))) {
+        value param = 
+                setter.getDirectMember(setter.name, null, false);
+        if (isDeclaration(param)) {
             declarationNode = that;
         }
         super.visit(that);
     }
     
     actual shared void visit(Tree.ObjectDefinition that) {
-        if (isDeclaration(that.declarationModel.typeDeclaration)) {
+        if (isDeclaration(that.anonymousClass)) {
+            declarationNode = that;
+        }
+        super.visit(that);
+    }
+    
+    actual shared void visit(Tree.ObjectExpression that) {
+        if (isDeclaration(that.anonymousClass)) {
             declarationNode = that;
         }
         super.visit(that);
