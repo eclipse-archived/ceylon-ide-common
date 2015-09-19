@@ -1,3 +1,6 @@
+import com.redhat.ceylon.ide.common.util {
+    equalsWithNulls
+}
 "Change in the declaration that may impact code in other compilation units"
 shared abstract class ImpactingChange()
         of StructuralChange | MemberAdded | Removed | MadeVisibleOutsideScope | MadeInvisibleOutsideScope {}
@@ -13,14 +16,14 @@ shared object structuralChange extends StructuralChange() {
 }
 
 "The [[changed element|AbstractDelta.changedElement]] is top-level and it has been made shared.
- 
+
  More precisely :
- - a top level declaration that has been made shared. This means that 
+ - a top level declaration that has been made shared. This means that
  it might now be seen by units in other packages, which could solve some
  unresolved reference problems in other packages. However this doesn't
  change anything for the current package compilation units.
- - a module import that has been made shared. This means it could solve some 
- unresolved problems in other modules, but also that the graph of 
+ - a module import that has been made shared. This means it could solve some
+ unresolved problems in other modules, but also that the graph of
  module dependencies may have greatly changed. However this doesn't change anything
  for the current module compilation units
  "
@@ -30,14 +33,14 @@ shared object madeVisibleOutsideScope extends MadeVisibleOutsideScope() {
 }
 
 "The [[changed element|AbstractDelta.changedElement]] is top-level and it has been made unshared
- 
+
  More precisely :
- - a top level declaration that has been made unshared. This means that 
+ - a top level declaration that has been made unshared. This means that
  it might not anymore be seen by units in other packages,
  which could produce some unresolved reference problems in other packages.
- However this doesn't change anything for the current package compilation units. 
- - a module import that has been made unshared. This means it could produce some 
- unresolved problems in other modules, but also that the graph of 
+ However this doesn't change anything for the current package compilation units.
+ - a module import that has been made unshared. This means it could produce some
+ unresolved problems in other modules, but also that the graph of
  module dependencies may have greatly changed. However this doesn't change anything
  for the current module compilation units"
 shared abstract class MadeInvisibleOutsideScope() of madeInvisibleOutsideScope extends ImpactingChange() {}
@@ -45,9 +48,9 @@ shared object madeInvisibleOutsideScope extends MadeInvisibleOutsideScope() {
     string => "madeInvisibleOutsideScope";
 }
 
-"The [[changed element|AbstractDelta.changedElement]] is not visible anymore from any other 
+"The [[changed element|AbstractDelta.changedElement]] is not visible anymore from any other
  compilation unit.
- 
+
  More precisely :
  - a top-level declaration that has been removed,
  - a nested declaration that has been removed or made unshared,
@@ -73,14 +76,14 @@ shared abstract class MemberAdded(name) of ScopedMemberAdded | DeclarationMember
     shared String name;
 }
 
-"A shared member has been added to either a top-level declaration 
- or a nested shared declaration. So it's visible in every scope where 
+"A shared member has been added to either a top-level declaration
+ or a nested shared declaration. So it's visible in every scope where
  the parent declaration is visible."
-shared class DeclarationMemberAdded(String name) extends MemberAdded(name) {
-    string => "DeclarationMemberAdded (\"`` name ``\")";
+shared class DeclarationMemberAdded(String? name) extends MemberAdded(name else "<null>") {
+    string => "DeclarationMemberAdded (\"`` super.name ``\")";
     shared actual Boolean equals(Object that) {
         if (is DeclarationMemberAdded that) {
-            return name==that.name;
+            return equalsWithNulls(name, that.name);
         }
         else {
             return false;
@@ -106,10 +109,10 @@ shared object visibleOutside extends ScopeVisibility()  {
 see(`class ModuleImportAdded`, `class TopLevelDeclarationAdded`)
 shared abstract class ScopedMemberAdded(String name, visibility) of ModuleImportAdded | TopLevelDeclarationAdded extends MemberAdded(name) {
     "The visibility of the added member outside the [[changed element|AbstractDelta.changedElement]]
-     scope, which means : 
+     scope, which means :
      - in referencing modules for a module import,
      - in outide the current package for a top-level declaration"
-    shared ScopeVisibility visibility; 
+    shared ScopeVisibility visibility;
 }
 
 "A top-level declaration (shared or not) has been added
@@ -118,7 +121,7 @@ shared class TopLevelDeclarationAdded(String name, ScopeVisibility visibility)  
     string => "TopLevelDeclarationAdded (\"`` name ``\", `` visibility ``)";
     shared actual Boolean equals(Object that) {
         if (is TopLevelDeclarationAdded that) {
-            return name==that.name && 
+            return name==that.name &&
                 visibility===that.visibility;
         }
         else {
@@ -135,8 +138,8 @@ shared class ModuleImportAdded(String name, version, ScopeVisibility visibility)
     string => "moduleImportAdded (\"`` name ``\", \"`` version ``\", `` visibility ``)";
     shared actual Boolean equals(Object that) {
         if (is ModuleImportAdded that) {
-            return name==that.name && 
-                visibility === that.visibility && 
+            return name==that.name &&
+                visibility === that.visibility &&
                 version==that.version;
         }
         else {
