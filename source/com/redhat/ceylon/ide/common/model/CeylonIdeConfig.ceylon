@@ -6,10 +6,20 @@ import com.redhat.ceylon.common.config {
 }
 import java.io {
     File,
+    FileReader,
     IOException
 }
 import java.lang {
     JBoolean=Boolean
+}
+import java.util {
+    Properties
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+import java.util.regex {
+    Pattern
 }
 
 shared interface JavaToCeylonConverterConfig {
@@ -42,12 +52,16 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
     
     void initIdeConfig() {
         File configFile = ideConfigFile;
+        variable CeylonConfig? searchedConfig = null;
         if (configFile.\iexists() && configFile.file) {
             try {
-                ideConfig = CeylonConfigFinder.loadConfigFromFile(configFile);
+                searchedConfig = CeylonConfigFinder.loadConfigFromFile(configFile);
             } catch (IOException e) {
                 throw Exception(null, e);
             }
+        }
+        if (exists existingConfig=searchedConfig) {
+            ideConfig = existingConfig;
         } else {
             ideConfig = CeylonConfig();
         }
@@ -81,7 +95,31 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
         shared actual Boolean useVariableInLocals => ideConfig.getBoolOption("converter.use-variable-in-locals", true);
         shared actual Boolean useVariableInParameters => ideConfig.getBoolOption("converter.use-variable-in-parameters", true);
     };
-    
+
+    shared String? getSourceAttachment(String moduleName, String moduleVersion) {
+        value propertiesFile = File(
+            project.rootDirectory,
+            ideConfig.getOption(
+                "source.attachments",
+                "attachments.properties"));
+
+        value optionPattern = "^(``Pattern.quote(moduleName)``|\\*)/(``Pattern.quote(moduleVersion)``|\\*)/path";
+
+        if (propertiesFile.\iexists()) {
+            value properties = Properties();
+            properties.load(FileReader(propertiesFile));
+            value srcPaths =
+                    CeylonIterable(properties.stringPropertyNames())
+                    .filter((name)=> name.matches(optionPattern))
+                    .map((s)=>s.string)
+                    .sort((x, y) => x.count('*'.equals) <=> y.count('*'.equals))
+                    .map((name) => properties.getProperty(name.string));
+            return srcPaths.first;
+        }
+
+        return null;
+    }
+
     shared void refresh() {
         initMergedConfig();
         initIdeConfig();

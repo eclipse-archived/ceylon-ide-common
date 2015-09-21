@@ -3,3 +3,5 @@
 compile-jvm=false
 compile-js=false
 system-repository=
+source-attachments=attachments.properties
+
