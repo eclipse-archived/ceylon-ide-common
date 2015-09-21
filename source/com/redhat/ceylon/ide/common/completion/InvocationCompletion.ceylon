@@ -1,5 +1,6 @@
 import ceylon.collection {
-    MutableList
+    MutableList,
+    ArrayList
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -24,7 +25,13 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     ModelUtil,
     FunctionOrValue,
-    ParameterList
+    ParameterList,
+    Parameter,
+    TypeParameter,
+    DeclarationWithProximity,
+    Module,
+    Value,
+    Function
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -37,7 +44,8 @@ import ceylon.interop.java {
 }
 import java.util {
     Collections,
-    HashSet
+    HashSet,
+    JList=List
 }
 
 shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
@@ -61,6 +69,11 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     
     shared formal CompletionResult newParameterInfo(Integer offset, Declaration dec, 
         Reference producedReference, Scope scope, IdeComponent cpc, Boolean namedInvocation);
+    
+    shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc, Integer index);
+    
+    shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
+        Integer index, Boolean basic, String op);
     
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
@@ -240,54 +253,326 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             return prefix;
         }
     }
+}
+
+shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+    (variable Integer offset, String prefix, String desc, String text, Declaration declaration, Reference? producedReference,
+    Scope scope, Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation,
+    Boolean qualified, Declaration? qualifyingValue, InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
+        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+        (offset, prefix, desc, text)
+        given InsertEdit satisfies TextEdit
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
     
-    shared abstract class Proposal<IFile,Document,InsertEdit,TextEdit,TextChange,Region>(variable Integer offset, String prefix,
-        String desc, String text, Declaration declaration, Reference? producedReference, Scope scope,
-        IdeComponent cpc, Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation,
-        Boolean qualified, Declaration? qualifyingValue)
-            extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>(offset, prefix, desc, text)
-            given InsertEdit satisfies TextEdit {
+    shared Integer adjustedOffset => offset;
+    
+    shared TextChange createChange(TextChange change, Document document) {
+        HashSet<Declaration> decs = HashSet<Declaration>();
+        initMultiEditChange(change);
         
-        shared TextChange createChange(TextChange change, Document document) {
-            HashSet<Declaration> decs = HashSet<Declaration>();
-            value cu = cpc.rootNode;
-            initMultiEditChange(change);
-            
-            if (exists qualifyingValue) {
-                importProposals.importDeclaration(decs, qualifyingValue, cu);
+        if (exists qualifyingValue) {
+            importProposals.importDeclaration(decs, qualifyingValue, cu);
+        }
+        if (!qualified) {
+            importProposals.importDeclaration(decs, declaration, cu);
+        }
+        if (positionalInvocation || namedInvocation) {
+            importProposals.importCallableParameterParamTypes(declaration, decs, cu);
+        }
+        value il = importProposals.applyImports(change, decs, cu, document);
+        addEditToChange(change, createEdit(document));
+        offset += il;
+        return change;
+    }
+    
+    shared void activeLinkedMode(Document document) {
+        if (is Generic declaration) {
+            value generic = declaration;
+            variable ParameterList? paramList = null;
+            if (is Functional fd = declaration, (positionalInvocation || namedInvocation)) {
+                value pls = fd.parameterLists;
+                if (!pls.empty, !pls.get(0).parameters.empty) {
+                    paramList = pls.get(0);
+                }
             }
-            if (!qualified) {
-                importProposals.importDeclaration(decs, declaration, cu);
+            if (exists pl = paramList) {
+                value params = getParameters(pl, includeDefaulted, namedInvocation);
+                if (!params.empty) {
+                    enterLinkedMode(document, params, null);
+                    return; //NOTE: early exit!
+                }
             }
-            if (positionalInvocation||namedInvocation) {
-                importProposals.importCallableParameterParamTypes(declaration, decs, cu);
+            value typeParams = generic.typeParameters;
+            if (!typeParams.empty) {
+                enterLinkedMode(document, null, typeParams);
             }
-            value il = importProposals.applyImports(change, decs, cu, document);
-            addEditToChange(change, createEdit(document));
-            offset+=il;
-            return change;
+        }
+    }
+    
+    shared actual Region getSelection(Document document) {
+        value first = getFirstPosition();
+        if (first <= 0) {
+            //no arg list
+            return super.getSelection(document);
+        }
+        value next = getNextPosition(document, first);
+        if (next <= 0) {
+            //an empty arg list
+            return super.getSelection(document);
+        }
+        value middle = getCompletionPosition(first, next);
+        variable value start = offset - prefix.size + first + middle;
+        variable value len = next - middle;
+        if (getDocSpan(document, start, len).trimmed.equals("{}")) {
+            start++;
+            len = 0;
         }
         
-       shared void activeLinkedMode(Document document) {
-            if (is Generic declaration) {
-                value generic = declaration;
-                variable ParameterList? paramList = null;
-                if (is Functional fd = declaration, (positionalInvocation || namedInvocation)) {
-                    value pls = fd.parameterLists;
-                    if (!pls.empty, !pls.get(0).parameters.empty) {
-                        paramList = pls.get(0);
+        return newRegion(start, len);
+    }
+    
+    Integer getCompletionPosition(Integer first, Integer next) {
+        return (text.span(first, first + next - 1).lastOccurrence(' ') else -1) + 1;
+    }
+    
+    Integer getFirstPosition() {
+        Integer? index;
+        if (namedInvocation) {
+            index = text.firstOccurrence('{');
+        } else if (positionalInvocation) {
+            index = text.firstOccurrence('(');
+        } else {
+            index = text.firstOccurrence('<');
+        }
+        return (index else -1) + 1;
+    }
+    
+    shared Integer getNextPosition(Document document, Integer lastOffset) {
+        value loc = offset - prefix.size;
+        variable value comma = -1;
+        value start = loc + lastOffset;
+        variable value end = loc + text.size - 1;
+        if (text.endsWith(";")) {
+            end--;
+        }
+        comma = findCharCount(1, document, start, end, ",;", "", true, getDocChar) - start;
+        
+        if (comma < 0) {
+            Integer? index;
+            if (namedInvocation) {
+                index = text.lastOccurrence('}');
+            } else if (positionalInvocation) {
+                index = text.lastOccurrence(')');
+            } else {
+                index = text.lastOccurrence('>');
+            }
+            return (index else -1) - lastOffset;
+        }
+        return comma;
+    }
+    
+    shared void enterLinkedMode(Document document, JList<Parameter>? params, JList<TypeParameter>? typeParams) {
+        value proposeTypeArguments = !(params exists);
+        value paramCount = if (proposeTypeArguments) then (typeParams?.size() else 0) else (params?.size() else 0);
+        if (paramCount == 0) {
+            return;
+        }
+        try {
+            value loc = offset - prefix.size;
+            variable value first = getFirstPosition();
+            if (first <= 0) {
+                return; //no arg list
+            }
+            variable value next = getNextPosition(document, first);
+            if (next <= 0) {
+                return; //empty arg list
+            }
+            value linkedMode = newLinkedMode();
+            variable value seq = 0;
+            variable value param = 0;
+            while (next>0 && param<paramCount) {
+                assert(exists params);
+                value voidParam = !proposeTypeArguments && params.get(param).declaredVoid;
+                if (proposeTypeArguments || positionalInvocation
+                        //don't create linked positions for
+                        //void callable parameters in named
+                        //argument lists
+                        || !voidParam) {
+                    
+                    value props = ArrayList<CompletionResult>();
+                    if (proposeTypeArguments) {
+                        assert(exists typeParams);
+                        addTypeArgumentProposals(typeParams.get(seq), loc, first, props, seq);
+                    } else if (!voidParam) {
+                        addValueArgumentProposals(params.get(param), loc, first, props, seq, param == params.size() - 1);
+                    }
+                    value middle = getCompletionPosition(first, next);
+                    variable value start = loc + first + middle;
+                    variable value len = next - middle;
+                    if (voidParam) {
+                        start++;
+                        len = 0;
+                    }
+                    addEditableRegion(linkedMode, document, start, len, seq, props.sequence());
+                    first = first + next + 1;
+                    next = getNextPosition(document, first);
+                    seq++;
+                }
+                param++;
+            }
+            if (seq > 0) {
+                installLinkedMode(document, linkedMode, this, seq, loc + text.size);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    void addValueArgumentProposals(Parameter p, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index, Boolean last) {
+        if (p.model.dynamicallyTyped) {
+            return;
+        }
+        assert(exists producedReference);
+        Type? type = producedReference.getTypedParameter(p).type;
+        if (!exists type) {
+            return;
+        }
+        assert(exists type);
+        value unit = cu.unit;
+        value proposals = CeylonIterable(getSortedProposedValues(scope, unit));
+        for (dwp in proposals) {
+            if (dwp.proximity <= 1) {
+                addValueArgumentProposal(p, loc, props, index, last, type, unit, dwp, null);
+            }
+        }
+        addLiteralProposals(loc, props, index, type, unit);
+        for (dwp in proposals) {
+            if (dwp.proximity > 1) {
+                addValueArgumentProposal(p, loc, props, index, last, type, unit, dwp, null);
+            }
+        }
+    }
+    
+    void addValueArgumentProposal(Parameter p, Integer loc, MutableList<CompletionResult> props, 
+        Integer index, Boolean last, Type type, Unit unit, DeclarationWithProximity dwp, DeclarationWithProximity? qualifier) {
+        
+        if (!exists qualifier, dwp.unimported) {
+            return;
+        }
+        value td = type.declaration;
+        value d = dwp.declaration;
+        value pname = d.unit.\ipackage.nameAsString;
+        value isInLanguageModule = !(qualifier exists) && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
+        value qdec = if (!exists qualifier) then null else qualifier.declaration;
+        if (is Value d) {
+            value \ivalue = d;
+            if (isInLanguageModule) {
+                if (isIgnoredLanguageModuleValue(\ivalue)) {
+                    return;
+                }
+            }
+            Type? vt = \ivalue.type;
+            if (exists vt, !vt.nothing) {
+                if (vt.isSubtypeOf(type) || withinBounds(td, vt)) {
+                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                    value isVarArg = p.sequenced && positionalInvocation;
+                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                }
+                if (!exists qualifier/*TODO , preferences.getBoolean(\iCHAIN_LINKED_MODE_ARGUMENTS)*/) {
+                    value members = \ivalue.typeDeclaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                    for (mwp in CeylonIterable(members)) {
+                        addValueArgumentProposal(p, loc, props, index, last, type, unit, mwp, dwp);
                     }
                 }
-                if (exists pl = paramList) {
-                    value params = getParameters(pl, includeDefaulted, namedInvocation);
-                    if (!params.empty) {
-                        // TODO enterLinkedMode(document, params, null);
+            }
+        }
+        if (is Function method = d, !d.annotation) {
+            if (isInLanguageModule) {
+                if (isIgnoredLanguageModuleMethod(method)) {
+                    return;
+                }
+            }
+            Type? mt = method.type;
+            if (exists mt, !mt.nothing) {
+                if (mt.isSubtypeOf(type) || withinBounds(td, mt)) {
+                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                    value isVarArg = p.sequenced && positionalInvocation;
+                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                }
+            }
+        }
+        if (is Class d) {
+            value clazz = d;
+            if (!clazz.abstract, !d.annotation) {
+                if (isInLanguageModule) {
+                    if (isIgnoredLanguageModuleClass(clazz)) {
                         return;
                     }
                 }
-                value typeParams = generic.typeParameters;
-                if (!typeParams.empty) {
-                    // TODO enterLinkedMode(document, null, typeParams);
+                Type? ct = clazz.type;
+                if (exists ct, !ct.nothing, (withinBounds(td, ct) || ct.declaration.equals(type.declaration) || ct.isSubtypeOf(type))) {
+                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                    value isVarArg = p.sequenced && positionalInvocation;
+                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                }
+            }
+        }
+    }
+    
+    Boolean withinBounds(TypeDeclaration td, Type vt) {
+        if (is TypeParameter td) {
+            value tp = td;
+            return isInBounds(tp.satisfiedTypes, vt);
+        } else {
+            return false;
+        }
+    }
+    
+    void addLiteralProposals(Integer loc, MutableList<CompletionResult> props, Integer index, Type type, Unit unit) {
+        value dtd = unit.getDefiniteType(type).declaration;
+        if (is Class dtd) {
+            if (dtd.equals(unit.integerDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("0", loc, index));
+                props.add(completionManager.newNestedLiteralCompletionProposal("1", loc, index));
+            }
+            if (dtd.equals(unit.floatDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("0.0", loc, index));
+                props.add(completionManager.newNestedLiteralCompletionProposal("1.0", loc, index));
+            }
+            if (dtd.equals(unit.stringDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("\"\"", loc, index));
+            }
+            if (dtd.equals(unit.characterDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("' '", loc, index));
+                props.add(completionManager.newNestedLiteralCompletionProposal("'\\n'", loc, index));
+                props.add(completionManager.newNestedLiteralCompletionProposal("'\\t'", loc, index));
+            }
+        } else if (is Interface dtd) {
+            if (dtd.equals(unit.iterableDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("{}", loc, index));
+            }
+            if (dtd.equals(unit.sequentialDeclaration) || dtd.equals(unit.emptyDeclaration)) {
+                props.add(completionManager.newNestedLiteralCompletionProposal("[]", loc, index));
+            }
+        }
+    }
+    
+    void addTypeArgumentProposals(TypeParameter tp, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index) {
+        for (dwp in CeylonIterable(getSortedProposedValues(scope, cu.unit))) {
+            value d = dwp.declaration;
+            if (d is TypeDeclaration, !dwp.unimported) {
+                assert (is TypeDeclaration td = d);
+                value t = td.type;
+                if (!t.nothing, td.typeParameters.empty, !td.annotation, !td.inherits(td.unit.exceptionDeclaration)) {
+                    if (td.unit.\ipackage.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME)) {
+                        if (isIgnoredLanguageModuleType(td)) {
+                            continue;
+                        }
+                    }
+                    if (isInBounds(tp.satisfiedTypes, t)) {
+                        props.add(completionManager.newNestedCompletionProposal(d, null, loc, index, true, ""));
+                    }
                 }
             }
         }

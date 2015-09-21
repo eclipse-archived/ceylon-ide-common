@@ -2,15 +2,14 @@ import com.redhat.ceylon.ide.common.correct {
     DocumentChanges,
     ImportProposals
 }
-import com.redhat.ceylon.ide.common.refactoring {
-    ExtractLinkedModeEnabled
-}
+
 import java.lang {
     Character
 }
 
-shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange> & ExtractLinkedModeEnabled<Region>
+shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
+                & LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit {
     
     String text;
@@ -41,8 +40,10 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
     shared formal void replaceInDoc(Document doc, Integer start, Integer length, String newText);
     shared formal Integer getDocLength(Document doc);
     shared formal Character getDocChar(Document doc, Integer offset);
-    
-    shared Region getSelection(Document document) {
+    shared formal String getDocSpan(Document doc, Integer start, Integer length);
+    shared formal Region newRegion(Integer start, Integer length);
+
+    shared default Region getSelection(Document document) {
         return newRegion(offset + text.size - prefix.size, 0);
     }
     

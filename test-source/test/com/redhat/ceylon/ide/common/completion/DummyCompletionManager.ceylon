@@ -188,5 +188,9 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     
     shared actual Boolean showParameterTypes => false;
     
-    shared actual Boolean supportsLinkedModeInArguments => false;    
+    shared actual Boolean supportsLinkedModeInArguments => false;
+    shared actual Result newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc, Integer index, Boolean basic, String op) => nothing;
+    
+    shared actual Result newNestedLiteralCompletionProposal(String val, Integer loc, Integer index) => nothing;
+        
 }

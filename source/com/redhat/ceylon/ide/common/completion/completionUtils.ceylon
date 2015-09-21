@@ -11,14 +11,23 @@ import com.redhat.ceylon.model.typechecker.model {
     Package,
     Module,
     Functional,
-    FunctionOrValue
+    FunctionOrValue,
+    DeclarationWithProximity,
+    Scope,
+    Function,
+    Class,
+    Type,
+    TypeDeclaration
 }
 import java.util {
     List,
-    ArrayList
+    ArrayList,
+    Collections,
+    Comparator
 }
 import ceylon.interop.java {
-    CeylonIterable
+    CeylonIterable,
+    javaString
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -30,6 +39,9 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import org.antlr.runtime {
     CommonToken
+}
+import java.lang {
+    JCharacter=Character
 }
 
 Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -209,3 +221,249 @@ String? getPackageName(Tree.CompilationUnit cu) {
     }
     return null;
 }
+
+shared Boolean isInBounds(List<Type> upperBounds, Type t) {
+    variable value ok = true;
+    for (ub in CeylonIterable(upperBounds)) {
+        if (!t.isSubtypeOf(ub), !(ub.involvesTypeParameters() && t.declaration.inherits(ub.declaration))) {
+            ok = false;
+            break;
+        }
+    }
+    return ok;
+}
+
+
+shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit) {
+    value results = ArrayList<DeclarationWithProximity>(scope.getMatchingDeclarations(unit, "", 0).values());
+    Collections.sort(results, object satisfies Comparator<DeclarationWithProximity> {
+            shared actual Integer compare(DeclarationWithProximity x, DeclarationWithProximity y) {
+                if (x.proximity < y.proximity) {
+                    return -1;
+                }
+                if (x.proximity > y.proximity) {
+                    return 1;
+                }
+                value c = javaString(x.declaration.name).compareTo(y.declaration.name);
+                if (c != 0) {
+                    return c;
+                }
+                return javaString(x.declaration.qualifiedNameString).compareTo(y.declaration.qualifiedNameString);
+            }
+            
+            shared actual Boolean equals(Object that) => false;
+        }
+    );
+    return results;
+}
+
+shared Boolean isIgnoredLanguageModuleClass(Class clazz) {
+    value name = clazz.name;
+    return name.equals("String")
+            || name.equals("Integer")
+            || name.equals("Float")
+            || name.equals("Character")
+            || clazz.annotation;
+}
+
+shared Boolean isIgnoredLanguageModuleValue(Value \ivalue) {
+    value name = \ivalue.name;
+    return name.equals("process")
+            || name.equals("runtime") 
+            || name.equals("system") 
+            || name.equals("operatingSystem") 
+            || name.equals("language") 
+            || name.equals("emptyIterator") 
+            || name.equals("infinity") 
+            || name.endsWith("IntegerValue") 
+            || name.equals("finished");
+}
+
+shared Boolean isIgnoredLanguageModuleMethod(Function method) {
+    value name = method.name;
+    return name.equals("className") 
+            || name.equals("flatten") 
+            || name.equals("unflatten") 
+            || name.equals("curry") 
+            || name.equals("uncurry") 
+            || name.equals("compose") 
+            || method.annotation;
+}
+
+Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
+    value name = td.name;
+    return !name.equals("Object") 
+            && !name.equals("Anything") 
+            && !name.equals("String") 
+            && !name.equals("Integer") 
+            && !name.equals("Character") 
+            && !name.equals("Float") 
+            && !name.equals("Boolean");
+}
+
+Integer findCharCount<Document>(Integer count, Document document, Integer start, Integer end,
+    String increments, String decrements, Boolean considerNesting, JCharacter(Document,Integer) getChar) {
+
+    assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
+
+    value \iNONE = 0;
+    value \iBRACKET = 1;
+    value \iBRACE = 2;
+    value \iPAREN = 3;
+    value \iANGLE = 4;
+
+    variable value nestingMode = \iNONE;
+    variable value nestingLevel = 0;
+
+    variable value charCount = 0;
+    variable value offset = start;
+    variable value lastWasEquals = false;
+
+    while (offset < end) {
+        if (nestingLevel == 0) {
+            if (count == charCount) {
+                return offset - 1;
+            }
+        }
+        value curr = getChar(document, offset++);
+        switch (curr.charValue())
+        case ('/') {
+            if (offset < end) {
+                value next = getChar(document, offset);
+                if (next == '*') {
+                    // a comment starts, advance to the comment end
+                    // TODO offset = getCommentEnd(document, offset + 1, end);
+                } else if (next == '/') {
+                    // TODO
+                    //value nextLine = document.getLineOfOffset(offset) + 1;
+                    //if (nextLine == document.numberOfLines) {
+                    //    offset = end;
+                    //} else {
+                    //    offset = document.getLineOffset(nextLine);
+                    //}
+                }
+            }
+        }
+        case ('*') {
+            if (offset < end) {
+                value next = getChar(document, offset);
+                if (next == '/') {
+                    charCount = 0;
+                    ++offset;
+                }
+            }
+        }
+        case ('"') {
+            // TODO offset = getStringEnd(document, offset, end, curr);
+        }
+        case ('[') {
+            if (considerNesting) {
+                if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
+                    nestingMode = \iBRACKET;
+                    nestingLevel++;
+                }
+                break;
+            }
+        }
+        case (']') {
+            if (considerNesting) {
+                if (nestingMode == \iBRACKET) {
+                    if (--nestingLevel == 0) {
+                        nestingMode = \iNONE;
+                    }
+                }
+                break;
+            }
+        }
+        case ('(') {
+            if (considerNesting) {
+                if (nestingMode == \iANGLE) {
+                    nestingMode = \iPAREN;
+                    nestingLevel = 1;
+                }
+                if (nestingMode==\iPAREN || nestingMode==\iNONE) {
+                    nestingMode = \iPAREN;
+                    nestingLevel++;
+                }
+                break;
+            }
+        }
+        case (')') {
+            if (considerNesting) {
+                if (nestingMode == 0) {
+                    return offset - 1;
+                }
+                if (nestingMode == \iPAREN) {
+                    if (--nestingLevel == 0) {
+                        nestingMode = \iNONE;
+                    }
+                }
+                break;
+            }
+        }
+        case ('{') {
+            if (considerNesting) {
+                if (nestingMode == \iANGLE) {
+                    nestingMode = \iBRACE;
+                    nestingLevel = 1;
+                }
+                if (nestingMode==\iBRACE || nestingMode==\iNONE) {
+                    nestingMode = \iBRACE;
+                    nestingLevel++;
+                }
+                break;
+            }
+        }
+        case ('}') {
+            if (considerNesting) {
+                if (nestingMode == 0) {
+                    return offset - 1;
+                }
+                if (nestingMode == \iBRACE) {
+                    if (--nestingLevel == 0) {
+                        nestingMode = \iNONE;
+                    }
+                }
+                break;
+            }
+        }
+        case ('<') {
+            if (considerNesting) {
+                if (nestingMode==\iANGLE || nestingMode==\iNONE) {
+                    nestingMode = \iANGLE;
+                    nestingLevel++;
+                }
+                break;
+            }
+        }
+        case ('>') {
+            if (!lastWasEquals) {
+                if (nestingMode == 0) {
+                    return offset - 1;
+                }
+                if (considerNesting) {
+                    if (nestingMode == \iANGLE) {
+                        if (--nestingLevel == 0) {
+                            nestingMode = \iNONE;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        else {
+            if (nestingLevel == 0) {
+                if (increments.firstOccurrence(curr.charValue()) exists) {
+                    ++charCount;
+                }
+                if (decrements.firstOccurrence(curr.charValue()) exists) {
+                    --charCount;
+                }
+            }
+        }
+        lastWasEquals = curr == '=';
+    }
+    return -1;
+}
+
+

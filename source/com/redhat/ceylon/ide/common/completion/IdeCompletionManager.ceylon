@@ -179,7 +179,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 return [];
             }
             qualified = text.span(bar, offsetInLink);
-            Integer dcolon = qualified.firstOccurrence("::") else -1;
+            Integer dcolon = qualified.firstInclusion("::") else -1;
             variable String? pkg = null;
             if (dcolon >= 0) {
                 pkg = qualified.span(0, dcolon + 2);
