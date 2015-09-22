@@ -897,7 +897,7 @@ shared class Path satisfies List<String> {
             return this;
         }
         assert(exists theLastSegment = lastSegment);
-        assert(exists extensionPlace = theLastSegment.lastOccurrence(extension));
+        assert(exists extensionPlace = theLastSegment.lastInclusion(extension));
         return removeLastSegments(1).append(theLastSegment.span(0, extensionPlace-2));
     }
 

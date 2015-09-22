@@ -66,7 +66,7 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
         if (decl.toplevel) {
             return decl.nameAsString;
         } else {
-            if (exists loc = qname.firstOccurrence("::")) {
+            if (exists loc = qname.firstInclusion("::")) {
                 return qname.spanFrom(loc + 2);
             } else {
                 return qname;
