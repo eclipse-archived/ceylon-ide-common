@@ -34,22 +34,22 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
     late variable CeylonConfig ideConfig;
     late variable Repositories mergedRepositories;
     late variable Repositories projectRepositories;
-    
+
     variable Boolean? transientCompileToJvm = null;
     variable Boolean? transientCompileToJs = null;
     variable String? transientSystemRepository = null;
-    
+
     variable Boolean isCompileToJvmChanged = false;
     variable Boolean isCompileToJsChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
-    
+
     File ideConfigFile => File(File(project.rootDirectory, ".ceylon"), "ide-config");
-    
+
     void initMergedConfig() {
         mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);
         mergedRepositories = Repositories.withConfig(mergedConfig);
     }
-    
+
     void initIdeConfig() {
         File configFile = ideConfigFile;
         variable CeylonConfig? searchedConfig = null;
@@ -67,28 +67,28 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
         }
         projectRepositories = Repositories.withConfig(ideConfig);
     }
-    
+
     initMergedConfig();
     initIdeConfig();
-    
+
     shared Boolean? compileToJvm => let (JBoolean? option = ideConfig.getBoolOption("project.compile-jvm")) option?.booleanValue();
     assign compileToJvm {
         this.isCompileToJvmChanged = true;
         this.transientCompileToJvm = compileToJvm;
     }
-    
+
     shared Boolean? compileToJs => let (JBoolean? option = ideConfig.getBoolOption("project.compile-js")) option?.booleanValue();
     assign compileToJs {
         this.isCompileToJsChanged = true;
         this.transientCompileToJs = compileToJs;
     }
-    
+
     shared String? systemRepository => ideConfig.get("project.system-repository");
     assign systemRepository {
         this.isSystemRepositoryChanged = true;
         this.transientSystemRepository = systemRepository;
     }
-    
+
     shared JavaToCeylonConverterConfig converterConfig => object satisfies JavaToCeylonConverterConfig {
         shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", false);
         shared actual Boolean useValues => ideConfig.getBoolOption("converter.use-values", false);
@@ -101,7 +101,7 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
             project.rootDirectory,
             ideConfig.getOption(
                 "source.attachments",
-                "attachments.properties"));
+                ".ceylon/attachments.properties"));
 
         value optionPattern = "^(``Pattern.quote(moduleName)``|\\*)/(``Pattern.quote(moduleVersion)``|\\*)/path";
 
@@ -123,27 +123,27 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
     shared void refresh() {
         initMergedConfig();
         initIdeConfig();
-        
+
         isCompileToJvmChanged = false;
         isCompileToJsChanged = false;
         isSystemRepositoryChanged = false;
-        
+
         transientCompileToJvm = null;
         transientCompileToJs = null;
         transientSystemRepository = null;
     }
-    
+
     shared void save() {
         initIdeConfig();
-        
+
         Boolean someSettingsChanged = isCompileToJsChanged || isCompileToJsChanged || isSystemRepositoryChanged;
-        
+
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
                 ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false);
                 ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false);
                 ideConfig.setOption("project.system-repository", transientSystemRepository else "");
-                
+
                 ConfigWriter.write(ideConfig, ideConfigFile);
                 refresh();
             } catch (IOException e) {
