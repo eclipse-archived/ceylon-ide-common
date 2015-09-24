@@ -7,55 +7,28 @@ import java.lang {
     Character
 }
 
-shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region>
+        (shared actual variable Integer offset, shared actual String prefix, /*Image image,*/ shared actual String description, shared actual String text)
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & LinkedModeSupport<LinkedMode,Document,CompletionResult>
+                & CommonCompletionProposal<Document,Region>
         given InsertEdit satisfies TextEdit {
     
-    String text;
-    //Image image;
-    String prefix;
-    String description;
-    Integer offset;
-    Integer length;
-    variable Boolean toggleOverwrite = false;
-    String currentPrefix;
-    
+    Integer length = prefix.size;
+
+    shared formal Boolean toggleOverwrite;
     shared formal ImportProposals<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange> importProposals;
-
-    shared new (Integer offset, String prefix, /*Image image,*/ String desc, String text) {
-        this.text = text;
-        //this.image = image;
-        this.offset = offset;
-        this.prefix = prefix;
-        currentPrefix = prefix;
-        this.length = prefix.size;
-        this.description = desc;
-    }
     
-    //shared actual Image getImage() {
-    //    return image;
-    //}
-    
-    shared formal void replaceInDoc(Document doc, Integer start, Integer length, String newText);
-    shared formal Integer getDocLength(Document doc);
-    shared formal Character getDocChar(Document doc, Integer offset);
-    shared formal String getDocSpan(Document doc, Integer start, Integer length);
-    shared formal Region newRegion(Integer start, Integer length);
-
-    shared default Region getSelection(Document document) {
+    shared actual default Region getSelectionInternal(Document document) {
         return newRegion(offset + text.size - prefix.size, 0);
     }
     
-    shared void apply(Document document) {
+    shared default void applyInternal(Document document) {
         replaceInDoc(document, start(), lengthOf(document), withoutDupeSemi(document));
     }
     
     shared TextEdit createEdit(Document document) {
         return newReplaceEdit(start(), lengthOf(document), withoutDupeSemi(document));
     }
-    
-    shared formal String completionMode;
     
     shared Integer lengthOf(Document document) {
         value overwrite = completionMode;
@@ -73,18 +46,14 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
         }
     }
     
-    shared Integer start() {
+    shared actual Integer start() {
         return offset - prefix.size;
     }
     
-    shared String withoutDupeSemi(Document document) {
+    shared actual String withoutDupeSemi(Document document) {
         if (text.endsWith(";"), getDocChar(document, offset) == ';') {
             return text.span(0, text.size - 1);
         }
         return text;
-    }
-    
-    shared String getDisplayString() {
-        return description;
     }
 }

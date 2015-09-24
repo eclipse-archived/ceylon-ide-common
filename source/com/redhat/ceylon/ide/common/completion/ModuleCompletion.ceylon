@@ -53,7 +53,8 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
                 String versioned, ModuleDetails mod,
                 Boolean withBody, ModuleVersionDetails version, String name, Node node);
 
-    shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String name); 
+    shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
+        Integer selectionStart, Integer selectionEnd); 
             
     shared formal CompletionResult newJDKModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, String name);
@@ -64,7 +65,9 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         }
         value moduleName = getPackageName(cpc.rootNode);
         if (exists moduleName) {
-            result.add(newModuleDescriptorProposal(offset, prefix, moduleName));
+            value text = "module " + moduleName + " \"1.0.0\" {}";
+            result.add(newModuleDescriptorProposal(offset, prefix, "module " + moduleName,
+                text, offset - prefix.size + (text.firstOccurrence('"') else 0) + 1, "1.0.0".size));
         }
     }
 

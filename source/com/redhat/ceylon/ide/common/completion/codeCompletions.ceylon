@@ -234,12 +234,11 @@ void appendPositionalArgs(Declaration d, Reference pr, Unit unit, StringBuilder 
                         result.append(" => ").append("nothing");
                     }
                 } else {
-                    variable Type pt = typedParameter.type;
-                    if (paramTypes, !ModelUtil.isTypeUnknown(pt)) {
-                        if (p.sequenced) {
-                            pt = unit.getSequentialElementType(pt);
-                        }
-                        result.append(pt.asString(unit));
+                    if (paramTypes, exists pt = typedParameter.type, !ModelUtil.isTypeUnknown(pt)) {
+                        value newPt = if (p.sequenced)
+                                      then unit.getSequentialElementType(pt)
+                                      else pt;
+                        result.append(newPt.asString(unit));
                         if (p.sequenced) {
                             result.append(if (p.atLeastOne) then "+" else "*");
                         }

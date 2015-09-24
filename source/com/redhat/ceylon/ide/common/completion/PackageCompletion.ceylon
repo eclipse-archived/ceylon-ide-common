@@ -1,5 +1,6 @@
 import ceylon.collection {
-    MutableList
+    MutableList,
+    ArrayList
 }
 import ceylon.interop.java {
     CeylonIterable
@@ -27,7 +28,9 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Module,
-    Package
+    Package,
+    ModelUtil,
+    Declaration
 }
 
 import java.lang {
@@ -61,7 +64,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
                 //if ( p.getModule().equals(module) || p.isShared() ) {
                 String packageName = escaping.escapePackageName(candidate);
                 if (!packageName.empty, packageName.startsWith(fullPrefix)) {
-                    variable Boolean already = false;
+                    variable Boolean already = false; 
                     if (!fullPrefix.equals(packageName)) {
                         //don't add already imported packages, unless
                         //it is an exact match to the typed path
@@ -109,7 +112,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         }
         value packageName = getPackageName(cpc.rootNode);
         if (exists packageName) {
-            result.add(newPackageDescriptorProposal(offset, prefix, packageName));
+            result.add(newPackageDescriptorProposal(offset, prefix, "package ``packageName``", "package ``packageName``;"));
         }
     }
 
@@ -121,7 +124,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         }
     }
     
-    shared formal CompletionResult newPackageDescriptorProposal(Integer offset, String prefix, String packageName);
+    shared formal CompletionResult newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text);
 
     shared formal CompletionResult newCurrentPackageProposal(Integer offset, String prefix, String packageName, IdeComponent cmp);
 
@@ -135,4 +138,54 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         String fullPackageName, IdeComponent controller,
         ModuleVersionDetails version, Unit unit, ModuleSearchResult.ModuleDetails md);
 
+}
+
+shared abstract class PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName)
+        extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
+        (offset, prefix, fullPackageName + (withBody then " { ... }" else ""),
+        memberPackageSubname + (withBody then " { ... }" else ""))
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
+        given InsertEdit satisfies TextEdit {
+
+    shared actual Region getSelectionInternal(Document document) {
+        if (withBody) {
+            return newRegion(offset + (text.firstInclusion("...") else 0) - prefix.size, 3);
+        } else {
+            return super.getSelectionInternal(document);
+        }
+    }
+}
+
+shared abstract class ImportedModulePackageProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate)
+        extends PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+        (offset, prefix, memberPackageSubname, withBody, fullPackageName)
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
+        given InsertEdit satisfies TextEdit {
+    
+    shared formal CompletionResult newReplacementCompletionResult(Declaration d, Region selection, LinkedMode lm);
+    
+    shared actual void applyInternal(Document document) {
+        super.applyInternal(document);
+        
+        if (withBody /* TODO && getPreferences().getBoolean(LINKED_MODE_ARGUMENTS) */) {
+            value linkedMode = newLinkedMode();
+            value selection = getSelectionInternal(document);
+            value proposals = ArrayList<CompletionResult>();
+            
+            for (d in CeylonIterable(candidate.members)) {
+                if (ModelUtil.isResolvable(d), d.shared, !ModelUtil.isOverloadedVersion(d)) {
+                    proposals.add(newReplacementCompletionResult(d, selection, linkedMode));
+                }
+            }
+            
+            if (!proposals.empty) {
+                addEditableRegion(linkedMode, document, getRegionStart(selection),
+                    getRegionLength(selection), 0, proposals.sequence());
+                
+                installLinkedMode(document, linkedMode, this, -1, 0);
+            }
+        }
+    }
 }

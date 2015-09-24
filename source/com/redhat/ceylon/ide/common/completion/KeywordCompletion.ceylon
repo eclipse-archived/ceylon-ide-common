@@ -30,7 +30,9 @@ shared interface KeywordCompletion<CompletionResult> {
                     "of", "in", "else", "for", "if", "is", 
                     "exists", "nonempty", "then", "let"});
     
-    shared formal CompletionResult newKeywordCompletionProposal(Integer offset, String prefix, String keyword);
+    value conditionKeywords => ["assert", "let", "while", "for", "if", "switch", "case", "catch"];
+    
+    shared formal CompletionResult newKeywordCompletionProposal(Integer offset, String prefix, String keyword, String text);
     
     // see KeywordCompletionProposal.addKeywordProposals(...)
     shared void addKeywordProposals(Tree.CompilationUnit cu, Integer offset, String prefix, MutableList<CompletionResult> result,
@@ -69,6 +71,8 @@ shared interface KeywordCompletion<CompletionResult> {
         }
     }
     
-    void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionResult> result, String keyword)
-        => result.add(newKeywordCompletionProposal(offset, prefix, keyword));
+    void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionResult> result, String keyword) {
+        value text = conditionKeywords.contains(keyword) then "``keyword`` ()" else keyword;
+        result.add(newKeywordCompletionProposal(offset, prefix, keyword, text));
+    }
 }

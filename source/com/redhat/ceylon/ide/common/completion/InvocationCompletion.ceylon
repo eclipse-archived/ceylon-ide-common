@@ -75,6 +75,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
         Integer index, Boolean basic, String op);
     
+    // TODO     static void addProgramElementReferenceProposal(int offset, String prefix, 
+    //        CeylonParseController cpc, List<ICompletionProposal> result, 
+    //        Declaration dec, Scope scope, boolean isMember) {
+
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
         Integer offset, String prefix, IdeComponent cmp,
@@ -256,11 +260,12 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
 }
 
 shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
-    (variable Integer offset, String prefix, String desc, String text, Declaration declaration, Reference? producedReference,
+    (variable Integer _offset, String prefix, String desc, String text, Declaration declaration, Reference? producedReference,
     Scope scope, Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation,
     Boolean qualified, Declaration? qualifyingValue, InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
-        (offset, prefix, desc, text)
+        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
+        (_offset, prefix, desc, text)
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
@@ -310,16 +315,16 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
     }
     
-    shared actual Region getSelection(Document document) {
+    shared actual Region getSelectionInternal(Document document) {
         value first = getFirstPosition();
         if (first <= 0) {
             //no arg list
-            return super.getSelection(document);
+            return super.getSelectionInternal(document);
         }
         value next = getNextPosition(document, first);
         if (next <= 0) {
             //an empty arg list
-            return super.getSelection(document);
+            return super.getSelectionInternal(document);
         }
         value middle = getCompletionPosition(first, next);
         variable value start = offset - prefix.size + first + middle;
@@ -392,8 +397,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             variable value seq = 0;
             variable value param = 0;
             while (next>0 && param<paramCount) {
-                assert(exists params);
-                value voidParam = !proposeTypeArguments && params.get(param).declaredVoid;
+                // if proposeTypeArguments is false, params *should* exist
+                value voidParam = !proposeTypeArguments && (params?.get(param)?.declaredVoid else false);
                 if (proposeTypeArguments || positionalInvocation
                         //don't create linked positions for
                         //void callable parameters in named
@@ -405,6 +410,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                         assert(exists typeParams);
                         addTypeArgumentProposals(typeParams.get(seq), loc, first, props, seq);
                     } else if (!voidParam) {
+                        assert(exists params);
                         addValueArgumentProposals(params.get(param), loc, first, props, seq, param == params.size() - 1);
                     }
                     value middle = getCompletionPosition(first, next);

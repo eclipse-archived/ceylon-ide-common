@@ -129,14 +129,15 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Result newJDKModuleProposal(Integer offset, String prefix, Integer len, String versioned, String name) 
             => Result("newJDKModuleProposal", versioned);
     
-    shared actual Result newKeywordCompletionProposal(Integer offset, String prefix, String keyword) 
-            => Result("newKeywordCompletionProposal", keyword);
+    shared actual Result newKeywordCompletionProposal(Integer offset, String prefix, String keyword, String text) 
+            => Result("newKeywordCompletionProposal", keyword, text);
     
     shared actual Result newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName)
             => Result("newMemberNameCompletionProposal", unquotedName, name);
     
-    shared actual Result newModuleDescriptorProposal(Integer offset, String prefix, String name)
-            => Result("newModuleDescriptorProposal", name);
+    shared actual Result newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
+        Integer selectionStart, Integer selectionEnd)
+            => Result("newModuleDescriptorProposal", text, desc);
     
     shared actual Result newModuleProposal(Integer offset, String prefix, Integer len, String versioned,
         ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name, Node node)
@@ -150,8 +151,8 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         Declaration dec, Reference? pr, Scope scope, CompletionData cmp, Boolean isMember, String? typeArgs, Boolean includeDefaulted)
             => Result("newNamedInvocationCompletion", text, desc);
     
-    shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String packageName)
-            => Result("newPackageDescriptorProposal", packageName);
+    shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text)
+            => Result("newPackageDescriptorProposal", text, desc);
     
     suppressWarnings("expressionTypeNothing")
     shared actual Result newParameterInfo(Integer offset, Declaration dec, Reference producedReference, Scope scope,

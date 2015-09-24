@@ -12,6 +12,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     Unit
 }
+import java.util {
+    HashSet
+}
 shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
@@ -29,10 +32,10 @@ shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Do
         }
 
         value start = arg.startIndex.intValue();
-        value stop = arg.stopIndex.intValue();
+        value stop = arg.endIndex.intValue();
         value origin = primary.startIndex.intValue();
         value doc = cpc.document;
-        value argText = cm.getDocumentSubstring(doc, start, stop - start + 1);
+        value argText = cm.getDocumentSubstring(doc, start, stop - start);
         value prefix = cm.getDocumentSubstring(doc, origin, offset - origin);
         variable String text = dec.getName(arg.unit) + "(" + argText + ")";
         
@@ -42,5 +45,22 @@ shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Do
         value unit = cpc.rootNode.unit;
         value desc = getDescriptionFor(dec, unit) + "(...)";
         result.add(newFunctionCompletionProposal(offset, prefix, desc, text, dec, unit, cpc));
+    }
+}
+
+shared abstract class FunctionCompletionProposal<CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region>  
+        (Integer _offset, String prefix, String desc, String text, Declaration declaration, Tree.CompilationUnit rootNode)
+        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
+        (_offset, prefix, desc, text)
+        given InsertEdit satisfies TextEdit {
+    
+    shared TextChange createChange(TextChange change, Document document) {
+        initMultiEditChange(change);
+        value decs = HashSet<Declaration>();
+        importProposals.importDeclaration(decs, declaration, rootNode);
+        value il = importProposals.applyImports(change, decs, rootNode, document);
+        addEditToChange(change, createEdit(document));
+        offset += il;
+        return change;
     }
 }
