@@ -318,7 +318,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             => if (exists node,
                     exists pkg = node.unit?.\ipackage)
                 then pkg.\imodule
-                    .getAvailableDeclarations(prefix)
+                    .getAvailableDeclarations(prefix, 0)
                 else noProposals;
 
     shared Boolean isQualifiedType(Node node)
