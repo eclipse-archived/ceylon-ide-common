@@ -52,7 +52,7 @@ Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
 }
 
 // see CompletionUtil.overloads(Declaration dec)
-{Declaration*} overloads(Declaration dec) {
+shared {Declaration*} overloads(Declaration dec) {
     return if (dec.abstraction)
     then CeylonIterable(dec.overloads)
     else {dec};
