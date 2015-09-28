@@ -69,7 +69,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
                         //don't add already imported packages, unless
                         //it is an exact match to the typed path
                         for (il in CeylonIterable(unit.importLists)) {
-                            if (il.importedScope == candidate) {
+                            if (exists scope = il.importedScope, scope == candidate) {
                                 already = true;
                             }
                         }
