@@ -193,5 +193,9 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Result newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc, Integer index, Boolean basic, String op) => nothing;
     
     shared actual Result newNestedLiteralCompletionProposal(String val, Integer loc, Integer index) => nothing;
+    
+    shared actual Result newTypeProposal(Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
+            => Result("newTypeProposal", text, desc);
+    
         
 }

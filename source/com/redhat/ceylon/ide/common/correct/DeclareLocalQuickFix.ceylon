@@ -2,14 +2,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
+import com.redhat.ceylon.ide.common.completion {
+    LinkedModeSupport,
+    IdeCompletionManager
+}
 import com.redhat.ceylon.ide.common.util {
     nodes
-}
-import java.util {
-    Collection
-}
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
 }
 
 shared Tree.Term? getDeclareLocalTerm(Tree.CompilationUnit rootNode, Node node) {
@@ -35,6 +33,7 @@ shared interface DeclareLocalQuickFix<Document,InsertEdit,TextEdit,TextChange,Li
         given InsertEdit satisfies TextEdit {
     
     shared formal void applyChange(Document doc, TextChange change);
+    shared formal IdeCompletionManager<out Object,out Object,CompletionResult,Document> completionManager;
     
     shared String getName(Node bme) {
         assert(is Tree.BaseMemberExpression bme);
@@ -42,7 +41,6 @@ shared interface DeclareLocalQuickFix<Document,InsertEdit,TextEdit,TextChange,Li
     }
     
     shared void addDeclareLocalProposal(Tree.CompilationUnit rootNode, Node node,
-        // Collection<ICompletionProposal> proposals, IFile file, CeylonEditor editor
         Document doc, TextChange change) {
         
         assert(exists term = getDeclareLocalTerm(rootNode, node));
@@ -54,8 +52,8 @@ shared interface DeclareLocalQuickFix<Document,InsertEdit,TextEdit,TextChange,Li
         if (exists type = term.typeModel) {
             value lm = newLinkedMode();
             
-            // TODO get proposals from TypeProposal
-            addEditableRegion(lm, doc, node.startIndex.intValue(), 5, 0, []);
+            value proposals = completionManager.getTypeProposals(doc, node.startIndex.intValue(), 5, type, rootNode, "value");
+            addEditableRegion(lm, doc, node.startIndex.intValue(), 5, 0, proposals);
             installLinkedMode(doc, lm, this, -1, -1);
         }
     }

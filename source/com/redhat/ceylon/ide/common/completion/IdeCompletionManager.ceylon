@@ -86,7 +86,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionResult,Document>
                 & ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
                 & FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & ControlStructureCompletionProposal<IdeComponent, IdeArtifact, CompletionResult, Document>
+                & ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & TypeCompletion<CompletionResult,Document>
         given CompletionResult satisfies Object
         given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
         given IdeArtifact satisfies Object {
