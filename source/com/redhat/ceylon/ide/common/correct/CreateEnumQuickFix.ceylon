@@ -1,0 +1,191 @@
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes,
+    Indents
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    Node
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+
+shared abstract class CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextChange>()
+        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
+        given InsertEdit satisfies TextEdit {
+    
+    shared formal void consumeNewQuickFix(String def, String desc, Icons image,
+        Integer offset, TextChange change);
+    
+    shared formal TextChange newTextChange(PhasedUnit unit);
+    shared formal Integer getDocLength(Document doc);
+    shared formal List<PhasedUnit> getUnits(Project project);
+    shared formal Indents<Document> indents;
+    
+    shared void addCreateEnumProposal(Tree.CompilationUnit rootNode, Node node, Project project) {
+        value idn = nodes.getIdentifyingNode(node);
+        if (!exists idn) {
+            return;
+        }
+        assert (exists idn);
+        value brokenName = idn.text;
+        if (brokenName.empty) {
+            return;
+        }
+        value dec = nodes.findDeclaration(rootNode, node);
+        if (is Tree.ClassDefinition dec) {
+            value cd = dec;
+            if (exists c = cd.caseTypes) {
+                if (cd.caseTypes.types.contains(node)) {
+                    addCreateEnumProposalInternal(project,
+                        "class " + brokenName + parameters(cd.typeParameterList)
+                                + parameters2(cd.parameterList) + " extends "
+                                + cd.declarationModel.name + parameters(cd.typeParameterList)
+                                + arguments(cd.parameterList) + " {}",
+                        "class '" + brokenName + parameters(cd.typeParameterList)
+                                + parameters2(cd.parameterList) + "'",
+                        Icons.classes, rootNode, cd);
+                }
+                if (cd.caseTypes.baseMemberExpressions.contains(node)) {
+                    addCreateEnumProposalInternal(project,
+                        "object " + brokenName + " extends " + cd.declarationModel.name
+                                + parameters(cd.typeParameterList) + arguments(cd.parameterList)
+                                + " {}", "object '" + brokenName + "'",
+                        Icons.attributes, rootNode, cd);
+                }
+            }
+        }
+        if (is Tree.InterfaceDefinition dec) {
+            value cd = dec;
+            if (exists c = cd.caseTypes) {
+                if (cd.caseTypes.types.contains(node)) {
+                    addCreateEnumProposalInternal(project,
+                        "interface " + brokenName + parameters(cd.typeParameterList)
+                                + " satisfies " + cd.declarationModel.name
+                                + parameters(cd.typeParameterList) + " {}",
+                        "interface '" + brokenName + parameters(cd.typeParameterList) + "'",
+                        Icons.interfaces, rootNode, cd);
+                }
+                if (cd.caseTypes.baseMemberExpressions.contains(node)) {
+                    addCreateEnumProposalInternal(project, 
+                        "object " + brokenName + " satisfies "
+                                + cd.declarationModel.name + parameters(cd.typeParameterList)
+                                + " {}", "object '" + brokenName + "'",
+                        Icons.attributes, rootNode, cd);
+                }
+            }
+        }
+    }
+    
+    void addCreateEnumProposalInternal(Project project, String def, String desc, Icons image,
+        Tree.CompilationUnit cu, Tree.TypeDeclaration cd) {
+        
+        for (unit in getUnits(project)) {
+            if (unit.unit.equals(cu.unit)) {
+                addCreateEnumProposalInternal2(def, desc, image, unit, cd);
+                break;
+            }
+        }
+    }
+    
+    void addCreateEnumProposalInternal2(String def, String desc, Icons image,
+        PhasedUnit unit, Tree.Statement statement) {
+        
+        value change = newTextChange(unit);
+        value doc = getDocumentForChange(change);
+        value indent = indents.getIndent(statement, doc);
+        variable value s = indent + def + indents.getDefaultLineDelimiter(doc);
+        variable value offset = statement.endIndex.intValue() + 1;
+        
+        if (offset > getDocLength(doc)) {
+            offset = getDocLength(doc);
+            s = indents.getDefaultLineDelimiter(doc) + s;
+        }
+        
+        initMultiEditChange(change);
+        addEditToChange(change, newInsertEdit(offset, s));
+        
+        consumeNewQuickFix(def, "Create enumerated " + desc, image,
+            offset + (def.firstInclusion("{}") else -1) + 1, change);
+    }
+    
+    String parameters(Tree.TypeParameterList? tpl) {
+        value result = StringBuilder();
+        if (exists tpl, !tpl.typeParameterDeclarations.empty) {
+            result.append("<");
+            value len = tpl.typeParameterDeclarations.size();
+            variable value i = 0;
+            for (p in CeylonIterable(tpl.typeParameterDeclarations)) {
+                result.append(p.identifier.text);
+                if (++i < len) {
+                    result.append(", ");
+                }
+            }
+            result.append(">");
+        }
+        return result.string;
+    }
+    
+    String parameters2(Tree.ParameterList? pl) {
+        value result = StringBuilder();
+        if (pl?.parameters?.empty else true) {
+            result.append("()");
+        } else {
+            assert(exists pl);
+            result.append("(");
+            value len = pl.parameters.size();
+            variable value i = 0;
+            for (Tree.Parameter? p in CeylonIterable(pl.parameters)) {
+                if (exists p) {
+                    if (is Tree.ParameterDeclaration p) {
+                        value td = (p).typedDeclaration;
+                        result.append(td.type.typeModel.asString()).append(" ").append(td.identifier.text);
+                    } else if (is Tree.InitializerParameter p) {
+                        result.append(p.parameterModel.type.asString()).append(" ").append((p).identifier.text);
+                    }
+                }
+                if (++i < len) {
+                    result.append(", ");
+                }
+            }
+            result.append(")");
+        }
+        return result.string;
+    }
+    
+    String arguments(Tree.ParameterList? pl) {
+        value result = StringBuilder();
+        if (pl?.parameters?.empty else true) {
+            result.append("()");
+        } else {
+            assert (exists pl);
+            result.append("(");
+            value len = pl.parameters.size();
+            variable value i = 0;
+            for (Tree.Parameter? p in CeylonIterable(pl.parameters)) {
+                if (exists p) {
+                    Tree.Identifier id;
+                    if (is Tree.InitializerParameter p) {
+                        id = (p).identifier;
+                    } else if (is Tree.ParameterDeclaration p) {
+                        id = (p).typedDeclaration.identifier;
+                    } else {
+                        continue;
+                    }
+                    result.append(id.text);
+                }
+                if (++i < len) {
+                    result.append(", ");
+                }
+            }
+            result.append(")");
+        }
+        return result.string;
+    }
+}
