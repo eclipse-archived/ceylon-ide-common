@@ -9,7 +9,7 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
     shared formal void initMultiEditChange(TextChange change);
 
-    shared formal TextEdit newDeleteEdit(Integer start, Integer stop);
+    shared formal TextEdit newDeleteEdit(Integer start, Integer length);
 
     shared formal InsertEdit newInsertEdit(Integer position, String text);
 
