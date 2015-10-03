@@ -887,7 +887,6 @@ shared abstract class DocGenerator<IdeComponent>() {
             return node.outerType.typeModel;
         }
         
-        assert(exists outerClass);
         return outerClass.type;
     }
 

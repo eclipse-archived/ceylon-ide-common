@@ -64,8 +64,6 @@ shared object escaping {
             return "";
         }
         
-        assert(exists aliass);
-        
         value c = aliass.first else ' ';
 
         if (is TypedDeclaration d, (c.uppercase || keywords.contains(aliass))) {

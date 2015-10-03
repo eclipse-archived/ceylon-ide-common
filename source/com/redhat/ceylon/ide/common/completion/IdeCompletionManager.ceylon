@@ -89,8 +89,6 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
             return noProposals;
         }
 
-        assert (exists unit);
-
         switch (node)
         case (is Tree.MemberLiteral) {
             if (exists mlt = node.type) {

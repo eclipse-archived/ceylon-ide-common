@@ -532,7 +532,6 @@ shared class Path satisfies List<String> {
         if (!exists tail) {
             return this;
         }
-        assert(exists tail);
         if (tail.segmentCount == 0) {
             return this;
         }
