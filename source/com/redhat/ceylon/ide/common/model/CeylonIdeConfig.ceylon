@@ -90,7 +90,7 @@ shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> proj
     }
 
     shared JavaToCeylonConverterConfig converterConfig => object satisfies JavaToCeylonConverterConfig {
-        shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", false);
+        shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
         shared actual Boolean useValues => ideConfig.getBoolOption("converter.use-values", false);
         shared actual Boolean useVariableInLocals => ideConfig.getBoolOption("converter.use-variable-in-locals", true);
         shared actual Boolean useVariableInParameters => ideConfig.getBoolOption("converter.use-variable-in-parameters", true);
