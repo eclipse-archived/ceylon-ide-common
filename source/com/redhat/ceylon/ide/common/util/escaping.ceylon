@@ -63,18 +63,19 @@ shared object escaping {
         if (!exists aliass) {
             return "";
         }
-        
-        assert (exists c = aliass.first);
-        if (is TypedDeclaration d, 
-                c.uppercase || keywords.contains(aliass)) {
-            return "\\i``aliass``";
-        }
-        else if (is TypeDeclaration d, 
-                c.lowercase && !d.anonymous) {
-            return "\\I``aliass``";
-        }
         else {
-            return aliass;
+            assert (exists c = aliass.first);
+            if (is TypedDeclaration d, 
+                    c.uppercase || keywords.contains(aliass)) {
+                return "\\i``aliass``";
+            }
+            else if (is TypeDeclaration d, 
+                    c.lowercase && !d.anonymous) {
+                return "\\I``aliass``";
+            }
+            else {
+                return aliass;
+            }
         }
     }
 
