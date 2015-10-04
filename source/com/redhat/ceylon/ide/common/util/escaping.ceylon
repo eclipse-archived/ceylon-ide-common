@@ -64,12 +64,13 @@ shared object escaping {
             return "";
         }
         
-        value c = aliass.first;
-
-        if (is TypedDeclaration d, (c.uppercase || keywords.contains(aliass))) {
+        assert (exists c = aliass.first);
+        if (is TypedDeclaration d, 
+                c.uppercase || keywords.contains(aliass)) {
             return "\\i``aliass``";
         }
-        else if (is TypeDeclaration d, c.lowercase, !d.anonymous) {
+        else if (is TypeDeclaration d, 
+                c.lowercase && !d.anonymous) {
             return "\\I``aliass``";
         }
         else {
