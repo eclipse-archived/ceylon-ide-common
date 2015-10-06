@@ -88,7 +88,7 @@ import ceylon.interop.java {
    is constructed all double-slashes are removed except those
    appearing at the beginning of the path.
    """
-shared class Path satisfies List<String> {
+shared final class Path satisfies List<String> {
     /** The device id string. May be null if there is no device. */
     variable String? _device=null;
 
