@@ -18,9 +18,9 @@ import ceylon.test {
 }
 
 import com.redhat.ceylon.ide.common.vfs {
-    ResourceVirtualFile,
-    FileVirtualFile,
-    FolderVirtualFile
+    BaseResourceVirtualFile,
+    BaseFolderVirtualFile,
+    BaseFileVirtualFile
 }
 
 import test.com.redhat.ceylon.ide.common.testUtils {
@@ -29,22 +29,15 @@ import test.com.redhat.ceylon.ide.common.testUtils {
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
 
-shared abstract class BaseTest<NativeResource, NativeFolder, NativeFile>()
-    given NativeResource satisfies Object
-    given NativeFolder satisfies NativeResource
-    given NativeFile satisfies NativeResource {
-
-    shared alias ResourceVirtualFileAlias => ResourceVirtualFile<NativeResource,NativeFolder,NativeFile>;
-    shared alias FolderVirtualFileAlias => FolderVirtualFile<NativeResource,NativeFolder,NativeFile>;
-    shared alias FileVirtualFileAlias => FileVirtualFile<NativeResource,NativeFolder,NativeFile>;
+shared abstract class BaseTest() {
 
     shared formal Path rootCeylonPath;
-    shared formal FolderVirtualFile<NativeResource, NativeFolder, NativeFile> rootVirtualFile;
+    shared formal BaseFolderVirtualFile rootVirtualFile;
 
     ExpectedType checkType<ExpectedType> (
-        ResourceVirtualFileAlias virtualFile,
+        BaseResourceVirtualFile virtualFile,
         ExistingResource ceylonResource)
-        given ExpectedType satisfies ResourceVirtualFile<NativeResource, NativeFolder, NativeFile> {
+        given ExpectedType satisfies BaseResourceVirtualFile {
         assertTrue(
                 virtualFile is ExpectedType/*,
                 "'`` ceylonResource ``' should be seen as a `` typeLiteral<ExpectedType>() ``"*/);
@@ -52,7 +45,7 @@ shared abstract class BaseTest<NativeResource, NativeFolder, NativeFile>()
         return virtualFile;
     }
 
-    void checkChildren(Directory ceylonResource, ResourceVirtualFileAlias virtualFile) {
+    void checkChildren(Directory ceylonResource, BaseResourceVirtualFile virtualFile) {
         value ceylonChildren = HashSet { * ceylonResource.childPaths().map((p)=>p.elements.last?.trimTrailing('/'.equals)).coalesced };
         value virtualFileChildren = HashSet { * CeylonIterable(virtualFile.children).map((vf)=>vf.name) };
         assertEquals(virtualFileChildren, ceylonChildren,
@@ -67,14 +60,14 @@ shared abstract class BaseTest<NativeResource, NativeFolder, NativeFile>()
         => fileOrDir.path.elements.last else "";
 
 
-    shared void checkParent(ResourceVirtualFileAlias virtualFile, Directory? ceylonParent) {
+    shared void checkParent(BaseResourceVirtualFile virtualFile, Directory? ceylonParent) {
         assertEquals(
             virtualFile.parent?.path,
             if (exists ceylonParent) then pathFromCeylonResource(ceylonParent) else null);
     }
 
-    ResourceVirtualFileAlias findChildVirtualFileByName(
-        FolderVirtualFileAlias parentVirtualFile, String name) {
+    BaseResourceVirtualFile findChildVirtualFileByName(
+        BaseFolderVirtualFile parentVirtualFile, String name) {
         value child = CeylonIterable(parentVirtualFile.children).find((f)=>f.name == name.trimTrailing('/'.equals));
         assertNotNull(child, "The virtual file ``parentVirtualFile `` should have a child name '``name``'");
         assert (exists child);
@@ -83,12 +76,12 @@ shared abstract class BaseTest<NativeResource, NativeFolder, NativeFile>()
 
 
     shared void testResourceTree() {
-        variable FolderVirtualFileAlias? parentVirtualFile = null;
+        variable BaseFolderVirtualFile? parentVirtualFile = null;
         variable Directory? parentCeylonFile = null;
         rootCeylonPath.visit {
             object visitor extends Visitor() {
                 function doCheck<Type>(Directory|File fileOrDir)
-                        given Type satisfies ResourceVirtualFile<NativeResource, NativeFolder, NativeFile> {
+                        given Type satisfies BaseResourceVirtualFile {
                     Type currentVirtualFile;
                     if (fileOrDir.path == rootCeylonPath, is Type root = rootVirtualFile) {
                         currentVirtualFile = root;
@@ -115,14 +108,14 @@ shared abstract class BaseTest<NativeResource, NativeFolder, NativeFile>()
                 }
 
                 shared actual Boolean beforeDirectory(Directory dir) {
-                    parentVirtualFile = doCheck<FolderVirtualFile<NativeResource, NativeFolder, NativeFile>>(dir);
+                    parentVirtualFile = doCheck<BaseFolderVirtualFile>(dir);
 
                     parentCeylonFile = dir;
                     return true;
                 }
 
                 shared actual void file(File file) {
-                    doCheck<FileVirtualFile<NativeResource, NativeFolder, NativeFile>>(file);
+                    doCheck<BaseFileVirtualFile>(file);
                 }
 
                 shared actual Boolean afterDirectory(Directory dir) {

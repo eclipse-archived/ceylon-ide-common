@@ -133,7 +133,7 @@ shared class LocalFolderVirtualFile(file)
     
     nativeResource => file;
     
-    shared actual String[] toPackageName(FolderVirtualFile<File,File,File> srcDir) {
+    shared actual String[] toPackageName(BaseFolderVirtualFile srcDir) {
         if (is LocalFolderVirtualFile srcDir) {
             value fileAbsolutePath = file.absolutePath;
             value sourceDirAbsolutePath = srcDir.nativeResource.absolutePath;

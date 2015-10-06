@@ -36,19 +36,19 @@ import java.util.zip {
     ZipFile
 }
 
-shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies FolderVirtualFile<> {
+shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies BaseFolderVirtualFile {
     shared String entryName;
-    JList<ResourceVirtualFile<>> theChildren = ArrayList<ResourceVirtualFile<>>();
+    JList<BaseResourceVirtualFile> theChildren = ArrayList<BaseResourceVirtualFile>();
     
     shared actual String path = "``rootPath``!/``entryName``".trimTrailing('/'.equals);
     shared actual String name = Helper.getSimpleName(entryName);
-    shared actual variable FolderVirtualFile<>? parent = null;
+    shared actual variable BaseFolderVirtualFile? parent = null;
     
-    shared actual JList<out ResourceVirtualFile<>> children {
+    shared actual JList<out BaseResourceVirtualFile> children {
         return Collections.unmodifiableList( theChildren );
     }
     
-    shared void addChild(ResourceVirtualFile<> child) {
+    shared void addChild(BaseResourceVirtualFile child) {
         theChildren.add(child);
     }
     
@@ -60,28 +60,26 @@ shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies FolderVi
     shared actual ZipEntryVirtualFile? findFile(String fileName)
             => searchFileChildren(theChildren, fileName);
     
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing nativeResource => nothing;
-    
-    shared actual String[] toPackageName(FolderVirtualFile<Nothing,Nothing,Nothing> srcDir)
+    shared actual String[] toPackageName(BaseFolderVirtualFile srcDir)
             => entryName.trim('/'.equals).split("/".equals).sequence();
     
     shared actual Boolean equals(Object that) 
-            => (super of FolderVirtualFile<>).equals(that); 
+            => (super of BaseFolderVirtualFile).equals(that); 
     
     shared actual Integer hash
-            => (super of FolderVirtualFile<>).hash;
+            => (super of BaseFolderVirtualFile).hash; 
+
     shared actual Boolean \iexists() => true;
 }
 
 throws(`class RuntimeException`)
-shared class ZipEntryVirtualFile(entry, zipFile) satisfies FileVirtualFile<> {
+shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     ZipEntry entry;
     shared String entryName = entry.name;
     ZipFile zipFile;
     shared actual String name = Helper.getSimpleName(entry);
     shared actual String path = "``zipFile.name``!/``entry.name``".trimTrailing('/'.equals);
-    shared variable actual FolderVirtualFile<Nothing,Nothing,Nothing>? parent = null;
+    shared variable actual BaseFolderVirtualFile? parent = null;
     shared actual Boolean \iexists() => true;
     
     shared actual InputStream inputStream {
@@ -106,18 +104,15 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies FileVirtualFile<> {
             .string;
     
     shared actual Boolean equals(Object that)
-            => (super of FileVirtualFile<>).equals(that);
+            => (super of BaseFileVirtualFile).equals(that);
     
     shared actual Integer hash
-            => (super of FileVirtualFile<>).hash;
+            => (super of BaseFileVirtualFile).hash;
     
     shared actual String? charset => null;
-    
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing nativeResource => nothing;
 }
 
-ZipEntryVirtualFile? searchFileChildren(JList<ResourceVirtualFile<>> theChildren, String fileName) {
+ZipEntryVirtualFile? searchFileChildren(JList<BaseResourceVirtualFile> theChildren, String fileName) {
     return CeylonIterable(theChildren).map {
         collecting(VirtualFile vf) 
                 => if (is ZipEntryVirtualFile vf, vf.name == fileName)
@@ -128,10 +123,10 @@ ZipEntryVirtualFile? searchFileChildren(JList<ResourceVirtualFile<>> theChildren
 
 
 
-shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFile<> {
+shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtualFile {
     ZipFile zipFile;
     shared actual late String name;
-    variable JList<ResourceVirtualFile<>> theChildren = ArrayList<ResourceVirtualFile<>>();
+    variable JList<BaseResourceVirtualFile> theChildren = ArrayList<BaseResourceVirtualFile>();
     variable Boolean childrenInitialized = false;
     Boolean closeable;
     
@@ -150,7 +145,7 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
     shared actual String path
             => zipFile.name;
 
-    shared actual JList<out ResourceVirtualFile<>> children {
+    shared actual JList<out BaseResourceVirtualFile> children {
         synchronize {
             on = theChildren;
             void do() {
@@ -184,20 +179,16 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
     shared actual ZipEntryVirtualFile? findFile(String fileName)
             => searchFileChildren(theChildren, fileName);
     
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing nativeResource
-            => nothing;
+    shared actual BaseFolderVirtualFile? parent => null;
     
-    shared actual FolderVirtualFile<Nothing,Nothing,Nothing>? parent => null;
-    
-    shared actual String[] toPackageName(FolderVirtualFile<Nothing,Nothing,Nothing> srcDir)
+    shared actual String[] toPackageName(BaseFolderVirtualFile srcDir)
             => [];
     
     shared actual Boolean equals(Object that)
-            => (super of FolderVirtualFile<>).equals(that);
+            => (super of BaseFolderVirtualFile).equals(that);
     
     shared actual Integer hash
-            => (super of FolderVirtualFile<>).hash;
+            => (super of BaseFolderVirtualFile).hash;
 
     shared actual Boolean \iexists()
             => true;
@@ -227,7 +218,7 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
             entryNames.addAll(parentEntriesNames);
         }
         
-        FolderVirtualFile<> addToParentfolder(JList<ResourceVirtualFile<>> directChildren, LinkedList<ZipFolderVirtualFile> directoryStack, String entryName, ResourceVirtualFile<> file) {
+        BaseFolderVirtualFile addToParentfolder(JList<BaseResourceVirtualFile> directChildren, LinkedList<ZipFolderVirtualFile> directoryStack, String entryName, BaseResourceVirtualFile file) {
             variable ZipFolderVirtualFile? up = directoryStack.peekLast();
             
             Boolean isChildOf(String entryName, ZipFolderVirtualFile? lastFolder) {
@@ -252,7 +243,7 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
             }
         }
         
-        value directChildren = ArrayList<ResourceVirtualFile<>>();
+        value directChildren = ArrayList<BaseResourceVirtualFile>();
         LinkedList<ZipFolderVirtualFile> directoryStack = LinkedList<ZipFolderVirtualFile>();
         for ( String entryName in entryNames ) {
             if ( entryName.endsWith("/")) {

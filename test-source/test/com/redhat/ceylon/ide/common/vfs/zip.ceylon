@@ -9,15 +9,15 @@ import ceylon.test {
 }
 
 import com.redhat.ceylon.ide.common.vfs {
-    FolderVirtualFile,
-    ZipFileVirtualFile
+    ZipFileVirtualFile,
+    BaseFolderVirtualFile
 }
 
 import java.io {
     JFile=File
 }
 
-shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
+shared class ZipFileSystemTest() extends BaseTest() {
      suppressWarnings("expressionTypeNothing")
      value sourceZip = if (is Directory zipDir = resourcesRoot.childResource("zip"),
                             is File sz = zipDir.childResource("source.zip"))
@@ -27,7 +27,7 @@ shared class ZipFileSystemTest() extends BaseTest<Nothing, Nothing, Nothing>() {
     suppressWarnings("expressionTypeNothing")
     shared actual Path rootCeylonPath = createZipFileSystem(sourceZip).rootPaths.first else nothing;
     
-    shared actual FolderVirtualFile<Nothing,Nothing,Nothing> rootVirtualFile =
+    shared actual BaseFolderVirtualFile rootVirtualFile =
             ZipFileVirtualFile.fromFile(JFile(sourceZip.path.absolutePath.string));
 
     shared actual String pathFromCeylonResource(File|Directory fileOrDir) 
