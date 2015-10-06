@@ -10,4 +10,5 @@ module com.redhat.ceylon.ide.common "1.2.1" {
     shared import com.redhat.ceylon.compiler.java "1.2.1";
     shared import com.redhat.ceylon.common "1.2.1";
     shared import org.jgrapht.core "0.9.1";
+    shared import zip4j "1.3.2";
 }
