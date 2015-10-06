@@ -8,7 +8,12 @@ import java.lang {
     InterruptedException
 }
 
+shared abstract class BaseCeylonProjects() {
+    
+}
+
 shared abstract class CeylonProjects<IdeArtifact>()
+        extends BaseCeylonProjects()
         given IdeArtifact satisfies Object {
     value projectMap = HashMap<IdeArtifact, CeylonProject<IdeArtifact>>();
 

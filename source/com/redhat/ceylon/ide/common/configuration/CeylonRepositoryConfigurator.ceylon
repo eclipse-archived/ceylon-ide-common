@@ -60,12 +60,12 @@ shared abstract class CeylonRepositoryConfigurator() {
         }
     }
 
-    shared void applyToConfiguration(CeylonProjectConfig<out Object> config) {
+    shared void applyToConfiguration(CeylonProjectConfig config) {
         config.projectLocalRepos = projectLocalRepos;
         config.projectRemoteRepos = projectRemoteRepos;
     }
 
-    shared void loadFromConfiguration(CeylonProjectConfig<out Object> config) {
+    shared void loadFromConfiguration(CeylonProjectConfig config) {
         projectLocalRepos.clear();
         projectLocalRepos.addAll(config.projectLocalRepos);
         addAllRepositoriesToList(createJavaStringArray(projectLocalRepos));
@@ -83,7 +83,7 @@ shared abstract class CeylonRepositoryConfigurator() {
         addAllRepositoriesToList(createJavaStringArray(otherRemoteRepos));
     }
 
-    shared Boolean isRepoConfigurationModified(CeylonProjectConfig<out Object> config) {
+    shared Boolean isRepoConfigurationModified(CeylonProjectConfig config) {
         return !(projectLocalRepos.equals(config.projectLocalRepos) && projectRemoteRepos.equals(config.projectRemoteRepos));
     }
 

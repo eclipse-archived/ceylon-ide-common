@@ -29,7 +29,7 @@ shared interface JavaToCeylonConverterConfig {
     shared formal Boolean useValues;
 }
 
-shared class CeylonIdeConfig<IdeArtifact>(shared CeylonProject<IdeArtifact> project) {
+shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     late variable CeylonConfig mergedConfig;
     late variable CeylonConfig ideConfig;
     late variable Repositories mergedRepositories;

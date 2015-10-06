@@ -333,10 +333,6 @@ public class ModuleDependencies {
         dependencies.removeVertex(moduleString);
     }
 
-    public static interface TraversalAction<T> {
-        void applyOn(T module);
-    }
-    
     public void doWithTransitiveDependencies(Module rootModule, TraversalAction<Module> action) {
         ModuleStringReference rootModuleString = new ModuleStringReference(rootModule);
         doWithTransitiveDependencies(rootModuleString, action);

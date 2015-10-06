@@ -68,12 +68,10 @@ void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? val
         }
 }
 
+shared class CeylonProjectConfig(project) {
 
-shared class CeylonProjectConfig<IdeArtifact>(project)
-    given IdeArtifact satisfies Object {
+    shared BaseCeylonProject project;
 
-    shared CeylonProject<IdeArtifact> project;
-    
     late variable CeylonConfig mergedConfig;
     late variable CeylonConfig projectConfig;
     late variable Repositories mergedRepositories;

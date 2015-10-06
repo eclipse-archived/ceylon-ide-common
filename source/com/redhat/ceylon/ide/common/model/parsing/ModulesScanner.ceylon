@@ -1,7 +1,3 @@
-import com.redhat.ceylon.ide.common.util {
-    ProgressMonitor,
-    ProjectSourceParser
-}
 import ceylon.interop.java {
     JavaList,
     javaString
@@ -10,21 +6,35 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject,
+    IdeModelLoader,
+    BaseIdeModule,
+    BaseIdeModuleManager,
+    BaseIdeModuleSourceMapper
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit
+}
+import com.redhat.ceylon.ide.common.util {
+    ProgressMonitor,
+    ProjectSourceParser
+}
+import com.redhat.ceylon.ide.common.vfs {
+    ResourceVirtualFile,
+    FolderVirtualFile,
+    FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
     Package,
     Declaration
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
-import com.redhat.ceylon.ide.common.vfs {
-    ResourceVirtualFile,
-    FolderVirtualFile,
-    FileVirtualFile
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
 }
 
 import java.util {
@@ -33,16 +43,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
-    IdeModelLoader,
-    IdeModuleManager,
-    IdeModule,
-    IdeModuleSourceMapper
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit
 }
 
 
@@ -55,24 +55,24 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     CeylonProject<NativeProject> ceylonProject;
-    IdeModule defaultModule = ceylonProject.modules.default;
-    IdeModuleManager moduleManager = ceylonProject.modules.manager;
-    IdeModuleSourceMapper moduleSourceMapper = ceylonProject.modules.sourceMapper;
+    BaseIdeModule defaultModule = ceylonProject.modules.default;
+    BaseIdeModuleManager moduleManager = ceylonProject.modules.manager;
+    BaseIdeModuleSourceMapper moduleSourceMapper = ceylonProject.modules.sourceMapper;
     IdeModelLoader modelLoader = moduleManager.modelLoader;
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     TypeChecker typeChecker = ceylonProject.typechecker;
-    late variable IdeModule currentModule;
+    late variable BaseIdeModule currentModule;
     ProgressMonitor monitor;
 
     alias FolderVirtualFileAlias => FolderVirtualFile<NativeResource, NativeFolder, NativeFile>;
     alias ProjectPhasedUnitAlias => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
 
     class ModuleDescriptorParser(
-        CeylonProject<NativeProject> ceylonProject,
+        CeylonProject<NativeProject> theCeylonProject,
         FileVirtualFile<NativeResource, NativeFolder, NativeFile> moduleFile,
         FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir
     ) extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
-                        ceylonProject,
+                        theCeylonProject,
                         moduleFile,
                         srcDir) {
 
@@ -81,14 +81,14 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
             Package pkg,
             JList<CommonToken> theTokens)
             => object extends ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
-                ceylonProject,
+                theCeylonProject,
                 moduleFile,
                 outer.srcDir,
                 cu,
                 pkg,
                 moduleManager,
                 moduleSourceMapper,
-                ceylonProject.typechecker,
+                theCeylonProject.typechecker,
                 theTokens) {
 
                 shared actual Boolean isAllowedToChangeModel(Declaration? declaration) => false;
@@ -102,7 +102,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
             resource == srcDir) {
             value moduleFile = resource.findFile(ModuleManager.\iMODULE_FILE);
             if (exists moduleFile) {
-                moduleManager.addTopLevelModuleError();
+                moduleSourceMapper.addTopLevelModuleError();
             }
             return true;
         }
@@ -146,9 +146,9 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
 
                     Module? m = tempPhasedUnit.visitSrcModulePhase();
                     if (exists m) {
-                        assert(is IdeModule m);
+                        assert(is BaseIdeModule m);
                         currentModule = m;
-                        currentModule.projectModule = true;
+                        currentModule.isProjectModule = true;
                     }
                 }
                 catch (Exception e) {

@@ -26,7 +26,9 @@ import com.redhat.ceylon.compiler.typechecker.util {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    BaseFileVirtualFile,
+    BaseFolderVirtualFile
 }
 
 import java.io {
@@ -53,11 +55,8 @@ import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit
 }
 
-shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFolder, NativeFile>
-        given ResultPhasedUnit satisfies PhasedUnit
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
+shared interface CeylonSourceParser<ResultPhasedUnit>
+        given ResultPhasedUnit satisfies PhasedUnit {
     shared default CeylonLexer buildLexer(ANTLRStringStream stringStream)
             => CeylonLexer(stringStream);
 
@@ -112,22 +111,22 @@ shared interface CeylonSourceParser<ResultPhasedUnit, NativeResource, NativeFold
     shared ResultPhasedUnit parseFileToPhasedUnit(
         ModuleManager moduleManager,
         TypeChecker typeChecker,
-        FileVirtualFile<NativeResource, NativeFolder, NativeFile> file,
-        FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
+        BaseFileVirtualFile file,
+        BaseFolderVirtualFile srcDir,
         Package pkg)
             => parseSourceCodeToPhasedUnit(moduleManager,
             InputStreamReader(file.inputStream, charset(file)),
             pkg);
 
     shared formal ResultPhasedUnit createPhasedUnit(Tree.CompilationUnit cu, Package pkg, List<CommonToken> tokenStream);
-    shared formal String charset(FileVirtualFile<NativeResource, NativeFolder, NativeFile> file);
+    shared formal String charset(BaseFileVirtualFile file);
 }
 
 shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile>(
     ceylonProject,
     unitFile,
     srcDir)
-        satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>, NativeResource, NativeFolder, NativeFile>
+        satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -146,6 +145,6 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
             ceylonProject.typechecker,
             tokens);
 
-    shared actual default String charset(FileVirtualFile<NativeResource,NativeFolder,NativeFile> file)
+    shared actual default String charset(BaseFileVirtualFile file)
         => file.charset else ceylonProject.defaultCharset;
 }
