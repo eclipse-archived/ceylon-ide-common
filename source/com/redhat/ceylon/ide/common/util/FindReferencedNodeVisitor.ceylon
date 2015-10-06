@@ -6,7 +6,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
     Declaration,
-    Function
+    Function,
+	Setter
 }
 
 shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visitor() {
@@ -72,7 +73,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     
     actual shared void visit(Tree.AttributeSetterDefinition that) {
         value setter = that.declarationModel;
-        value param = 
+        Declaration? param = 
                 setter.getDirectMember(setter.name, null, false);
         if (isDeclaration(param)) {
             declarationNode = that;
