@@ -15,9 +15,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 
-import java.lang {
-    Character
-}
 import java.util {
     HashSet
 }
@@ -55,11 +52,10 @@ shared interface RefineFormalMembersQuickFix<IFile, Document, InsertEdit, TextEd
         }
     }
     
-    shared TextChange? refineFormalMembers(Data data, IFile file, Integer editorOffset) {
+    shared TextChange? refineFormalMembers(Data data, Document document, Integer editorOffset) {
         value rootNode = data.rootNode;
         value node = data.node;
-        value change = newTextChange("Refine Members", file);
-        value document = getDocumentForChange(change);
+        value change = newTextChange("Refine Members", document);
 
         initMultiEditChange(change);
         

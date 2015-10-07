@@ -40,6 +40,7 @@ shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextCha
                 if (exists e = se.expression, exists term = e.term) {
                     
                     value change = newTextChange("Declare Local Value", file);
+                    initMultiEditChange(change);
                     addEditToChange(change, newInsertEdit(node.startIndex.intValue(), "value "));
                     value desc = "Declare local value '``bme.identifier.text``'";
                     

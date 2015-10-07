@@ -17,7 +17,7 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     
     shared formal List<PhasedUnit> getUnits(Project p);
     
-    shared formal TextChange newTextChange(String desc, PhasedUnit|IFile u);
+    shared formal TextChange newTextChange(String desc, PhasedUnit|IFile|IDocument u);
     
     shared formal ImportProposals<out Anything,out Anything,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
     

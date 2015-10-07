@@ -26,6 +26,7 @@ import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor
 }
 
+// TODO extends InitializerProposal
 shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
         satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,CompletionResult> 
                 & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
