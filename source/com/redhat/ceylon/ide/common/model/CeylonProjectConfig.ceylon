@@ -73,7 +73,7 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
     given IdeArtifact satisfies Object {
 
     shared CeylonProject<IdeArtifact> project;
-
+    
     late variable CeylonConfig mergedConfig;
     late variable CeylonConfig projectConfig;
     late variable Repositories mergedRepositories;
@@ -99,7 +99,7 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
 
     variable {String*}? transientSuppressWarnings = null;
     variable Boolean isSuppressWarningsChanged = false;
-
+    
 
     File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
 
@@ -124,6 +124,8 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
 
     initMergedConfig();
     initProjectConfig();
+
+    shared CeylonConfig ceylonConfig => mergedConfig;
 
     shared Repositories repositories => mergedRepositories;
 
@@ -159,7 +161,6 @@ shared class CeylonProjectConfig<IdeArtifact>(project)
         isEncodingChanged = true;
         transientEncoding = projectEncoding;
     }
-
 
     shared Boolean offline => mergedConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, false);
 
