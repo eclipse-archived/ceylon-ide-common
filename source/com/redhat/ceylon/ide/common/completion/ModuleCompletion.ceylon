@@ -101,7 +101,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
                 if (!exists results) {
                     return;
                 }
-                assert(exists results);
+
                 for (\imodule in CeylonIterable(results.results)) {
                     value name = \imodule.name;
                     if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {

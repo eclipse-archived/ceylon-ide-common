@@ -123,7 +123,7 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
         if (!exists res) {
             return;
         }
-        assert(exists res);
+
         value prim = res.primary;
         if (is Tree.MemberOrTypeExpression prim) {
             value mte = prim;

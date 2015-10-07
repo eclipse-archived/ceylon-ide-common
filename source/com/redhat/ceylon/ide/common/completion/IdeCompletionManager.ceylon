@@ -207,7 +207,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         if (!exists scope) {
             return [];
         }
-        assert(exists scope);
         
         //construct completions when outside ordinary code
         variable CompletionResult[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 

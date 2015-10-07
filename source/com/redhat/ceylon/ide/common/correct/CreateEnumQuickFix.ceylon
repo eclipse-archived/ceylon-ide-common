@@ -36,7 +36,7 @@ shared interface CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextCha
         if (!exists idn) {
             return;
         }
-        assert (exists idn);
+
         value brokenName = idn.text;
         if (brokenName.empty) {
             return;

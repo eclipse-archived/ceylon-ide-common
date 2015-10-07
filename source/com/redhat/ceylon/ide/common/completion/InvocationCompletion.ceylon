@@ -444,7 +444,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         if (!exists type) {
             return;
         }
-        assert(exists type);
+
         value unit = cu.unit;
         value proposals = CeylonIterable(getSortedProposedValues(scope, unit));
         for (dwp in proposals) {

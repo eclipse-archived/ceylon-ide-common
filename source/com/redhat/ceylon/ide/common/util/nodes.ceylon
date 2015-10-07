@@ -200,6 +200,24 @@ shared object nodes {
         return visitor.scope;
     }
 
+    shared Integer getIdentifyingStartOffset(Node? node) {
+        return getNodeStartOffset(getIdentifyingNode(node));
+    }
+
+    shared Integer getIdentifyingEndOffset(Node? node) {
+        return getNodeEndOffset(getIdentifyingNode(node));
+    }
+
+    shared Integer getIdentifyingLength(Node? node) {
+        return getIdentifyingEndOffset(node) -
+                getIdentifyingStartOffset(node);
+    }
+
+    shared Integer getNodeLength(Node? node) {
+        return getNodeEndOffset(node) -
+                getNodeStartOffset(node);
+    }
+
     shared Node? getIdentifyingNode(Node? node) {
         if (is Tree.Declaration node) {
             variable Tree.Identifier? identifier = node.identifier;
@@ -329,7 +347,7 @@ shared object nodes {
     }
 
     shared Integer getNodeEndOffset(Node? node) {
-        return (node?.stopIndex?.intValue() else -1) + 1;
+        return node?.endIndex?.intValue() else 0;
     }
 
     shared Node? getReferencedNode(Referenceable? model) {
@@ -468,7 +486,7 @@ shared object nodes {
             rootNode.visit(visitor);
             return visitor.declarationNode;
         }
-        
+
         return null;
     }
 
@@ -501,7 +519,7 @@ shared object nodes {
         cu.visit(visitor);
         return visitor.occurrence;
     }
-    
+
     shared String? getImportedName(Tree.ImportModule im) {
         Tree.ImportPath? ip = im.importPath;
         Tree.QuotedLiteral? ql = im.quotedLiteral;
@@ -513,7 +531,7 @@ shared object nodes {
             return null;
         }
     }
-    
+
     shared String toString(Node term, JList<CommonToken>? tokens) {
         value start = term.startIndex.intValue();
         value length = term.stopIndex.intValue() - start + 1;
@@ -541,7 +559,7 @@ shared object nodes {
         return token.stopIndex - token.startIndex + 1;
     }
 
-    shared ObjectArray<JString> nameProposals(Node node, Boolean unplural = false) {
+    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
         value names = HashSet<String>();
 
         if (is Tree.Term node) {

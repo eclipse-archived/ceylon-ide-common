@@ -32,7 +32,6 @@ shared interface TypeArgumentListCompletions<IdeComponent,IdeArtifact,Completion
         if (!exists startIndex2) {
             return; // we need it
         }
-        assert(exists startIndex2);
 
         value document = cpc.document;
         value typeArgText = completionManager.getDocumentSubstring(cpc.document, startIndex2.intValue(), stopIndex2.intValue() - startIndex2.intValue() + 1);
