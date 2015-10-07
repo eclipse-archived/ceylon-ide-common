@@ -1,60 +1,51 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Node
+    Tree
 }
 import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport,
-    IdeCompletionManager
+    LinkedModeSupport
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
 
-shared Tree.Term? getDeclareLocalTerm(Tree.CompilationUnit rootNode, Node node) {
-    value st = nodes.findStatement(rootNode, node);
+shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult,Project,Data,Region>
+        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
+                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,CompletionResult>
+                & LinkedModeSupport<LinkedMode, Document, CompletionResult>
+        given InsertEdit satisfies TextEdit
+        given Data satisfies QuickFixData<Project> {
     
-    if (is Tree.SpecifierStatement st) {
-        value sst = st;
-        value se = sst.specifierExpression;
-        value bme = sst.baseMemberExpression;
-        if (bme == node, is Tree.BaseMemberExpression bme) {
-            if (exists e = se.expression, exists term = e.term) {
-                return term;
-            }
+    shared void enableLinkedMode(Data data, Tree.Term term, TextChange change) {
+        if (exists type = term.typeModel) {
+            value lm = newLinkedMode();
+            value doc = getDocumentForChange(change);
+            value proposals = completionManager.getTypeProposals(doc, data.node.startIndex.intValue(), 5, type, data.rootNode, "value");
+            addEditableRegion(lm, doc, data.node.startIndex.intValue(), 5, 0, proposals);
+            installLinkedMode(doc, lm, this, -1, -1);
         }
     }
     
-    return null;
-}
-
-shared interface DeclareLocalQuickFix<Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & LinkedModeSupport<LinkedMode, Document, CompletionResult>
-        given InsertEdit satisfies TextEdit {
+    shared formal void newDeclareLocalQuickFix(Data data, String desc, TextChange change, 
+        Tree.Term term, Tree.BaseMemberExpression bme);
     
-    shared formal void applyChange(Document doc, TextChange change);
-    shared formal IdeCompletionManager<out Object,out Object,CompletionResult,Document> completionManager;
-    
-    shared String getName(Node bme) {
-        assert(is Tree.BaseMemberExpression bme);
-        return "Declare local value '``bme.identifier.text``'";
-    }
-    
-    shared void addDeclareLocalProposal(Tree.CompilationUnit rootNode, Node node,
-        Document doc, TextChange change) {
+    shared void addDeclareLocalProposal(Data data, IFile file) {
+        value node = data.node;
+        value st = nodes.findStatement(data.rootNode, node);
         
-        assert(exists term = getDeclareLocalTerm(rootNode, node));
-        assert(is Tree.BaseMemberExpression node);
-        
-        addEditToChange(change, newInsertEdit(node.startIndex.intValue(), "value "));
-        applyChange(doc, change);
-        
-        if (exists type = term.typeModel) {
-            value lm = newLinkedMode();
-            
-            value proposals = completionManager.getTypeProposals(doc, node.startIndex.intValue(), 5, type, rootNode, "value");
-            addEditableRegion(lm, doc, node.startIndex.intValue(), 5, 0, proposals);
-            installLinkedMode(doc, lm, this, -1, -1);
+        if (is Tree.SpecifierStatement st) {
+            value sst = st;
+            value se = sst.specifierExpression;
+            value bme = sst.baseMemberExpression;
+            if (bme == node, is Tree.BaseMemberExpression bme) {
+                if (exists e = se.expression, exists term = e.term) {
+                    
+                    value change = newTextChange("Declare Local Value", file);
+                    addEditToChange(change, newInsertEdit(node.startIndex.intValue(), "value "));
+                    value desc = "Declare local value '``bme.identifier.text``'";
+                    
+                    newDeclareLocalQuickFix(data, desc, change, term, bme);
+                }
+            }
         }
     }
 }

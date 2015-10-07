@@ -51,7 +51,7 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,
         Boolean addParameterTypesInCompletions) {
         
         value isInterface = scope is Interface;
-        Reference pr = getRefinedProducedReference(scope, dec);
+        value pr = getRefinedProducedReference(scope, dec);
         value unit = node.unit;
         value doc = cpc.document;
         
@@ -64,10 +64,31 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
 
     // see getRefinedProducedReference(Scope scope, Declaration d)
-    shared Reference getRefinedProducedReference(Scope scope, Declaration d) {
-        return refinedProducedReference(scope.getDeclaringType(d), d);
+    shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
+        if (is Type scope) {
+            value superType = scope;
+            if (superType.intersection) {
+                for (pt in CeylonIterable(superType.satisfiedTypes)) {
+                    value result = getRefinedProducedReference(pt, d);
+                    if (exists result) {
+                        return result;
+                    }
+                }
+                return null;
+            } else {
+                Type? declaringType = superType.declaration.getDeclaringType(d);
+                if (!exists declaringType) {
+                    return null;
+                } else {
+                    value outerType = superType.getSupertype(declaringType.declaration);
+                    return refinedProducedReference(outerType, d);
+                }
+            }
+        } else {
+            return refinedProducedReference(scope.getDeclaringType(d), d);
+        }
     }
-    
+
     // see refinedProducedReference(Type outerType, Declaration d)
     Reference refinedProducedReference(Type outerType, 
         Declaration d) {

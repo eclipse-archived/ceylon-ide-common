@@ -3,16 +3,11 @@ import ceylon.interop.java {
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node,
     Tree
 }
 import com.redhat.ceylon.ide.common.completion {
-    IdeCompletionManager,
     overloads,
     getRefinementTextFor
-}
-import com.redhat.ceylon.ide.common.util {
-    Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
@@ -27,50 +22,48 @@ import java.util {
     HashSet
 }
 
-shared ClassOrInterface? getRefineFormalMembersScope(Node node) {
-    if (node is Tree.ClassBody
-        || node is Tree.InterfaceBody
-            || node is Tree.ClassDefinition
-            || node is Tree.InterfaceDefinition
-            || node is Tree.ObjectDefinition
-            || node is Tree.ObjectExpression) {
-        
-        if (is ClassOrInterface ci = node.scope) {
-            return ci;
-        }
-    }
+shared interface RefineFormalMembersQuickFix<IFile, Document, InsertEdit, TextEdit, TextChange, Region, Project, Data, ICompletionResult>
+        satisfies AbstractQuickFix<IFile, Document, InsertEdit, TextEdit, TextChange, Region, Project, ICompletionResult> 
+                & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
+        given InsertEdit satisfies TextEdit
+        given Data satisfies QuickFixData<Project> {
     
-    return null;
-}
-shared interface RefineFormalMembersQuickFix<Document,InsertEdit,TextEdit,TextChange>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
-    
-    shared formal Indents<Document> indents;
-    shared formal IdeCompletionManager<out Object,out Object,out Object,Document> completionManager;
-    shared formal ImportProposals<out Object,out Object,Document,InsertEdit,TextEdit,TextChange> importProposals;
     shared formal Character getDocChar(Document doc, Integer offset);
     
-    shared String? getName(Node node, Boolean ambiguousError) {
-        assert(exists ci = getRefineFormalMembersScope(node));
-        String name = if (ci.name.startsWith("anonymous#"))
-                      then "anonymous class"
-                      else "'" + ci.name + "'";
-        
-        return if (ambiguousError)
-               then "Refine inherited ambiguous and formal members of " + name
-               else "Refine inherited formal members of " + name;
+    shared formal void newRefineFormalMembersProposal(Data data, String desc);
+    
+    shared void addRefineFormalMembersProposal(Data data, Boolean ambiguousError) {
+        value node = data.node;
+        if (node is Tree.ClassBody
+            || node is Tree.InterfaceBody
+                || node is Tree.ClassDefinition
+                || node is Tree.InterfaceDefinition
+                || node is Tree.ObjectDefinition
+                || node is Tree.ObjectExpression) {
+            
+            if (is ClassOrInterface ci = node.scope, exists cin = ci.name) {
+                String name = if (ci.name.startsWith("anonymous#"))
+                              then "anonymous class"
+                              else "'" + ci.name + "'";
+                
+                String desc = if (ambiguousError)
+                              then "Refine inherited ambiguous and formal members of " + name
+                              else "Refine inherited formal members of " + name;
+                
+                newRefineFormalMembersProposal(data, desc);
+            }
+        }
     }
     
-    shared void refineFormalMembers(Document document, TextChange change, Tree.CompilationUnit? rootNode,
-        Node node, Integer editorOffset) {
-        
-        if (!exists r = rootNode) {
-            return;
-        }
-        assert (exists rootNode);
+    shared TextChange? refineFormalMembers(Data data, IFile file, Integer editorOffset) {
+        value rootNode = data.rootNode;
+        value node = data.node;
+        value change = newTextChange("Refine Members", file);
+        value document = getDocumentForChange(change);
+
         initMultiEditChange(change);
         
+        //TODO: copy/pasted from CeylonQuickFixAssistant
         Tree.Body body;
         variable Integer offset;
         if (is Tree.ClassDefinition node) {
@@ -89,7 +82,8 @@ shared interface RefineFormalMembersQuickFix<Document,InsertEdit,TextEdit,TextCh
             body = node;
             offset = editorOffset;
         } else {
-            return;
+            //TODO: run a visitor to find the containing body!
+            return null; //TODO: popup error dialog
         }
         value isInterface = body is Tree.InterfaceBody;
         value statements = body.statements;
@@ -114,6 +108,10 @@ shared interface RefineFormalMembersQuickFix<Document,InsertEdit,TextEdit,TextCh
         assert (is ClassOrInterface ci = node.scope);
         value unit = node.unit;
         value ambiguousNames = HashSet<String>();
+
+        //TODO: does not return unrefined overloaded  
+        //      versions of a method with one overlaad
+        //      already refined
         value proposals = completionManager.getProposals(node, ci, "", false, rootNode).values();
         
         for (dwp in CeylonIterable(proposals)) {
@@ -154,6 +152,8 @@ shared interface RefineFormalMembersQuickFix<Document,InsertEdit,TextEdit,TextCh
         
         importProposals.applyImports(change, already, rootNode, document);
         addEditToChange(change, newInsertEdit(offset, result.string));
+        
+        return change;
     }
     
     void appendRefinementText(Boolean isInterface, String indent, StringBuilder result,

@@ -19,22 +19,23 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration
 }
 
-shared interface RemoveAnnotationQuickFix<IDocument,InsertEdit,TextEdit,TextChange,Region,Project>
-        satisfies AbstractAnnotationQuickFix<IDocument,TextEdit,TextChange,Region,Project>
+shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
+        given InsertEdit satisfies TextEdit
+        given Data satisfies QuickFixData<Project> {
     
     shared formal void newRemoveAnnotationQuickFix(Declaration dec, String annotation,
-            String desc, Integer offset, TextChange change, Region selection);
+            String desc, Integer offset, TextChange change, Region selection, Data data);
     
-    shared void addRemoveAnnotationProposal(Node node, String annotation, Project project) {
+    shared void addRemoveAnnotationProposal(Node node, String annotation, Project project, Data data) {
         value dec = nodes.getReferencedDeclaration(node);
         if (is Declaration dec) {
-            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, project);
+            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, project, data);
         }
     }
     
-    shared void addMakeContainerNonfinalProposal(Project project, Node node) {
+    shared void addMakeContainerNonfinalProposal(Project project, Node node, Data data) {
         Declaration dec;
         if (is Tree.Declaration node) {
             value decNode = node;
@@ -48,10 +49,10 @@ shared interface RemoveAnnotationQuickFix<IDocument,InsertEdit,TextEdit,TextChan
             assert(is Declaration scope = node.scope);
             dec = scope;
         }
-        addRemoveAnnotationProposal2(node, "final", "Make Nonfinal", dec, project);
+        addRemoveAnnotationProposal2(node, "final", "Make Nonfinal", dec, project, data);
     }
     
-    void addRemoveAnnotationProposal2(Node node, String annotation, String desc, Declaration? dec, Project project) {
+    void addRemoveAnnotationProposal2(Node node, String annotation, String desc, Declaration? dec, Project project, Data data) {
         if (exists dec, exists d = dec.name) {
             Unit? u = dec.unit;
             // TODO
@@ -67,7 +68,7 @@ shared interface RemoveAnnotationQuickFix<IDocument,InsertEdit,TextEdit,TextChan
                     unit.compilationUnit.visit(fdv);
                     assert (is Tree.Declaration? decNode = fdv.declarationNode);
                     if (exists decNode) {
-                        addRemoveAnnotationProposalInternal(annotation, desc, dec, unit, decNode);
+                        addRemoveAnnotationProposalInternal(annotation, desc, dec, unit, decNode, data);
                     }
                     break;
                 }
@@ -75,8 +76,8 @@ shared interface RemoveAnnotationQuickFix<IDocument,InsertEdit,TextEdit,TextChan
         }
     }
     
-    void addRemoveAnnotationProposalInternal(String annotation, String desc, Declaration dec, PhasedUnit unit, Tree.Declaration decNode) {
-        value change = newTextChange(unit);
+    void addRemoveAnnotationProposalInternal(String annotation, String desc, Declaration dec, PhasedUnit unit, Tree.Declaration decNode, Data data) {
+        value change = newTextChange(desc, unit);
         initMultiEditChange(change);
 
         value offset = decNode.startIndex;
@@ -100,13 +101,13 @@ shared interface RemoveAnnotationQuickFix<IDocument,InsertEdit,TextEdit,TextChan
         
         value newDesc = "Make '``dec.name``' non-``annotation`` ``location``";
         value selection = newRegion(offset.intValue(), 0);
-        newRemoveAnnotationQuickFix(dec, annotation, newDesc, offset.intValue(), change, selection);
+        newRemoveAnnotationQuickFix(dec, annotation, newDesc, offset.intValue(), change, selection, data);
     }
     
-    shared void addRemoveAnnotationDecProposal(String annotation, Project project, Node node) {
+    shared void addRemoveAnnotationDecProposal(String annotation, Project project, Node node, Data data) {
         if (is Tree.Declaration node) {
             value decNode = node;
-            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, decNode.declarationModel, project);
+            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, decNode.declarationModel, project, data);
         }
     }
 }

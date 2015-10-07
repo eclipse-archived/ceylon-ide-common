@@ -44,7 +44,7 @@ import java.lang {
     JCharacter=Character
 }
 
-Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
+shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
     if (exists loc1) {
         return loc1 == loc2;
     }

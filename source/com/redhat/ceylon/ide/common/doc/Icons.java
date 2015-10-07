@@ -5,5 +5,9 @@ public enum Icons {
     enumeration, extendedType, satisfiedTypes,
     exceptions, see, implementation, override,
     returns, units, parameters, types, attributes,
-    interfaces
+    interfaces,
+    
+    localClass, localAttribute, localMethod,
+    
+    addCorrection
 }

@@ -1,3 +1,13 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
@@ -5,30 +15,23 @@ import com.redhat.ceylon.ide.common.util {
     nodes,
     Indents
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Node
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
 
-shared abstract class CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextChange>()
+shared interface CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextChange,Data>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
+        given InsertEdit satisfies TextEdit
+        given Data satisfies QuickFixData<Project> {
     
-    shared formal void consumeNewQuickFix(String def, String desc, Icons image,
-        Integer offset, TextChange change);
+    shared formal void consumeNewQuickFix(String desc, Icons image,
+        Integer offset, TextChange change, Data data);
     
     shared formal TextChange newTextChange(PhasedUnit unit);
     shared formal Integer getDocLength(Document doc);
     shared formal List<PhasedUnit> getUnits(Project project);
     shared formal Indents<Document> indents;
     
-    shared void addCreateEnumProposal(Tree.CompilationUnit rootNode, Node node, Project project) {
+    shared void addCreateEnumProposal(Project project, Data data) {
+        value node = data.node;
+        value rootNode = data.rootNode;
         value idn = nodes.getIdentifyingNode(node);
         if (!exists idn) {
             return;
@@ -50,14 +53,14 @@ shared abstract class CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,Te
                                 + arguments(cd.parameterList) + " {}",
                         "class '" + brokenName + parameters(cd.typeParameterList)
                                 + parameters2(cd.parameterList) + "'",
-                        Icons.classes, rootNode, cd);
+                        Icons.classes, rootNode, cd, data);
                 }
                 if (cd.caseTypes.baseMemberExpressions.contains(node)) {
                     addCreateEnumProposalInternal(project,
                         "object " + brokenName + " extends " + cd.declarationModel.name
                                 + parameters(cd.typeParameterList) + arguments(cd.parameterList)
                                 + " {}", "object '" + brokenName + "'",
-                        Icons.attributes, rootNode, cd);
+                        Icons.attributes, rootNode, cd, data);
                 }
             }
         }
@@ -70,32 +73,32 @@ shared abstract class CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,Te
                                 + " satisfies " + cd.declarationModel.name
                                 + parameters(cd.typeParameterList) + " {}",
                         "interface '" + brokenName + parameters(cd.typeParameterList) + "'",
-                        Icons.interfaces, rootNode, cd);
+                        Icons.interfaces, rootNode, cd, data);
                 }
                 if (cd.caseTypes.baseMemberExpressions.contains(node)) {
                     addCreateEnumProposalInternal(project, 
                         "object " + brokenName + " satisfies "
                                 + cd.declarationModel.name + parameters(cd.typeParameterList)
                                 + " {}", "object '" + brokenName + "'",
-                        Icons.attributes, rootNode, cd);
+                        Icons.attributes, rootNode, cd, data);
                 }
             }
         }
     }
     
     void addCreateEnumProposalInternal(Project project, String def, String desc, Icons image,
-        Tree.CompilationUnit cu, Tree.TypeDeclaration cd) {
+        Tree.CompilationUnit cu, Tree.TypeDeclaration cd, Data data) {
         
         for (unit in getUnits(project)) {
             if (unit.unit.equals(cu.unit)) {
-                addCreateEnumProposalInternal2(def, desc, image, unit, cd);
+                addCreateEnumProposalInternal2(def, desc, image, unit, cd, data);
                 break;
             }
         }
     }
     
     void addCreateEnumProposalInternal2(String def, String desc, Icons image,
-        PhasedUnit unit, Tree.Statement statement) {
+        PhasedUnit unit, Tree.Statement statement, Data data) {
         
         value change = newTextChange(unit);
         value doc = getDocumentForChange(change);
@@ -111,8 +114,8 @@ shared abstract class CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,Te
         initMultiEditChange(change);
         addEditToChange(change, newInsertEdit(offset, s));
         
-        consumeNewQuickFix(def, "Create enumerated " + desc, image,
-            offset + (def.firstInclusion("{}") else -1) + 1, change);
+        consumeNewQuickFix("Create enumerated " + desc, image,
+            offset + (def.firstInclusion("{}") else -1) + 1, change, data);
     }
     
     String parameters(Tree.TypeParameterList? tpl) {

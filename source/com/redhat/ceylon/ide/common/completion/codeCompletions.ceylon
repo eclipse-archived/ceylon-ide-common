@@ -107,7 +107,7 @@ shared String getNamedInvocationDescriptionFor(Declaration dec, Reference pr,
     return result.string;
 }
 
-shared String getRefinementTextFor(Declaration d, Reference pr, Unit unit, Boolean isInterface, ClassOrInterface ci,
+shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit, Boolean isInterface, ClassOrInterface? ci,
     String indent, Boolean containsNewline, Boolean preamble, Indents<out Anything> indents, Boolean addParameterTypesInCompletions) {
     value result = StringBuilder();
     if (preamble) {
@@ -129,7 +129,7 @@ shared String getRefinementTextFor(Declaration d, Reference pr, Unit unit, Boole
     return result.string;
 }
 
-void appendConstraints(Declaration d, Reference pr, Unit unit, String indent, Boolean containsNewline,
+void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent, Boolean containsNewline,
     StringBuilder result, Indents<out Anything> indents) {
     
     if (is Generic d) {
@@ -177,7 +177,7 @@ shared Boolean isVariable(Declaration d) {
     return if (is TypedDeclaration d, d.variable) then true else false;
 }
 
-String getRefinementDescriptionFor(Declaration d, Reference pr, Unit unit) {
+String getRefinementDescriptionFor(Declaration d, Reference? pr, Unit unit) {
     value result = StringBuilder().append("shared actual ");
     
     if (isVariable(d)) {
@@ -211,14 +211,14 @@ shared String getDocDescriptionFor<Document,IdeArtifact>(Declaration decl, Refer
     return result.string;
 }
 
-void appendPositionalArgs(Declaration d, Reference pr, Unit unit, StringBuilder result,
+void appendPositionalArgs(Declaration d, Reference? pr, Unit unit, StringBuilder result,
     Boolean includeDefaulted, Boolean descriptionOnly, Boolean addParameterTypesInCompletions) {
     
     if (is Functional d) {
         value params = getParametersFunctional(d, includeDefaulted, false);
         if (params.empty) {
             result.append("()");
-        } else {
+        } else if (exists pr) {
             value paramTypes = descriptionOnly && addParameterTypesInCompletions;
             result.append("(");
             for (p in CeylonIterable(params)) {
@@ -257,7 +257,7 @@ void appendPositionalArgs(Declaration d, Reference pr, Unit unit, StringBuilder 
     }
 }
 
-void appendSuperArgsText(Declaration d, Reference pr, Unit unit, StringBuilder result, Boolean includeDefaulted) {
+void appendSuperArgsText(Declaration d, Reference? pr, Unit unit, StringBuilder result, Boolean includeDefaulted) {
     if (is Functional d) {
         value params = getParametersFunctional(d, includeDefaulted, false);
         if (params.empty) {
@@ -406,11 +406,11 @@ shared void appendTypeParameters(Declaration d, Reference? pr, Unit unit, String
     }
 }
 
-void appendDeclarationHeaderDescription(Declaration d, Reference pr, Unit unit, StringBuilder result) {
+void appendDeclarationHeaderDescription(Declaration d, Reference? pr, Unit unit, StringBuilder result) {
     appendDeclarationHeader(d, pr, unit, result, true);
 }
 
-void appendDeclarationHeaderText(Declaration d, Reference pr, Unit unit, StringBuilder result) {
+void appendDeclarationHeaderText(Declaration d, Reference? pr, Unit unit, StringBuilder result) {
     appendDeclarationHeader(d, pr, unit, result, false);
 }
 
@@ -488,7 +488,7 @@ void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
     result.append(" ").append(if (descriptionOnly) then p.name else escaping.escapeName(p.model));
 }
 
-void appendImplText(Declaration d, Reference pr, Boolean isInterface, Unit unit, String indent,
+void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit, String indent,
     StringBuilder result, ClassOrInterface? ci, Indents<out Anything> indents) {
     
     if (is Function d) {
