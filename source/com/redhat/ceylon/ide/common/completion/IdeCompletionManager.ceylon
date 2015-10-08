@@ -103,10 +103,9 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     shared formal Indents<Document> indents;
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
-    shared CompletionResult[] getContentProposals(IdeComponent analysisResult, 
+    shared CompletionResult[] getContentProposals(Tree.CompilationUnit typecheckedRootNode, IdeComponent analysisResult, 
             Integer offset, Integer line, Boolean secondLevel, ProgressMonitor monitor, Boolean returnedParamInfo = false) {
         value tokens = analysisResult.tokens;
-        value rn = analysisResult.rootNode;
         value document = analysisResult.document;
 
         // TODO perhaps we should make it non optional in LocalAnalysisResult?
@@ -130,7 +129,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         }
 
         //find the node at the token
-        Node node = getTokenNode(adjustedToken.startIndex, adjustedToken.stopIndex + 1, tt, rn, offset);
+        Node node = getTokenNode(adjustedToken.startIndex, adjustedToken.stopIndex + 1, tt, typecheckedRootNode, offset);
 
         //it's useful to know the type of the preceding token, if any
         variable Integer index = adjustedToken.tokenIndex;
@@ -147,7 +146,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         //      an expression, since RequiredTypeVisitor
         //      doesn't know how to search up the tree for
         //      the containing InvocationExpression
-        Type? requiredType = types.getRequiredType(rn, node, adjustedToken);
+        Type? requiredType = types.getRequiredType(typecheckedRootNode, node, adjustedToken);
         variable String prefix = "";
         variable String fullPrefix = "";
         if (isIdentifierOrKeyword(adjustedToken)) {
@@ -200,7 +199,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         }
         
         FindScopeVisitor fsv = FindScopeVisitor(node);
-        fsv.visit(rn);
+        fsv.visit(typecheckedRootNode);
         Scope? scope = fsv.scope;
 
         // I think the rest of this function assumes the scope always exists
@@ -215,7 +214,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                         tokenType, monitor);
 
         if (!exists c = completions) {
-            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, rn);
+            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, typecheckedRootNode);
             Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
             filterProposals(proposals);
             filterProposals(functionProposals);
@@ -237,6 +236,9 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
 
         if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
             addFakeShowParametersCompletion(node, cpc, result);
+            if (result.empty) {
+                return null;
+            }
         } else if (is Tree.PackageLiteral node) {
             addPackageCompletions(cpc, offset, prefix, null, node, result, false, monitor);
         } else if (is Tree.ModuleLiteral node) {
@@ -712,7 +714,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 value dec = dwp.declaration;
                 if (isTypeParameterOfCurrentDeclaration(node, dec)) {
                     addReferenceProposal(cu, offset, prefix, cmp,
-                        result, dec, null, scope, ol, false);
+                        result, dwp, null, scope, ol, false);
                 }
             }
         } else if (prefix.empty, !isLocation(ol, OccurrenceLocation.\iIS),
@@ -730,7 +732,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                         secondLevel, result, ol, t, false);
             }
             //otherwise guess something from the type
-            addMemberNameProposal(offset, prefix, node, result);
+            addMemberNameProposal(offset, prefix, node, result, cu);
         } else {
             value isMember = if (is Tree.MemberLiteral node)
                 then node.type exists
@@ -785,7 +787,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                             then getQualifiedProducedReference(node, dec)
                             else getRefinedProducedReference(scope, dec);
 
-                        addInvocationProposals(offset, prefix, cmp, result, dec, pr, scope, ol, null, isMember);
+                        addInvocationProposals(offset, prefix, cmp, result, dwp, dec, pr, scope, ol, null, isMember);
                     }
                 }
                 if (isProposable(dwp, ol, scope, unit, requiredType, previousTokenType),
@@ -809,7 +811,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                         if (secondLevel, exists pr) {
                             addSecondLevelProposal(offset, prefix, cmp, result, dec, scope, false, pr, requiredType, ol);
                         } else if (!dec is Function || !ModelUtil.isAbstraction(dec) || !noParamsFollow) {
-                            addReferenceProposal(cu, offset, prefix, cmp, result, dec, pr, scope, ol, isMember);
+                            addReferenceProposal(cu, offset, prefix, cmp, result, dwp, pr, scope, ol, isMember);
                         }
                     }
                 }
@@ -849,6 +851,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 value primary = node.primary;
                 addFunctionProposal(offset, cmp, primary, result, dwp.declaration, this);
             }
+        }
+        if (previousTokenType==CeylonLexer.\iOBJECT_DEFINITION) {
+            addKeywordProposals(cu, offset, prefix, 
+                result, node, ol, false, tokenType);
         }
 
         return result.sequence();
@@ -1005,8 +1011,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         value text = anonFunctionHeader(requiredType, unit);
         value funtext = text + " => nothing";
 
+        // TODO selection
         result.add(newAnonFunctionProposal(offset, requiredType, unit, funtext, text, false));
 
+        // TODO selection
         if (unit.getCallableReturnType(requiredType).anything){
             value voidtext = "void " + text + " {}";
             result.add(newAnonFunctionProposal(offset, requiredType, unit, voidtext, text, true));

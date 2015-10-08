@@ -42,7 +42,7 @@ Result[] callCompletion(String fileName, Integer caretPosition, Integer line, Bo
 
     value completionData = CompletionData(code.contents, pu);
     
-    return dummyCompletionManager.getContentProposals(completionData, caretPosition, line, secondLevel, dummyMonitor, true);
+    return dummyCompletionManager.getContentProposals(pu.compilationUnit, completionData, caretPosition, line, secondLevel, dummyMonitor, true);
 }
 
 void assertContains(Result[] list, Result el, String? message = null) {
