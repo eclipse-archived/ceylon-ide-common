@@ -21,8 +21,13 @@ Boolean forceExplicitTypeArgs(Declaration d, OccurrenceLocation? ol) {
     if (isLocation(ol, OccurrenceLocation.\iEXTENDS)) {
         return true;
     } else {
+        //TODO: this is a pretty limited implementation 
+        //      for now, but eventually we could do 
+        //      something much more sophisticated to
+        //      guess if explicit type args will be
+        //      necessary (variance, etc)
         if (is Functional d) {
-            value pls = (d).parameterLists;
+            value pls = d.parameterLists;
             return pls.empty || pls.get(0).parameters.empty;
         } else {
             return false;
@@ -79,9 +84,33 @@ shared String getDescriptionFor(Declaration dec, Unit unit) {
     return result.string;
 }
 
-shared String getPositionalInvocationDescriptionFor(Declaration dec, OccurrenceLocation? ol,
-    Reference pr, Unit unit, Boolean includeDefaulted, String? typeArgs, Boolean addParameterTypesInCompletions) {
+shared String getDescriptionFor2(DeclarationWithProximity dwp, Unit unit, Boolean addTypeParameters) {
     value result = StringBuilder();
+    value dec = dwp.declaration;
+    if (dwp.\ialias) {
+        result.append(dwp.name);
+        result.append(" \{#2192} ");
+    }
+    result.append(dec.getName(unit));
+    if (addTypeParameters) {
+        appendTypeParameters2(dec, result);
+    }
+    return result.string;
+}
+
+
+shared String getPositionalInvocationDescriptionFor(
+    DeclarationWithProximity? dwp, Declaration dec, OccurrenceLocation? ol,
+    Reference pr, Unit unit, 
+    Boolean includeDefaulted, 
+    String? typeArgs, 
+    Boolean addParameterTypesInCompletions) {
+    
+    value result = StringBuilder();
+    if (exists dwp, dwp.\ialias) {
+        result.append(dwp.name);
+        result.append(" \{#2192} ");
+    }
     result.append(dec.getName(unit));
     
     if (exists typeArgs) {
@@ -440,13 +469,16 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit, StringB
             variable Type? type = if (exists pr) then pr.type else decl.type;
             
             if (sequenced, exists t = type) {
+//                type = unit.getIteratedType(type);
+                //TODO: nasty workaround because unit can be null
+                //      in docs for Open dialogs
                 if (!t.typeArgumentList.empty) {
                     type = t.typeArgumentList.get(0);
                 }
             }
             
             if (!exists t = type) {
-                type = UnknownType(unit).type;
+                type = unit.unknownType;
             }
             
             assert (exists t = type);
@@ -595,11 +627,12 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, Parameter p) {
     
     variable value found = false;
+    value nt = unit.nullValueDeclaration.type;
     for (m in CeylonIterable(ci.members)) {
-        if (m is Value, !isObjectField(m)) {
+        if (m is Value, !isObjectField(m), !ModelUtil.isConstructor(m)) {
             assert (is Value \ivalue = m);
             if (!\ivalue.transient) {
-                if (!unit.nullValueDeclaration.type.isSubtypeOf(\ivalue.type)) {
+                if (!nt.isSubtypeOf(\ivalue.type)) {
                     result.append(\ivalue.name).append("==").append(p.name).append(".").append(\ivalue.name).append(" && ").append(indent);
                     found = true;
                 }
@@ -615,11 +648,15 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
 }
 
 void appendMembersToHash(Unit unit, String indent, StringBuilder result, ClassOrInterface ci) {
+    value nt = unit.nullValueDeclaration.type;
     for (m in CeylonIterable(ci.members)) {
-        if (is Value val = m, !isObjectField(m)) {
+        if (is Value val = m, !isObjectField(m), !ModelUtil.isConstructor(m)) {
             if (!val.transient) {
-                if (!unit.nullValueDeclaration.type.isSubtypeOf(val.type)) {
-                    result.append("hash = 31*hash + ").append(val.name).append(".hash;").append(indent);
+                if (!nt.isSubtypeOf(val.type)) {
+                    result.append("hash = 31*hash + ")
+                            .append(val.name)
+                            .append(".hash;")
+                            .append(indent);
                 }
             }
         }

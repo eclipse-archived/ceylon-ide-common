@@ -30,6 +30,7 @@ import com.redhat.ceylon.ide.common.util {
     Indents
 }
 // see RefinementCompletionProposal
+// TODO linked mode
 shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult, Document>
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {

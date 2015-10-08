@@ -31,7 +31,9 @@ import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
     Module,
     Value,
-    Function
+    Function,
+    Constructor,
+    NothingType
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -82,8 +84,12 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
         Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionResult> result, Declaration dec,
-        Reference? pr, Scope scope, OccurrenceLocation? ol,
+        MutableList<CompletionResult> result,
+        DeclarationWithProximity? dwp,
+        // sometimes we have no dwp, just a dec, so we have to handle that too
+        Declaration dec,
+        Reference? pr, 
+        Scope scope, OccurrenceLocation? ol,
         String? typeArgs, Boolean isMember) {
         
         if (is Functional fd = dec) {
@@ -108,14 +114,14 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
 
                     value parameters = getParameters(parameterList, false, false);
                     if (ps.size() != parameters.size()) {
-                        value desc = getPositionalInvocationDescriptionFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         value text = getPositionalInvocationTextFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         
                         result.add(newPositionalInvocationCompletion(offset, prefix, desc, text,
                             dec, pr, scope, cmp, isMember, typeArgs, false, null));
                     }
 
-                    value desc = getPositionalInvocationDescriptionFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                    value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
                     value text = getPositionalInvocationTextFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
 
                     result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, dec,
@@ -149,15 +155,16 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     // see InvocationCompletionProposal.addReferenceProposal()
     shared void addReferenceProposal(Tree.CompilationUnit cu,
         Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionResult> result, Declaration dec,
+        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
         Reference? pr, Scope scope, OccurrenceLocation? ol,
         Boolean isMember) {
         
         value unit = cu.unit;
+        value dec = dwp.declaration;
         
         //proposal with type args
         if (is Generic dec) {
-            value desc = getDescriptionFor(dec, unit);
+            value desc = getDescriptionFor2(dwp, unit, true);
             value text = getTextFor(dec, unit);
             
             result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, true));
@@ -175,7 +182,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS),
             !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)) {
             
-            value desc = dec.getName(unit);
+            value desc = getDescriptionFor2(dwp, unit, false);
             value text = escaping.escapeName(dec, unit);
 
             result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, false));
@@ -183,6 +190,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
     
     shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionResult> result) {
+        Tree.CompilationUnit? upToDateAndTypeChecked = cpc.rootNode; // TODO cpc.getTypecheckedRootNode();
+        if (!exists upToDateAndTypeChecked) {
+            return;
+        }
         object extends Visitor() {
             
             shared actual void visit(Tree.InvocationExpression that) {
@@ -201,51 +212,71 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 }
                 super.visit(that);
             }
-        }.visit(cpc.rootNode);
+        }.visit(upToDateAndTypeChecked);
     }
 
     shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
-        
-        if (!(dec is Functional), !(dec is TypeDeclaration)) {
-            value unit = controller.rootNode.unit;
-            value type = pr.type;
-            if (ModelUtil.isTypeUnknown(type)) {
-                return;
-            }
-            value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
-            for (ndwp in CeylonIterable(members)) {
-                value m = ndwp.declaration;
-                if ((m is FunctionOrValue || m is Class), !ModelUtil.isConstructor(m)) {
-                    addSecondLevelProposalInternal(offset, prefix, controller, result, dec, scope, requiredType, ol, unit, type, m);
+
+        value unit = controller.rootNode.unit;
+
+        if (exists type = pr.type) {
+            if (!(dec is Functional), !(dec is TypeDeclaration)) {
+                value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                for (ndwp in CeylonIterable(members)) {
+                    value m = ndwp.declaration;
+                    if ((m is FunctionOrValue || m is Class), !ModelUtil.isConstructor(m)) {
+                        if (m.abstraction) {
+                            for (o in CeylonIterable(m.overloads)) {
+                                addSecondLevelProposalInternal(offset, prefix, controller,
+                                    result, dec, scope, requiredType, ol, unit, type, ndwp, o);
+                            }
+                        } else {
+                            addSecondLevelProposalInternal(offset, prefix, controller,
+                                result, dec, scope, requiredType, ol, unit, type, ndwp, m);
+                        }
+                    }
                 }
             }
-        }
-        if (is Class dec) {
-            value unit = controller.rootNode.unit;
-            value type = pr.type;
-            if (ModelUtil.isTypeUnknown(type)) {
-                return;
-            }
-            value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
-            for (ndwp in CeylonIterable(members)) {
-                value m = ndwp.declaration;
-                if (ModelUtil.isConstructor(m)) {
-                    addSecondLevelProposalInternal(offset, prefix, controller, result, dec, scope, requiredType, ol, unit, type, m);
+            if (is Class dec) {
+                value members = type.declaration.members;
+
+                for (m in CeylonIterable(members)) {
+                    if (ModelUtil.isConstructor(m), m.shared, m.name exists) {
+                        addSecondLevelProposalInternal(offset, prefix, controller,
+                            result, dec, scope, requiredType, ol, unit, type, null, m);
+                    }
                 }
             }
         }
     }
 
-    void addSecondLevelProposalInternal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
-            Declaration dec, Scope scope, Type? requiredType, OccurrenceLocation? ol, Unit unit, Type type, Declaration m) {
+    void addSecondLevelProposalInternal(
+            Integer offset, String prefix,
+            IdeComponent controller,
+            MutableList<CompletionResult> result,
+            Declaration dec, Scope scope,
+            Type? requiredType, OccurrenceLocation? ol,
+            Unit unit, Type type,
+            DeclarationWithProximity? mwp,
+            // sometimes we have no mwp so we also need the m
+            Declaration m) {
+        
         value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
         
-        if (exists mt = ptr.type, (requiredType is Null || mt.isSubtypeOf(requiredType))) {
-            value qualifier = dec.name + ".";
-            value desc = qualifier + getPositionalInvocationDescriptionFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-            value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-            result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
+        if (exists mt = ptr.type) {
+            value cond = if (exists requiredType)
+                         then mt.isSubtypeOf(requiredType)
+                            || withinBounds(requiredType.declaration, mt)
+                            || dec is Class && dec.equals(requiredType.declaration)
+                         else true;
+            
+            if (cond) {
+                value qualifier = dec.name + ".";
+                value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+                value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+                result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
+            }
         }
     }
 
@@ -435,27 +466,34 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
     }
     
-    void addValueArgumentProposals(Parameter p, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index, Boolean last) {
-        if (p.model.dynamicallyTyped) {
+    void addValueArgumentProposals(Parameter param, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index, Boolean last) {
+        if (param.model.dynamicallyTyped) {
             return;
         }
         assert(exists producedReference);
-        Type? type = producedReference.getTypedParameter(p).type;
+        Type? type = producedReference.getTypedParameter(param).type;
         if (!exists type) {
             return;
         }
 
         value unit = cu.unit;
-        value proposals = CeylonIterable(getSortedProposedValues(scope, unit));
+        value exactName = param.name;
+        value proposals = CeylonIterable(getSortedProposedValues(scope, unit, exactName));
+        //stuff defined in the same block, along with
+        //stuff with fuzzily-matching name 
         for (dwp in proposals) {
             if (dwp.proximity <= 1) {
-                addValueArgumentProposal(p, loc, props, index, last, type, unit, dwp, null);
+                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null);
             }
         }
-        addLiteralProposals(loc, props, index, type, unit);
+        //literals
+        for (val in getAssignableLiterals(type, unit)) {
+            props.add(completionManager.newNestedLiteralCompletionProposal(val, loc, index));
+        }
+        //stuff with lower proximity
         for (dwp in proposals) {
             if (dwp.proximity > 1) {
-                addValueArgumentProposal(p, loc, props, index, last, type, unit, dwp, null);
+                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null);
             }
         }
     }
@@ -468,6 +506,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
         value td = type.declaration;
         value d = dwp.declaration;
+        if (is NothingType d) {
+            return;
+        }
         value pname = d.unit.\ipackage.nameAsString;
         value isInLanguageModule = !(qualifier exists) && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
         value qdec = if (!exists qualifier) then null else qualifier.declaration;
@@ -483,7 +524,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                 if (vt.isSubtypeOf(type) || withinBounds(td, vt)) {
                     value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
-                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                    value op = if (isIterArg || isVarArg) then "*" else "";
+                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, op));
                 }
                 if (!exists qualifier/*TODO , preferences.getBoolean(\iCHAIN_LINKED_MODE_ARGUMENTS)*/) {
                     value members = \ivalue.typeDeclaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
@@ -504,7 +546,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                 if (mt.isSubtypeOf(type) || withinBounds(td, mt)) {
                     value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
-                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                    value op = if (isIterArg || isVarArg) then "*" else "";
+                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, op));
                 }
             }
         }
@@ -517,70 +560,63 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     }
                 }
                 Type? ct = clazz.type;
-                if (exists ct, !ct.nothing, (withinBounds(td, ct) || ct.declaration.equals(type.declaration) || ct.isSubtypeOf(type))) {
+                if (exists ct, (withinBounds(td, ct) || clazz.equals(type.declaration) || ct.isSubtypeOf(type))) {
                     value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
-                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, if (isIterArg || isVarArg) then "*" else ""));
+                    
+                    if (clazz.parameterList exists) {
+                        value op = if (isIterArg || isVarArg) then "*" else "";
+                        props.add(completionManager.newNestedCompletionProposal(d,
+                            qdec, loc, index, false, op));
+                    }
+
+                    for (m in CeylonIterable(clazz.members)) {
+                        if (is Constructor m, m.shared, m.name exists) {
+                            value op = if (isIterArg || isVarArg) then "*" else "";
+                            props.add(completionManager.newNestedCompletionProposal(m,
+                                qdec, loc, index, false, op));
+                        }
+                    }
                 }
             }
         }
     }
     
-    Boolean withinBounds(TypeDeclaration td, Type vt) {
-        if (is TypeParameter td) {
-            value tp = td;
-            return isInBounds(tp.satisfiedTypes, vt);
-        } else {
-            return false;
-        }
-    }
-    
-    void addLiteralProposals(Integer loc, MutableList<CompletionResult> props, Integer index, Type type, Unit unit) {
-        value dtd = unit.getDefiniteType(type).declaration;
-        if (is Class dtd) {
-            if (dtd.equals(unit.integerDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("0", loc, index));
-                props.add(completionManager.newNestedLiteralCompletionProposal("1", loc, index));
-            }
-            if (dtd.equals(unit.floatDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("0.0", loc, index));
-                props.add(completionManager.newNestedLiteralCompletionProposal("1.0", loc, index));
-            }
-            if (dtd.equals(unit.stringDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("\"\"", loc, index));
-            }
-            if (dtd.equals(unit.characterDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("' '", loc, index));
-                props.add(completionManager.newNestedLiteralCompletionProposal("'\\n'", loc, index));
-                props.add(completionManager.newNestedLiteralCompletionProposal("'\\t'", loc, index));
-            }
-        } else if (is Interface dtd) {
-            if (dtd.equals(unit.iterableDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("{}", loc, index));
-            }
-            if (dtd.equals(unit.sequentialDeclaration) || dtd.equals(unit.emptyDeclaration)) {
-                props.add(completionManager.newNestedLiteralCompletionProposal("[]", loc, index));
-            }
-        }
-    }
-    
     void addTypeArgumentProposals(TypeParameter tp, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index) {
+        value ed = cu.unit.exceptionDeclaration;
+        
         for (dwp in CeylonIterable(getSortedProposedValues(scope, cu.unit))) {
-            value d = dwp.declaration;
-            if (d is TypeDeclaration, !dwp.unimported) {
-                assert (is TypeDeclaration td = d);
+            value dec = dwp.declaration;
+            if (is TypeDeclaration dec, !dwp.unimported) {
+                value td = dec;
                 value t = td.type;
-                if (!t.nothing, td.typeParameters.empty, !td.annotation, !td.inherits(td.unit.exceptionDeclaration)) {
-                    if (td.unit.\ipackage.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME)) {
+                
+                if (!t.nothing, 
+                    td.typeParameters.empty, 
+                    !td.annotation, 
+                    !td.inherits(ed)) {
+                    
+                    value pname = td.unit.\ipackage.nameAsString;
+                    if (pname.equals(Module.\iLANGUAGE_MODULE_NAME)) {
                         if (isIgnoredLanguageModuleType(td)) {
                             continue;
                         }
                     }
                     if (isInBounds(tp.satisfiedTypes, t)) {
-                        props.add(completionManager.newNestedCompletionProposal(d, null, loc, index, true, ""));
+                        props.add(completionManager.newNestedCompletionProposal(dec, null, loc, index, true, ""));
                     }
                 }
             }
         }
     }
 }
+
+Boolean withinBounds(TypeDeclaration td, Type vt) {
+    if (is TypeParameter td) {
+        value tp = td;
+        return isInBounds(tp.satisfiedTypes, vt);
+    } else {
+        return false;
+    }
+}
+

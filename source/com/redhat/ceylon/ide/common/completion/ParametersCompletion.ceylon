@@ -35,6 +35,7 @@ shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,
             if (type.classOrInterface, type.declaration.equals(cd)) {
                 value argTypes = unit.getCallableArgumentTypes(type);
                 
+                // TODO not finished
                 result.add(newParametersCompletionProposal(offset, type, argTypes, node, cmp));
             }
         }

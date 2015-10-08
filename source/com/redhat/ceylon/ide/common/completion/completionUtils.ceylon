@@ -1,3 +1,16 @@
+import ceylon.interop.java {
+    CeylonIterable,
+    javaString
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    TreeUtil,
+    Visitor
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
+}
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
     nodes
@@ -17,31 +30,22 @@ import com.redhat.ceylon.model.typechecker.model {
     Function,
     Class,
     Type,
-    TypeDeclaration
+    TypeDeclaration,
+    Interface,
+    ModelUtil
+}
+
+import java.lang {
+    JCharacter=Character
 }
 import java.util {
     List,
     ArrayList,
-    Collections,
-    Comparator
+    Collections
 }
-import ceylon.interop.java {
-    CeylonIterable,
-    javaString
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    TreeUtil,
-    Visitor
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
+
 import org.antlr.runtime {
     CommonToken
-}
-import java.lang {
-    JCharacter=Character
 }
 
 shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -69,18 +73,25 @@ List<Parameter> getParameters(ParameterList pl,
         List<Parameter> list = ArrayList<Parameter>();
         for (p in CeylonIterable(ps)) {
             if (!p.defaulted || 
-                (namedInvocation && 
-                p==ps.get(ps.size()-1) && 
-                    p.model is Value &&
-                    p.type exists &&
-                    p.declaration.unit
-                    .isIterableParameterType(p.type))) {
+                (namedInvocation && spreadable(p, ps))) {
                 list.add(p);
             }
         }
         return list;
     }
 }
+
+Boolean spreadable(Parameter param, List<Parameter> list) {
+    value lastParam = list.get(list.size() - 1);
+    if (param == lastParam, param.model is Value) {
+        Type? type = param.type;
+        value unit = param.declaration.unit;
+        return type exists && unit.isIterableParameterType(type);
+    } else {
+        return false;
+    }
+}
+
 
 shared Boolean isModuleDescriptor(Tree.CompilationUnit? cu)
     => (cu?.unit?.filename else "") == "module.ceylon";
@@ -234,35 +245,27 @@ shared Boolean isInBounds(List<Type> upperBounds, Type t) {
 }
 
 
-shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit) {
-    value results = ArrayList<DeclarationWithProximity>(scope.getMatchingDeclarations(unit, "", 0).values());
-    Collections.sort(results, object satisfies Comparator<DeclarationWithProximity> {
-            shared actual Integer compare(DeclarationWithProximity x, DeclarationWithProximity y) {
-                if (x.proximity < y.proximity) {
-                    return -1;
-                }
-                if (x.proximity > y.proximity) {
-                    return 1;
-                }
-                value c = javaString(x.declaration.name).compareTo(y.declaration.name);
-                if (c != 0) {
-                    return c;
-                }
-                return javaString(x.declaration.qualifiedNameString).compareTo(y.declaration.qualifiedNameString);
+shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
+    value map = scope.getMatchingDeclarations(unit, "", 0);
+    if (exists exactName) {
+        for (dwp in CeylonIterable(ArrayList<DeclarationWithProximity>(map.values()))) {
+            if (!dwp.unimported, !dwp.\ialias,
+                ModelUtil.isNameMatching(dwp.name, exactName)) {
+                
+                map.put(javaString(dwp.name), DeclarationWithProximity(dwp.declaration, -5));
             }
-            
-            shared actual Boolean equals(Object that) => false;
         }
-    );
+    }
+    value results = ArrayList<DeclarationWithProximity>(map.values());
+    Collections.sort(results, ArgumentProposalComparator(exactName));
     return results;
 }
 
 shared Boolean isIgnoredLanguageModuleClass(Class clazz) {
-    value name = clazz.name;
-    return name.equals("String")
-            || name.equals("Integer")
-            || name.equals("Float")
-            || name.equals("Character")
+    return clazz.isString()
+            || clazz.integer
+            || clazz.float
+            || clazz.character
             || clazz.annotation;
 }
 
@@ -291,14 +294,13 @@ shared Boolean isIgnoredLanguageModuleMethod(Function method) {
 }
 
 Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
-    value name = td.name;
-    return !name.equals("Object") 
-            && !name.equals("Anything") 
-            && !name.equals("String") 
-            && !name.equals("Integer") 
-            && !name.equals("Character") 
-            && !name.equals("Float") 
-            && !name.equals("Boolean");
+    return !td.\iobject 
+            && !td.anything 
+            && !td.isString() 
+            && !td.integer 
+            && !td.character 
+            && !td.float 
+            && !td.boolean;
 }
 
 Integer findCharCount<Document>(Integer count, Document document, Integer start, Integer end,
@@ -464,6 +466,36 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
         lastWasEquals = curr == '=';
     }
     return -1;
+}
+
+shared String[] getAssignableLiterals(Type type, Unit unit) {
+    value dtd = unit.getDefiniteType(type).declaration;
+    if (is Class dtd) {
+        if (dtd.integer) {
+            return ["0", "1", "2"];
+        }
+        if (dtd.byte) {
+            return ["0.byte", "1.byte"];
+        } else if (dtd.float) {
+            return ["0.0", "1.0", "2.0"];
+        } else if (dtd.isString()) {
+            return ["\"\""];
+        } else if (dtd.character) {
+            return ["' '", "'\\n'", "'\\t'"];
+        } else {
+            return [];
+        }
+    } else if (is Interface dtd) {
+        if (dtd.iterable) {
+            return ["{}"];
+        } else if (dtd.sequential || dtd.empty) {
+            return ["[]"];
+        } else {
+            return [];
+        }
+    } else {
+        return [];
+    }
 }
 
 

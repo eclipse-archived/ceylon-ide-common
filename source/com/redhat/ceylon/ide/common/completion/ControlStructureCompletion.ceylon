@@ -4,7 +4,6 @@ import ceylon.collection {
 import ceylon.interop.java {
     CeylonIterable
 }
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
@@ -21,7 +20,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact> 
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
     shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
@@ -35,10 +34,10 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
             if (exists t = td.type, d.unit.isIterableType(td.type)) {
                 value name = d.name;
                 value elemName = if (name.size == 1)
-                                 then "element"
-                                 else if (name.endsWith("s"))
-                                 then name.span(0, name.size - 1)
-                                 else name.span(0, 1);
+                then "element"
+                else if (name.endsWith("s"))
+                    then name.span(0, name.size - 1)
+                    else name.span(0, 1);
                 
                 value unit = cpc.rootNode.unit;
                 value desc = "for (" + elemName + " in " + getDescriptionFor(d, unit) + ")";
@@ -65,6 +64,22 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
+    shared void addAssertExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+        DeclarationWithProximity dwp, Declaration d) {
+        
+        if (!dwp.unimported) {
+            if (is Value d) {
+                value v = d;
+                if (v.type exists, d.unit.isOptionalType(v.type), !v.variable) {
+                    value unit = cpc.rootNode.unit;
+                    result.add(newControlStructureCompletionProposal(offset, prefix,
+                            "assert (exists " + getDescriptionFor(d, unit) + ")",
+                            "assert (exists " + getTextFor(d, unit) + ");", d, cpc));
+                }
+            }
+        }
+    }
+    
     shared void addIfNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
@@ -80,9 +95,26 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
+    shared void addAssertNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+        DeclarationWithProximity dwp, Declaration d) {
+        
+        if (!dwp.unimported) {
+            if (is Value d) {
+                value v = d;
+                if (v.type exists, d.unit.isPossiblyEmptyType(v.type), !v.variable) {
+                    value unit = cpc.rootNode.unit;
+                    result.add(newControlStructureCompletionProposal(offset, prefix,
+                            "assert (nonempty " + getDescriptionFor(d, unit) + ")",
+                            "assert (nonempty " + getTextFor(d, unit) + ");",
+                            d, cpc));
+                }
+            }
+        }
+    }
+    
     shared void addTryProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
-       
+        
         if (!dwp.unimported) {
             if (is Value d) {
                 value v = d;
@@ -118,7 +150,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                     body.append(indent);
                     value u = cpc.rootNode.unit;
                     value desc = "switch (" + getDescriptionFor(d, u) + ")";
-                    value text = "switch (" + getTextFor(d, u) + ")" 
+                    value text = "switch (" + getTextFor(d, u) + ")"
                             + indents.getDefaultLineDelimiter(cpc.document) + body.string;
                     result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
                 }

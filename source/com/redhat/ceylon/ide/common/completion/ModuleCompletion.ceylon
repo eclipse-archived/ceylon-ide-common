@@ -124,6 +124,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         if (mod.equals(Module.\iLANGUAGE_MODULE_NAME)) {
             return true;
         }
+        // TODO .getParsedRootNode()
         value md = cpc.rootNode.moduleDescriptors;
         if (!md.empty) {
             Tree.ImportModuleList? iml = md.get(0).importModuleList;

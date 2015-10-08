@@ -822,7 +822,9 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                     
                     addForProposal(offset, prefix, cmp, result, dwp, dec);
                     addIfExistsProposal(offset, prefix, cmp, result, dwp, dec);
+                    addAssertExistsProposal(offset, prefix, cmp, result, dwp, dec);
                     addIfNonemptyProposal(offset, prefix, cmp, result, dwp, dec);
+                    addAssertNonemptyProposal(offset, prefix, cmp, result, dwp, dec);
                     addTryProposal(offset, prefix, cmp, result, dwp, dec);
                     addSwitchProposal(offset, prefix, cmp, result, dwp, dec, node, indents);
                 }

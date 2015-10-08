@@ -22,6 +22,7 @@ import java.util {
     HashSet
 }
 
+// TODO should be in package correct
 shared interface TypeCompletion<CompletionResult,Document> {
     
     shared formal CompletionResult newTypeProposal(Integer offset, Type? type,
