@@ -193,7 +193,7 @@ shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, 
                 }
             }
             value fiv = FindInitializerVisitor();
-            (fiv of Visitor).visit(cpc.rootNode);
+            (fiv of Visitor).visit(cpc.lastCompilationUnit);
             sie = fiv.result;
         }
         if (exists s = sie) {
@@ -211,7 +211,7 @@ shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, 
                     if (exists id, !exists b = bme.typeArguments) {
                         return arrow + id.text;
                     }
-                } else if (term.unit.equals(cpc.rootNode.unit)) {
+                } else if (term.unit.equals(cpc.lastCompilationUnit.unit)) {
                     value impl = nodes.toString(term, cpc.tokens);
                     if (impl.size < 10) {
                         return arrow + impl;

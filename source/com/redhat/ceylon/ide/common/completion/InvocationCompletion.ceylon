@@ -93,7 +93,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         String? typeArgs, Boolean isMember) {
         
         if (is Functional fd = dec) {
-            value unit = cmp.rootNode.unit;
+            value unit = cmp.lastCompilationUnit.unit;
             value isAbstract = if (is TypeDeclaration dec, dec.abstract) then true else false;
             value pls = fd.parameterLists;
             
@@ -190,7 +190,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
     
     shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionResult> result) {
-        Tree.CompilationUnit? upToDateAndTypeChecked = cpc.rootNode; // TODO cpc.getTypecheckedRootNode();
+        Tree.CompilationUnit? upToDateAndTypeChecked = cpc.typecheckedRootNode;
         if (!exists upToDateAndTypeChecked) {
             return;
         }
@@ -218,7 +218,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
 
-        value unit = controller.rootNode.unit;
+        value unit = controller.lastCompilationUnit.unit;
 
         if (exists type = pr.type) {
             if (!(dec is Functional), !(dec is TypeDeclaration)) {

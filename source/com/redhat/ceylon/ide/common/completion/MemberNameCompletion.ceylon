@@ -36,28 +36,29 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
     
     shared void addMemberNameProposals(Integer offset, IdeComponent controller, Node node, MutableList<CompletionResult> result) {
         JInteger? startIndex2 = node.startIndex;
-        value upToDateAndTypechecked = controller.rootNode; // TODO .getTypecheckedRootNode();
-        
-        object extends Visitor() {
 
-            shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
-                Tree.TypeArguments? tal = that.typeArguments;
-                value startIndex = if (!exists tal) then null else tal.startIndex;
-                if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
-                    addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+        if (exists upToDateAndTypechecked = controller.typecheckedRootNode) {
+            object extends Visitor() {
+    
+                shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
+                    Tree.TypeArguments? tal = that.typeArguments;
+                    value startIndex = if (!exists tal) then null else tal.startIndex;
+                    if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                        addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+                    }
+                    super.visit(that);
                 }
-                super.visit(that);
-            }
-
-            shared actual void visit(Tree.SimpleType that) {
-                Tree.TypeArgumentList? tal = that.typeArgumentList;
-                value startIndex = if (!exists tal) then null else tal.startIndex;
-                if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
-                    addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+    
+                shared actual void visit(Tree.SimpleType that) {
+                    Tree.TypeArgumentList? tal = that.typeArgumentList;
+                    value startIndex = if (!exists tal) then null else tal.startIndex;
+                    if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                        addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+                    }
+                    super.visit(that);
                 }
-                super.visit(that);
-            }
-        }.visit(upToDateAndTypechecked);
+            }.visit(upToDateAndTypechecked);
+        }
     }
     
     shared void addMemberNameProposal(Integer offset, String prefix, Node previousNode,

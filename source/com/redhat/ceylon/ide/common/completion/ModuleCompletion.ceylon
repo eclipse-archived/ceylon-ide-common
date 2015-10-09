@@ -63,7 +63,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         if (!"module".startsWith(prefix)) {
             return;
         }
-        value moduleName = getPackageName(cpc.rootNode);
+        value moduleName = getPackageName(cpc.lastCompilationUnit);
         if (exists moduleName) {
             value text = "module " + moduleName + " \"1.0.0\" {}";
             result.add(newModuleDescriptorProposal(offset, prefix, "module " + moduleName,
@@ -124,8 +124,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         if (mod.equals(Module.\iLANGUAGE_MODULE_NAME)) {
             return true;
         }
-        // TODO .getParsedRootNode()
-        value md = cpc.rootNode.moduleDescriptors;
+        value md = cpc.parsedRootNode.moduleDescriptors;
         if (!md.empty) {
             Tree.ImportModuleList? iml = md.get(0).importModuleList;
             if (exists iml) {

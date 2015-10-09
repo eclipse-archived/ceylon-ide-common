@@ -250,13 +250,13 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         } else if (node is Tree.ImportModule, offset > token.stopIndex+1) {
             addModuleCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL, monitor);
         } else if (is Tree.ImportPath node) {
-            ImportVisitor(prefix, token, offset, node, cpc, result, monitor, this).visit(cpc.rootNode);
-        } else if (isEmptyModuleDescriptor(cpc.rootNode)) {
+            ImportVisitor(prefix, token, offset, node, cpc, result, monitor, this).visit(cpc.lastCompilationUnit);
+        } else if (isEmptyModuleDescriptor(cpc.lastCompilationUnit)) {
             addModuleDescriptorCompletion(cpc, offset, prefix, result);
-            addKeywordProposals(cpc.rootNode, offset, prefix, result, node, null, false, tokenType);
-        } else if (isEmptyPackageDescriptor(cpc.rootNode)) {
+            addKeywordProposals(cpc.lastCompilationUnit, offset, prefix, result, node, null, false, tokenType);
+        } else if (isEmptyPackageDescriptor(cpc.lastCompilationUnit)) {
             addPackageDescriptorCompletion(cpc, offset, prefix, result);
-            addKeywordProposals(cpc.rootNode, offset, prefix, result, node, null, false, tokenType);
+            addKeywordProposals(cpc.lastCompilationUnit, offset, prefix, result, node, null, false, tokenType);
         } else if (node is Tree.TypeArgumentList, token.type == CeylonLexer.\iLARGER_OP) {
             if (offset == token.stopIndex+1) {
                 addTypeArgumentListProposal(offset, cpc, node, scope, result, this);
@@ -694,7 +694,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             Integer tokenType) {
 
         MutableList<CompletionResult> result = ArrayList<CompletionResult>();
-        value cu = cmp.rootNode;
+        value cu = cmp.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
 
@@ -739,7 +739,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 else node is Tree.QualifiedMemberOrTypeExpression || node is Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
-                addKeywordProposals(cmp.rootNode, offset, prefix, result, node, ol, isMember, tokenType);
+                addKeywordProposals(cmp.lastCompilationUnit, offset, prefix, result, node, ol, isMember, tokenType);
             }
             if (!secondLevel, !inDoc, !isMember,
                     prefix.empty, !ModelUtil.isTypeUnknown(requiredType), unit.isCallableType(requiredType)) {
@@ -1293,7 +1293,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             IdeComponent cpc, MutableList<CompletionResult> result,
             Declaration dec, Scope scope, Boolean isMember) {
 
-        Unit? unit = cpc.rootNode.unit;
+        Unit? unit = cpc.lastCompilationUnit.unit;
 
         result.add(newProgramElementReferenceCompletion(offset, prefix, dec, unit, dec.reference, scope, cpc, isMember));
     }

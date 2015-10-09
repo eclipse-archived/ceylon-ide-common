@@ -105,7 +105,7 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,
     shared void addNamedArgumentProposal(Integer offset, String prefix, IdeComponent cpc,
         MutableList<CompletionResult> result, Declaration dec, Scope scope) {
         
-        value unit = cpc.rootNode.unit;
+        value unit = cpc.lastCompilationUnit.unit;
         value desc = getDescriptionFor(dec, unit);
         value text = getTextFor(dec, unit) + " = nothing;";
         

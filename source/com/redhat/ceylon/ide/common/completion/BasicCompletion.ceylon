@@ -32,7 +32,7 @@ shared interface BasicCompletion<IdeComponent,IdeArtifact,CompletionResult,Docum
         //for doc links, propose both aliases and unaliased qualified form
         //we don't need to do this in code b/c there is no fully-qualified form
         String name = dec.name;
-        value cu = cpc.rootNode;
+        value cu = cpc.lastCompilationUnit;
         String aliasedName = dec.getName(cu.unit);
         if (!name.equals(aliasedName)) {
             result.add(newBasicCompletionProposal(offset, prefix, aliasedName, aliasedName, dec, cpc));

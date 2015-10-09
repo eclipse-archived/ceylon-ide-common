@@ -67,9 +67,11 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
     
     shared actual String document => code;
     
-    shared actual PhasedUnit phasedUnit => pu;
+    shared actual PhasedUnit lastPhasedUnit => pu;
     
-    shared actual Tree.CompilationUnit rootNode => pu.compilationUnit;
+    shared actual Tree.CompilationUnit lastCompilationUnit => pu.compilationUnit;
+    shared actual Tree.CompilationUnit parsedRootNode => lastCompilationUnit;
+    shared actual Tree.CompilationUnit? typecheckedRootNode => lastCompilationUnit;
     
     shared actual JList<CommonToken>? tokens => pu.tokens;
     

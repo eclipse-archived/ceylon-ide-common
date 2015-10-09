@@ -42,7 +42,7 @@ shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Do
         if (is Functional dec, dec.declaredVoid) {
             text += ";";
         }
-        value unit = cpc.rootNode.unit;
+        value unit = cpc.lastCompilationUnit.unit;
         value desc = getDescriptionFor(dec, unit) + "(...)";
         result.add(newFunctionCompletionProposal(offset, prefix, desc, text, dec, unit, cpc));
     }

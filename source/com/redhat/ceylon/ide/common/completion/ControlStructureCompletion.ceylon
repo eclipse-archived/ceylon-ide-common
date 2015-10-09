@@ -39,7 +39,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                     then name.span(0, name.size - 1)
                     else name.span(0, 1);
                 
-                value unit = cpc.rootNode.unit;
+                value unit = cpc.lastCompilationUnit.unit;
                 value desc = "for (" + elemName + " in " + getDescriptionFor(d, unit) + ")";
                 value text = "for (" + elemName + " in " + getTextFor(d, unit) + ") {}";
                 
@@ -54,7 +54,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         if (!dwp.unimported) {
             if (is Value v = d) {
                 if (exists type = v.type, d.unit.isOptionalType(type), !v.variable) {
-                    value unit = cpc.rootNode.unit;
+                    value unit = cpc.lastCompilationUnit.unit;
                     value desc = "if (exists " + getDescriptionFor(d, unit) + ")";
                     value text = "if (exists " + getTextFor(d, unit) + ") {}";
                     
@@ -71,7 +71,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
             if (is Value d) {
                 value v = d;
                 if (v.type exists, d.unit.isOptionalType(v.type), !v.variable) {
-                    value unit = cpc.rootNode.unit;
+                    value unit = cpc.lastCompilationUnit.unit;
                     result.add(newControlStructureCompletionProposal(offset, prefix,
                             "assert (exists " + getDescriptionFor(d, unit) + ")",
                             "assert (exists " + getTextFor(d, unit) + ");", d, cpc));
@@ -86,7 +86,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         if (!dwp.unimported) {
             if (is Value v = d) {
                 if (exists type = v.type, d.unit.isPossiblyEmptyType(type), !v.variable) {
-                    value unit = cpc.rootNode.unit;
+                    value unit = cpc.lastCompilationUnit.unit;
                     value desc = "if (nonempty " + getDescriptionFor(d, unit) + ")";
                     value text = "if (nonempty " + getTextFor(d, unit) + ") {}";
                     result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
@@ -102,7 +102,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
             if (is Value d) {
                 value v = d;
                 if (v.type exists, d.unit.isPossiblyEmptyType(v.type), !v.variable) {
-                    value unit = cpc.rootNode.unit;
+                    value unit = cpc.lastCompilationUnit.unit;
                     result.add(newControlStructureCompletionProposal(offset, prefix,
                             "assert (nonempty " + getDescriptionFor(d, unit) + ")",
                             "assert (nonempty " + getTextFor(d, unit) + ");",
@@ -119,7 +119,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
             if (is Value d) {
                 value v = d;
                 if (exists type = v.type, v.type.declaration.inherits(d.unit.obtainableDeclaration), !v.variable) {
-                    value unit = cpc.rootNode.unit;
+                    value unit = cpc.lastCompilationUnit.unit;
                     value desc = "try (" + getDescriptionFor(d, unit) + ")";
                     value text = "try (" + getTextFor(d, unit) + ") {}";
                     
@@ -148,7 +148,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                         body.append(") {}").append(indents.getDefaultLineDelimiter(cpc.document));
                     }
                     body.append(indent);
-                    value u = cpc.rootNode.unit;
+                    value u = cpc.lastCompilationUnit.unit;
                     value desc = "switch (" + getDescriptionFor(d, u) + ")";
                     value text = "switch (" + getTextFor(d, u) + ")"
                             + indents.getDefaultLineDelimiter(cpc.document) + body.string;

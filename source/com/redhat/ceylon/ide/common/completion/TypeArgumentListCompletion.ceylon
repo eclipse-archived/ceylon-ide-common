@@ -35,7 +35,7 @@ shared interface TypeArgumentListCompletions<IdeComponent,IdeArtifact,Completion
 
         value document = cpc.document;
         value typeArgText = completionManager.getDocumentSubstring(cpc.document, startIndex2.intValue(), stopIndex2.intValue() - startIndex2.intValue());
-        Tree.CompilationUnit? upToDateAndTypechecked = cpc.rootNode; // TODO .getTypecheckedRootNode();
+        Tree.CompilationUnit? upToDateAndTypechecked = cpc.typecheckedRootNode;
 
         if (!exists upToDateAndTypechecked) {
             return;

@@ -110,7 +110,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         if (!"package".startsWith(prefix)) {
             return;
         }
-        value packageName = getPackageName(cpc.rootNode);
+        value packageName = getPackageName(cpc.lastCompilationUnit);
         if (exists packageName) {
             result.add(newPackageDescriptorProposal(offset, prefix, "package ``packageName``", "package ``packageName``;"));
         }
@@ -118,7 +118,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
 
     shared void addCurrentPackageNameCompletion(IdeComponent cpc, Integer offset, String prefix,
             MutableList<CompletionResult> result) {
-        value moduleName = getPackageName(cpc.rootNode);
+        value moduleName = getPackageName(cpc.lastCompilationUnit);
         if (exists moduleName) {
             result.add(newCurrentPackageProposal(offset, prefix, moduleName, cpc));
         }
