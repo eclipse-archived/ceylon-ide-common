@@ -67,7 +67,11 @@ public class ModuleDependencies {
             }
         }
     }
-
+    
+    public static ModuleReference reference(Module module) {
+        return new ModuleStringReference(module);
+    }
+    
     public interface ModuleReference {
         String getIdentifier();
     }
