@@ -465,7 +465,9 @@ shared object nodes {
         return createJavaStringArray(names);
     }
 
-    shared void addNameProposals(MutableSet<String>|JSet<JString> names, Boolean plural, String name) {
+    shared void addNameProposals(
+            MutableSet<String>|JSet<JString> names, 
+            Boolean plural, String name) {
         value matcher = idPattern.matcher(javaString(name));
         while (matcher.find()) {
             value subname = 
@@ -473,16 +475,31 @@ shared object nodes {
                     name[matcher.start(2)...] + 
                     (plural then "s" else "");
             value escaped = 
-                    keywords.contains(subname)
+                    subname in keywords
                         then "\\i" + subname
                         else subname;
-
             if (is MutableSet<String> names) {
                 names.add(escaped);
             } else {
                 names.add(javaString(escaped));
             }
         }
+        /*matcher.reset();
+        while (matcher.find()) {
+            value initials = 
+                    matcher.group(1).lowercased +
+                    String(name.skip(matcher.start(2))
+                               .filter(Character.uppercase)
+                               .map(Character.lowercased)) +
+                    (plural then "s" else "");
+            if (!initials in keywords) {
+                if (is MutableSet<String> names) {
+                    names.add(initials);
+                } else {
+                    names.add(javaString(initials));
+                }
+            }
+        }*/
     }
 }
 
