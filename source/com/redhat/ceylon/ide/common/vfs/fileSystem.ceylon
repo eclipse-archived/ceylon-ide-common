@@ -53,6 +53,8 @@ shared class LocalFileVirtualFile(file)
     
     parent => (super of FileSystemVitualFile).parent;
 
+    \iexists() => file.\iexists();
+    
     throws(`class RuntimeException`)
     shared actual InputStream inputStream {
         try {
@@ -89,6 +91,8 @@ shared class LocalFolderVirtualFile(file)
     path => (super of FileSystemVitualFile).path;
     
     parent => (super of FileSystemVitualFile).parent;
+    
+    \iexists() => file.\iexists();
     
     children 
         => let(ObjectArray<File>? theChildren = file.listFiles())

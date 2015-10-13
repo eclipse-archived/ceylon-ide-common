@@ -70,7 +70,8 @@ shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies FolderVi
             => (super of FolderVirtualFile<>).equals(that); 
     
     shared actual Integer hash
-            => (super of FolderVirtualFile<>).hash; 
+            => (super of FolderVirtualFile<>).hash;
+    shared actual Boolean \iexists() => true;
 }
 
 throws(`class RuntimeException`)
@@ -81,6 +82,7 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies FileVirtualFile<> {
     shared actual String name = Helper.getSimpleName(entry);
     shared actual String path = "``zipFile.name``!/``entry.name``".trimTrailing('/'.equals);
     shared variable actual FolderVirtualFile<Nothing,Nothing,Nothing>? parent = null;
+    shared actual Boolean \iexists() => true;
     
     shared actual InputStream inputStream {
         try {
@@ -197,6 +199,9 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & FolderVirtualFil
     shared actual Integer hash
             => (super of FolderVirtualFile<>).hash;
 
+    shared actual Boolean \iexists()
+            => true;
+    
     void initializeChildren(ZipFile zipFile) {
         value path = zipFile.name;
         value lastIndex = path.lastIndexWhere(File.separator.equals);

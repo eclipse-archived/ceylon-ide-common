@@ -76,11 +76,13 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
 
     class TestFile(String path, String contents) extends TestVirtualFile(path) {
         shared actual JList<VirtualFile> children => emptyList<VirtualFile>();
+        shared actual Boolean \iexists() => true;
         shared actual Boolean folder => false;
         shared actual InputStream inputStream => ByteArrayInputStream(javaString(contents + " ").bytes);
     }
 
     class TestDirectory(String path) extends TestVirtualFile(path) {
+        shared actual Boolean \iexists() => true;
         shared actual Boolean folder => true;
         value theChildren = ArrayList<TestVirtualFile>();
 
