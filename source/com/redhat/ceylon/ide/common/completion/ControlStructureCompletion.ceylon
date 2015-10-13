@@ -36,8 +36,8 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                 value elemName = if (name.size == 1)
                 then "element"
                 else if (name.endsWith("s"))
-                    then name.span(0, name.size - 1)
-                    else name.span(0, 1);
+                    then name.spanTo(name.size - 2)
+                    else name.spanTo(0);
                 
                 value unit = cpc.lastCompilationUnit.unit;
                 value desc = "for (" + elemName + " in " + getDescriptionFor(d, unit) + ")";

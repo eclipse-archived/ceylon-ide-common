@@ -381,15 +381,15 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     
     String getAnnotationWithoutParam(String annotation) {
         if (exists index = annotation.firstOccurrence('(')) {
-            return annotation.span(0, index).trimmed;
+            return annotation.spanTo(index - 1).trimmed;
         }
         
         if (exists index = annotation.firstOccurrence('"')) {
-            return annotation.span(0, index).trimmed;
+            return annotation.spanTo(index - 1).trimmed;
         }
         
         if (exists index = annotation.firstOccurrence(' ')) {
-            return annotation.span(0, index).trimmed;
+            return annotation.spanTo(index - 1).trimmed;
         }
         return annotation.trimmed;
     }

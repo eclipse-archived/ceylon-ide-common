@@ -120,16 +120,22 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         }
         CommonToken adjustedToken = adjust(tokenIndex, offset, tokens);
         Integer tt = adjustedToken.type;
-        if (offset <= adjustedToken.stopIndex, offset > adjustedToken.startIndex,
+        
+        if (offset <= adjustedToken.stopIndex,
+                offset > adjustedToken.startIndex,
                 isCommentOrCodeStringLiteral(adjustedToken)) {
             return [];
         }
-        if (isLineComment(adjustedToken), offset > adjustedToken.startIndex, adjustedToken.line == line + 1) {
+        if (isLineComment(adjustedToken),
+                offset > adjustedToken.startIndex,
+                adjustedToken.line == line + 1) {
             return [];
         }
 
         //find the node at the token
-        Node node = getTokenNode(adjustedToken.startIndex, adjustedToken.stopIndex + 1, tt, typecheckedRootNode, offset);
+        Node node = getTokenNode(adjustedToken.startIndex, 
+            adjustedToken.stopIndex + 1, 
+            tt, typecheckedRootNode, offset);
 
         //it's useful to know the type of the preceding token, if any
         variable Integer index = adjustedToken.tokenIndex;
@@ -158,8 +164,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             Integer offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
             Integer realOffsetInToken = offset - adjustedToken.startIndex;
             if (offsetInToken <= text.size) {
-                prefix = text.span(0, offsetInToken);
-                fullPrefix = getRealText(adjustedToken).span(0, realOffsetInToken);
+                prefix = text.spanTo(offsetInToken - 1);
+                fullPrefix = getRealText(adjustedToken).spanTo(realOffsetInToken - 1);
             }
         }
         variable Boolean isMemberOp = isMemberOperator(adjustedToken);
@@ -178,11 +184,11 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             if (offsetInLink < bar) { 
                 return [];
             }
-            qualified = text.span(bar, offsetInLink);
+            qualified = text.span(bar, offsetInLink - 1);
             Integer dcolon = qualified.firstInclusion("::") else -1;
             variable String? pkg = null;
             if (dcolon >= 0) {
-                pkg = qualified.span(0, dcolon + 2);
+                pkg = qualified.spanTo(dcolon + 1);
                 qualified = qualified.spanFrom(dcolon + 2);
             }
             Integer dot = (qualified.firstOccurrence('.') else -1) + 1;
@@ -720,6 +726,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         } else if (prefix.empty, !isLocation(ol, OccurrenceLocation.\iIS),
                 isMemberNameProposable(offset, node, memberOp),
                 node is Tree.Type || node is Tree.BaseTypeExpression || node is Tree.QualifiedTypeExpression) {
+            
+            //member names we can refine
             Type? t = switch (node)
                 case (is Tree.Type) node.typeModel
                 case (is Tree.BaseTypeExpression) node.target?.type
@@ -730,6 +738,19 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 addRefinementProposals(offset,
                         sortedProposals, cmp, scope, node, doc,
                         secondLevel, result, ol, t, false);
+            }
+            //otherwise guess something from the type
+            addMemberNameProposal(offset, prefix, node, result, cu);
+        } else if (is Tree.TypedDeclaration node, 
+            !(node is Tree.Variable && node.type is Tree.SyntheticVariable),
+            //!(node is Tree.InitializerParameter),
+            isMemberNameProposable(offset, node, memberOp)) {
+            
+            //member names we can refine
+            if (exists dnt = node.type, exists t = dnt.typeModel) {
+                addRefinementProposals(offset, sortedProposals, 
+                        cmp, scope, node, doc, secondLevel, 
+                        result, ol, t, true);
             }
             //otherwise guess something from the type
             addMemberNameProposal(offset, prefix, node, result, cu);
@@ -780,7 +801,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 if (!secondLevel, !inDoc, noParamsFollow, isInvocationProposable(dwp, ol, previousTokenType),
                         !isQualifiedType(node) || ModelUtil.isConstructor(dec) || dec.staticallyImportable,
                         if (is Constructor scope)
-                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) && isDelegatableConstructor(scope, dec)
+                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) || isDelegatableConstructor(scope, dec)
                         else true) {
                     for (d in overloads(dec)) {
                         value pr = if (isMember)
@@ -1022,7 +1043,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     }
 
     Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d) {
-        return scope == d.namedArgumentList;
+        return if (exists nal = d.namedArgumentList, scope == nal) then true else false;
     }
 
     Boolean isDirectlyInsideNamedArgumentList(IdeComponent cmp, Node node, CommonToken token) {
@@ -1106,7 +1127,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             isProposable &&= !dwp.namedArgumentList exists;
             isProposable &&= !dec.annotation
                      || (if (is Function dec)
-                         then (!dec.parameterLists.empty || !dec.parameterLists.get(0).parameters.empty)
+                         then (!dec.parameterLists.empty && !dec.parameterLists.get(0).parameters.empty)
                          else true);
 
             return isProposable;
@@ -1117,10 +1138,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     Boolean isProposable(DeclarationWithProximity dwp, OccurrenceLocation? ol, Scope scope, Unit unit, Type? requiredType, Integer previousTokenType) {
         value dec = dwp.declaration;
         variable Boolean isProp = !isLocation(ol, OccurrenceLocation.\iEXTENDS);
-        isProp ||= if (is Class dec) then dec.final else false;
+        isProp ||= if (is Class dec) then !dec.final else false;
+        isProp ||= ModelUtil.isConstructor(dec) && (if (is Class c = dec.container) then !c.final else false);
 
-        variable Boolean isCorrectLocation = ModelUtil.isConstructor(dec) && (if (is Class c = dec.container) then !c.final else false);
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) || dec is Class;
+        variable Boolean isCorrectLocation = !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) || dec is Class;
         isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iSATISFIES) || dec is Interface;
         isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iOF) || dec is Class || isAnonymousClassValue(dec);
         isCorrectLocation &&= (!isLocation(ol, OccurrenceLocation.\iTYPE_ARGUMENT_LIST)
@@ -1141,7 +1162,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_LIST);
         isCorrectLocation &&= !dwp.namedArgumentList exists;
 
-        isProp ||= isCorrectLocation;
+        isProp &&= isCorrectLocation;
         return isProp;
     }
 

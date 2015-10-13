@@ -283,7 +283,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     // see InvocationCompletionProposal.prefixWithoutTypeArgs
     String prefixWithoutTypeArgs(String prefix, String? typeArgs) {
         if (exists typeArgs) {
-            return prefix.span(0, prefix.size - typeArgs.size);
+            return prefix.spanTo(prefix.size - typeArgs.size - 1);
         } else {
             return prefix;
         }
@@ -369,7 +369,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
     }
     
     Integer getCompletionPosition(Integer first, Integer next) {
-        return (text.span(first, first + next - 1).lastOccurrence(' ') else -1) + 1;
+        return (text.span(first, first + next - 2).lastOccurrence(' ') else -1) + 1;
     }
     
     Integer getFirstPosition() {

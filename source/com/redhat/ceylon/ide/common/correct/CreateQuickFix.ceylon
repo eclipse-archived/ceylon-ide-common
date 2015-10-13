@@ -177,9 +177,9 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
                 if (typeDec.unit.equals(unit.unit)) {
                     value fdv = FindDeclarationNodeVisitor(typeDec);
                     correctionUtil.getRootNode(unit).visit(fdv);
-                    assert (is Tree.Declaration decNode = fdv.declarationNode);
-                    value body = correctionUtil.getClassOrInterfaceBody(decNode);
-                    if (exists body) {
+
+                    if (is Tree.Declaration decNode = fdv.declarationNode,
+                        exists body = correctionUtil.getClassOrInterfaceBody(decNode)) {
                         addCreateMemberProposal(data, dg, typeDec, unit, decNode, body, statement);
                         break;
                     }
