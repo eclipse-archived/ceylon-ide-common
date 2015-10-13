@@ -88,6 +88,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 & FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
                 & ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
                 & TypeCompletion<CompletionResult,Document>
+                & AnonFunctionCompletion<CompletionResult>
         given CompletionResult satisfies Object
         given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
         given IdeArtifact satisfies Object {
@@ -177,28 +178,28 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 && offset<=adjustedToken.stopIndex;
         if (inDoc) {
             if (is Tree.DocLink node) {
-            Tree.DocLink docLink = node;
-            Integer offsetInLink = offset - docLink.startIndex.intValue();
-            String text = docLink.token.text;
-            Integer bar = (text.firstOccurrence('|') else -1) + 1;
-            if (offsetInLink < bar) { 
-                return [];
-            }
-            qualified = text.span(bar, offsetInLink - 1);
-            Integer dcolon = qualified.firstInclusion("::") else -1;
-            variable String? pkg = null;
-            if (dcolon >= 0) {
-                pkg = qualified.spanTo(dcolon + 1);
-                qualified = qualified.spanFrom(dcolon + 2);
-            }
-            Integer dot = (qualified.firstOccurrence('.') else -1) + 1;
-            isMemberOp = dot > 0;
-            prefix = qualified.spanFrom(dot);
-            if (dcolon >= 0) {
-                assert(exists p = pkg); 
-                qualified = p + qualified;
-            }
-            fullPrefix = prefix;
+                Tree.DocLink docLink = node;
+                Integer offsetInLink = offset - docLink.startIndex.intValue();
+                String text = docLink.token.text;
+                Integer bar = (text.firstOccurrence('|') else -1) + 1;
+                if (offsetInLink < bar) { 
+                    return [];
+                }
+                qualified = text.span(bar, offsetInLink - 1);
+                Integer dcolon = qualified.firstInclusion("::") else -1;
+                variable String? pkg = null;
+                if (dcolon >= 0) {
+                    pkg = qualified.spanTo(dcolon + 1);
+                    qualified = qualified.spanFrom(dcolon + 2);
+                }
+                Integer dot = (qualified.firstOccurrence('.') else -1) + 1;
+                isMemberOp = dot > 0;
+                prefix = qualified.spanFrom(dot);
+                if (dcolon >= 0) {
+                    assert(exists p = pkg); 
+                    qualified = p + qualified;
+                }
+                fullPrefix = prefix;
             } else { 
                 return [];
             }
@@ -899,27 +900,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             token.stopIndex >= offset-2) then true else false;
     }
 
-    // see CompletionUtil.anonFunctionHeader(Type requiredType, Unit unit)
-    shared String anonFunctionHeader(Type? requiredType, Unit unit) {
-        value text = StringBuilder();
-        text.append("(");
-
-        variable Character c = 'a';
-
-        CeylonIterable(unit.getCallableArgumentTypes(requiredType)).fold(true)((isFirst, paramType) {
-            if (!isFirst) { text.append(", "); }
-            text.append(paramType.asSourceCodeString(unit))
-                .append(" ")
-                .append(c.string);
-            c++;
-
-            return false;
-        });
-        text.append(")");
-
-        return text.string;
-    }
-
     Reference? getQualifiedProducedReference(Node node, Declaration d) {
         variable Type? pt;
 
@@ -1023,23 +1003,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
                 (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
-    }
-
-    shared formal CompletionResult newAnonFunctionProposal(Integer offset, Type? requiredType,
-        Unit unit, String text, String header, Boolean isVoid);
-
-    void addAnonFunctionProposal(Integer offset, Type? requiredType, MutableList<CompletionResult> result, Unit unit){
-        value text = anonFunctionHeader(requiredType, unit);
-        value funtext = text + " => nothing";
-
-        // TODO selection
-        result.add(newAnonFunctionProposal(offset, requiredType, unit, funtext, text, false));
-
-        // TODO selection
-        if (unit.getCallableReturnType(requiredType).anything){
-            value voidtext = "void " + text + " {}";
-            result.add(newAnonFunctionProposal(offset, requiredType, unit, voidtext, text, true));
-        }
     }
 
     Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d) {
@@ -1310,15 +1273,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
              && (!isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) || dec is TypeParameter);
     }
 
-    void addProgramElementReferenceProposal(Integer offset, String prefix,
-            IdeComponent cpc, MutableList<CompletionResult> result,
-            Declaration dec, Scope scope, Boolean isMember) {
-
-        Unit? unit = cpc.lastCompilationUnit.unit;
-
-        result.add(newProgramElementReferenceCompletion(offset, prefix, dec, unit, dec.reference, scope, cpc, isMember));
-    }
-
     CommonToken? getNextToken(IdeComponent cmp, CommonToken token) {
         variable Integer i = token.tokenIndex;
         variable CommonToken? nextToken=null;
@@ -1338,9 +1292,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
 
         return nextToken;
     }
-
-    shared formal CompletionResult newProgramElementReferenceCompletion(Integer offset, String prefix,
-        Declaration dec, Unit? u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember);
 }
 
 shared class FindScopeVisitor(Node node) extends Visitor() {

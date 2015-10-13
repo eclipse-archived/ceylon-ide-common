@@ -55,6 +55,26 @@ shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
     return false;
 }
 
+shared String anonFunctionHeader(Type? requiredType, Unit unit) {
+    value text = StringBuilder();
+    text.append("(");
+    
+    variable Character c = 'a';
+    
+    CeylonIterable(unit.getCallableArgumentTypes(requiredType)).fold(true)((isFirst, paramType) {
+        if (!isFirst) { text.append(", "); }
+        text.append(paramType.asSourceCodeString(unit))
+                .append(" ")
+                .append(c.string);
+        c++;
+        
+        return false;
+    });
+    text.append(")");
+    
+    return text.string;
+}
+
 // see CompletionUtil.overloads(Declaration dec)
 shared {Declaration*} overloads(Declaration dec) {
     return if (dec.abstraction)

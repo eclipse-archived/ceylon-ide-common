@@ -54,7 +54,8 @@ class ArgumentProposalComparator(String? exactName) satisfies Comparator<Declara
         if (c != 0) {
             return c;
         }
-        return javaString(xd.qualifiedNameString).compareTo(yd.qualifiedNameString);
+        return javaString(xd.qualifiedNameString)
+                .compareTo(yd.qualifiedNameString);
     }
     
     shared actual Boolean equals(Object that) => false;

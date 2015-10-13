@@ -227,8 +227,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
         super.visit(that);
         if (inBounds(that)) {
             if (exists o = occurrence, o != OccurrenceLocation.\iTYPE_ARGUMENT_LIST) {
-                // this bug prevents us to assign the result to `occurrence`: https://github.com/ceylon/ceylon-compiler/issues/2265
-                value foo = switch (that.nodeType)
+                occurrence = switch (that.nodeType)
                     case ("ModuleLiteral") OccurrenceLocation.\iMODULE_REF 
                     case ("PackageLiteral") OccurrenceLocation.\iPACKAGE_REF 
                     case ("ValueLiteral") OccurrenceLocation.\iVALUE_REF 
@@ -238,7 +237,6 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
                     case ("TypeParameterLiteral") OccurrenceLocation.\iTYPE_PARAMETER_REF 
                     case ("AliasLiteral") OccurrenceLocation.\iALIAS_REF
                     else OccurrenceLocation.\iMETA;
-                occurrence = foo;
             }
         }
     }

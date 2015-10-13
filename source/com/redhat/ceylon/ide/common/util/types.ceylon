@@ -15,7 +15,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 
 shared object types {
     
-    shared Type? getResultType(Declaration d) {
+    shared Type? getResultType(Declaration? d) {
         if (is TypeDeclaration d) {
             if (is Class d, !d.abstract) {
                 return (d).type;

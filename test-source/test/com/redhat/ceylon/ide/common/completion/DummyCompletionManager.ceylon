@@ -102,7 +102,7 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Boolean addParameterTypesInCompletions => true;
     
     shared actual Result newAnonFunctionProposal(Integer offset, Type? requiredType, Unit unit, 
-        String text, String header, Boolean isVoid)
+        String text, String header, Boolean isVoid, Integer start, Integer len)
             => Result("newAnonFunctionProposal", text);
     
     shared actual Result newBasicCompletionProposal(Integer offset, String prefix, String text,
@@ -170,9 +170,10 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         Boolean includeDefaulted, Declaration? qualifyingDec) 
             => Result("newPositionalInvocationCompletion", text, desc);
     
-    shared actual Result newProgramElementReferenceCompletion(Integer offset, String prefix, Declaration dec, Unit? u,
+    shared actual Result newProgramElementReferenceCompletion(Integer offset, String prefix, 
+        String name, String desc, Declaration dec,
         Reference? pr, Scope scope, CompletionData cmp, Boolean isMember)
-            => Result("newProgramElementReferenceCompletion", dec.qualifiedNameString, "");
+            => Result("newProgramElementReferenceCompletion", name, desc);
     
     shared actual Result newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
         Boolean withBody, String fullPackageName, CompletionData controller, ModuleVersionDetails version, Unit unit,

@@ -14,7 +14,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Type,
     Unit,
-    ModelUtil
+    ModelUtil,
+    Declaration
 }
 
 import java.util {
@@ -26,23 +27,16 @@ import org.antlr.runtime {
     Token
 }
 
-class RequiredTypeVisitor extends Visitor {
+class RequiredTypeVisitor(Node node, Token? token) extends Visitor() {
     
-    variable Node node;
     variable Type? requiredType = null;
     variable Type? finalResult = null;
     variable Reference? namedArgTarget = null;
-    variable Token? token;
 
     shared Type? type => finalResult;
 
-    shared new (variable Node node, variable Token token) extends Visitor() {
-        this.node = node;
-        this.token = token;
-    }
-
     shared actual void visitAny(variable Node that) {
-        if (node === that) {
+        if (node == that) {
             finalResult = requiredType;
         }
         super.visitAny(that);
@@ -55,50 +49,66 @@ class RequiredTypeVisitor extends Visitor {
         Type? ort = requiredType;
         Reference? onat = namedArgTarget;
         Tree.PositionalArgumentList? pal = that.positionalArgumentList;
-        Unit unit = that.unit;
+        Unit? unit = that.unit;
 
+        if (!exists unit) {
+            return;
+        }
         if (exists pal) {
             variable Integer pos;
-            variable List<Tree.PositionalArgument> pas = pal.positionalArguments;
+            List<Tree.PositionalArgument> pas = pal.positionalArguments;
             if (pas.empty) {
                 pos = 0;
             } else {
                 pos = pas.size(); //default to the last argument if incomplete
-                variable Integer i = 0;
-                while (i < pas.size()) {
-                    variable Tree.PositionalArgument pa = pas.get(i);
+                for (i in 0..pas.size()) {
+                    Tree.PositionalArgument pa = pas.get(i);
                     if (exists t = token) {
                         assert(is CommonToken t);
-                        if (pa.stopIndex.intValue() >= t.stopIndex) {
+                        value tokenEnd = t.stopIndex + 1;
+                        if (pa.endIndex.intValue() >= tokenEnd) {
                             pos = i;
                             break;
                         }
                     } else {
-                        if (node.startIndex.intValue() >= pa.startIndex.intValue(), node.stopIndex.intValue() <= pa.stopIndex.intValue()) {
+                        if (node.startIndex.intValue() >= pa.startIndex.intValue(),
+                            node.endIndex.intValue() <= pa.endIndex.intValue()) {
+                            
                             pos = i;
                             break;
                         }
                     }
-                    i++;
                 }
             }
 
-            if (exists pr = getTarget(that), exists params = getParameters(pr)) {
-                if (params.size() > pos) {
-                    Parameter param = params.get(pos);
-                    if (pr.declaration.qualifiedNameString.equals("ceylon.language::print")) {
-                        requiredType = unit.stringDeclaration.type;
-                    } else {
-                        requiredType = pr.getTypedParameter(param).fullType;
+            if (exists pr = getTarget(that)) {
+                if (exists params = getParameters(pr)) {
+                    if (params.size() > pos) {
+                        Parameter param = params.get(pos);
+                        if (pr.declaration.qualifiedNameString.equals("ceylon.language::print")) {
+                            requiredType = unit.stringDeclaration.type;
+                        } else {
+                            requiredType = pr.getTypedParameter(param).fullType;
+                            if (param.sequenced) {
+                                requiredType = unit.getIteratedType(requiredType);
+                            }
+                        }
+                    } else if (!params.empty) {
+                        Parameter param = params.get(params.size() - 1);
                         if (param.sequenced) {
+                            requiredType = pr.getTypedParameter(param).fullType;
                             requiredType = unit.getIteratedType(requiredType);
                         }
                     }
-                } else if (!params.empty) {
-                    Parameter param = params.get(params.size() - 1);
-                    if (param.sequenced) {
-                        requiredType = pr.getTypedParameter(param).fullType;
-                        requiredType = unit.getIteratedType(requiredType);
+                }
+            } else {
+                //indirect invocations
+                if (exists ct = that.primary.typeModel,
+                    unit.isCallableType(ct)) {
+                    value pts = unit.getCallableArgumentTypes(ct);
+                    
+                    if (pts.size()>pos) {
+                        requiredType = pts.get(pos);
                     }
                 }
             }
@@ -107,7 +117,10 @@ class RequiredTypeVisitor extends Visitor {
         Tree.NamedArgumentList? nal = that.namedArgumentList;
         if (exists nal) {
             namedArgTarget = getTarget(that);
-            if (exists nat = namedArgTarget, exists params = getParameters(nat), !params.empty) {
+            if (exists nat = namedArgTarget, 
+                exists params = getParameters(nat), 
+                !params.empty) {
+                
                 Parameter param = params.get(params.size() - 1);
                 if (unit.isIterableType(param.type)) {
                     requiredType = nat.getTypedParameter(param).fullType;
@@ -128,7 +141,7 @@ class RequiredTypeVisitor extends Visitor {
         namedArgTarget = onat;
     }
 
-    Reference? getTarget(variable Tree.InvocationExpression that) {
+    Reference? getTarget(Tree.InvocationExpression that) {
         if (is Tree.MemberOrTypeExpression p = that.primary) {
             return p.target;
         } else {
@@ -161,7 +174,8 @@ class RequiredTypeVisitor extends Visitor {
     
     shared actual void visit(Tree.ForIterator that) {
         Type? ort = requiredType;
-        requiredType = that.unit.getIterableType(that.unit.anythingDeclaration.type);
+        value unit = that.unit;
+        requiredType = unit.getIterableType(unit.anythingType);
         super.visit(that);
         requiredType = ort;
     }
@@ -175,7 +189,7 @@ class RequiredTypeVisitor extends Visitor {
     
     shared actual void visit(Tree.SwitchStatement that) {
         Type? ort = requiredType;
-        variable Type? srt = that.unit.anythingDeclaration.type;
+        variable Type? srt = that.unit.anythingType;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
             Tree.Expression? e = switchClause.switched.expression;
@@ -250,14 +264,14 @@ class RequiredTypeVisitor extends Visitor {
     
     shared actual void visit(Tree.Throw that) {
         Type? ort = requiredType;
-        requiredType = that.unit.exceptionDeclaration.type;
+        requiredType = that.unit.exceptionType;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.ConditionList that) {
         Type? ort = requiredType;
-        requiredType = that.unit.booleanDeclaration.type;
+        requiredType = that.unit.booleanType;
         super.visit(that);
         requiredType = ort;
     }
@@ -265,8 +279,8 @@ class RequiredTypeVisitor extends Visitor {
     shared actual void visit(Tree.ResourceList that) {
         Type? ort = requiredType;
         Unit unit = that.unit;
-        requiredType = ModelUtil.unionType(unit.destroyableDeclaration.type,
-            unit.obtainableDeclaration.type, unit);
+        requiredType = ModelUtil.unionType(unit.destroyableType,
+            unit.obtainableType, unit);
         super.visit(that);
         requiredType = ort;
     }
@@ -279,9 +293,10 @@ class RequiredTypeVisitor extends Visitor {
     
     shared actual void visit(Tree.DocLink that) {
         Type? ort = requiredType;
-        requiredType = types.getResultType(that.base);
-        if (!exists rt = requiredType, exists b = that.base) {
-            requiredType = b.reference.fullType;
+        Declaration? base = that.base;
+        requiredType = types.getResultType(base);
+        if (!exists rt = requiredType, exists base) {
+            requiredType = base.reference.fullType;
         }
         super.visit(that);
         requiredType = ort;

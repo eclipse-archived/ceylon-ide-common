@@ -77,10 +77,124 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
         Integer index, Boolean basic, String op);
     
-    // TODO     static void addProgramElementReferenceProposal(int offset, String prefix, 
-    //        CeylonParseController cpc, List<ICompletionProposal> result, 
-    //        Declaration dec, Scope scope, boolean isMember) {
+    shared formal CompletionResult newProgramElementReferenceCompletion(Integer offset, String prefix,
+        String name, String desc, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember);
 
+    shared void addProgramElementReferenceProposal(Integer offset, String prefix,
+        IdeComponent cpc, MutableList<CompletionResult> result,
+        Declaration dec, Scope scope, Boolean isMember) {
+        
+        Unit? unit = cpc.lastCompilationUnit.unit;
+        value name = dec.getName(unit);
+        value desc = escaping.escapeName(dec, unit);
+        result.add(newProgramElementReferenceCompletion(offset, prefix, 
+            name, desc, dec, dec.reference, scope, cpc, isMember));
+    }    
+
+    // see InvocationCompletionProposal.addReferenceProposal()
+    shared void addReferenceProposal(Tree.CompilationUnit cu,
+        Integer offset, String prefix, IdeComponent cmp,
+        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
+        Reference? pr, Scope scope, OccurrenceLocation? ol,
+        Boolean isMember) {
+        
+        value unit = cu.unit;
+        value dec = dwp.declaration;
+        
+        //proposal with type args
+        if (is Generic dec) {
+            value desc = getDescriptionFor2(dwp, unit, true);
+            value text = getTextFor(dec, unit);
+            
+            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, true));
+            
+            if (dec.typeParameters.empty) {
+                // don't add another proposal below!
+                return;
+            }
+        }
+        
+        //proposal without type args
+        value isAbstract = if (is Class dec) then dec.abstract else dec is Interface;
+        if (!isAbstract, !isLocation(ol, OccurrenceLocation.\iEXTENDS),
+            !isLocation(ol, OccurrenceLocation.\iSATISFIES),
+            !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS),
+            !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)) {
+            
+            value desc = getDescriptionFor2(dwp, unit, false);
+            value text = escaping.escapeName(dec, unit);
+            
+            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, false));
+        }
+    }
+
+    shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
+        Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
+        
+        value unit = controller.lastCompilationUnit.unit;
+        
+        if (exists type = pr.type) {
+            if (!(dec is Functional), !(dec is TypeDeclaration)) {
+                //add qualified member proposals
+                value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                for (ndwp in CeylonIterable(members)) {
+                    value m = ndwp.declaration;
+                    if ((m is FunctionOrValue || m is Class), !ModelUtil.isConstructor(m)) {
+                        if (m.abstraction) {
+                            for (o in CeylonIterable(m.overloads)) {
+                                addSecondLevelProposalInternal(offset, prefix, controller,
+                                    result, dec, scope, requiredType, ol, unit, type, ndwp, o);
+                            }
+                        } else {
+                            addSecondLevelProposalInternal(offset, prefix, controller,
+                                result, dec, scope, requiredType, ol, unit, type, ndwp, m);
+                        }
+                    }
+                }
+            }
+            if (is Class dec) {
+                //add constructor proposals
+                value members = type.declaration.members;
+                
+                for (m in CeylonIterable(members)) {
+                    if (ModelUtil.isConstructor(m), m.shared, m.name exists) {
+                        addSecondLevelProposalInternal(offset, prefix, controller,
+                            result, dec, scope, requiredType, ol, unit, type, null, m);
+                    }
+                }
+            }
+        }
+    }
+    
+    void addSecondLevelProposalInternal(
+        Integer offset, String prefix,
+        IdeComponent controller,
+        MutableList<CompletionResult> result,
+        Declaration dec, Scope scope,
+        Type? requiredType, OccurrenceLocation? ol,
+        Unit unit, Type type,
+        DeclarationWithProximity? mwp,
+        // sometimes we have no mwp so we also need the m
+        Declaration m) {
+        
+        value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
+        
+        if (exists mt = ptr.type) {
+            value cond = if (exists requiredType)
+            then mt.isSubtypeOf(requiredType)
+                    || withinBounds(requiredType.declaration, mt)
+                    || dec is Class && dec.equals(requiredType.declaration)
+            else true;
+            
+            if (cond) {
+                value qualifier = dec.name + ".";
+                value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+                value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+                result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
+            }
+        }
+    }
+    
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
         Integer offset, String prefix, IdeComponent cmp,
@@ -152,43 +266,6 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         }
     }
     
-    // see InvocationCompletionProposal.addReferenceProposal()
-    shared void addReferenceProposal(Tree.CompilationUnit cu,
-        Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
-        Reference? pr, Scope scope, OccurrenceLocation? ol,
-        Boolean isMember) {
-        
-        value unit = cu.unit;
-        value dec = dwp.declaration;
-        
-        //proposal with type args
-        if (is Generic dec) {
-            value desc = getDescriptionFor2(dwp, unit, true);
-            value text = getTextFor(dec, unit);
-            
-            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, true));
-            
-            if (dec.typeParameters.empty) {
-                // don't add another proposal below!
-                return;
-            }
-        }
-        
-        //proposal without type args
-        value isAbstract = if (is Class dec) then dec.abstract else dec is Interface;
-        if (!isAbstract, !isLocation(ol, OccurrenceLocation.\iEXTENDS),
-            !isLocation(ol, OccurrenceLocation.\iSATISFIES),
-            !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS),
-            !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)) {
-            
-            value desc = getDescriptionFor2(dwp, unit, false);
-            value text = escaping.escapeName(dec, unit);
-
-            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, false));
-        }
-    }
-    
     shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionResult> result) {
         Tree.CompilationUnit? upToDateAndTypeChecked = cpc.typecheckedRootNode;
         if (!exists upToDateAndTypeChecked) {
@@ -213,71 +290,6 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 super.visit(that);
             }
         }.visit(upToDateAndTypeChecked);
-    }
-
-    shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
-            Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
-
-        value unit = controller.lastCompilationUnit.unit;
-
-        if (exists type = pr.type) {
-            if (!(dec is Functional), !(dec is TypeDeclaration)) {
-                value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
-                for (ndwp in CeylonIterable(members)) {
-                    value m = ndwp.declaration;
-                    if ((m is FunctionOrValue || m is Class), !ModelUtil.isConstructor(m)) {
-                        if (m.abstraction) {
-                            for (o in CeylonIterable(m.overloads)) {
-                                addSecondLevelProposalInternal(offset, prefix, controller,
-                                    result, dec, scope, requiredType, ol, unit, type, ndwp, o);
-                            }
-                        } else {
-                            addSecondLevelProposalInternal(offset, prefix, controller,
-                                result, dec, scope, requiredType, ol, unit, type, ndwp, m);
-                        }
-                    }
-                }
-            }
-            if (is Class dec) {
-                value members = type.declaration.members;
-
-                for (m in CeylonIterable(members)) {
-                    if (ModelUtil.isConstructor(m), m.shared, m.name exists) {
-                        addSecondLevelProposalInternal(offset, prefix, controller,
-                            result, dec, scope, requiredType, ol, unit, type, null, m);
-                    }
-                }
-            }
-        }
-    }
-
-    void addSecondLevelProposalInternal(
-            Integer offset, String prefix,
-            IdeComponent controller,
-            MutableList<CompletionResult> result,
-            Declaration dec, Scope scope,
-            Type? requiredType, OccurrenceLocation? ol,
-            Unit unit, Type type,
-            DeclarationWithProximity? mwp,
-            // sometimes we have no mwp so we also need the m
-            Declaration m) {
-        
-        value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
-        
-        if (exists mt = ptr.type) {
-            value cond = if (exists requiredType)
-                         then mt.isSubtypeOf(requiredType)
-                            || withinBounds(requiredType.declaration, mt)
-                            || dec is Class && dec.equals(requiredType.declaration)
-                         else true;
-            
-            if (cond) {
-                value qualifier = dec.name + ".";
-                value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-                value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-                result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
-            }
-        }
     }
 
     // see InvocationCompletionProposal.prefixWithoutTypeArgs
