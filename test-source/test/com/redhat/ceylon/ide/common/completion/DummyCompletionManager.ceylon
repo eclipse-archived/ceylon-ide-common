@@ -124,10 +124,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         Boolean withBody, String fullPackageName, CompletionData controller, Package candidate)
             => Result("newImportedModulePackageProposal", memberPackageSubname, fullPackageName);
     
-    shared actual Result newInlineFunctionProposal(Integer offset, String prefix, Reference? pr,
-        String desc, String text, CompletionData cmp, Declaration dec, Scope scope)
-            => Result("newInlineFunctionProposal", text, desc);
-    
     shared actual Result newJDKModuleProposal(Integer offset, String prefix, Integer len, String versioned, String name) 
             => Result("newJDKModuleProposal", versioned);
     
@@ -144,10 +140,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Result newModuleProposal(Integer offset, String prefix, Integer len, String versioned,
         ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name, Node node)
             => Result("newModuleProposal", versioned, name);
-    
-    shared actual Result newNamedArgumentProposal(Integer offset, String prefix, Reference? pr, String desc, String text,
-        CompletionData cmp, Declaration dec, Scope scope)
-            => Result("newNamedArgumentProposal", text, desc);
     
     shared actual Result newNamedInvocationCompletion(Integer offset, String prefix, String desc, String text,
         Declaration dec, Reference? pr, Scope scope, CompletionData cmp, Boolean isMember, String? typeArgs, Boolean includeDefaulted)
@@ -185,7 +177,8 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
             => Result("newReferenceCompletion", text, desc);
     
     shared actual Result newRefinementCompletionProposal(Integer offset, String prefix, Reference? pr,
-        String desc, String text, CompletionData cmp, Declaration dec, Scope scope)
+        String desc, String text, CompletionData cmp, Declaration dec, Scope scope,
+        Boolean fullType, Boolean explicitReturnType)
             => Result("newRefinementCompletionProposal", text, desc);
     
     shared actual List<Pattern> proposalFilters => empty;

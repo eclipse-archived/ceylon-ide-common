@@ -13,7 +13,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
-    nodes
+    nodes,
+    escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
@@ -32,7 +33,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     Interface,
-    ModelUtil
+    ModelUtil,
+    Constructor
 }
 
 import java.lang {
@@ -74,6 +76,23 @@ shared String anonFunctionHeader(Type? requiredType, Unit unit) {
     
     return text.string;
 }
+
+shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit) {
+    value buf = StringBuilder();
+    if (exists qualifier) {
+        buf.append(escaping.escapeName(qualifier, unit)).append(".");
+    }
+    
+    if (is Constructor dec) {
+        value constructor = dec;
+        value clazz = constructor.extendedType.declaration;
+        buf.append(escaping.escapeName(clazz, unit)).append(".");
+    }
+    
+    buf.append(escaping.escapeName(dec, unit));
+    return buf.string;
+}
+
 
 // see CompletionUtil.overloads(Declaration dec)
 shared {Declaration*} overloads(Declaration dec) {

@@ -58,6 +58,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     
     shared formal Boolean addParameterTypesInCompletions;
     
+    // TODO refactor all this in a single method
     shared formal CompletionResult newPositionalInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
         Boolean isMember, String? typeArgs, Boolean includeDefaulted, Declaration? qualifyingDec);
@@ -246,6 +247,8 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                             && !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS)
                             && !dec.overloaded) {
                     
+                    //if there is at least one parameter, 
+                    //suggest a named argument invocation
                     value parameters = getParameters(parameterList, false, true);
                     if (ps.size() != parameters.size()) {
                         value desc = getNamedInvocationDescriptionFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);

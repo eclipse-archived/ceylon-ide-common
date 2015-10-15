@@ -59,28 +59,16 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
     shared formal CompletionResult newJDKModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, String name);
 
-    shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
-        if (!"module".startsWith(prefix)) {
-            return;
-        }
-        value moduleName = getPackageName(cpc.lastCompilationUnit);
-        if (exists moduleName) {
-            value text = "module " + moduleName + " \"1.0.0\" {}";
-            result.add(newModuleDescriptorProposal(offset, prefix, "module " + moduleName,
-                text, offset - prefix.size + (text.firstOccurrence('"') else 0) + 1, "1.0.0".size));
-        }
-    }
-
     shared void addModuleCompletions(IdeComponent cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
-            MutableList<CompletionResult> result, Boolean withBody, ProgressMonitor monitor) {
+        MutableList<CompletionResult> result, Boolean withBody, ProgressMonitor monitor) {
         value fp = fullPath(offset, prefix, path);
-
+        
         addModuleCompletionsInternal(offset, prefix, node, result, fp.size, fp + prefix, cpc, withBody, monitor);
     }
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
-            Integer len, String pfp, IdeComponent cpc, Boolean withBody, ProgressMonitor monitor) {
-
+        Integer len, String pfp, IdeComponent cpc, Boolean withBody, ProgressMonitor monitor) {
+        
         if (pfp.startsWith("java.")) {
             for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
                 if (name.startsWith(pfp), !moduleAlreadyImported(cpc, name)) {
@@ -101,7 +89,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
                 if (!exists results) {
                     return;
                 }
-
+                
                 for (\imodule in CeylonIterable(results.results)) {
                     value name = \imodule.name;
                     if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
@@ -144,12 +132,24 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         //        }
         return false;
     }
-
+    
     String getModuleString(Boolean withBody, variable String name, String version) {
         if (!javaString(name).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
             name = "\"``name``\"";
         }
         return if (withBody) then name + " \"" + version + "\";" else name;
+    }
+
+    shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
+        if (!"module".startsWith(prefix)) {
+            return;
+        }
+        value moduleName = getPackageName(cpc.lastCompilationUnit);
+        if (exists moduleName) {
+            value text = "module " + moduleName + " \"1.0.0\" {}";
+            result.add(newModuleDescriptorProposal(offset, prefix, "module " + moduleName,
+                text, offset - prefix.size + (text.firstOccurrence('"') else 0) + 1, "1.0.0".size));
+        }
     }
 
 }
