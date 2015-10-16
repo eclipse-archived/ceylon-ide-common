@@ -603,7 +603,7 @@ shared class DeltaBuilderFactory(
                 }
 
                 shared actual void visitIdentifier(Ast.Identifier node) {
-                    if (is Function method = node.scope,
+                    if (is Function method = node.scope?.scope,
                         method.parameter,
                         method.nameAsString != node.text) {
                         // parameters of a method functional parameter are not
@@ -703,6 +703,14 @@ shared class DeltaBuilderFactory(
                                 return any {
                                     nodesDiffer(oldConstructor.delegatedConstructor, newConstructor.delegatedConstructor, "delegatedConstructor"),
                                     nodesDiffer(oldConstructor.parameterList, newConstructor.parameterList, "parameterList")
+                                };
+                            }
+                        },
+                        lookForChanges {
+                            checkedType=`Ast.Enumerated`;
+                            function between(Ast.Enumerated oldEnumerated, Ast.Enumerated newEnumerated) {
+                                return any {
+                                    nodesDiffer(oldEnumerated.delegatedConstructor, newEnumerated.delegatedConstructor, "delegatedConstructor")
                                 };
                             }
                         },
