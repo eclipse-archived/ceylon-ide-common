@@ -394,7 +394,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         return (text.span(first, first + next - 2).lastOccurrence(' ') else -1) + 1;
     }
     
-    Integer getFirstPosition() {
+    shared Integer getFirstPosition() {
         Integer? index;
         if (namedInvocation) {
             index = text.firstOccurrence('{');

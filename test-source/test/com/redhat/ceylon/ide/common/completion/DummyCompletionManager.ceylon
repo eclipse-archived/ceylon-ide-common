@@ -138,7 +138,8 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
             => Result("newModuleDescriptorProposal", text, desc);
     
     shared actual Result newModuleProposal(Integer offset, String prefix, Integer len, String versioned,
-        ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name, Node node)
+        ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name,
+        Node node, CompletionData data)
             => Result("newModuleProposal", versioned, name);
     
     shared actual Result newInvocationCompletion(Integer offset, String prefix,
@@ -155,9 +156,9 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         CompletionData cpc, Boolean namedInvocation)
             => nothing; // not supported
     
-    shared actual Result newParametersCompletionProposal(Integer offset, Type type, JList<Type> argTypes, Node node,
-        CompletionData cmp)
-            => Result("newParametersCompletionProposal", type.asQualifiedString(), "");
+    shared actual Result newParametersCompletionProposal(Integer offset, String prefix, String desc, String text,
+        JList<Type> argTypes, Node node, Unit unit)
+            => Result("newParametersCompletionProposal", text, desc);
     
     shared actual Result newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
         Boolean withBody, String fullPackageName, CompletionData controller, ModuleVersionDetails version, Unit unit,

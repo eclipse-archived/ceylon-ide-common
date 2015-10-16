@@ -240,7 +240,7 @@ shared String getDocDescriptionFor<Document,IdeArtifact>(Declaration decl, Refer
     return result.string;
 }
 
-void appendPositionalArgs(Declaration d, Reference? pr, Unit unit, StringBuilder result,
+shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit, StringBuilder result,
     Boolean includeDefaulted, Boolean descriptionOnly, Boolean addParameterTypesInCompletions) {
     
     if (is Functional d) {
