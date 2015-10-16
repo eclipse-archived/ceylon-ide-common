@@ -1,6 +1,7 @@
 import ceylon.collection {
     MutableList,
-    naturalOrderTreeSet
+    naturalOrderTreeSet,
+    ArrayList
 }
 import ceylon.interop.java {
     CeylonIterable,
@@ -50,8 +51,8 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
     shared formal Boolean supportsLinkedModeInArguments;
             
     shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
-                String versioned, ModuleDetails mod,
-                Boolean withBody, ModuleVersionDetails version, String name, Node node);
+                String versioned, ModuleDetails mod, Boolean withBody,
+                ModuleVersionDetails version, String name, Node node, IdeComponent cpc);
 
     shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
         Integer selectionStart, Integer selectionEnd); 
@@ -90,16 +91,16 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
                     return;
                 }
                 
-                for (\imodule in CeylonIterable(results.results)) {
-                    value name = \imodule.name;
+                for (mod in CeylonIterable(results.results)) {
+                    value name = mod.name;
                     if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
                         if (supportsLinkedModeInArguments) {
-                            result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, \imodule.lastVersion.version),
-                                \imodule, withBody, \imodule.lastVersion, name, node));
+                            result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, mod.lastVersion.version),
+                                mod, withBody, mod.lastVersion, name, node, cpc));
                         } else {
-                            for (version in CeylonIterable(\imodule.versions.descendingSet())) {
+                            for (version in CeylonIterable(mod.versions.descendingSet())) {
                                 result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, version.version),
-                                    \imodule, withBody, version, name, node));
+                                    mod, withBody, version, name, node, cpc));
                             }
                         }
                     }
@@ -152,4 +153,49 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         }
     }
 
+}
+
+shared abstract class ModuleProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+        (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
+         Boolean withBody, ModuleVersionDetails version, String name, Node node)
+        extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
+        (offset, prefix, versioned, versioned.spanFrom(len))
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
+        given InsertEdit satisfies TextEdit {
+
+    shared actual Region getSelectionInternal(Document document) {
+        value off = offset + versioned.size - prefix.size - len;
+        if (withBody) {
+            value verlen = version.version.size;
+            return newRegion(off-verlen-2, verlen);
+        }
+        else {
+            return newRegion(off, 0);
+        }
+    }
+    
+    shared formal CompletionResult newModuleProposal(ModuleVersionDetails d, Region selection, LinkedMode lm);
+
+    shared actual void applyInternal(Document document) {
+        //super.applyInternal(document);
+        
+        if (withBody //module.getVersions().size()>1 && //TODO: put this back in when sure it works
+            // TODO EditorUtil.getPreferences().getBoolean(LINKED_MODE_ARGUMENTS)
+            ) {
+            
+            value linkedMode = newLinkedMode();
+            value selection = getSelectionInternal(document);
+            value proposals = ArrayList<CompletionResult>();
+
+            for (d in CeylonIterable(mod.versions)) {
+                proposals.add(newModuleProposal(d, selection, linkedMode));
+            }
+            
+            value x = getRegionStart(selection);
+            value y = getRegionLength(selection);
+            addEditableRegion(linkedMode, document, x, y, 0, proposals.sequence());
+            
+            installLinkedMode(document, linkedMode, this, 1, x + y + 2);
+        }
+    }
 }
