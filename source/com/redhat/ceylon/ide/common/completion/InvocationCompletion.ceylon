@@ -58,29 +58,14 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     
     shared formal Boolean addParameterTypesInCompletions;
     
-    // TODO refactor all this in a single method
-    shared formal CompletionResult newPositionalInvocationCompletion(Integer offset, String prefix,
+    shared formal CompletionResult newInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
-        Boolean isMember, String? typeArgs, Boolean includeDefaulted, Declaration? qualifyingDec);
-
-    shared formal CompletionResult newNamedInvocationCompletion(Integer offset, String prefix,
-        String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
-        Boolean isMember, String? typeArgs, Boolean includeDefaulted);
-
-    shared formal CompletionResult newReferenceCompletion(Integer offset, String prefix, String desc, String text,
-        Declaration dec, Unit u, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember, Boolean includeTypeArgs);
+        Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
+        Boolean qualified, Declaration? qualifyingDec);
     
     shared formal CompletionResult newParameterInfo(Integer offset, Declaration dec, 
         Reference producedReference, Scope scope, IdeComponent cpc, Boolean namedInvocation);
     
-    shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc, Integer index);
-    
-    shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
-        Integer index, Boolean basic, String op);
-    
-    shared formal CompletionResult newProgramElementReferenceCompletion(Integer offset, String prefix,
-        String name, String desc, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp, Boolean isMember);
-
     shared void addProgramElementReferenceProposal(Integer offset, String prefix,
         IdeComponent cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope, Boolean isMember) {
@@ -88,8 +73,9 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         Unit? unit = cpc.lastCompilationUnit.unit;
         value name = dec.getName(unit);
         value desc = escaping.escapeName(dec, unit);
-        result.add(newProgramElementReferenceCompletion(offset, prefix, 
-            name, desc, dec, dec.reference, scope, cpc, isMember));
+        result.add(newInvocationCompletion(offset, prefix, 
+            name, desc, dec, dec.reference, scope, cpc, true, 
+            false, false, isMember, null));
     }    
 
     // see InvocationCompletionProposal.addReferenceProposal()
@@ -107,7 +93,9 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             value desc = getDescriptionFor2(dwp, unit, true);
             value text = getTextFor(dec, unit);
             
-            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, true));
+            result.add(newInvocationCompletion(offset, prefix, 
+                desc, text, dec, pr, scope, cmp, 
+                true, false, false, isMember, null));
             
             if (dec.typeParameters.empty) {
                 // don't add another proposal below!
@@ -125,7 +113,8 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             value desc = getDescriptionFor2(dwp, unit, false);
             value text = escaping.escapeName(dec, unit);
             
-            result.add(newReferenceCompletion(offset, prefix, desc, text, dec, unit, pr, scope, cmp, isMember, false));
+            result.add(newInvocationCompletion(offset, prefix, desc, 
+                text, dec, pr, scope, cmp, true, false, false, isMember, null));
         }
     }
 
@@ -191,7 +180,9 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 value qualifier = dec.name + ".";
                 value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
                 value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-                result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, m, ptr, scope, controller, true, null, true, dec));
+                result.add(newInvocationCompletion(offset, prefix,
+                     desc, text, m, ptr, scope, controller, true, 
+                     true, false, true, dec));
             }
         }
     }
@@ -232,15 +223,15 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                         value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         value text = getPositionalInvocationTextFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newPositionalInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, isMember, typeArgs, false, null));
+                        result.add(newInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, false, true, false, isMember, null));
                     }
 
                     value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
                     value text = getPositionalInvocationTextFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
 
-                    result.add(newPositionalInvocationCompletion(offset, prefix, desc, text, dec,
-                        pr, scope, cmp, isMember, typeArgs, true, null));
+                    result.add(newInvocationCompletion(offset, prefix, desc, text, dec,
+                        pr, scope, cmp, true, true, false, isMember, null));
                 }
                 if (named, parameterList.namedParametersSupported, exists pr,
                     !isAbstract && !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
@@ -254,15 +245,15 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                         value desc = getNamedInvocationDescriptionFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         value text =  getNamedInvocationTextFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newNamedInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, isMember, typeArgs, false));
+                        result.add(newInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, false, false, true, isMember, null));
                     }
                     if (!ps.empty) {
                         value desc = getNamedInvocationDescriptionFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
                         value text = getNamedInvocationTextFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newNamedInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, isMember, typeArgs, true));
+                        result.add(newInvocationCompletion(offset, prefix, desc, text,
+                            dec, pr, scope, cmp, true, false, true, isMember, null));
                     }
                 }
             }
@@ -316,6 +307,22 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
+    shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc, Integer index);
+    
+    shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
+        Integer index, Boolean basic, String op);
+    
+    shared String getNestedCompletionText(String op, Unit unit, Declaration dec,
+        Declaration? qualifier, Boolean basic, Boolean description) {
+        value sb = StringBuilder().append(op);
+        sb.append(getProposedName(qualifier, dec, unit));
+        if (dec is Functional, !basic) {
+            appendPositionalArgs(dec, dec.reference, unit, sb, false, description, false);
+        }
+        
+        return sb.string;
+    }
+
     shared Integer adjustedOffset => offset;
     
     shared TextChange createChange(TextChange change, Document document) {
@@ -503,7 +510,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
         //literals
         for (val in getAssignableLiterals(type, unit)) {
-            props.add(completionManager.newNestedLiteralCompletionProposal(val, loc, index));
+            props.add(newNestedLiteralCompletionProposal(val, loc, index));
         }
         //stuff with lower proximity
         for (dwp in proposals) {
@@ -540,7 +547,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
                     value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, op));
+                    props.add(newNestedCompletionProposal(d, qdec, loc, index, false, op));
                 }
                 if (!exists qualifier/*TODO , preferences.getBoolean(\iCHAIN_LINKED_MODE_ARGUMENTS)*/) {
                     value members = \ivalue.typeDeclaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
@@ -562,7 +569,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
                     value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(completionManager.newNestedCompletionProposal(d, qdec, loc, index, false, op));
+                    props.add(newNestedCompletionProposal(d, qdec, loc, index, false, op));
                 }
             }
         }
@@ -581,14 +588,14 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     
                     if (clazz.parameterList exists) {
                         value op = if (isIterArg || isVarArg) then "*" else "";
-                        props.add(completionManager.newNestedCompletionProposal(d,
+                        props.add(newNestedCompletionProposal(d,
                             qdec, loc, index, false, op));
                     }
 
                     for (m in CeylonIterable(clazz.members)) {
                         if (is Constructor m, m.shared, m.name exists) {
                             value op = if (isIterArg || isVarArg) then "*" else "";
-                            props.add(completionManager.newNestedCompletionProposal(m,
+                            props.add(newNestedCompletionProposal(m,
                                 qdec, loc, index, false, op));
                         }
                     }
@@ -618,12 +625,13 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                         }
                     }
                     if (isInBounds(tp.satisfiedTypes, t)) {
-                        props.add(completionManager.newNestedCompletionProposal(dec, null, loc, index, true, ""));
+                        props.add(newNestedCompletionProposal(dec, null, loc, index, true, ""));
                     }
                 }
             }
         }
     }
+    
 }
 
 Boolean withinBounds(TypeDeclaration td, Type vt) {

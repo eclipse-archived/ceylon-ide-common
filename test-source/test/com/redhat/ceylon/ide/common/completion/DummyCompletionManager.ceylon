@@ -141,8 +141,10 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name, Node node)
             => Result("newModuleProposal", versioned, name);
     
-    shared actual Result newNamedInvocationCompletion(Integer offset, String prefix, String desc, String text,
-        Declaration dec, Reference? pr, Scope scope, CompletionData cmp, Boolean isMember, String? typeArgs, Boolean includeDefaulted)
+    shared actual Result newInvocationCompletion(Integer offset, String prefix,
+        String desc, String text, Declaration dec, Reference? pr, Scope scope, CompletionData data,
+        Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
+        Boolean qualified, Declaration? qualifyingDec)
             => Result("newNamedInvocationCompletion", text, desc);
     
     shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text)
@@ -157,24 +159,10 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         CompletionData cmp)
             => Result("newParametersCompletionProposal", type.asQualifiedString(), "");
     
-    shared actual Result newPositionalInvocationCompletion(Integer offset, String prefix, String desc, String text,
-        Declaration dec, Reference? pr, Scope scope, CompletionData cmp, Boolean isMember, String? typeArgs,
-        Boolean includeDefaulted, Declaration? qualifyingDec) 
-            => Result("newPositionalInvocationCompletion", text, desc);
-    
-    shared actual Result newProgramElementReferenceCompletion(Integer offset, String prefix, 
-        String name, String desc, Declaration dec,
-        Reference? pr, Scope scope, CompletionData cmp, Boolean isMember)
-            => Result("newProgramElementReferenceCompletion", name, desc);
-    
     shared actual Result newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
         Boolean withBody, String fullPackageName, CompletionData controller, ModuleVersionDetails version, Unit unit,
         ModuleSearchResult.ModuleDetails md)
             => Result("newQueriedModulePackageProposal", memberPackageSubname);
-    
-    shared actual Result newReferenceCompletion(Integer offset, String prefix, String desc, String text,
-        Declaration dec, Unit u, Reference? pr, Scope scope, CompletionData cmp, Boolean isMember, Boolean includeTypeArgs)
-            => Result("newReferenceCompletion", text, desc);
     
     shared actual Result newRefinementCompletionProposal(Integer offset, String prefix, Reference? pr,
         String desc, String text, CompletionData cmp, Declaration dec, Scope scope,
@@ -186,9 +174,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Boolean showParameterTypes => false;
     
     shared actual Boolean supportsLinkedModeInArguments => false;
-    shared actual Result newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc, Integer index, Boolean basic, String op) => nothing;
-    
-    shared actual Result newNestedLiteralCompletionProposal(String val, Integer loc, Integer index) => nothing;
     
     shared actual Result newTypeProposal(Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
             => Result("newTypeProposal", text, desc);
