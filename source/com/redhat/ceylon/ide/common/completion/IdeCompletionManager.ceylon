@@ -706,13 +706,13 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         value unit = node.unit;
 
         if (is Tree.Term node) {
-            addParametersProposal(offset, node, result, cmp);
+            addParametersProposal(offset, prefix, node, result, cmp);
         } else if (is Tree.ArgumentList node) {
             value fiv = FindInvocationVisitor(node);
             (fiv of Visitor).visit(cu);
 
             if (exists ie = fiv.result) {
-                addParametersProposal(offset, ie, result, cmp);
+                addParametersProposal(offset, prefix, ie, result, cmp);
             }
         }
 
