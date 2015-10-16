@@ -13,8 +13,7 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
                 & CommonCompletionProposal<Document,Region>
         given InsertEdit satisfies TextEdit {
     
-    Integer length = prefix.size;
-
+    shared actual variable Integer length = prefix.size;
     shared formal Boolean toggleOverwrite;
     shared formal ImportProposals<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange> importProposals;
     

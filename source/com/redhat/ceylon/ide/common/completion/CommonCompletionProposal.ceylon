@@ -15,6 +15,7 @@ shared interface CommonCompletionProposal<Document,Region> {
     shared formal Integer offset;
     shared formal String description;
     shared formal String text;
+    shared formal variable Integer length;
     
     shared formal void replaceInDoc(Document doc, Integer start, Integer length, String newText);
     shared formal Integer getDocLength(Document doc);
