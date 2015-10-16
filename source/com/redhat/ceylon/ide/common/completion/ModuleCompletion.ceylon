@@ -177,7 +177,7 @@ shared abstract class ModuleProposal<IFile, CompletionResult, Document, InsertEd
     shared formal CompletionResult newModuleProposal(ModuleVersionDetails d, Region selection, LinkedMode lm);
 
     shared actual void applyInternal(Document document) {
-        //super.applyInternal(document);
+        super.applyInternal(document);
         
         if (withBody //module.getVersions().size()>1 && //TODO: put this back in when sure it works
             // TODO EditorUtil.getPreferences().getBoolean(LINKED_MODE_ARGUMENTS)

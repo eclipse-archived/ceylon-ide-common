@@ -112,7 +112,8 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         }
         value packageName = getPackageName(cpc.lastCompilationUnit);
         if (exists packageName) {
-            result.add(newPackageDescriptorProposal(offset, prefix, "package ``packageName``", "package ``packageName``;"));
+            result.add(newPackageDescriptorProposal(offset, prefix,
+                "package ``packageName``", "package ``packageName``;"));
         }
     }
 
@@ -164,7 +165,7 @@ shared abstract class ImportedModulePackageProposal<IFile, CompletionResult, Doc
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit {
     
-    shared formal CompletionResult newReplacementCompletionResult(Declaration d, Region selection, LinkedMode lm);
+    shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, Region selection, LinkedMode lm);
     
     shared actual void applyInternal(Document document) {
         super.applyInternal(document);
@@ -176,7 +177,7 @@ shared abstract class ImportedModulePackageProposal<IFile, CompletionResult, Doc
             
             for (d in CeylonIterable(candidate.members)) {
                 if (ModelUtil.isResolvable(d), d.shared, !ModelUtil.isOverloadedVersion(d)) {
-                    proposals.add(newReplacementCompletionResult(d, selection, linkedMode));
+                    proposals.add(newPackageMemberCompletionProposal(d, selection, linkedMode));
                 }
             }
             
