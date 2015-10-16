@@ -1,20 +1,11 @@
-import ceylon.language.meta {
-    type
-}
 import ceylon.test {
     test,
-    assertEquals,
-    AssertionComparisonError
+    assertEquals
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     VisitorAdaptor,
-    Ast=Tree,
-    TreeUtil
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Function,
-    Declaration
+    Ast=Tree
 }
 
 import test.com.redhat.ceylon.ide.common.testUtils {
@@ -36,7 +27,7 @@ shared test void invalidFunctionalParameterArgumentScope() {
                 if (node.text == "functionalParameterArgument") {
                     assertEquals {
                         message = "Wrong scope of functional parameter argument";
-                        expected = "function test.functionalParameter(Integer functionalParameterArgument) => Anything";
+                        expected = "value test.functionalParameter.functionalParameterArgument => Integer";
                         actual = node.scope.string;
                     };
                 }
