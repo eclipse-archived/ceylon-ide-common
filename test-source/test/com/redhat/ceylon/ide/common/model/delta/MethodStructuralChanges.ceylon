@@ -94,7 +94,7 @@ test void methodParameterDefaultValueAdded() {
         void doWithNodeComparisons({NodeComparison*} comparisons) {
             assert(comparisons.contains(["dir::test", "parameterLists",
                 "ParameterList[ValueParameterDeclaration[AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Integer]]]]"
-             -> "ParameterList[ValueParameterDeclaration[SpecifierExpression[Expression[NaturalLiteral[]]]AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Integer]]]]"]));
+             -> "ParameterList[ValueParameterDeclaration[AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Integer]SpecifierExpression[Expression[NaturalLiteral[]]]]]]"]));
         }
     };
 }
@@ -124,8 +124,8 @@ test void methodParameterDefaultValueTypeChanged() {
         };
         void doWithNodeComparisons({NodeComparison*} comparisons) {
             assert(comparisons.contains(["dir::test", "parameterLists",
-                "ParameterList[ValueParameterDeclaration[SpecifierExpression[Expression[NaturalLiteral[]]]AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Object]]]]"
-             -> "ParameterList[ValueParameterDeclaration[SpecifierExpression[Expression[FloatLiteral[]]]AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Object]]]]"]));
+                "ParameterList[ValueParameterDeclaration[AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Object]SpecifierExpression[Expression[NaturalLiteral[]]]]]]"
+             -> "ParameterList[ValueParameterDeclaration[AttributeDeclaration[AnnotationList[]Identifier[a]Type[ceylon.language::Object]SpecifierExpression[Expression[FloatLiteral[]]]]]]"]));
         }
     };
 }

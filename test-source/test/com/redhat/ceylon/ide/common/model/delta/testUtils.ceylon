@@ -65,6 +65,8 @@ object declarationFieldFilter {
         `value Ast.Declaration.identifier`,
         `value Ast.Declaration.declarationModel`,
         `value Ast.Declaration.compilerAnnotations`,
+        `value Ast.Enumerated.block`,
+        `value Ast.Enumerated.enumerated`,
         `value Ast.Constructor.block`,
         `value Ast.Constructor.constructor`,
         `value Ast.AttributeDeclaration.specifierOrInitializerExpression`,
