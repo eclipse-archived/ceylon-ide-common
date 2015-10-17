@@ -704,6 +704,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         value cu = cmp.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
+        value addParameterTypesInCompletions = cmp.options.parameterTypesInCompletion;
 
         if (is Tree.Term node) {
             addParametersProposal(offset, prefix, node, result, cmp);
@@ -981,6 +982,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         OccurrenceLocation? ol, Type t,
         Boolean preamble) {
 
+        value addParameterTypesInCompletions = cpc.options.parameterTypesInCompletion;
+        
         for (dwp in CeylonIterable(set)) {
             value dec = dwp.declaration;
             if (!filter, is FunctionOrValue m = dec) {

@@ -54,10 +54,6 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact> 
         given IdeArtifact satisfies Object {
     
-    shared formal String inexactMatches;
-    
-    shared formal Boolean addParameterTypesInCompletions;
-    
     shared formal CompletionResult newInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
@@ -177,6 +173,7 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             else true;
             
             if (cond) {
+                value addParameterTypesInCompletions = controller.options.parameterTypesInCompletion;
                 value qualifier = dec.name + ".";
                 value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
                 value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
@@ -208,10 +205,12 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 value ps = parameterList.parameters;
                 value exact = prefixWithoutTypeArgs(prefix, typeArgs)
                         .equals(dec.getName(unit));
+                value inexactMatches = cmp.options.inexactMatches;
                 value positional = exact
                         || "both".equals(inexactMatches)
                         || "positional".equals(inexactMatches);
                 value named = exact || "both".equals(inexactMatches);
+                value addParameterTypesInCompletions = cmp.options.parameterTypesInCompletion;
                 
                 if (positional, exists pr, 
                     parameterList.positionalParametersSupported,
@@ -344,7 +343,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         return change;
     }
     
-    shared void activeLinkedMode(Document document) {
+    shared void activeLinkedMode(Document document, IdeComponent cpc) {
         if (is Generic declaration) {
             value generic = declaration;
             variable ParameterList? paramList = null;
@@ -357,13 +356,13 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             if (exists pl = paramList) {
                 value params = getParameters(pl, includeDefaulted, namedInvocation);
                 if (!params.empty) {
-                    enterLinkedMode(document, params, null);
+                    enterLinkedMode(document, params, null, cpc);
                     return; //NOTE: early exit!
                 }
             }
             value typeParams = generic.typeParameters;
             if (!typeParams.empty) {
-                enterLinkedMode(document, null, typeParams);
+                enterLinkedMode(document, null, typeParams, cpc);
             }
         }
     }
@@ -430,7 +429,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         return comma;
     }
     
-    shared void enterLinkedMode(Document document, JList<Parameter>? params, JList<TypeParameter>? typeParams) {
+    shared void enterLinkedMode(Document document, JList<Parameter>? params,
+        JList<TypeParameter>? typeParams, IdeComponent cpc) {
+        
         value proposeTypeArguments = !(params exists);
         value paramCount = if (proposeTypeArguments) then (typeParams?.size() else 0) else (params?.size() else 0);
         if (paramCount == 0) {
@@ -464,7 +465,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                         addTypeArgumentProposals(typeParams.get(seq), loc, first, props, seq);
                     } else if (!voidParam) {
                         assert(exists params);
-                        addValueArgumentProposals(params.get(param), loc, first, props, seq, param == params.size() - 1);
+                        addValueArgumentProposals(params.get(param), loc, first,
+                            props, seq, param == params.size() - 1, cpc);
                     }
                     value middle = getCompletionPosition(first, next);
                     variable value start = loc + first + middle;
@@ -488,7 +490,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
     }
     
-    void addValueArgumentProposals(Parameter param, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index, Boolean last) {
+    void addValueArgumentProposals(Parameter param, Integer loc, Integer first,
+        MutableList<CompletionResult> props, Integer index, Boolean last, IdeComponent cpc) {
+        
         if (param.model.dynamicallyTyped) {
             return;
         }
@@ -505,7 +509,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         //stuff with fuzzily-matching name 
         for (dwp in proposals) {
             if (dwp.proximity <= 1) {
-                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null);
+                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null, cpc);
             }
         }
         //literals
@@ -515,13 +519,14 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         //stuff with lower proximity
         for (dwp in proposals) {
             if (dwp.proximity > 1) {
-                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null);
+                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null, cpc);
             }
         }
     }
     
     void addValueArgumentProposal(Parameter p, Integer loc, MutableList<CompletionResult> props, 
-        Integer index, Boolean last, Type type, Unit unit, DeclarationWithProximity dwp, DeclarationWithProximity? qualifier) {
+        Integer index, Boolean last, Type type, Unit unit, DeclarationWithProximity dwp,
+        DeclarationWithProximity? qualifier, IdeComponent cpc) {
         
         if (!exists qualifier, dwp.unimported) {
             return;
@@ -549,10 +554,10 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     value op = if (isIterArg || isVarArg) then "*" else "";
                     props.add(newNestedCompletionProposal(d, qdec, loc, index, false, op));
                 }
-                if (!exists qualifier/*TODO , preferences.getBoolean(\iCHAIN_LINKED_MODE_ARGUMENTS)*/) {
+                if (!exists qualifier, cpc.options.chainLinkedModeArguments) {
                     value members = \ivalue.typeDeclaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
                     for (mwp in CeylonIterable(members)) {
-                        addValueArgumentProposal(p, loc, props, index, last, type, unit, mwp, dwp);
+                        addValueArgumentProposal(p, loc, props, index, last, type, unit, mwp, dwp, cpc);
                     }
                 }
             }

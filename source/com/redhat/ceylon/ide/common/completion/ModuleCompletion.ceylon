@@ -48,8 +48,6 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
-    shared formal Boolean supportsLinkedModeInArguments;
-            
     shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, ModuleDetails mod, Boolean withBody,
                 ModuleVersionDetails version, String name, Node node, IdeComponent cpc);
@@ -90,6 +88,8 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
                 if (!exists results) {
                     return;
                 }
+                
+                value supportsLinkedModeInArguments = cpc.options.linkedModeArguments;
                 
                 for (mod in CeylonIterable(results.results)) {
                     value name = mod.name;
@@ -155,13 +155,15 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
 
 }
 
-shared abstract class ModuleProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent,IdeArtifact>
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
-         Boolean withBody, ModuleVersionDetails version, String name, Node node)
+         Boolean withBody, ModuleVersionDetails version, String name, Node node, IdeComponent cpc)
         extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
         (offset, prefix, versioned, versioned.spanFrom(len))
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit {
+        given InsertEdit satisfies TextEdit
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
 
     shared actual Region getSelectionInternal(Document document) {
         value off = offset + versioned.size - prefix.size - len;
@@ -179,9 +181,8 @@ shared abstract class ModuleProposal<IFile, CompletionResult, Document, InsertEd
     shared actual void applyInternal(Document document) {
         super.applyInternal(document);
         
-        if (withBody //module.getVersions().size()>1 && //TODO: put this back in when sure it works
-            // TODO EditorUtil.getPreferences().getBoolean(LINKED_MODE_ARGUMENTS)
-            ) {
+        if (withBody, //module.getVersions().size()>1 && //TODO: put this back in when sure it works
+            cpc.options.linkedModeArguments) {
             
             value linkedMode = newLinkedMode();
             value selection = getSelectionInternal(document);

@@ -15,7 +15,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Type,
     Functional,
-    Scope,
     Unit
 }
 
@@ -26,8 +25,6 @@ shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
 
-    shared formal Boolean showParameterTypes;
-    
     shared formal CompletionResult newParametersCompletionProposal(Integer offset,
         String prefix, String desc, String text, List<Type> argTypes, Node node, Unit unit);
     
@@ -43,7 +40,7 @@ shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,
             
             if (type.classOrInterface, td.equals(cd)) {
                 value argTypes = unit.getCallableArgumentTypes(type);
-                value paramTypes = true; // TODO getPreferences().getBoolean(PARAMETER_TYPES_IN_COMPLETIONS);
+                value paramTypes = cmp.options.parameterTypesInCompletion;
                 value desc = StringBuilder().append("(");
                 value text = StringBuilder().append("(");
                 

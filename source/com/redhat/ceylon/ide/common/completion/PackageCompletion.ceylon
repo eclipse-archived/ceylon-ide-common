@@ -158,19 +158,21 @@ shared abstract class PackageCompletionProposal<IFile, CompletionResult, Documen
     }
 }
 
-shared abstract class ImportedModulePackageProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
-        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate)
+shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent,IdeArtifact>
+        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, IdeComponent cpc)
         extends PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
         (offset, prefix, memberPackageSubname, withBody, fullPackageName)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit {
+        given InsertEdit satisfies TextEdit
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
     
     shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, Region selection, LinkedMode lm);
     
     shared actual void applyInternal(Document document) {
         super.applyInternal(document);
         
-        if (withBody /* TODO && getPreferences().getBoolean(LINKED_MODE_ARGUMENTS) */) {
+        if (withBody, cpc.options.linkedModeArguments) {
             value linkedMode = newLinkedMode();
             value selection = getSelectionInternal(document);
             value proposals = ArrayList<CompletionResult>();

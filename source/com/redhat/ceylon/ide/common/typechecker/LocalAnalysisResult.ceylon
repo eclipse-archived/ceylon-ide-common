@@ -16,6 +16,9 @@ import com.redhat.ceylon.compiler.typechecker {
 import com.redhat.ceylon.ide.common.model {
     CeylonProject
 }
+import com.redhat.ceylon.ide.common.settings {
+    CompletionOptions
+}
 
 "The result of the local typechecking of a CompilationUnit.
  For example, this can be used when a file is being modified,
@@ -30,4 +33,5 @@ shared interface LocalAnalysisResult<Document,IdeArtifact>
     shared formal List<CommonToken>? tokens;
     shared formal TypeChecker typeChecker;
     shared formal CeylonProject<IdeArtifact>? ceylonProject;
+    shared formal CompletionOptions options;
 }

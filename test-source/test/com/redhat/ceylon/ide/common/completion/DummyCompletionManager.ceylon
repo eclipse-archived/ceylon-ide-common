@@ -44,6 +44,9 @@ import java.util.regex {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.settings {
+    CompletionOptions
+}
 
 class Result(shared String kind, shared String insertedText, shared String description = insertedText) {
     shared actual String string => "``kind``[``insertedText``"
@@ -77,6 +80,8 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
     
     suppressWarnings("expressionTypeNothing")
     shared actual TypeChecker typeChecker => nothing;
+    
+    shared actual CompletionOptions options = CompletionOptions();
 }
 
 object dummyMonitor satisfies ProgressMonitor {
@@ -96,10 +101,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
         shared actual Integer indentSpaces => 0;
         shared actual Boolean indentWithSpaces => true;
     };
-    
-    shared actual String inexactMatches => "positional";
-    
-    shared actual Boolean addParameterTypesInCompletions => true;
     
     shared actual Result newAnonFunctionProposal(Integer offset, Type? requiredType, Unit unit, 
         String text, String header, Boolean isVoid, Integer start, Integer len)
@@ -171,10 +172,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
             => Result("newRefinementCompletionProposal", text, desc);
     
     shared actual List<Pattern> proposalFilters => empty;
-    
-    shared actual Boolean showParameterTypes => false;
-    
-    shared actual Boolean supportsLinkedModeInArguments => false;
     
     shared actual Result newTypeProposal(Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
             => Result("newTypeProposal", text, desc);
