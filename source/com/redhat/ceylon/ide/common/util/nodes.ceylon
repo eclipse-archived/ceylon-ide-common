@@ -470,7 +470,7 @@ shared object nodes {
                                 JList<Declaration>? overloads = headerDeclaration.overloads;
                                 if (exists overloads) {
                                     for (overload in CeylonIterable(overloads)) {
-                                        if (Backend.None.nativeAnnotation.equals(overload.nativeBackend)) {
+                                        if (Backend.\iNone.nativeAnnotation.equals(overload.nativeBackend)) {
                                             model = overload;
                                             foundTheCeylonDeclaration = true;
                                             break;

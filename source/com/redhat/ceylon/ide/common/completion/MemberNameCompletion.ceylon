@@ -69,6 +69,11 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
             shared variable Node result = previousNode;
 
             shared actual void visit(Tree.Type that) {
+                if (!that.startIndex exists || !that.endIndex exists) {
+                    print(that);
+                    return;
+                }
+
                 if (that.startIndex.intValue() <= previousNode.startIndex.intValue()
                     && that.endIndex.intValue() >= previousNode.endIndex.intValue()) {
                     
