@@ -51,7 +51,7 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
     
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         super.visit(that);
-        value d = that.declaration;
+        Declaration? d = that.declaration;
         if (isAliased(d, that.identifier)) {
             remove(nodes.getAbstraction(d));
         }
@@ -64,7 +64,7 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
     
     shared actual void visit(Tree.QualifiedType that) {
         super.visit(that);
-        value d = that.declarationModel;
+        Declaration? d = that.declarationModel;
         if (isAliased(d, that.identifier)) {
             remove(nodes.getAbstraction(d));
         }

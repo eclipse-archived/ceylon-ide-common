@@ -70,7 +70,6 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
 
             shared actual void visit(Tree.Type that) {
                 if (!that.startIndex exists || !that.endIndex exists) {
-                    print(that);
                     return;
                 }
 
