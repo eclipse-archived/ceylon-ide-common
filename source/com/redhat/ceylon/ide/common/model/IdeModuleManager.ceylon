@@ -16,9 +16,15 @@ import com.redhat.ceylon.model.typechecker.model {
     Package,
     ModuleImport
 }
+
+import com.redhat.ceylon.common {
+    Backend    
+}
+
 import com.redhat.ceylon.ide.common.util {
     toJavaStringList,
-    Path
+    Path,
+    toJavaString
 }
 import java.lang {
     JString=String,
@@ -182,9 +188,30 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             modelLoader.addJDKModuleToClassPath(theModule);
         }
     }
-    
+
     shared formal Boolean moduleFileInProject(String moduleName, BaseCeylonProject? ceylonProject);
     shared formal BaseIdeModule newModule(String moduleName, String version);
+
+    
+    shared actual JSet<JString> supportedBackends {
+        // We detect which backends are enabled in the project settings and
+        // we return those instead of relying on our super class which will
+        // only (and correctly!) return "JVM".
+        // This is just a hack of course because we're using this JVM module
+        // manager even for the JS backend.
+        // TODO At some point we'll need an actual module manager for the
+        // JS backend and an IDE that can somehow merge the two when needed
+        value backends = HashSet<JString>();
+        if (exists theProject = ceylonProject) {
+            if (theProject.compileToJava) {
+                backends.add(toJavaString(Backend.\iJava.nativeAnnotation));
+            }
+            if (theProject.compileToJs) {
+                backends.add(toJavaString(Backend.\iJavaScript.nativeAnnotation));
+            }
+        }
+        return backends;
+    }
 }
 
 shared abstract class IdeModuleManager<NativeProject>(
