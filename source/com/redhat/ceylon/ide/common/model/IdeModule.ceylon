@@ -276,7 +276,6 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         if (!exists sourceUnitRelativePath) {
             return null;
         }
-        assert(exists sourceUnitRelativePath);
         if (sourceUnitRelativePath.endsWith(".ceylon")) {
             return sourceUnitRelativePath;
         }
