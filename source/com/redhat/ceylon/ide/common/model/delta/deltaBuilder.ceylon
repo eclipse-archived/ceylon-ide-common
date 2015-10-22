@@ -49,6 +49,9 @@ import java.util {
 import ceylon.language.meta.model {
     ClassOrInterface
 }
+import com.redhat.ceylon.common {
+    Backends
+}
 
 shared interface NodeComparisonListener {
     shared formal void comparedNodes(String? oldNode, String? newNode, Ast.Declaration declaration, String attribute);
@@ -283,15 +286,9 @@ shared class DeltaBuilderFactory(
     }
 
     function sameBackend([Ast.AnnotationList, TypecheckerUnit] oldNode, [Ast.AnnotationList, TypecheckerUnit] newNode)
-            => let (String? oldNative = getNativeBackend(*oldNode),
-                    String? newNative = getNativeBackend(*newNode))
-                        if (exists oldNative, exists newNative)
-                        then oldNative == newNative
-                        else
-                            if (oldNative is Null && newNative is Null)
-                            then true
-                            else false;
-
+            => let (Backends oldNative = getNativeBackend(*oldNode),
+                    Backends newNative = getNativeBackend(*newNode))
+                        oldNative == newNative;
 
     class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, Ast.ModuleDescriptor? newNode, NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder(oldNode, newNode) {

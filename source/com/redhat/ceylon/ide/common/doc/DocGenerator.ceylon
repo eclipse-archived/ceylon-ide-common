@@ -497,8 +497,8 @@ shared abstract class DocGenerator<IdeComponent>() {
         if (is Value decl, decl.late) { annotationsBuilder.append("late "); }
         if (is TypedDeclaration decl, decl.variable) { annotationsBuilder.append("variable "); }
         if (decl.native) { annotationsBuilder.append("native"); }
-        if (exists backend = decl.nativeBackend, !backend.empty) {
-            annotationsBuilder.append("(").append(color("\"" + backend + "\"", Colors.strings)).append(")");
+        if (exists backends = decl.nativeBackends, !backends.none()) {
+            annotationsBuilder.append("(").append(color("\"" + backends.string + "\"", Colors.strings)).append(")");
         }
         if (decl.native) { annotationsBuilder.append(" "); }
         if (is TypeDeclaration decl) {
