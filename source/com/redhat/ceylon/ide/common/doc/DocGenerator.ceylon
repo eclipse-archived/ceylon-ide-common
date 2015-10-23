@@ -58,6 +58,9 @@ import java.lang {
 import java.util {
     Collections
 }
+import com.redhat.ceylon.common {
+    Backends
+}
 
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
@@ -497,7 +500,7 @@ shared abstract class DocGenerator<IdeComponent>() {
         if (is Value decl, decl.late) { annotationsBuilder.append("late "); }
         if (is TypedDeclaration decl, decl.variable) { annotationsBuilder.append("variable "); }
         if (decl.native) { annotationsBuilder.append("native"); }
-        if (exists backends = decl.nativeBackends, !backends.none()) {
+        if (exists backends = decl.nativeBackends, !backends.none(), backends != Backends.\iHEADER) {
             annotationsBuilder.append("(").append(color("\"" + backends.string + "\"", Colors.strings)).append(")");
         }
         if (decl.native) { annotationsBuilder.append(" "); }
