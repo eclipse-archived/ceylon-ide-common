@@ -13,7 +13,7 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
             extends SourceFile(phasedUnit) {
     }
     
-    shared actual ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? phasedUnit {
+    shared actual default ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? phasedUnit {
         assert(is ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? mpu = 
             super.phasedUnit);
         return mpu;

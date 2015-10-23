@@ -13,7 +13,8 @@ import com.redhat.ceylon.ide.common.model {
     IdeModule,
     CeylonProject,
     ProjectSourceFile,
-    BaseIdeModule
+    BaseIdeModule,
+    ModelAliases
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper { ModuleDependencyAnalysisError }
@@ -26,7 +27,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -48,17 +50,20 @@ import org.antlr.runtime {
 
 shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    value theWorkingCopies = WeakHashMap<EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>, String>();
-    WeakReference<CeylonProject<NativeProject>> ceylonProjectRef;
+    value theWorkingCopies = WeakHashMap<EditedPhasedUnitAlias, String>();
+    WeakReference<CeylonProjectAlias> ceylonProjectRef;
 
     shared new(
-        CeylonProject<NativeProject> project,
-        FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile,
-        FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir,
+        CeylonProjectAlias project,
+        FileVirtualFileAlias unitFile,
+        FolderVirtualFileAlias srcDir,
         Tree.CompilationUnit cu,
         Package p,
         ModuleManager moduleManager,
@@ -69,12 +74,12 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         ceylonProjectRef = WeakReference(project);
     }
 
-    shared new clone(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> other)
+    shared new clone(ProjectPhasedUnitAlias other)
             extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>.clone(other) {
         ceylonProjectRef = WeakReference(other.ceylonProjectRef.get());
     }
 
-    shared CeylonProject<NativeProject> ceylonProject => 
+    shared CeylonProjectAlias ceylonProject => 
             ceylonProjectRef.get();
 
     shared actual TypecheckerUnit newUnit() => 
@@ -90,11 +95,11 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
             srcDir.nativeResource;
 
     shared actual ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> unit { 
-        assert(is ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> psf=super.unit);
+        assert(is ProjectSourceFileAlias psf=super.unit);
         return psf; 
     }
     
-    shared void addWorkingCopy(EditedPhasedUnit<NativeResource, NativeFolder, NativeFile> workingCopy) {
+    shared void addWorkingCopy(EditedPhasedUnitAlias workingCopy) {
         synchronize {
              on = theWorkingCopies;
              void do() {
@@ -112,14 +117,14 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         };
     }
 
-    shared {EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>*} workingCopies {
+    shared {EditedPhasedUnitAlias*} workingCopies {
         return CeylonIterable(theWorkingCopies.keySet());
     }
 
     shared void install() {
         if (exists tc = typeChecker) {
             PhasedUnits phasedUnits = tc.phasedUnits;
-            if (is ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> oldPhasedUnit = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
+            if (is ProjectPhasedUnitAlias oldPhasedUnit = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
                 if (oldPhasedUnit === this) {
                     return; // Nothing to do : the PhasedUnit is already installed in the typechecker
                 }

@@ -28,7 +28,8 @@ import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
     FileVirtualFile,
     BaseFileVirtualFile,
-    BaseFolderVirtualFile
+    BaseFolderVirtualFile,
+    VfsAliases
 }
 
 import java.io {
@@ -49,10 +50,12 @@ import java.util {
     List
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    CeylonProject,
+    ModelAliases
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit
+    ProjectPhasedUnit,
+    TypecheckerAliases
 }
 
 shared interface CeylonSourceParser<ResultPhasedUnit>
@@ -127,15 +130,19 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
     unitFile,
     srcDir)
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared CeylonProject<NativeProject> ceylonProject;
-    shared FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile;
-    shared FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
+    shared CeylonProjectAlias ceylonProject;
+    shared FileVirtualFileAlias unitFile;
+    shared FolderVirtualFileAlias srcDir;
 
-    shared actual default ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> createPhasedUnit(
+    shared actual default ProjectPhasedUnitAlias createPhasedUnit(
         Tree.CompilationUnit cu,
         Package pkg,
         List<CommonToken> tokens)

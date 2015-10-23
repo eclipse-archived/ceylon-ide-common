@@ -187,7 +187,12 @@ shared abstract class BaseIdeModule()
     shared formal void refresh();
 }
 
-shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>() extends BaseIdeModule() {
+shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>()
+        extends BaseIdeModule()
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
     variable ModuleType? _moduleType = null;
     variable String _repositoryDisplayString = "";
     variable File? _artifact = null;
@@ -197,7 +202,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     variable Map<String, String> _classesToSources = emptyMap;
     variable Map<String, String> javaImplFilesToCeylonDeclFiles = HashMap<String, String>();
     variable String? _sourceArchivePath = null;
-    variable WeakReference<TypedCeylonProject>? _originalProject = WeakReference<TypedCeylonProject>(null);
+    variable WeakReference<CeylonProjectAlias>? _originalProject = WeakReference<CeylonProjectAlias>(null);
     variable BaseIdeModule? _originalModule = null;
     variable MutableSet<String> originalUnitsToRemove = HashSet<String> { stability = linked; };
     variable MutableSet<String> originalUnitsToAdd = HashSet<String> { stability = linked; };
@@ -207,10 +212,10 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     JSet<JString> \iJVM_BACKEND = Collections.singleton(javaString("jvm"));
     
-    alias TypedCeylonProject => CeylonProject<NativeProject>;
-    shared actual CeylonProject<NativeProject>? ceylonProject => moduleManager.ceylonProject;
+    shared alias CeylonProjectAlias => CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>;
+    shared actual CeylonProjectAlias? ceylonProject => moduleManager.ceylonProject;
     
-    shared formal actual IdeModuleManager<NativeProject> moduleManager;
+    shared formal actual IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager;
     shared formal actual IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper;
     
     shared actual Boolean isProjectModule => 

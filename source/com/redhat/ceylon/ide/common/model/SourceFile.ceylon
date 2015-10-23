@@ -18,7 +18,7 @@ shared abstract class SourceFile(
     IdePhasedUnit phasedUnit) 
         extends CeylonUnit() {
     
-    shared variable actual WeakReference<IdePhasedUnit>? phasedUnitRef = 
+    shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef = 
             WeakReference<IdePhasedUnit>(phasedUnit);
 
     shared actual Package \ipackage {

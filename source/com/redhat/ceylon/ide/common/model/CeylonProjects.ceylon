@@ -7,16 +7,36 @@ import java.util.concurrent.locks { ReentrantReadWriteLock,
 import java.lang {
     InterruptedException
 }
+import com.redhat.ceylon.ide.common.vfs {
+    ResourceVirtualFile,
+    FolderVirtualFile,
+    FileVirtualFile,
+    VfsAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    Path
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit,
+    CrossProjectPhasedUnit
+}
 
 shared abstract class BaseCeylonProjects() {
     
 }
 
-shared abstract class CeylonProjects<IdeArtifact>()
-        extends BaseCeylonProjects()
-        given IdeArtifact satisfies Object {
-    value projectMap = HashMap<IdeArtifact, CeylonProject<IdeArtifact>>();
 
+shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
+        extends BaseCeylonProjects()
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
+    
+    value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
+    
     value lock = ReentrantReadWriteLock(true);
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
@@ -32,9 +52,9 @@ shared abstract class CeylonProjects<IdeArtifact>()
         }
     }
 
-    shared formal CeylonProject<IdeArtifact> newIdeArtifact(IdeArtifact ideArtifact);
+    shared formal CeylonProjectAlias newNativeProject(NativeProject nativeProject);
 
-    shared {CeylonProject<IdeArtifact>*} ceylonProjects
+    shared {CeylonProjectAlias*} ceylonProjects
         => withLocking {
             write=false;
             do() => projectMap.items.sequence();
@@ -42,28 +62,28 @@ shared abstract class CeylonProjects<IdeArtifact>()
         };
 
 
-    shared CeylonProject<IdeArtifact>? getProject(IdeArtifact? ideArtifact)
+    shared CeylonProjectAlias? getProject(NativeProject? nativeProject)
         => withLocking {
             write=false;
-            do() => if (exists ideArtifact) then projectMap[ideArtifact] else null;
+            do() => if (exists nativeProject) then projectMap[nativeProject] else null;
             interrupted() => null;
         };
 
-    shared Boolean removeProject(IdeArtifact ideArtifact)
+    shared Boolean removeProject(NativeProject nativeProject)
         => withLocking {
             write=true;
-            do() => projectMap.remove(ideArtifact) exists;
+            do() => projectMap.remove(nativeProject) exists;
             interrupted() => false;
         };
 
-    shared Boolean addProject(IdeArtifact ideArtifact)
+    shared Boolean addProject(NativeProject nativeProject)
         => withLocking {
             write=true;
             function do() {
-                 if (projectMap[ideArtifact] exists) {
+                 if (projectMap[nativeProject] exists) {
                      return false;
                  } else {
-                     projectMap.put(ideArtifact, newIdeArtifact(ideArtifact));
+                     projectMap.put(nativeProject, newNativeProject(nativeProject));
                      return true;
                  }
             }
@@ -77,4 +97,24 @@ shared abstract class CeylonProjects<IdeArtifact>()
             interrupted() => null;
         };
 
+    shared abstract formal class VirtualFileSystem()
+            satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
+
+        shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource) {
+            assert (is NativeFolder | NativeFile resource);
+            if (is NativeFolder resource) {
+                return createVirtualFolder(resource);
+            }
+            else {
+                return createVirtualFile(resource);
+            }
+        }
+        
+        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file);
+        shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
+        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder);
+        shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
+    }
+    
+    shared formal VirtualFileSystem vfs;
 }

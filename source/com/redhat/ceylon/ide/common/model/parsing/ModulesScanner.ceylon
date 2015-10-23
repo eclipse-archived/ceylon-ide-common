@@ -14,10 +14,14 @@ import com.redhat.ceylon.ide.common.model {
     IdeModelLoader,
     BaseIdeModule,
     BaseIdeModuleManager,
-    BaseIdeModuleSourceMapper
+    BaseIdeModuleSourceMapper,
+    CrossProjectSourceFile,
+    ModelAliases
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit
+    ProjectPhasedUnit,
+    CrossProjectPhasedUnit,
+    TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
     ProgressMonitor,
@@ -26,7 +30,8 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.ide.common.vfs {
     ResourceVirtualFile,
     FolderVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -45,16 +50,19 @@ import org.antlr.runtime {
     CommonToken
 }
 
-
 shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
-    ceylonProject,
-    srcDir,
-    monitor)
+            ceylonProject,
+            srcDir,
+            monitor)
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    CeylonProject<NativeProject> ceylonProject;
+    
+    CeylonProjectAlias ceylonProject;
     BaseIdeModule defaultModule = ceylonProject.modules.default;
     BaseIdeModuleManager moduleManager = ceylonProject.modules.manager;
     BaseIdeModuleSourceMapper moduleSourceMapper = ceylonProject.modules.sourceMapper;
@@ -64,13 +72,11 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     late variable BaseIdeModule currentModule;
     ProgressMonitor monitor;
 
-    alias FolderVirtualFileAlias => FolderVirtualFile<NativeResource, NativeFolder, NativeFile>;
-    alias ProjectPhasedUnitAlias => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
 
     class ModuleDescriptorParser(
-        CeylonProject<NativeProject> theCeylonProject,
-        FileVirtualFile<NativeResource, NativeFolder, NativeFile> moduleFile,
-        FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir
+        CeylonProjectAlias theCeylonProject,
+        FileVirtualFileAlias moduleFile,
+        FolderVirtualFileAlias srcDir
     ) extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
                         theCeylonProject,
                         moduleFile,

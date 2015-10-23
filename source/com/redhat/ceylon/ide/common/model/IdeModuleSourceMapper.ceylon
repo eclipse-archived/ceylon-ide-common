@@ -31,7 +31,8 @@ import com.redhat.ceylon.compiler.typechecker.util {
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ExternalPhasedUnit,
-    CrossProjectPhasedUnit
+    CrossProjectPhasedUnit,
+    TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
     CeylonSourceParser
@@ -39,7 +40,8 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
     ZipEntryVirtualFile,
-    BaseFileVirtualFile
+    BaseFileVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.model.cmr {
     ArtifactResult
@@ -166,13 +168,19 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
 "Provisional version of the class, in order to be able to compile ModulesScanner"
 shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>(
     Context context, 
-    IdeModuleManager<NativeProject> theModuleManager) 
-		extends BaseIdeModuleSourceMapper(context, theModuleManager) {
+    IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> theModuleManager) 
+		extends BaseIdeModuleSourceMapper(context, theModuleManager) 
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
 
-    shared actual CeylonProject<NativeProject>? ceylonProject => theModuleManager.ceylonProject;
+    shared actual CeylonProjectAlias? ceylonProject => theModuleManager.ceylonProject;
     
-	shared actual default IdeModuleManager<NativeProject> moduleManager {
-		assert(is IdeModuleManager<NativeProject> mm=super.moduleManager);
+	shared actual default IdeModuleManagerAlias moduleManager {
+		assert(is IdeModuleManagerAlias mm=super.moduleManager);
 		return mm;
 	}
 	
@@ -192,7 +200,7 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 		};
 		return object extends ExternalModulePhasedUnits(context, moduleManagerFactory) {
 			
-			variable CeylonProject<NativeProject>? referencedProject = null;
+			variable CeylonProjectAlias? referencedProject = null;
 			
 			shared actual void parseFile(VirtualFile file, VirtualFile srcDir) {
 				if (file.name.endsWith(".ceylon")) {

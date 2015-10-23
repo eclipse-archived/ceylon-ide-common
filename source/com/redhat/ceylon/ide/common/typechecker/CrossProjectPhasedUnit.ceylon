@@ -34,9 +34,18 @@ import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile
 }
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
-        extends ExternalPhasedUnit {
+        extends ExternalPhasedUnit
+        given NativeProject satisfies Object
+        given OriginalNativeResource satisfies Object
+        given OriginalNativeFolder satisfies OriginalNativeResource
+        given OriginalNativeFile satisfies OriginalNativeResource {
     
-    variable value originalProjectRef = WeakReference<CeylonProject<NativeProject>>(null);
+    shared alias CeylonProjectAlias => CeylonProject<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>;
+    shared alias ProjectPhasedUnitAlias => ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>;
+    shared alias CrossProjectPhasedUnitAlias => CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>;
+    shared alias CrossProjectSourceFileAlias => CrossProjectSourceFile<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>;
+    
+    variable value originalProjectRef = WeakReference<CeylonProjectAlias>(null);
     variable value originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(null);
     
     shared new (
@@ -48,28 +57,28 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         ModuleSourceMapper moduleSourceMapper, 
         TypeChecker typeChecker, 
         List<CommonToken> tokenStream, 
-        CeylonProject<NativeProject> originalProject) 
+        CeylonProjectAlias originalProject) 
             extends ExternalPhasedUnit(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
-        originalProjectRef = WeakReference<CeylonProject<NativeProject>>(originalProject);
+        originalProjectRef = WeakReference<CeylonProjectAlias>(originalProject);
     }
     
-    shared new clone(CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> other)
+    shared new clone(CrossProjectPhasedUnitAlias other)
             extends ExternalPhasedUnit.clone(other) {
-        originalProjectRef = WeakReference<CeylonProject<NativeProject>>(other.originalProjectRef.get());
-        originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(other.originalProjectPhasedUnit);
+        originalProjectRef = WeakReference<CeylonProjectAlias>(other.originalProjectRef.get());
+        originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(other.originalProjectPhasedUnit);
     }
     
-    shared ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>? originalProjectPhasedUnit {
+    shared ProjectPhasedUnitAlias? originalProjectPhasedUnit {
         if (exists originalPhasedUnit = originalProjectPhasedUnitRef.get()) {
             return originalPhasedUnit;
         } 
-        CeylonProject<NativeProject>? originalProject = originalProjectRef.get();
+        CeylonProjectAlias? originalProject = originalProjectRef.get();
         if (exists originalProject) {
             TypeChecker? originalTypeChecker = originalProject.typechecker;
             if (exists originalTypeChecker,
-                is ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> originalPhasedUnit =
+                is ProjectPhasedUnitAlias originalPhasedUnit =
                         originalTypeChecker.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
-                originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(originalPhasedUnit);
+                originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(originalPhasedUnit);
                 return originalPhasedUnit;
             }
         }
@@ -81,8 +90,8 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         return CrossProjectSourceFile(this);
     }
     
-    shared actual CrossProjectSourceFile<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> unit {
-        assert(is CrossProjectSourceFile<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> cpsf = super.unit);
+    shared actual CrossProjectSourceFileAlias unit {
+        assert(is CrossProjectSourceFileAlias cpsf = super.unit);
         return cpsf;
     }
 }

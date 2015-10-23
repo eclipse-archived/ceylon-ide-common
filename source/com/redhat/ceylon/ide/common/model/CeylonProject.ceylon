@@ -112,13 +112,17 @@ shared abstract class BaseCeylonProject() {
     shared formal Modules modules; 
 }
 
-shared abstract class CeylonProject<NativeProject>()
+shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
-        given NativeProject satisfies Object {
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
 
-    shared actual formal CeylonProjects<NativeProject> model;
+    shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
-
+    
     shared actual Modules modules => object satisfies Modules {
         iterator() => object satisfies Iterator<BaseIdeModule> {
             value it = phasedUnits.moduleManager.modules.listOfModules.iterator();
@@ -158,12 +162,12 @@ shared abstract class CeylonProject<NativeProject>()
     shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
     shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);
     
-    shared actual {CeylonProject<NativeProject>*} referencedCeylonProjects =>
+    shared actual {CeylonProjectAlias*} referencedCeylonProjects =>
             referencedNativeProjects(ideArtifact)
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;
 
-    shared actual {CeylonProject<NativeProject>*} referencingCeylonProjects =>
+    shared actual {CeylonProjectAlias*} referencingCeylonProjects =>
             referencingNativeProjects(ideArtifact)
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;

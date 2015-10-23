@@ -10,11 +10,11 @@ import com.redhat.ceylon.ide.common.typechecker {
 
 shared abstract class CeylonUnit() extends IdeUnit() {
     
-    shared variable default WeakReference<IdePhasedUnit>? phasedUnitRef = null;
+    shared variable default WeakReference<out IdePhasedUnit>? phasedUnitRef = null;
     
     shared PhasedUnitType createPhasedUnitRef<PhasedUnitType>(PhasedUnitType phasedUnit)
         given PhasedUnitType satisfies IdePhasedUnit {
-        phasedUnitRef = WeakReference<IdePhasedUnit>(phasedUnit);
+        phasedUnitRef = WeakReference<PhasedUnitType>(phasedUnit);
         return phasedUnit;
     }
     

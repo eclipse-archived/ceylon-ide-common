@@ -40,6 +40,12 @@ import ceylon.interop.java {
 import com.redhat.ceylon.model.loader {
     AbstractModelLoader
 }
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    TypecheckerAliases
+}
 shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() {
 
@@ -214,11 +220,18 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     }
 }
 
-shared abstract class IdeModuleManager<NativeProject>(
-    CeylonProject<NativeProject>? theCeylonProject)
-        extends BaseIdeModuleManager(theCeylonProject) {
-    shared actual CeylonProject<NativeProject>? ceylonProject {
-        assert(is CeylonProject<NativeProject>? cp=super.ceylonProject);
+shared abstract class IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>(
+    CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? theCeylonProject)
+        extends BaseIdeModuleManager(theCeylonProject)
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
+    shared actual CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? ceylonProject {
+        assert(is CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? cp=super.ceylonProject);
         return cp;
     }
 
