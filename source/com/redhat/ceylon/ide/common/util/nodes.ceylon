@@ -270,7 +270,7 @@ shared object nodes {
 
     shared Node? getReferencedNode(Referenceable? model) {
         if (exists model) {
-            if (is Unit unit = model.unit) {
+            if (exists unit = model.unit) {
                 // TODO!
             }
         }
@@ -278,18 +278,19 @@ shared object nodes {
         return null;
     }
 
-
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
         Referenceable? dec = getReferencedDeclaration(node);
-
-        if (exists dec, exists node, exists unit = dec.unit, unit.equals(node.unit)) {
+        if (exists dec, exists node,
+                exists unit = dec.unit,
+                exists nodeUnit = node.unit,
+                unit==nodeUnit) {
             FindDeclarationNodeVisitor fdv =
                     FindDeclarationNodeVisitor(dec);
             fdv.visit(rn);
 
             if (is Tree.Variable decNode = fdv.declarationNode) {
                 if (is Tree.SyntheticVariable type = decNode.type) {
-                    Tree.Term term = decNode.specifierExpression.expression.term;
+                    value term = decNode.specifierExpression.expression.term;
                     return getReferencedExplicitDeclaration(term, rn);
                 }
             }
