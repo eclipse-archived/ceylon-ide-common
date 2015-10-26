@@ -25,12 +25,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addAnnotations;
     shared formal RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> removeAnnotations;
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
-    shared formal CreateQuickFix<IFile, Project,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createQuickFix;
-    shared CreateParameterQuickFix<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix => createQuickFix.createParameterQuickFix;
-    shared formal ChangeReferenceQuickFix<IFile, Project, IDocument, InsertEdit, TextEdit, TextChange, Data, Region,ICompletionProposal> changeReferenceQuickFix; 
-    shared formal DeclareLocalQuickFix<IFile, IDocument, InsertEdit, TextEdit, TextChange, LinkedMode, ICompletionProposal, Project, Data, Region> declareLocalQuickFix;
-    shared formal CreateEnumQuickFix<Project, IDocument, InsertEdit, TextEdit, TextChange, Data> createEnumQuickFix;
-    shared formal RefineFormalMembersQuickFix<IFile, IDocument, InsertEdit, TextEdit, TextChange, Region, Project, Data, ICompletionProposal> refineFormalMembersQuickFix;
+    shared formal CreateQuickFix<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createQuickFix;
+    shared CreateParameterQuickFix<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix
+            => createQuickFix.createParameterQuickFix;
+    shared formal ChangeReferenceQuickFix<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange,Data,Region,ICompletionProposal> changeReferenceQuickFix;
+    shared formal DeclareLocalQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,LinkedMode,ICompletionProposal,Project,Data,Region> declareLocalQuickFix;
+    shared formal CreateEnumQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> createEnumQuickFix;
+    shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> refineFormalMembersQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     

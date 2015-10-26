@@ -12,22 +12,19 @@ import com.redhat.ceylon.ide.common.doc {
     Icons
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
-    Indents
+    nodes
 }
 
-shared interface CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextChange,Data>
+shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
+                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,ICompletionResult>
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
     
     shared formal void consumeNewQuickFix(String desc, Icons image,
         Integer offset, TextChange change, Data data);
     
-    shared formal TextChange newTextChange(PhasedUnit unit);
     shared formal Integer getDocLength(Document doc);
-    shared formal List<PhasedUnit> getUnits(Project project);
-    shared formal Indents<Document> indents;
     
     shared void addCreateEnumProposal(Project project, Data data) {
         value node = data.node;
@@ -100,7 +97,7 @@ shared interface CreateEnumQuickFix<Project,Document,InsertEdit,TextEdit,TextCha
     void addCreateEnumProposalInternal2(String def, String desc, Icons image,
         PhasedUnit unit, Tree.Statement statement, Data data) {
         
-        value change = newTextChange(unit);
+        value change = newTextChange("Create Enumerated", unit);
         value doc = getDocumentForChange(change);
         value indent = indents.getIndent(statement, doc);
         variable value s = indent + def + indents.getDefaultLineDelimiter(doc);
