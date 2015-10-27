@@ -3,6 +3,9 @@ import ceylon.interop.java {
     javaString
 }
 
+import com.redhat.ceylon.common {
+    Backends
+}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -61,15 +64,6 @@ import java.lang {
 import java.util {
     Collections
 }
-import com.redhat.ceylon.ide.common.completion {
-    getDocDescriptionFor
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
-import com.redhat.ceylon.common {
-    Backends
-}
 
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
@@ -97,6 +91,63 @@ shared interface DocGenerator<Document,IdeArtifact> {
     "Get the Node referenced by the given model, searching
      in all relevant compilation units."
     shared formal Node? getReferencedNode(Declaration dec);
+    
+    shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
+        if (exists target) {
+            if (javaString(target).matches("doc:ceylon.language/.*:ceylon.language:Nothing")) {
+                return cmp.lastCompilationUnit.unit.nothingDeclaration;
+            }
+            
+            return getLinkedModelInternal(target, cmp);
+        }
+        
+        return null;
+    }
+    
+    Referenceable? getLinkedModelInternal(String link, IdeComponent cpc) {
+        value bits = link.split(':'.equals).sequence();
+        
+        if (exists moduleNameAndVersion = bits[1],
+            exists loc = moduleNameAndVersion.firstOccurrence('/')) {
+            
+            String moduleName = moduleNameAndVersion.spanTo(loc - 1);
+            String moduleVersion = moduleNameAndVersion.spanFrom(loc + 1);
+            value tc = cpc.typeChecker;
+            value mod = CeylonIterable(tc.context.modules.listOfModules).find(
+                (m) => m.nameAsString==moduleName && m.version==moduleVersion
+            );
+            
+            if (bits.size == 2, exists mod) {
+                return mod;
+            }
+            if (exists mod) {
+                variable Referenceable? target = mod.getPackage(bits[2]);
+                
+                if (bits.size > 3) {
+                    for (i in 3 .. bits.size-1) {
+                        variable Scope scope;
+                        if (is Scope t = target) {
+                            scope = t;
+                        } else if (is TypedDeclaration t = target) {
+                            scope = t.type.declaration;
+                        } else {
+                            return null;
+                        }
+                        
+                        if (is Value s = scope, s.typeDeclaration.anonymous) {
+                            scope = s.typeDeclaration;
+                        }
+                        
+                        target = scope.getDirectMember(bits[i], null, false);
+                    }
+                }
+                return target;
+             }
+        }
+        
+        return null;
+
+    }
     
     // see getHoverText(CeylonEditor editor, IRegion hoverRegion)
     shared String? getDocumentation(Tree.CompilationUnit rootNode, Integer offset,
