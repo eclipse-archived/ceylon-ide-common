@@ -7,7 +7,7 @@ import com.redhat.ceylon.common {
     Backends
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
+    TypecheckerUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
@@ -46,11 +46,13 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
     
     shared formal Indents<IDocument> indents;
     
-    shared formal [IFile, Tree.CompilationUnit, PhasedUnit] getUnit(IProject project, Module mod);
+    shared formal [IFile, Tree.CompilationUnit, TypecheckerUnit] getUnit(IProject project, Module mod);
     
     shared formal Character getChar(IDocument doc, Integer offset);
     
     shared formal Integer getEditOffset(TextChange change);
+    
+    shared formal void gotoLocation(TypecheckerUnit unit, Integer offset, Integer length);
     
     shared void exportModuleImports(IProject project, Module target, String moduleName) {
         value unit = getUnit(project, target);
@@ -102,7 +104,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
             map({moduleName -> versionNode}));
         value unit = getUnit(project, target);
         
-        // TODO gotoLocation(unit[2], offset + moduleName.size + indents.defaultIndent.size + 10, moduleVersion.size);
+        gotoLocation(unit[2], offset + moduleName.size + indents.defaultIndent.size + 10, moduleVersion.size);
     }
 
     shared void makeModuleImportShared(IProject project, Module target,
