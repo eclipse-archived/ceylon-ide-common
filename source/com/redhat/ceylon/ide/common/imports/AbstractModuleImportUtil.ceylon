@@ -225,25 +225,44 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         Boolean shared, Backends? backend, String moduleName,
          String moduleVersion, String newline) {
         
-        importModule.append(newline).append(indents.defaultIndent);
+        importModule.append(newline)
+                .append(indents.defaultIndent);
+        
         if (shared) {
             importModule.append("shared ");
         }
         
         if (exists backend) {
-            importModule.append("native(\"").append(backend).append("\") ");
+            appendNative(importModule, backend);
+            importModule.append(" ");
         }
         
         importModule.append("import ");
         if (!javaString(moduleName).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
-            importModule.append('"').append(moduleName).append('"');
+            importModule.append('"')
+                    .append(moduleName)
+                    .append('"');
         } else {
             importModule.append(moduleName);
         }
         
-        importModule.append(" \"").append(moduleVersion).append("\";");
+        importModule.append(" \"")
+                .append(moduleVersion)
+                .append("\";");
     }
 
+    shared void appendNative(StringBuilder builder, Backends backends) {
+        builder.append("native(");
+        appendNativeBackends(builder, backends);
+        builder.append(")");
+    }
+    
+    shared void appendNativeBackends(StringBuilder builder, Backends backends) {
+        value it = CeylonIterable(backends);
+        builder.append(", ".join(it.map((be) => "\"``be.nativeAnnotation``\"")));
+    }
+
+    
     TextEdit? createRemoveEdit(Tree.CompilationUnit unit, String moduleName) {
         value iml = getImportList(unit);
         if (!exists iml) {
