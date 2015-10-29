@@ -146,7 +146,7 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
     shared actual Result newInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, CompletionData data,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
-        Boolean qualified, Declaration? qualifyingDec)
+        Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
             => Result("newNamedInvocationCompletion", text, desc);
     
     shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text)

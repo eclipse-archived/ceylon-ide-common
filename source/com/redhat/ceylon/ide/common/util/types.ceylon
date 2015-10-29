@@ -13,6 +13,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 
+shared interface RequiredType {
+    shared formal Type? type;
+    shared formal String? parameterName;
+}
+
 shared object types {
     
     shared Type? getResultType(Declaration? d) {
@@ -27,10 +32,10 @@ shared object types {
             return null;
         }
     }
-    
-    shared Type? getRequiredType(variable Tree.CompilationUnit rootNode, variable Node node, variable CommonToken token) {
+        
+    shared RequiredType getRequiredType(variable Tree.CompilationUnit rootNode, variable Node node, variable CommonToken token) {
         RequiredTypeVisitor rtv = RequiredTypeVisitor(node, token);
         rtv.visit(rootNode);
-        return rtv.type;
+        return rtv;
     }
 }

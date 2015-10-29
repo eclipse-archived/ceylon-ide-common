@@ -238,7 +238,7 @@ shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, 
         if (exists s = sie) {
             Tree.Expression? e = s.expression;
             if (exists e) {
-                value term = e.term;
+                Tree.Term? term = e.term;
                 if (is Tree.Literal term) {
                     value text = term.token.text;
                     if (text.size < 20) {
@@ -250,7 +250,7 @@ shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, 
                     if (exists id, !exists b = bme.typeArguments) {
                         return arrow + id.text;
                     }
-                } else if (term.unit.equals(cpc.lastCompilationUnit.unit)) {
+                } else if (exists term, term.unit.equals(cpc.lastCompilationUnit.unit)) {
                     value impl = nodes.toString(term, cpc.tokens);
                     if (impl.size < 10) {
                         return arrow + impl;
@@ -518,7 +518,7 @@ shared String[] getAssignableLiterals(Type type, Unit unit) {
         } else if (dtd.float) {
             return ["0.0", "1.0", "2.0"];
         } else if (dtd.isString()) {
-            return ["\"\""];
+            return ["\"\"", "\"\"\"\"\"\""];
         } else if (dtd.character) {
             return ["' '", "'\\n'", "'\\t'"];
         } else {

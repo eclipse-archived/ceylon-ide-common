@@ -27,17 +27,27 @@ import org.antlr.runtime {
     Token
 }
 
-class RequiredTypeVisitor(Node node, Token? token) extends Visitor() {
+class RequiredTypeVisitor(Node node, Token? token)
+        extends Visitor()
+        satisfies RequiredType {
     
     variable Type? requiredType = null;
     variable Type? finalResult = null;
     variable Reference? namedArgTarget = null;
-
-    shared Type? type => finalResult;
-
+    variable String? paramName = null;
+    
+    shared actual Type? type => finalResult;
+    shared actual String? parameterName => paramName;
+    
     shared actual void visitAny(variable Node that) {
         if (node == that) {
             finalResult = requiredType;
+            
+            if (is Tree.PositionalArgument pa = that) {
+                paramName = pa.parameter.name;
+            } else if (is Tree.NamedArgument na = that) {
+                paramName = na.parameter.name;
+            }
         }
         super.visitAny(that);
     }

@@ -30,7 +30,9 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     TypeParameter,
     Unit,
-    Functional
+    Functional,
+    ModelUtil,
+    NothingType
 }
 
 import java.util {
@@ -225,10 +227,23 @@ shared abstract class RefinementCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
         
         value unit = cpc.lastCompilationUnit.unit;
+        
+        // nothing:
+        props.add(newNestedCompletionProposal(
+                unit.getLanguageModuleDeclaration("nothing"), loc));
+        
+        // this:
+        if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
+            ci.type.isSubtypeOf(type)) {
+            props.add(newNestedLiteralCompletionProposal("this", loc));
+        }
+        
+        // literals:
         for (val in getAssignableLiterals(_type, unit)) {
             props.add(newNestedLiteralCompletionProposal(val, loc));
         }
         
+        // declarations:
         value td = _type.declaration;
         for (dwp in CeylonIterable(getSortedProposedValues(scope, unit))) {
             if (dwp.unimported) {
@@ -239,14 +254,17 @@ shared abstract class RefinementCompletionProposal<IdeComponent,IdeArtifact,Comp
             }
             
             value d = dwp.declaration;
+            if (is NothingType d) {
+                return;
+            }
             value name = d.name;
             value split = javaString(prefix).split("\\s+");
             if (split.size > 0, name.equals(split.get(split.size - 1))) {
                 continue;
             }
             
-            value pack = d.unit.\ipackage;
-            value inLanguageModule = pack.nameAsString.equals(Module.\iLANGUAGE_MODULE_NAME);
+            value pname = d.unit.\ipackage.nameAsString;
+            value inLanguageModule = pname.equals(Module.\iLANGUAGE_MODULE_NAME);
             if (is Value val = d, !d.equals(declaration)) {
                 if (inLanguageModule) {
                     if (isIgnoredLanguageModuleValue(val)) {

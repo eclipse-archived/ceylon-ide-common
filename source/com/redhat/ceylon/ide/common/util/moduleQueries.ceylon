@@ -5,10 +5,34 @@ import com.redhat.ceylon.cmr.api {
 import com.redhat.ceylon.ide.common.model {
     CeylonProject
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Module
+}
+import com.redhat.ceylon.common {
+    Backend
+}
 
 shared object moduleQueries {
     
-    shared ModuleQuery getModuleQuery<IdeArtifact>(String prefix, CeylonProject<out IdeArtifact>? project) {
+    shared ModuleQuery getModuleQuery<IdeArtifact>(String prefix, Module? mod, CeylonProject<out IdeArtifact>? project) {
+        if (exists mod) {
+            if (exists backends = mod.nativeBackends) {
+                value compileToJava = backends.supports(Backend.\iJava);
+                value compileToJs = backends.supports(Backend.\iJavaScript);
+                if (compileToJava, !compileToJs) {
+                    return ModuleQuery(prefix, ModuleQuery.Type.\iJVM);
+                }
+                
+                if (compileToJs, !compileToJava) {
+                    return ModuleQuery(prefix, ModuleQuery.Type.\iJS);
+                }
+            }
+        }
+        
+        return getModuleQuery2(prefix, project);
+    }
+
+    shared ModuleQuery getModuleQuery2<IdeArtifact>(String prefix, CeylonProject<out IdeArtifact>? project) {
         if (exists project) {
             Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
             Boolean compileToJs = project.ideConfiguration.compileToJs else false;

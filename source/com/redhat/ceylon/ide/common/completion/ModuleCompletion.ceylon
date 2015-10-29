@@ -78,8 +78,9 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
             TypeChecker? typeChecker = cpc.typeChecker;
             if (exists typeChecker) {
                 value project = cpc.ceylonProject;
+                value modul = cpc.lastPhasedUnit.\ipackage.\imodule;
                 monitor.subTask("querying module repositories...");
-                value query = moduleQueries.getModuleQuery(pfp, project);
+                value query = moduleQueries.getModuleQuery(pfp, modul, project);
                 query.binaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
                 ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
                 monitor.subTask(null);

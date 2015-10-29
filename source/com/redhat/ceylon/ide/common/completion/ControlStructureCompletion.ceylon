@@ -140,8 +140,12 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                     value unit = node.unit;
                     for (pt in CeylonIterable(caseTypes)) {
                         body.append(indent).append("case (");
-                        if (pt.declaration.anonymous) {
-                            body.append(pt.declaration.getName(unit));
+                        value ctd = pt.declaration;
+                        if (ctd.anonymous) {
+                            if (!ctd.toplevel) {
+                                body.append(type.declaration.getName(unit)).append(".");
+                            }
+                            body.append(ctd.getName(unit));
                         } else {
                             body.append("is ").append(pt.asSourceCodeString(unit));
                         }

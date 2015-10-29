@@ -24,7 +24,8 @@ import com.redhat.ceylon.ide.common.util {
     types,
     escaping,
     ProgressMonitor,
-    Indents
+    Indents,
+    RequiredType
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
@@ -153,7 +154,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         //      an expression, since RequiredTypeVisitor
         //      doesn't know how to search up the tree for
         //      the containing InvocationExpression
-        Type? requiredType = types.getRequiredType(typecheckedRootNode, node, adjustedToken);
+        value required = types.getRequiredType(typecheckedRootNode, node, adjustedToken);
         variable String prefix = "";
         variable String fullPrefix = "";
         if (isIdentifierOrKeyword(adjustedToken)) {
@@ -225,11 +226,11 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
             filterProposals(proposals);
             filterProposals(functionProposals);
-            value sortedProposals = sortProposals(prefix, requiredType, proposals);
-            value sortedFunctionProposals = sortProposals(prefix, requiredType, functionProposals);
+            value sortedProposals = sortProposals(prefix, required, proposals);
+            value sortedFunctionProposals = sortProposals(prefix, required, functionProposals);
             completions = constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
                 sortedFunctionProposals, analysisResult, scope, node, adjustedToken, isMemberOp, document,
-                secondLevel, inDoc, requiredType, previousTokenType, tokenType);
+                secondLevel, inDoc, required.type, previousTokenType, tokenType);
         }
 
         assert(exists c = completions);
@@ -324,8 +325,8 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     shared formal List<Pattern> proposalFilters;
     
     // see CeylonCompletionProcessor.sortProposals()
-    Set<DeclarationWithProximity> sortProposals(String prefix, Type? type, Proposals proposals) {
-        Set<DeclarationWithProximity> set = TreeSet<DeclarationWithProximity>(ProposalComparator(prefix, type));
+    Set<DeclarationWithProximity> sortProposals(String prefix, RequiredType required, Proposals proposals) {
+        Set<DeclarationWithProximity> set = TreeSet<DeclarationWithProximity>(ProposalComparator(prefix, required));
         set.addAll(proposals.values());
         return set;
     }
@@ -989,7 +990,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             if (!filter, is FunctionOrValue m = dec) {
                 for (d in overloads(dec)) {
                     if (isRefinementProposable(d, ol, scope),
-                        t.isSubtypeOf(m.type), is ClassOrInterface scope) {
+                        isReturnType(t, m, node), is ClassOrInterface scope) {
                         value start = node.startIndex.intValue();
                         String pfx = getDocumentSubstring(doc, 0, offset - start);
 
@@ -1057,6 +1058,28 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             }
         }
         return adjustedToken;
+    }
+
+    value noTypes => Collections.emptyList<Type>();
+    
+    Boolean isReturnType(Type t, FunctionOrValue m, Node node) {
+        if (t.isSubtypeOf(m.type)) {
+            return true;
+        }
+        
+        if (is Tree.TypedDeclaration node) {
+            value td = node;
+            value container = td.declarationModel.container;
+            if (is ClassOrInterface container) {
+                value ci = container;
+                value type = ci.type.getTypedMember(m, noTypes).type;
+                if (t.isSubtypeOf(type)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 
     Boolean noParametersFollow(CommonToken? nextToken) {

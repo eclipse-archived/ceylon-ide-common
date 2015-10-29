@@ -1,22 +1,24 @@
-import com.redhat.ceylon.model.typechecker.model {
-    DeclarationWithProximity,
-    Type
-}
-
-import java.util {
-    Comparator
-}
-import java.lang {
-    JInteger=Integer
-}
 import ceylon.interop.java {
     javaString
 }
+
 import com.redhat.ceylon.ide.common.util {
-    types
+    types,
+    RequiredType
+}
+import com.redhat.ceylon.model.typechecker.model {
+    DeclarationWithProximity,
+    ModelUtil
 }
 
-class ProposalComparator(String prefix, Type? type) satisfies Comparator<DeclarationWithProximity> {
+import java.lang {
+    JInteger=Integer
+}
+import java.util {
+    Comparator
+}
+
+class ProposalComparator(String prefix, RequiredType required) satisfies Comparator<DeclarationWithProximity> {
 
     shared actual Integer compare(DeclarationWithProximity x, DeclarationWithProximity y) {
         try {
@@ -48,11 +50,11 @@ class ProposalComparator(String prefix, Type? type) satisfies Comparator<Declara
             
             value xd = x.declaration;
             value yd = y.declaration;
-            if (exists type) {
+            if (exists requiredType = required.type) {
                 value xtype = types.getResultType(xd);
                 value ytype = types.getResultType(yd);
-                Boolean xassigns = xtype?.isSubtypeOf(type) else false;
-                Boolean yassigns = ytype?.isSubtypeOf(type) else false;
+                Boolean xassigns = xtype?.isSubtypeOf(requiredType) else false;
+                Boolean yassigns = ytype?.isSubtypeOf(requiredType) else false;
                 if (xassigns, !yassigns) {
                     return -1;
                 }
@@ -86,6 +88,18 @@ class ProposalComparator(String prefix, Type? type) satisfies Comparator<Declara
             Integer pc = JInteger.compare(x.proximity, y.proximity);
             if (pc!=0) {
                 return pc;
+            }
+            
+            if (exists requiredName = required.parameterName) {
+                Boolean xnr = ModelUtil.isNameMatching(xName, requiredName);
+                Boolean ynr = ModelUtil.isNameMatching(yName, requiredName);
+                if (xnr && !ynr) {
+                    return -1;
+                }
+                if (!xnr && ynr) {
+                    return 1;
+                }
+
             }
 
             //lowercase proposals first if no prefix

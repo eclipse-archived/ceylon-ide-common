@@ -85,7 +85,7 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
             }
             if (!found, !unit.\ipackage.nameAsString.empty) {
                 monitor.subTask("querying module repositories...");
-                value query = moduleQueries.getModuleQuery("", controller.ceylonProject);
+                value query = moduleQueries.getModuleQuery("", mod, controller.ceylonProject);
                 query.memberName = fullPrefix;
                 query.memberSearchPackageOnly = true;
                 query.memberSearchExact = false;
