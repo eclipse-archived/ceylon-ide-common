@@ -16,7 +16,8 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit,
-    TypeDeclaration
+    ModelUtil,
+    ClassOrInterface
 }
 
 shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
@@ -95,14 +96,37 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             }
         }
         
-        value location = if (is TypeDeclaration con = dec.container)
-            then "in '``con.name``'"
-            else "";
-        
-        value newDesc = "Make '``dec.name``' non-``annotation`` ``location``";
+        value newDesc = description(annotation, dec);
         value selection = newRegion(offset.intValue(), 0);
-        newRemoveAnnotationQuickFix(dec, annotation, newDesc, offset.intValue(), change, selection, data);
+        newRemoveAnnotationQuickFix(dec, annotation, 
+            newDesc, offset.intValue(), change, selection, data);
     }
+    
+    String description(String annotation, Declaration dec) {
+        variable String? name = dec.name;
+        if (!exists n = name) {
+            if (ModelUtil.isConstructor(dec)) {
+                name = "default constructor ";
+            } else {
+                name = "";
+            }
+        } else {
+            assert(exists n = name);
+            name = "'" + n + "' ";
+        }
+        
+        assert(exists _name = name);
+        
+        variable value descr = "Make " + _name + "non-" + annotation;
+        value container = dec.container;
+        if (is ClassOrInterface container) {
+            value td = container;
+            descr += " in '"+td.name+"'";
+        }
+        
+        return descr;
+    }
+
     
     shared void addRemoveAnnotationDecProposal(String annotation, Project project, Node node, Data data) {
         if (is Tree.Declaration node) {

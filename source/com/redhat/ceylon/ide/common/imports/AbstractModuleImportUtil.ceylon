@@ -28,7 +28,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    StringBuilder,
+    //StringBuilder,
     ObjectArray,
     JString=String
 }
@@ -239,9 +239,9 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         
         importModule.append("import ");
         if (!javaString(moduleName).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
-            importModule.append('"')
+            importModule.append("\"")
                     .append(moduleName)
-                    .append('"');
+                    .append("\"");
         } else {
             importModule.append(moduleName);
         }

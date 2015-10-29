@@ -11,7 +11,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.util {
-    FindDeclarationNodeVisitor
+    FindDeclarationNodeVisitor,
+    types
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -27,7 +28,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeAlias,
     TypedDeclaration,
     Package,
-    Value
+    Value,
+    Module
 }
 
 import java.util {
@@ -36,6 +38,9 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
+}
+import com.redhat.ceylon.ide.common.imports {
+    AbstractModuleImportUtil
 }
 
 shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
@@ -47,6 +52,10 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     shared formal void newAddAnnotationQuickFix(Referenceable dec, String text, String desc, Integer offset,
         TextChange change, Region? selection, Data data);
 
+    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection);
+    
+    shared formal AbstractModuleImportUtil<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange> moduleImportUtil;
+    
     value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
         "actual", "formal", "default", "variable"];
     
@@ -66,6 +75,39 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
+    shared void addMakeNativeProposal(Project project, Node node, IFile file, Data data) {
+        if (is Tree.ImportPath node) {
+            object extends Visitor() {
+                shared actual void visit(Tree.ModuleDescriptor that) {
+                    value ip = node;
+                    assert(is Module \imodule = ip.model);
+                    value backends = \imodule.nativeBackends;
+                    value change = newTextChange("Declare Module Native", file);
+                    value annotation = StringBuilder();
+                    moduleImportUtil.appendNative(annotation, backends);
+                    addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
+                    newCorrectionQuickFix("Declare module '" + annotation.string + "'", change, null);
+                    
+                    super.visit(that);
+                }
+                
+                shared actual void visit(Tree.ImportModule that) {
+                    if (that.importPath == node) {
+                        assert (is Module \imodule = that.importPath.model);
+                        value backends = \imodule.nativeBackends;
+                        value change = newTextChange("Declare Import Native", file);
+                        value annotation = StringBuilder();
+                        moduleImportUtil.appendNative(annotation, backends);
+                        addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
+                        newCorrectionQuickFix("Declare import '" + annotation.string + "'", change, null);
+                    }
+                    
+                    super.visit(that);
+                }
+            }.visit(data.rootNode);
+        }
+    }
+
     shared void addMakeContainerAbstractProposal(Project project, Node node, Data data) {
         Declaration dec;
         if (is Tree.Declaration node) {
@@ -139,39 +181,53 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     }
     
     shared void addMakeDefaultProposal(Project project, Node node, Data data) {
-        variable Declaration d;
+        variable Declaration? d;
         if (is Tree.Declaration node) {
             value decNode = node;
-            d = decNode.declarationModel;
-        }
-        if (is Tree.SpecifierStatement node) {
+            //get the supertype declaration we're refining
+            d = types.getRefinedDeclaration(decNode.declarationModel);
+        } else if (is Tree.SpecifierStatement node) {
             value specNode = node;
+            //get the supertype declaration we're referencing
             d = specNode.refined;
-        } else if (is Tree.BaseMemberExpression node) {
+        /*} else if (is Tree.BaseMemberExpression node) {
             value bme = node;
             d = bme.declaration;
+        */
         } else {
             return;
         }
-        if (d.classOrInterfaceMember) {
-            assert (is ClassOrInterface container = d.container);
-            value rds = container.getInheritedMembers(d.name);
-            variable Declaration? rd = null;
-            if (rds.empty) {
-                rd = d;
-            } else {
-                for (r in CeylonIterable(rds)) {
-                    if (!r.default) {
-                        rd = r;
-                        break;
-                    }
-                }
-            }
-            if (exists _rd = rd) {
-                addAddAnnotationProposal(node, "default", "Make Default", _rd, project, data);
-            }
+        if (exists _d = d, _d.classOrInterfaceMember) {
+            addAddAnnotationProposal(node, "default",
+                "Make default", d, project, data);
+
+            //assert (is ClassOrInterface container = d.container);
+            //value rds = container.getInheritedMembers(d.name);
+            //variable Declaration? rd = null;
+            //if (rds.empty) {
+            //    rd = d;
+            //} else {
+            //    for (r in CeylonIterable(rds)) {
+            //        if (!r.default) {
+            //            rd = r;
+            //            break;
+            //        }
+            //    }
+            //}
+            //if (exists _rd = rd) {
+            //    addAddAnnotationProposal(node, "default", "Make Default", _rd, project, data);
+            //}
         }
     }
+    
+    shared void addMakeDefaultDecProposal(Project project, Node node, Data data) {
+        value dec = annotatedNode(node);
+        addAddAnnotationProposal(node,
+            if (dec.shared) then "default" else "shared default",
+            if (dec.shared) then "Make Default" else "Make Shared Default",
+            dec, project, data);
+    }
+
     
     void addAddAnnotationProposal(Node? node, String annotation, String desc,
         Referenceable? dec, Project project, Data data) {
