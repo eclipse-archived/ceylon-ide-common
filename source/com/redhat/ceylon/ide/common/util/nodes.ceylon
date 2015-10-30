@@ -8,12 +8,18 @@ import ceylon.interop.java {
     createJavaStringArray
 }
 
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
     Visitor,
     CustomTree,
     TreeUtil
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -42,15 +48,6 @@ import java.util.regex {
 import org.antlr.runtime {
     Token,
     CommonToken
-}
-import com.redhat.ceylon.common {
-    Backend
-}
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
 }
 
 shared object nodes {
@@ -534,7 +531,7 @@ shared object nodes {
 
     shared String toString(Node term, JList<CommonToken>? tokens) {
         value start = term.startIndex.intValue();
-        value length = term.stopIndex.intValue() - start + 1;
+        value length = term.endIndex.intValue() - start;
         value region = DefaultRegion(start, length);
         value exp = StringBuilder();
         value ti = getTokenIterator(tokens, region);

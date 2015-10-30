@@ -3,7 +3,6 @@ import ceylon.collection {
 }
 import ceylon.file {
     File,
-    parsePath,
     Path,
     Visitor,
     Directory,
@@ -24,7 +23,9 @@ import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile
 }
 
-import test.com.redhat.ceylon.ide.common.testUtils { resourcesRootForPackage }
+import test.com.redhat.ceylon.ide.common.testUtils {
+    resourcesRootForPackage
+}
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
 

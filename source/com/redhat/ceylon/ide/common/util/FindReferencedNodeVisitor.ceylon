@@ -6,8 +6,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
     Declaration,
-    Function,
-	Setter
+    Function
 }
 
 shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visitor() {

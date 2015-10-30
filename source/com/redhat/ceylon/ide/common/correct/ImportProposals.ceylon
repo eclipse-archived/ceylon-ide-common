@@ -39,7 +39,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.lang {
     JIterable=Iterable,
-    JInteger=Integer,
     JString=String
 }
 import java.util {
