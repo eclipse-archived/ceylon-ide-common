@@ -64,6 +64,9 @@ import java.lang {
 import java.util {
     Collections
 }
+import com.redhat.ceylon.ide.common.imports {
+    AbstractModuleImportUtil
+}
 
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
@@ -91,6 +94,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
     "Get the Node referenced by the given model, searching
      in all relevant compilation units."
     shared formal Node? getReferencedNode(Declaration dec);
+    
+    shared formal AbstractModuleImportUtil<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> moduleImportUtil;
     
     shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
         if (exists target) {
@@ -180,7 +185,7 @@ shared interface DocGenerator<Document,IdeArtifact> {
             value builder = StringBuilder();
             appendPageProlog(builder);
             
-            value text = "Inferred type: <tt>``printer.print(model, node.unit)``</tt>";
+            value text = "Inferred type:&nbsp;<tt>``printer.print(model, node.unit)``</tt>";
             addIconAndText(builder, Icons.types, text);
             builder.append("<br/>");
             // TODO add quick assist
@@ -409,6 +414,7 @@ shared interface DocGenerator<Document,IdeArtifact> {
             addNothingTypeInfo(builder);
         } else {
             addUnitInfo(decl, builder);
+            // TODO extra actions
         }
         
         appendPageEpilog(builder);
@@ -507,12 +513,33 @@ shared interface DocGenerator<Document,IdeArtifact> {
 
     // see void addMainModuleDescription(Module mod, StringBuilder buffer)
     void addMainModuleDescription(Module mod, StringBuilder buffer, IdeComponent cmp) {
+        value buf = StringBuilder();
+        if (mod.native) {
+            buf.append("native");
+        }
+        
+        value nativeBackends = mod.nativeBackends;
+        if (!nativeBackends.none(), !Backends.\iHEADER == nativeBackends) {
+            moduleImportUtil.appendNativeBackends(buf, nativeBackends);
+            value desc = color(buf.string, Colors.annotationStrings);
+            buf.append(desc);
+        }
+        
+        if (mod.native) {
+            buf.append("&nbsp;");
+        }
+        
+        if (!buf.empty) {
+            value desc = "<tt>``color(buf.string, Colors.annotations)``</tt>";
+            addIconAndText(buffer, Icons.annotations, desc);
+        }
+
         value description = "module ``mod.nameAsString`` \"``mod.version``\"";
         buffer.append("<tt>");
         addIconAndText(buffer, mod, highlight(description, cmp));
         buffer.append("</tt>");
     }
-    
+
     // see addAdditionalModuleInfo(StringBuilder buffer, Module mod)
     void addAdditionalModuleInfo(Module mod, StringBuilder buffer) {
         if (mod.java) {
@@ -570,12 +597,14 @@ shared interface DocGenerator<Document,IdeArtifact> {
         if (is TypedDeclaration decl, decl.variable) { annotationsBuilder.append("variable&nbsp;"); }
         if (decl.native) { annotationsBuilder.append("native"); }
         if (exists backends = decl.nativeBackends, !backends.none(), backends != Backends.\iHEADER) {
-            annotationsBuilder.append("(").append(color("\"" + backends.string + "\"", Colors.annotationStrings)).append(")");
+            value buf = StringBuilder();
+            moduleImportUtil.appendNativeBackends(buf, backends);
+            annotationsBuilder.append("(").append(color(buf.string, Colors.annotationStrings)).append(")");
         }
         if (decl.native) { annotationsBuilder.append("&nbsp;"); }
         if (is TypeDeclaration decl) {
             if (decl.sealed) { annotationsBuilder.append("sealed&nbsp;"); }
-            if (decl.final) { annotationsBuilder.append("final&nbsp;"); }
+            if (decl.final, !decl is Constructor) { annotationsBuilder.append("final&nbsp;"); }
             if (is Class decl, decl.abstract) { annotationsBuilder.append("abstract&nbsp;"); }
         }
         if (decl.annotation) { annotationsBuilder.append("annotation&nbsp;"); }
@@ -842,10 +871,13 @@ shared interface DocGenerator<Document,IdeArtifact> {
     // see addDoc(Declaration dec, Node node, StringBuilder buffer)
     Boolean addDoc(Declaration dec, Node? node, StringBuilder builder, IdeComponent cmp) {
         variable Boolean hasDoc = false;
-        Node? rn = getReferencedNode(dec);
+        variable Node? rn = getReferencedNode(dec);
         
-        if (is Tree.Declaration rn) {
-            Tree.AnnotationList? annotationList = rn.annotationList;
+        if (is Tree.SpecifierStatement ss = rn) {
+            rn = getReferencedNode(ss.refined);
+        }
+        if (is Tree.Declaration td = rn) {
+            Tree.AnnotationList? annotationList = td.annotationList;
             value scope = resolveScope(dec);
             appendDeprecatedAnnotationContent(annotationList, builder, scope, cmp);
             value len = builder.size;
