@@ -27,7 +27,7 @@ import org.antlr.runtime {
     Token
 }
 
-class RequiredTypeVisitor(Node node, Token? token)
+shared class RequiredTypeVisitor(Node node, Token? token)
         extends Visitor()
         satisfies RequiredType {
     
@@ -44,9 +44,13 @@ class RequiredTypeVisitor(Node node, Token? token)
             finalResult = requiredType;
             
             if (is Tree.PositionalArgument pa = that) {
-                paramName = pa.parameter.name;
+                if (exists parameter = pa.parameter) {
+                    paramName = parameter.name;
+                }
             } else if (is Tree.NamedArgument na = that) {
-                paramName = na.parameter.name;
+                if (exists parameter = na.parameter) {
+                    paramName = parameter.name;
+                }
             }
         }
         super.visitAny(that);
@@ -60,7 +64,7 @@ class RequiredTypeVisitor(Node node, Token? token)
         Reference? onat = namedArgTarget;
         Tree.PositionalArgumentList? pal = that.positionalArgumentList;
         Unit? unit = that.unit;
-
+        
         if (!exists unit) {
             return;
         }
@@ -71,10 +75,10 @@ class RequiredTypeVisitor(Node node, Token? token)
                 pos = 0;
             } else {
                 pos = pas.size(); //default to the last argument if incomplete
-                for (i in 0..pas.size()) {
+                for (i in 0 .. pas.size()) {
                     Tree.PositionalArgument pa = pas.get(i);
                     if (exists t = token) {
-                        assert(is CommonToken t);
+                        assert (is CommonToken t);
                         value tokenEnd = t.stopIndex + 1;
                         if (pa.endIndex.intValue() >= tokenEnd) {
                             pos = i;
@@ -90,7 +94,7 @@ class RequiredTypeVisitor(Node node, Token? token)
                     }
                 }
             }
-
+            
             if (exists pr = getTarget(that)) {
                 if (exists params = getParameters(pr)) {
                     if (params.size() > pos) {
@@ -117,18 +121,18 @@ class RequiredTypeVisitor(Node node, Token? token)
                     unit.isCallableType(ct)) {
                     value pts = unit.getCallableArgumentTypes(ct);
                     
-                    if (pts.size()>pos) {
+                    if (pts.size() > pos) {
                         requiredType = pts.get(pos);
                     }
                 }
             }
         }
-
+        
         Tree.NamedArgumentList? nal = that.namedArgumentList;
         if (exists nal) {
             namedArgTarget = getTarget(that);
-            if (exists nat = namedArgTarget, 
-                exists params = getParameters(nat), 
+            if (exists nat = namedArgTarget,
+                exists params = getParameters(nat),
                 !params.empty) {
                 
                 Parameter param = params.get(params.size() - 1);
@@ -150,7 +154,7 @@ class RequiredTypeVisitor(Node node, Token? token)
         requiredType = ort;
         namedArgTarget = onat;
     }
-
+    
     Reference? getTarget(Tree.InvocationExpression that) {
         if (is Tree.MemberOrTypeExpression p = that.primary) {
             return p.target;
@@ -212,7 +216,7 @@ class RequiredTypeVisitor(Node node, Token? token)
                 srt = null;
             }
         }
-
+        
         if (exists switchCaseList = that.switchCaseList) {
             for (Tree.CaseClause cc in CeylonIterable(switchCaseList.caseClauses)) {
                 if (cc===node || cc.caseItem===node) {

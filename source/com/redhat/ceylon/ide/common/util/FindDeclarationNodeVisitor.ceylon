@@ -24,27 +24,24 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
         super.visit(that);
     }
     
-    
-    shared actual void visit(Tree.ObjectDefinition that) {
+    shared actual default void visit(Tree.ObjectDefinition that) {
         if (isDeclaration(that.declarationModel.typeDeclaration)) {
             declarationNode = that;
         }
         super.visit(that);
     }
     
-    
     shared actual void visit(Tree.ModuleDescriptor that) {
         if (TreeUtil.formatPath(that.importPath.identifiers)
-            .equals(declaration.nameAsString)) {
+                .equals(declaration.nameAsString)) {
             declarationNode = that;
         }
         super.visit(that);
     }
     
-    
     shared actual void visit(Tree.PackageDescriptor that) {
         if (TreeUtil.formatPath(that.importPath.identifiers)
-            .equals(declaration.nameAsString)) {
+                .equals(declaration.nameAsString)) {
             declarationNode = that;
         }
         super.visit(that);

@@ -4,7 +4,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 
-class FindBodyContainerVisitor(Node node) extends Visitor() {
+shared class FindBodyContainerVisitor(Node node) extends Visitor() {
     
     shared variable Tree.Declaration? declaration = null;
     variable Tree.Declaration? currentDeclaration = null;
@@ -59,8 +59,8 @@ class FindBodyContainerVisitor(Node node) extends Visitor() {
     }
     
     shared actual void visitAny(Node node) {
-        if (this.node==node) {
-            declaration=currentDeclaration;
+        if (this.node == node) {
+            declaration = currentDeclaration;
         }
         if (!exists d = declaration) {
             super.visitAny(node);
