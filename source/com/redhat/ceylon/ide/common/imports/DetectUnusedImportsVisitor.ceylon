@@ -46,7 +46,8 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
         if (!exists id) {
             return true;
         }
-        return if (exists d, !d.name.equals(id.text)) then true else false;
+        return if (exists d, !d.name.equals(id.text)) 
+               then true else false;
     }
     
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {

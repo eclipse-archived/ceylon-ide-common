@@ -32,7 +32,13 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
         given InsertEdit satisfies TextEdit {
     
     shared formal Indents<IDocument> indents;
+    
+    "Returns a subset of the `doc` from offset `start` to `start + length`"
     shared formal String getDocContent(IDocument doc, Integer start, Integer length);
+    
+    "Shows a popup to allow the user to select which `Declaration` should
+     be imported between the different `proposals`"
+    shared formal Declaration? select(List<Declaration> proposals);
     
     "Returns true if the change should be applied"
     shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
@@ -70,9 +76,16 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     String imports(Tree.CompilationUnit cu, IDocument doc) {
         value proposals = ArrayList<Declaration>();
         value unused = ArrayList<Declaration>();
-        ImportProposalsVisitor(cu, proposals).visit(cu);
+        
+        ImportProposalsVisitor(cu, proposals, select).visit(cu);
         DetectUnusedImportsVisitor(unused).visit(cu);
+        
         return reorganizeImports(cu.importList, unused, proposals, doc);
+    }
+
+    // Formerly CleanImportsHandler.imports(List<Declaration>, IDocument)
+    shared String createImports(List<Declaration> proposed, IDocument doc) {
+        return reorganizeImports(null, empty, proposed, doc);
     }
     
     shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused, List<Declaration> proposed, IDocument doc) {
@@ -123,8 +136,11 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
                     builder.append(delim);
                 }
                 
-                builder.append("import ").append(escapedPackageName).append(" {");
-                appendImportElements(packageName, list, unused, proposed,
+                builder.append("import ")
+                        .append(escapedPackageName)
+                        .append(" {");
+                appendImportElements(packageName, list,
+                    unused, proposed,
                     _hasWildcard, builder, doc);
                 builder.append(delim).append("}");
             }
@@ -298,15 +314,19 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     }
     
     Boolean isErrorFree(Tree.ImportMemberOrType imt) {
-        return !hasRealErrors(imt.identifier) && !hasRealErrors(imt);
+        return !hasRealErrors(imt.identifier)
+                && !hasRealErrors(imt);
     }
     
-    Boolean preventAmbiguityDueWildcards(Declaration d, Map<String,List<Tree.Import>> importsMap) {
-        value \imodule = d.unit.\ipackage.\imodule;
+    Boolean preventAmbiguityDueWildcards(Declaration d, 
+        Map<String,List<Tree.Import>> importsMap) {
+        
+        value mod = d.unit.\ipackage.\imodule;
         value containerName = d.container.qualifiedNameString;
+        
         for (packageName -> importList in importsMap) {
             if (!packageName.equals(containerName), hasWildcard(importList)) {
-                if (exists p2 = \imodule.getPackage(packageName)) {
+                if (exists p2 = mod.getPackage(packageName)) {
                     if (exists d2 = p2.getMember(d.name, null, false), 
                         d2.toplevel, d2.shared,
                         !d2.anonymous, !isImportedWithAlias(d2, importList)) {

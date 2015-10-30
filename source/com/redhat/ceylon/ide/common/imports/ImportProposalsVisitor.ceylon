@@ -1,5 +1,6 @@
 import ceylon.collection {
-    MutableList
+    MutableList,
+    ArrayList
 }
 import ceylon.interop.java {
     CeylonIterable
@@ -13,13 +14,10 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
-import java.util {
-    ArrayList
-}
-
-class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> proposals)
+class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> proposals,
+        Declaration? chooseDeclaration(List<Declaration> decls))
         extends Visitor() {
-    
+
     shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
         super.visit(that);
         if (!that.declaration exists) {
@@ -58,10 +56,10 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
         Declaration? prop;
         if (possibles.empty) {
             prop = null;
-        } else if (possibles.size() == 1) {
+        } else if (possibles.size == 1) {
             prop = possibles.get(0);
         } else {
-            prop = null; // TODO CleanImportsHandler.select(possibles);
+            prop = chooseDeclaration(possibles);
         }
         
         if (exists prop) {
