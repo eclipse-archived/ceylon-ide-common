@@ -216,25 +216,26 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         }
         
         //construct completions when outside ordinary code
-        variable CompletionResult[]? completions = constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
+        value completions = 
+                constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
                         analysisResult, node, adjustedToken,
                         scope, returnedParamInfo, isMemberOp,
                         tokenType, monitor);
-
-        if (!exists c = completions) {
+        
+        if (exists completions) {
+            return completions; 
+        }
+        else {
             Proposals proposals = getProposals(node, scope, prefix, isMemberOp, typecheckedRootNode);
             Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
             filterProposals(proposals);
             filterProposals(functionProposals);
             value sortedProposals = sortProposals(prefix, required, proposals);
             value sortedFunctionProposals = sortProposals(prefix, required, functionProposals);
-            completions = constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
+            return constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
                 sortedFunctionProposals, analysisResult, scope, node, adjustedToken, isMemberOp, document,
                 secondLevel, inDoc, required.type, previousTokenType, tokenType);
         }
-
-        assert(exists c = completions);
-        return c; 
     }
     
     CompletionResult[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
