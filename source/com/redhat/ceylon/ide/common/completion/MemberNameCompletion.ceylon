@@ -128,22 +128,22 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
         switch (node)
         case (is Tree.SimpleType) {
             addProposals(proposals, node.identifier, node.typeModel);
-        } 
+        }
         case (is Tree.BaseTypeExpression) {
-            addProposals(proposals, node.identifier, 
+            addProposals(proposals, node.identifier,
                 getLiteralType(node, node));
         }
         case (is Tree.QualifiedTypeExpression) {
-            addProposals(proposals, node.identifier, 
+            addProposals(proposals, node.identifier,
                 getLiteralType(node, node));
-        } 
+        }
         case (is Tree.OptionalType) {
             addProposalsForType(node.definiteType, proposals);
-            for (text in proposals) {
-                value unescaped = 
-                        text.startsWith("\\i") 
+            for (text in proposals.clone()) {
+                value unescaped =
+                        text.startsWith("\\i")
                         then text[2...] else text;
-                proposals.add("maybe" + 
+                proposals.add("maybe" +
                     escaping.toInitialUppercase(unescaped));
             }
         }
@@ -188,7 +188,7 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 }
                 proposals.add("tuple");
             }
-        } 
+        }
         case (is Tree.FunctionType) {
             addProposalsForType(node.returnType, proposals);
             proposals.add("callable");
@@ -208,8 +208,8 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
             value set = HashSet<String>();
             addProposalsForType(t, set);
             if (!is Finished text = set.iterator().next()) {
-                value _text = 
-                        if (text.startsWith("\\i")) 
+                value _text =
+                        if (text.startsWith("\\i"))
                         then text[2...] else text;
                 if (sb.empty) {
                     sb.append(_text);
