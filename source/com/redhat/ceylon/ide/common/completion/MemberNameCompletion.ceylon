@@ -41,18 +41,18 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
             object extends Visitor() {
     
                 shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
-                    Tree.TypeArguments? tal = that.typeArguments;
-                    value startIndex = if (!exists tal) then null else tal.startIndex;
-                    if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                    if (exists tal = that.typeArguments, 
+                        exists startIndex = tal.startIndex, exists startIndex2, 
+                        startIndex.intValue() == startIndex2.intValue()) {
                         addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
                     }
                     super.visit(that);
                 }
     
                 shared actual void visit(Tree.SimpleType that) {
-                    Tree.TypeArgumentList? tal = that.typeArgumentList;
-                    value startIndex = if (!exists tal) then null else tal.startIndex;
-                    if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                    if (exists tal = that.typeArgumentList, 
+                        exists startIndex = tal.startIndex, exists startIndex2, 
+                        startIndex.intValue() == startIndex2.intValue()) {
                         addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
                     }
                     super.visit(that);
@@ -69,13 +69,10 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
             shared variable Node result = previousNode;
 
             shared actual void visit(Tree.Type that) {
-                if (!that.startIndex exists || !that.endIndex exists) {
-                    return;
-                }
-
-                if (that.startIndex.intValue() <= previousNode.startIndex.intValue()
-                    && that.endIndex.intValue() >= previousNode.endIndex.intValue()) {
-                    
+                if (exists thatStart = that.startIndex, exists prevStart = previousNode.startIndex,
+                    exists thatEnd = that.endIndex, exists prevEnd = previousNode.endIndex,
+                    thatStart.intValue() <= prevStart.intValue() && 
+                    thatEnd.intValue() >= prevEnd.intValue()) {
                     result = that;
                 }
             }
@@ -115,10 +112,9 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
             proposals.add("it");
          }*/
         for (name in proposals) {
-            String unquotedPrefix = prefix.startsWith("\\i") then prefix.spanFrom(2) else prefix;
-            
+            String unquotedPrefix = prefix.startsWith("\\i") then prefix[2...] else prefix;
             if (name.startsWith(unquotedPrefix)) {
-                value unquotedName = name.startsWith("\\i") then name.spanFrom(2) else name;
+                value unquotedName = name.startsWith("\\i") then name[2...] else name;
                 result.add(newMemberNameCompletionProposal(offset, prefix, unquotedName, name));
             }
         }
