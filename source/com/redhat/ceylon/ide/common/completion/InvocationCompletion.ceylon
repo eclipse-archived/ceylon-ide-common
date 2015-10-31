@@ -2,11 +2,17 @@ import ceylon.collection {
     MutableList,
     ArrayList
 }
+import ceylon.interop.java {
+    CeylonIterable
+}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
     Node
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
@@ -35,15 +41,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     NothingType
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
-import java.lang {
-    JInteger=Integer
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
+
 import java.util {
     Collections,
     HashSet,
@@ -279,14 +277,10 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             return;
         }
         object extends Visitor() {
-            
             shared actual void visit(Tree.InvocationExpression that) {
-                Tree.ArgumentList? al = that.positionalArgumentList else that.namedArgumentList;
-
-                if (exists pal=al) {
-                    JInteger? startIndex = pal.startIndex;
-                    JInteger? startIndex2 = node.startIndex;
-                    if (exists startIndex, exists startIndex2, startIndex.intValue() == startIndex2.intValue()) {
+                if (exists pal=that.positionalArgumentList else that.namedArgumentList) {
+                    if (exists startIndex = pal.startIndex, exists startIndex2 = node.startIndex, 
+                        startIndex.intValue() == startIndex2.intValue()) {
                         if (is Tree.MemberOrTypeExpression primary = that.primary) {
                             if (exists decl = primary.declaration, exists target = primary.target) {
                                 result.add(newParameterInfo(startIndex.intValue(), decl, target, node.scope, cpc, pal is Tree.NamedArgumentList));

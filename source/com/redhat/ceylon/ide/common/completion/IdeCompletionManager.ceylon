@@ -241,7 +241,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     CompletionResult[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
             Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
             Integer tokenType, ProgressMonitor monitor) {
-        MutableList<CompletionResult> result = ArrayList<CompletionResult>();
+        value result = ArrayList<CompletionResult>();
 
         if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
             addFakeShowParametersCompletion(node, cpc, result);
