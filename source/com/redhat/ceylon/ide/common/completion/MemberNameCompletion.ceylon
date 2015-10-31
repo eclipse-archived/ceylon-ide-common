@@ -203,18 +203,19 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
     
     shared void addCompoundTypeProposal(JList<out Tree.Type> ets, MutableSet<String> proposals, String join) {
-        StringBuilder sb = StringBuilder();
+        value sb = StringBuilder();
         for (t in CeylonIterable(ets)) {
             value set = HashSet<String>();
             addProposalsForType(t, set);
-
-            if (is String text = set.iterator().next()) {
-                value _text = if (text.startsWith("\\i")) then text.spanFrom(2) else text;
-
-                if (sb.size > 0) {
-                    sb.append(join).append(escaping.toInitialUppercase(_text));
-                } else {
+            if (!is Finished text = set.iterator().next()) {
+                value _text = 
+                        if (text.startsWith("\\i")) 
+                        then text[2...] else text;
+                if (sb.empty) {
                     sb.append(_text);
+                } else {
+                    sb.append(join)
+                      .append(escaping.toInitialUppercase(_text));
                 }
             } else {
                 return;
