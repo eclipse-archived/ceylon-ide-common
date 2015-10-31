@@ -307,7 +307,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     // see CeylonCompletionProcessor.
     void filterProposals(Proposals proposals) {
         List<Pattern> filters = proposalFilters;
-
         if (!filters.empty) {
             JIterator<DeclarationWithProximity> iterator = proposals.values().iterator();
             while (iterator.hasNext()) {
@@ -701,7 +700,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
             Type? requiredType, Integer previousTokenType,
             Integer tokenType) {
 
-        MutableList<CompletionResult> result = ArrayList<CompletionResult>();
+        value result = ArrayList<CompletionResult>();
         value cu = cmp.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
@@ -897,7 +896,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     Boolean isMemberNameProposable(Integer offset,
         Node node, Boolean memberOp) {
         Token? token = node.endToken;
-
         return if(is CommonToken token, !memberOp,
             token.stopIndex >= offset-2) then true else false;
     }
@@ -1044,7 +1042,6 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
     // see CeylonCompletionProcessor.adjust(...)
     CommonToken adjust(variable Integer tokenIndex, Integer offset, JList<CommonToken> tokens) {
         variable CommonToken adjustedToken = tokens.get(tokenIndex);
-
         while (--tokenIndex >= 0,
                adjustedToken.type==CeylonLexer.\iWS //ignore whitespace
             || adjustedToken.type==CeylonLexer.\iEOF
@@ -1218,21 +1215,15 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
         }
     }
 
-    Boolean isAnonymousClassValue(Declaration dec) {
-        if (is Value dec) {
-            return dec.typeDeclaration?.anonymous else false;
-        } else {
-            return false;
-        }
-    }
+    Boolean isAnonymousClassValue(Declaration dec) 
+            => if (is Value dec) 
+            then (dec.typeDeclaration?.anonymous else false) 
+            else false;
 
-    Boolean isExceptionType(Unit unit, Declaration dec) {
-        if (is TypeDeclaration dec) {
-            return dec.inherits(unit.exceptionDeclaration);
-        } else {
-            return false;
-        }
-    }
+    Boolean isExceptionType(Unit unit, Declaration dec) 
+            => if (is TypeDeclaration dec) 
+            then dec.inherits(unit.exceptionDeclaration) 
+            else false;
 
     Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {
         if (exists requiredType, requiredType.union) {

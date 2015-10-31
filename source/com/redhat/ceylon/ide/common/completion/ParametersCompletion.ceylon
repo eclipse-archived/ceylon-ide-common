@@ -44,7 +44,7 @@ shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 value desc = StringBuilder().append("(");
                 value text = StringBuilder().append("(");
                 
-                for (i in 0..argTypes.size() -1) {
+                for (i in 0..argTypes.size()-1) {
                     variable value argType = argTypes.get(i);
                     if (desc.size > 1) {
                         desc.append(", ");
