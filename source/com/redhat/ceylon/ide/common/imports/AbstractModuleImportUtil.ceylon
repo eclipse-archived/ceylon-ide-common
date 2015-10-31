@@ -122,7 +122,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
             value importModules = moduleDescriptor.importModuleList.importModules;
             
             for (im in CeylonIterable(importModules)) {
-                value importedName = nodes.getImportedName(im);
+                value importedName = nodes.getImportedModuleName(im);
                 if (exists importedName, exists moduleName,
                     javaString(importedName).equals(moduleName)) {
                     
@@ -272,7 +272,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         variable Tree.ImportModule? prev = null;
         
         for (im in CeylonIterable(iml.importModules)) {
-            value ip = nodes.getImportedName(im);
+            value ip = nodes.getImportedModuleName(im);
             if (exists ip, ip.equals(moduleName)) {
                 variable value startOffset = im.startIndex.intValue();
                 variable value length = im.distance.intValue();
@@ -298,7 +298,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         }
         
         for (im in CeylonIterable(iml.importModules)) {
-            value ip = nodes.getImportedName(im);
+            value ip = nodes.getImportedModuleName(im);
             if (exists ip, ip.equals(moduleName)) {
                 value startOffset = im.startIndex;
                 return newInsertEdit(startOffset.intValue(), "shared ");

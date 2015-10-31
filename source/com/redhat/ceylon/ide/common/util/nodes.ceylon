@@ -46,7 +46,6 @@ import java.util.regex {
 }
 
 import org.antlr.runtime {
-    Token,
     CommonToken
 }
 
@@ -217,20 +216,14 @@ shared object nodes {
 
     shared Node? getIdentifyingNode(Node? node) {
         if (is Tree.Declaration node) {
-            variable Tree.Identifier? identifier = node.identifier;
-
-            if (!exists i = identifier, !is Tree.MissingDeclaration node) {
+            if (!node.identifier exists && 
+                !node is Tree.MissingDeclaration) {
                 //TODO: whoah! this is really ugly!
-                Token? tok = node.mainToken;
-                if (!exists tok) {
-                    return null;
-                }
-                else {
-                    CommonToken fakeToken = CommonToken(tok);
-                    identifier = Tree.Identifier(fakeToken);
-                }
+                return if (exists tok = node.mainToken) 
+                then Tree.Identifier(CommonToken(tok)) 
+                else null;
             }
-            return identifier;
+            return node.identifier;
         }
         else if (is Tree.ModuleDescriptor node) {
             return node.importPath;
@@ -517,18 +510,24 @@ shared object nodes {
         return visitor.occurrence;
     }
 
-    shared String? getImportedName(Tree.ImportModule im) {
-        Tree.ImportPath? ip = im.importPath;
-        Tree.QuotedLiteral? ql = im.quotedLiteral;
-        if (exists ip) {
+    shared String? getImportedModuleName(Tree.ImportModule im) {
+        if (exists ip = im.importPath) {
             return TreeUtil.formatPath(ip.identifiers);
-        } else if (exists ql) {
+        } else if (exists ql = im.quotedLiteral) {
             return ql.text;
         } else {
             return null;
         }
     }
 
+    shared String? getImportedPackageName(Tree.Import im) {
+        if (exists ip = im.importPath) {
+            return TreeUtil.formatPath(ip.identifiers);
+        } else {
+            return null;
+        }
+    }
+    
     shared String toString(Node term, JList<CommonToken>? tokens) {
         value start = term.startIndex.intValue();
         value length = term.endIndex.intValue() - start;

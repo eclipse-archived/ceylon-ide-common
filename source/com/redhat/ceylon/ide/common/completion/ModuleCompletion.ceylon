@@ -119,7 +119,7 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
             Tree.ImportModuleList? iml = md.get(0).importModuleList;
             if (exists iml) {
                 for (im in CeylonIterable(iml.importModules)) {
-                    value path = nodes.getImportedName(im);
+                    value path = nodes.getImportedModuleName(im);
                     if (exists path, path.equals(mod)) {
                         return true;
                     }
