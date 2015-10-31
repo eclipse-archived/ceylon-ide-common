@@ -125,55 +125,57 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
     
     shared void addProposalsForType(Node? node, MutableSet<String> proposals) {
-        if (is Tree.SimpleType simpleType = node) {
-            addProposals(proposals, simpleType.identifier, simpleType.typeModel);
-        } else if (is Tree.BaseTypeExpression typeExpression = node) {
-            addProposals(proposals, typeExpression.identifier, getLiteralType(typeExpression, typeExpression));
-        } else if (is Tree.QualifiedTypeExpression typeExpression = node) {
-            addProposals(proposals, typeExpression.identifier, getLiteralType(typeExpression, typeExpression));
-        } else if (is Tree.OptionalType ot = node) {
-            Tree.StaticType et = ot.definiteType;
-            addProposalsForType(ot.definiteType, proposals);
+        switch (node)
+        case (is Tree.SimpleType) {
+            addProposals(proposals, node.identifier, node.typeModel);
+        } 
+        case (is Tree.BaseTypeExpression) {
+            addProposals(proposals, node.identifier, 
+                getLiteralType(node, node));
+        }
+        case (is Tree.QualifiedTypeExpression) {
+            addProposals(proposals, node.identifier, 
+                getLiteralType(node, node));
+        } 
+        case (is Tree.OptionalType) {
+            addProposalsForType(node.definiteType, proposals);
             for (text in proposals) {
-                value unescaped = (text.startsWith("\\i")) then text.spanFrom(2) else text;
-                proposals.add("maybe``escaping.toInitialUppercase(unescaped)``");
+                value unescaped = 
+                        text.startsWith("\\i") 
+                        then text[2...] else text;
+                proposals.add("maybe" + 
+                    escaping.toInitialUppercase(unescaped));
             }
+        }
+        case (is Tree.SequenceType) {
+            Tree.StaticType et = node.elementType;
             if (is Tree.SimpleType et) {
-                addProposals(proposals, et.identifier, ot.typeModel);
-            }
-        } else if (is Tree.SequenceType st = node) {
-            Tree.StaticType et = st.elementType;
-            if (is Tree.SimpleType et) {
-                addPluralProposals(proposals, et.identifier, st.typeModel);
+                addPluralProposals(proposals, et.identifier, node.typeModel);
             }
             proposals.add("sequence");
-        } else if (is Tree.IterableType it = node) {
-            variable Tree.Type et = it.elementType;
-
-            if (is Tree.SequencedType st = et) {
-                et = st.type;
-            }
-            if (is Tree.SimpleType set = et) {
-                addPluralProposals(proposals, set.identifier, it.typeModel);
+        }
+        case (is Tree.IterableType) {
+            if (is Tree.SequencedType st = node.elementType,
+                is Tree.SimpleType et = st.type) {
+                addPluralProposals(proposals, et.identifier, node.typeModel);
             }
             proposals.add("stream");
             proposals.add("iterable");
-        } else if (is Tree.TupleType tt = node) {
-            value ets = tt.elementTypes;
-            
+        }
+        case (is Tree.TupleType) {
+            value ets = node.elementTypes;
             if (ets.empty) {
                 proposals.add("none");
                 proposals.add("empty");
             } else if (ets.size() == 1) {
-                variable Tree.Type et = ets.get(0);
-                if (is Tree.SequencedType st = et) {
-                    et = st.type;
-                    if (is Tree.SimpleType set = et) {
-                        addPluralProposals(proposals, set.identifier, tt.typeModel);
+                value first = ets.get(0);
+                if (is Tree.SequencedType first) {
+                    if (is Tree.SimpleType set = first.type) {
+                        addPluralProposals(proposals, set.identifier, node.typeModel);
                     }
                     proposals.add("sequence");
                 } else {
-                    addProposalsForType(et, proposals);
+                    addProposalsForType(first, proposals);
                     proposals.add("singleton");
                 }
             } else {
@@ -186,14 +188,18 @@ shared interface MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,
                 }
                 proposals.add("tuple");
             }
-        } else if (is Tree.FunctionType ft = node) {
-            addProposalsForType(ft.returnType, proposals);
+        } 
+        case (is Tree.FunctionType) {
+            addProposalsForType(node.returnType, proposals);
             proposals.add("callable");
-        } else if (is Tree.UnionType ut = node) {
-            addCompoundTypeProposal(ut.staticTypes, proposals, "Or");
-        } else if (is Tree.IntersectionType it = node) {
-            addCompoundTypeProposal(it.staticTypes, proposals, "And");
         }
+        case (is Tree.UnionType) {
+            addCompoundTypeProposal(node.staticTypes, proposals, "Or");
+        }
+        case (is Tree.IntersectionType) {
+            addCompoundTypeProposal(node.staticTypes, proposals, "And");
+        }
+        else {}
     }
     
     shared void addCompoundTypeProposal(JList<out Tree.Type> ets, MutableSet<String> proposals, String join) {
