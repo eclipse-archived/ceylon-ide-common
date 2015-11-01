@@ -366,8 +366,8 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                 return offset - 1;
             }
         }
-        value curr = getChar(document, offset++);
-        switch (curr.charValue())
+        value curr = getChar(document, offset++).charValue();
+        switch (curr)
         case ('/') {
             if (offset < end) {
                 value next = getChar(document, offset);
@@ -394,110 +394,122 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                 }
             }
         }
-        case ('"') {
+        case ('"' | '\'') {
             // TODO offset = getStringEnd(document, offset, end, curr);
         }
-        case ('[') {
-            if (considerNesting) {
-                if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
-                    nestingMode = \iBRACKET;
-                    nestingLevel++;
-                }
-                break;
-            }
-        }
-        case (']') {
-            if (considerNesting) {
-                if (nestingMode == \iBRACKET) {
-                    if (--nestingLevel == 0) {
-                        nestingMode = \iNONE;
-                    }
-                }
-                break;
-            }
-        }
-        case ('(') {
-            if (considerNesting) {
-                if (nestingMode == \iANGLE) {
-                    nestingMode = \iPAREN;
-                    nestingLevel = 1;
-                }
-                if (nestingMode==\iPAREN || nestingMode==\iNONE) {
-                    nestingMode = \iPAREN;
-                    nestingLevel++;
-                }
-                break;
-            }
-        }
-        case (')') {
-            if (considerNesting) {
-                if (nestingMode == 0) {
-                    return offset - 1;
-                }
-                if (nestingMode == \iPAREN) {
-                    if (--nestingLevel == 0) {
-                        nestingMode = \iNONE;
-                    }
-                }
-                break;
-            }
-        }
-        case ('{') {
-            if (considerNesting) {
-                if (nestingMode == \iANGLE) {
-                    nestingMode = \iBRACE;
-                    nestingLevel = 1;
-                }
-                if (nestingMode==\iBRACE || nestingMode==\iNONE) {
-                    nestingMode = \iBRACE;
-                    nestingLevel++;
-                }
-                break;
-            }
-        }
-        case ('}') {
-            if (considerNesting) {
-                if (nestingMode == 0) {
-                    return offset - 1;
-                }
-                if (nestingMode == \iBRACE) {
-                    if (--nestingLevel == 0) {
-                        nestingMode = \iNONE;
-                    }
-                }
-                break;
-            }
-        }
-        case ('<') {
-            if (considerNesting) {
-                if (nestingMode==\iANGLE || nestingMode==\iNONE) {
-                    nestingMode = \iANGLE;
-                    nestingLevel++;
-                }
-                break;
-            }
-        }
-        case ('>') {
-            if (!lastWasEquals) {
-                if (nestingMode == 0) {
-                    return offset - 1;
-                }
+        else {
+            variable Boolean fallThrough = false;
+            variable Boolean breakSwitch = false;
+            
+            if (curr == '[') {
                 if (considerNesting) {
-                    if (nestingMode == \iANGLE) {
+                    if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
+                        nestingMode = \iBRACKET;
+                        nestingLevel++;
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }
+            if (fallThrough || curr == ']') {
+                if (considerNesting) {
+                    if (nestingMode == \iBRACKET) {
                         if (--nestingLevel == 0) {
                             nestingMode = \iNONE;
                         }
                     }
-                    break;
+                    breakSwitch = true;
                 }
+                fallThrough = !breakSwitch;
             }
-        }
-        else {
-            if (nestingLevel == 0) {
-                if (increments.firstOccurrence(curr.charValue()) exists) {
+            if (fallThrough || curr == '(') {
+                if (considerNesting) {
+                    if (nestingMode == \iANGLE) {
+                        nestingMode = \iPAREN;
+                        nestingLevel = 1;
+                    }
+                    if (nestingMode==\iPAREN || nestingMode==\iNONE) {
+                        nestingMode = \iPAREN;
+                        nestingLevel++;
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }            
+            if (fallThrough || curr == ')') {
+                if (considerNesting) {
+                    if (nestingMode == 0) {
+                        return offset - 1;
+                    }
+                    if (nestingMode == \iPAREN) {
+                        if (--nestingLevel == 0) {
+                            nestingMode = \iNONE;
+                        }
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }
+            if (fallThrough || curr == '{') {
+                if (considerNesting) {
+                    if (nestingMode == \iANGLE) {
+                        nestingMode = \iBRACE;
+                        nestingLevel = 1;
+                    }
+                    if (nestingMode==\iBRACE || nestingMode==\iNONE) {
+                        nestingMode = \iBRACE;
+                        nestingLevel++;
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }
+            if (fallThrough || curr == '}') {
+                if (considerNesting) {
+                    if (nestingMode == 0) {
+                        return offset - 1;
+                    }
+                    if (nestingMode == \iBRACE) {
+                        if (--nestingLevel == 0) {
+                            nestingMode = \iNONE;
+                        }
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }
+            if (fallThrough || curr == '<') {
+                if (considerNesting) {
+                    if (nestingMode==\iANGLE || nestingMode==\iNONE) {
+                        nestingMode = \iANGLE;
+                        nestingLevel++;
+                    }
+                    breakSwitch = true;
+                }
+                fallThrough = !breakSwitch;
+            }
+            if (fallThrough || curr == '>') {
+                if (!lastWasEquals) {
+                    if (nestingMode == 0) {
+                        return offset - 1;
+                    }
+                    if (considerNesting) {
+                        if (nestingMode == \iANGLE) {
+                            if (--nestingLevel == 0) {
+                                nestingMode = \iNONE;
+                            }
+                        }
+                        breakSwitch = true;
+                    }
+                }
+                fallThrough = !breakSwitch;
+            }
+
+            if (!breakSwitch, nestingLevel == 0) {
+                if (increments.firstOccurrence(curr) exists) {
                     ++charCount;
                 }
-                if (decrements.firstOccurrence(curr.charValue()) exists) {
+                if (decrements.firstOccurrence(curr) exists) {
                     --charCount;
                 }
             }
