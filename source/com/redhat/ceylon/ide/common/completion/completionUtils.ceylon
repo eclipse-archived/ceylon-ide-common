@@ -398,32 +398,20 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
             // TODO offset = getStringEnd(document, offset, end, curr);
         }
         else {
-            variable Boolean fallThrough = false;
-            variable Boolean breakSwitch = false;
-            
-            if (curr == '[') {
-                if (considerNesting) {
+            if (considerNesting) {
+                switch (curr)
+                case ('[') {
                     if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
                         nestingMode = \iBRACKET;
                         nestingLevel++;
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == ']') {
-                if (considerNesting) {
-                    if (nestingMode == \iBRACKET) {
-                        if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
-                        }
+                case (']') {
+                    if (nestingMode == \iBRACKET && --nestingLevel == 0) {
+                        nestingMode = \iNONE;
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == '(') {
-                if (considerNesting) {
+                case ('(') {
                     if (nestingMode == \iANGLE) {
                         nestingMode = \iPAREN;
                         nestingLevel = 1;
@@ -432,12 +420,8 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                         nestingMode = \iPAREN;
                         nestingLevel++;
                     }
-                    breakSwitch = true;
-                }
-                fallThrough = !breakSwitch;
-            }            
-            if (fallThrough || curr == ')') {
-                if (considerNesting) {
+                }            
+                case (')') {
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
@@ -446,12 +430,8 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                             nestingMode = \iNONE;
                         }
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == '{') {
-                if (considerNesting) {
+                case ('{') {
                     if (nestingMode == \iANGLE) {
                         nestingMode = \iBRACE;
                         nestingLevel = 1;
@@ -460,57 +440,51 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                         nestingMode = \iBRACE;
                         nestingLevel++;
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == '}') {
-                if (considerNesting) {
+                case ('}') {
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iBRACE) {
-                        if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
-                        }
+                    if (nestingMode == \iBRACE && --nestingLevel == 0) {
+                        nestingMode = \iNONE;
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == '<') {
-                if (considerNesting) {
+                case ('<') {
                     if (nestingMode==\iANGLE || nestingMode==\iNONE) {
                         nestingMode = \iANGLE;
                         nestingLevel++;
                     }
-                    breakSwitch = true;
                 }
-                fallThrough = !breakSwitch;
-            }
-            if (fallThrough || curr == '>') {
-                if (!lastWasEquals) {
+                else if (curr=='>' && !lastWasEquals) {
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (considerNesting) {
-                        if (nestingMode == \iANGLE) {
-                            if (--nestingLevel == 0) {
-                                nestingMode = \iNONE;
-                            }
+                    if (nestingMode == \iANGLE) {
+                        if (--nestingLevel == 0) {
+                            nestingMode = \iNONE;
                         }
-                        breakSwitch = true;
                     }
                 }
-                fallThrough = !breakSwitch;
-            }
-
-            if (!breakSwitch, nestingLevel == 0) {
-                if (increments.firstOccurrence(curr) exists) {
-                    ++charCount;
+                else if (nestingLevel == 0) {
+                    if (curr in increments) {
+                        ++charCount;
+                    }
+                    if (curr in decrements) {
+                        --charCount;
+                    }
                 }
-                if (decrements.firstOccurrence(curr) exists) {
-                    --charCount;
+            }
+            else {
+                if (curr=='>' && !lastWasEquals && nestingMode == 0) {
+                    return offset - 1;
+                }
+                if (nestingLevel == 0) {
+                    if (curr in increments) {
+                        ++charCount;
+                    }
+                    if (curr in decrements) {
+                        --charCount;
+                    }
                 }
             }
         }
