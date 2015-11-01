@@ -38,7 +38,7 @@ Boolean forceExplicitTypeArgs(Declaration d, OccurrenceLocation? ol) {
 shared String getTextFor(Declaration dec, Unit unit) {
     value result = StringBuilder();
     result.append(escaping.escapeName(dec, unit));
-    appendTypeParameters2(dec, result);
+    appendTypeParameters(dec, result);
     return result.string;
 }
 
@@ -50,7 +50,7 @@ String getPositionalInvocationTextFor(Declaration dec, OccurrenceLocation? ol, R
     if (exists typeArgs) {
         result.append(typeArgs);
     } else if (forceExplicitTypeArgs(dec, ol)) {
-        appendTypeParameters2(dec, result);
+        appendTypeParameters(dec, result);
     }
     appendPositionalArgs(dec, pr, unit, result, includeDefaulted, false, addParameterTypesInCompletions);
     appendSemiToVoidInvocation(result, dec);
@@ -65,7 +65,7 @@ String getNamedInvocationTextFor(Declaration dec, Reference pr, Unit unit,
     if (exists typeArgs) {
         result.append(typeArgs);
     } else if (forceExplicitTypeArgs(dec, null)) {
-        appendTypeParameters2(dec, result);
+        appendTypeParameters(dec, result);
     }
     appendNamedArgs(dec, pr, unit, result, includeDefaulted, false, addParameterTypesInCompletions);
     appendSemiToVoidInvocation(result, dec);
@@ -80,7 +80,7 @@ void appendSemiToVoidInvocation(StringBuilder result, Declaration dd) {
 
 shared String getDescriptionFor(Declaration dec, Unit unit) {
     value result = StringBuilder().append(dec.getName(unit));
-    appendTypeParameters2(dec, result);
+    appendTypeParameters(dec, result);
     return result.string;
 }
 
@@ -93,7 +93,7 @@ shared String getDescriptionFor2(DeclarationWithProximity dwp, Unit unit, Boolea
     }
     result.append(dec.getName(unit));
     if (addTypeParameters) {
-        appendTypeParameters2(dec, result);
+        appendTypeParameters(dec, result);
     }
     return result.string;
 }
@@ -116,7 +116,7 @@ shared String getPositionalInvocationDescriptionFor(
     if (exists typeArgs) {
         result.append(typeArgs);
     } else if (forceExplicitTypeArgs(dec, ol)) {
-        appendTypeParameters2(dec, result);
+        appendTypeParameters(dec, result);
     }
     appendPositionalArgs(dec, pr, unit, result, includeDefaulted, true, addParameterTypesInCompletions);
     return result.string;
@@ -130,7 +130,7 @@ shared String getNamedInvocationDescriptionFor(Declaration dec, Reference pr,
     if (exists typeArgs) {
         result.append(typeArgs);
     } else if (forceExplicitTypeArgs(dec, null)) {
-        appendTypeParameters2(dec, result);
+        appendTypeParameters(dec, result);
     }
     appendNamedArgs(dec, pr, unit, result, includeDefaulted, true, addParameterTypesInCompletions);
     return result.string;
@@ -146,7 +146,7 @@ shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit, Bool
         }
     }
     appendDeclarationHeaderText(d, pr, unit, result);
-    appendTypeParameters2(d, result);
+    appendTypeParameters(d, result);
     appendParameters(d, pr, unit, result, null, true);
     if (is Class d) {
         result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
@@ -192,7 +192,7 @@ void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent, B
 shared String getInlineFunctionTextFor(Parameter p, Reference? pr, Unit unit, String indent) {
     value result = StringBuilder();
     appendNamedArgumentHeader(p, pr, result, false);
-    appendTypeParameters2(p.model, result);
+    appendTypeParameters(p.model, result);
     appendParametersText(p.model, pr, unit, result);
     if (p.declaredVoid) {
         result.append(" {}");
@@ -213,7 +213,7 @@ String getRefinementDescriptionFor(Declaration d, Reference? pr, Unit unit) {
         result.append("variable ");
     }
     appendDeclarationHeaderDescription(d, pr, unit, result);
-    appendTypeParameters2(d, result);
+    appendTypeParameters(d, result);
     appendParameters(d, pr, unit, result, null, true);
     /*result.append(" - refine declaration in ") 
         .append(((Declaration) d.getContainer()).getName());*/
@@ -223,7 +223,7 @@ String getRefinementDescriptionFor(Declaration d, Reference? pr, Unit unit) {
 String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
     value result = StringBuilder();
     appendNamedArgumentHeader(p, pr, result, true);
-    appendTypeParameters2(p.model, result);
+    appendTypeParameters(p.model, result);
     appendParameters(p.model, pr, unit, result, null, true);
     return result.string;
 }
@@ -232,11 +232,9 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 shared String getDocDescriptionFor<Document,IdeArtifact>(Declaration decl, Reference? pr, Unit unit,
     LocalAnalysisResult<Document,IdeArtifact> cmp) {
     StringBuilder result = StringBuilder();
-    
     appendDeclarationHeader(decl, pr, unit, result, true);
-    appendTypeParameters(decl, pr, unit, result, true);
+    appendTypeParametersWithArguments(decl, pr, unit, result, true);
     appendParametersDescription(decl, pr, unit, result, true, cmp);
-    
     return result.string;
 }
 
@@ -364,7 +362,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder resul
 }
 
 // see CodeCompletions.appendTypeParameters(Declaration d, StringBuilder result)
-void appendTypeParameters2(Declaration d, StringBuilder result, Boolean variances = false) {
+void appendTypeParameters(Declaration d, StringBuilder result, Boolean variances = false) {
     if (is Generic d) {
         value types = (d).typeParameters;
         if (!types.empty) {
@@ -387,12 +385,12 @@ void appendTypeParameters2(Declaration d, StringBuilder result, Boolean variance
 }
 
 // see CodeCompletions.appendTypeParameters
-shared void appendTypeParameters(Declaration d, Reference? pr, Unit unit, StringBuilder result, Boolean variances) {
+shared void appendTypeParametersWithArguments(Declaration d, Reference? pr, Unit unit, StringBuilder result, Boolean variances) {
     if (is Generic d) {
         value types = d.typeParameters;
         
         if (!types.empty) {
-            result.append("&lt;");
+            result.append("<");
             
             CeylonIterable(types).fold(true)((isFirst, tp) {
                 if (!isFirst) { result.append(", "); }
@@ -430,7 +428,7 @@ shared void appendTypeParameters(Declaration d, Reference? pr, Unit unit, String
                 return false;
             });
             
-            result.append("&gt;");
+            result.append(">");
         }
     }
 }
