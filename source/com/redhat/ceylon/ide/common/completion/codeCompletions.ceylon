@@ -297,7 +297,7 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit, StringBuilder 
                 }
                 result.append(escaping.escapeName(p.model)).append(", ");
             }
-            result.deleteTerminal(result.size - 2);
+            result.deleteTerminal(2);
             result.append(")");
         }
     }
