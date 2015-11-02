@@ -48,12 +48,11 @@ shared interface KeywordCompletion<CompletionResult> {
             //TODO: this filters out satisfies/extends in an object named arg
             value keywords = if (isLocation(ol, OccurrenceLocation.\iEXPRESSION))
                              then if (postfix) then postfixKeywords else expressionKeywords
-                             else CeylonIterable(escaping.keywords);
+                             else escaping.keywords;
 
             for (keyword in keywords) {
-                value str = if (is String keyword) then keyword else keyword.string;
-                if (str.startsWith(prefix)) {
-                    addKeywordProposal(offset, prefix, result, str);
+                if (keyword.startsWith(prefix)) {
+                    addKeywordProposal(offset, prefix, result, keyword);
                 }
             }
         } else if (isLocation(ol, OccurrenceLocation.\iCASE), previousTokenType == CeylonLexer.\iLPAREN) {

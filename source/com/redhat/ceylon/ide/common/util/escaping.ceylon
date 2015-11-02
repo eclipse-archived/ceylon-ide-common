@@ -7,22 +7,15 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 
-import java.lang {
-    JString=String
-}
-import java.util {
-    Set,
-    LinkedHashSet
-}
 
 shared object escaping {
     
-    shared Set<JString> keywords = LinkedHashSet<JString>(toJavaStringList({"import", "assert",
+    shared {String+} keywords = {"import", "assert",
         "alias", "class", "interface", "object", "given", "value", "assign", "void", "function", 
         "assembly", "module", "package", "of", "extends", "satisfies", "abstracts", "in", "out", 
         "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while", 
         "try", "catch", "finally", "this", "outer", "super", "is", "exists", "nonempty", "then",
-        "dynamic", "new", "let"}));
+        "dynamic", "new", "let"};
     
     shared String escape(String name) {
         return if (keywords.contains(name))

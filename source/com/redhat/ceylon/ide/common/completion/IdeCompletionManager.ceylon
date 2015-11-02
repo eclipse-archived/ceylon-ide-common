@@ -422,7 +422,7 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 || type == CeylonLexer.\iUIDENTIFIER 
                 || type == CeylonLexer.\iAIDENTIFIER 
                 || type == CeylonLexer.\iPIDENTIFIER 
-                || escaping.keywords.contains(token.text);
+                || escaping.keywords.contains(token.text.string);
     }
 
     // see CeylonCompletionProcessor.isCommentOrCodeStringLiteral()
