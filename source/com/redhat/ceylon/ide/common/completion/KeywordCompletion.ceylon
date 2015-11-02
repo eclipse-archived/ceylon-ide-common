@@ -4,9 +4,6 @@ import ceylon.collection {
     Hashtable,
     MutableList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
