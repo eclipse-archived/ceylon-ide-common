@@ -1,5 +1,7 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+    Tree,
+    Visitor,
+    Node
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -29,6 +31,21 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         & ExtractLinkedModeEnabled<IRegion>
         given InsertEdit satisfies TextEdit {
+
+    class FindAnonFunctionVisitor(statement, Node node) extends Visitor() {
+        Tree.Statement statement;
+        shared variable Tree.FunctionArgument? result = null;
+        
+        shared actual void visit(Tree.FunctionArgument that) {
+            if (that != node &&
+                that.startIndex.intValue() <= node.startIndex.intValue() &&
+                    that.endIndex.intValue()>=node.endIndex.intValue() &&
+                    that.startIndex.intValue()>statement.startIndex.intValue()) {
+                result = that;
+            }
+            super.visit(that);
+        }
+    }
 
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
 
@@ -75,9 +92,85 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
         value unit = node.unit;
         value statement = nodes.findStatement(rootNode, node);
-        value toplevel = if (is Tree.Declaration statement)
-        then statement.declarationModel.toplevel
-        else false;
+
+        Tree.FunctionArgument? anon;
+        assert(exists statement);
+        variable value start = statement.startIndex.intValue();
+        variable Integer il = 0;
+        variable String newLineOrReturn = 
+                indents.getDefaultLineDelimiter(doc) + 
+                indents.getIndent(statement, doc);
+        value visitor = 
+                FindAnonFunctionVisitor(statement, node);
+        visitor.visit(statement);
+        anon = visitor.result;
+
+        Boolean toplevel;
+        if (exists anon, !anon.block exists) {
+            Tree.Expression? ex = anon.expression;
+            if (exists ex) {
+                value pls = anon.parameterLists;
+                variable Node pl = pls.get(pls.size()-1);
+                if (exists tcl = anon.typeConstraintList) {
+                    pl = tcl;
+                }
+                start = ex.startIndex.intValue();
+                value loc = pl.endIndex.intValue();
+                value len = ex.startIndex.intValue() - loc;
+                value end = ex.endIndex.intValue();
+                addEditToChange(tfc, newReplaceEdit(loc, len, " { "));
+                addEditToChange(tfc, newInsertEdit(end, "; }"));
+                il -=len-3;
+                if (anon.declarationModel.declaredVoid) {
+                    newLineOrReturn = " ";
+                }
+                else {
+                    newLineOrReturn = " return ";
+                }
+                toplevel = false;
+            }
+            else {
+                return;
+            }
+        }
+        else if (is Tree.Declaration dec=statement) {
+            if (is Tree.MethodDeclaration md=dec) {
+                Tree.SpecifierExpression? se = md.specifierExpression;
+                if (exists se) {
+                    Tree.Expression? ex = se.expression;
+                    if (exists ex) {
+                        value pls = md.parameterLists;
+                        variable Node pl = pls.get(pls.size()-1);
+                        if (exists tcl=md.typeConstraintList) {
+                            pl = tcl;
+                        }
+                        start = ex.startIndex.intValue();
+                        value loc = pl.endIndex.intValue();
+                        value len = ex.startIndex.intValue() - loc;
+                        value end = ex.endIndex.intValue();
+                        value semi = dec.endIndex.intValue()-1;
+                        String indent = indents.defaultIndent;
+                        String starting = " {" + newLineOrReturn + indent;
+                        String ending = ";" + newLineOrReturn + "}";
+                        addEditToChange(tfc, newReplaceEdit(loc, len, starting));
+                        addEditToChange(tfc, newInsertEdit(end, ending));
+                        addEditToChange(tfc, newDeleteEdit(semi, 1));
+                        il-=len-starting.size;
+                        newLineOrReturn = newLineOrReturn + indent;
+                        if (!md.declarationModel.declaredVoid) {
+                            newLineOrReturn += "return ";
+                        }
+                    }
+                }
+                toplevel = false;
+            }
+            else {
+                toplevel = dec.declarationModel.toplevel;
+            }
+        }
+        else {
+            toplevel = false;
+        }
         type = unit.denotableType(node.typeModel);
         value unparened = unparenthesize(node);
 
@@ -111,7 +204,6 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
         variable String typeDec;
 
-        Integer il;
         if (type?.unknown else true) {
             typeDec = "dynamic";
             il = 0;
@@ -119,11 +211,10 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             typeDec = t.asSourceCodeString(unit);
             value declarations = HashSet<Declaration>();
             importProposals.importType(declarations, type, rootNode);
-            il = importProposals.applyImports(tfc, declarations, rootNode, doc);
+            il += importProposals.applyImports(tfc, declarations, rootNode, doc);
         } else {
             canBeInferred = true;
             typeDec = mod;
-            il = 0;
         }
 
         value myDeclaration =
@@ -133,19 +224,16 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 else if (getter) then " => " else " = "
                 ````exp``";
 
-        value text = myDeclaration + indents.getDefaultLineDelimiter(doc)
-                + indents.getIndent(statement, doc);
-
-        if (exists st = statement) {
-            Integer start = st.startIndex.intValue();
-
-            addEditToChange(tfc, newInsertEdit(start, text));
-            addEditToChange(tfc, newReplaceEdit(nodes.getNodeStartOffset(node), nodes.getNodeLength(node), newName));
-            typeRegion = newRegion(start+il, typeDec.size);
-            decRegion = newRegion(start+il+typeDec.size+1, newName.size);
-            refRegion = newRegion(nodes.getNodeStartOffset(node)+il+text.size,
-                newName.size);
-        }
+        value text = myDeclaration + newLineOrReturn;
+        value tlength = typeDec.size;
+        value nstart = nodes.getNodeStartOffset(node);
+        value nlength = node.distance.intValue();
+        addEditToChange(tfc, newInsertEdit(start, text));
+        addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
+        value len = newName.size;
+        typeRegion = newRegion(start+il, tlength);
+        decRegion = newRegion(start+il+tlength+1, len);
+        refRegion = newRegion(nstart+il+text.size, len);
     }
 
     shared Boolean isFunction
