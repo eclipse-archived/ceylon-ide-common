@@ -75,7 +75,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 pos = 0;
             } else {
                 pos = pas.size(); //default to the last argument if incomplete
-                for (i in 0 .. pas.size()) {
+                for (i in 0 .. pas.size() - 1) {
                     Tree.PositionalArgument pa = pas.get(i);
                     if (exists t = token) {
                         assert (is CommonToken t);
