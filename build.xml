@@ -43,6 +43,7 @@
 
         <reposet id="reposet.compile.source">
             <repo url="${out.repo}"/>
+            <repo url="${basedir}/repo"/>
         </reposet>
 
         <reposet id="reposet.compile.test">
