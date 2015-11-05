@@ -808,10 +808,10 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                         else true) {
                     for (d in overloads(dec)) {
                         value pr = if (isMember)
-                            then getQualifiedProducedReference(node, dec)
-                            else getRefinedProducedReference(scope, dec);
+                            then getQualifiedProducedReference(node, d)
+                            else getRefinedProducedReference(scope, d);
 
-                        addInvocationProposals(offset, prefix, cmp, result, dwp, dec, pr, scope, ol, null, isMember);
+                        addInvocationProposals(offset, prefix, cmp, result, dwp, d, pr, scope, ol, null, isMember);
                     }
                 }
                 if (isProposable(dwp, ol, scope, unit, requiredType, previousTokenType),
