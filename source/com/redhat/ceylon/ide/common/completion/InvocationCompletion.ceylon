@@ -118,26 +118,33 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         }
     }
 
-    shared void addSecondLevelProposal(Integer offset, String prefix, IdeComponent controller, MutableList<CompletionResult> result,
-        Declaration dec, Scope scope, Boolean isMember, Reference pr, Type? requiredType, OccurrenceLocation? ol) {
+    shared void addSecondLevelProposal(Integer offset, String prefix, 
+        IdeComponent controller, MutableList<CompletionResult> result,
+        Declaration dec, Scope scope, Boolean isMember, Reference pr,
+        Type? requiredType, OccurrenceLocation? ol) {
         
         value unit = controller.lastCompilationUnit.unit;
         
         if (exists type = pr.type) {
             if (!(dec is Functional), !(dec is TypeDeclaration)) {
                 //add qualified member proposals
-                value members = type.declaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                value members = type.declaration
+                        .getMatchingMemberDeclarations(unit, scope, "", 0).values();
                 for (ndwp in CeylonIterable(members)) {
                     value m = ndwp.declaration;
-                    if ((m is FunctionOrValue || m is Class), !ModelUtil.isConstructor(m)) {
+                    if ((m is FunctionOrValue || m is Class),
+                        !ModelUtil.isConstructor(m)) {
+                        
                         if (m.abstraction) {
                             for (o in CeylonIterable(m.overloads)) {
-                                addSecondLevelProposalInternal(offset, prefix, controller,
-                                    result, dec, scope, requiredType, ol, unit, type, ndwp, o);
+                                addSecondLevelProposalInternal(offset, prefix,
+                                    controller, result, dec, scope, requiredType,
+                                    ol, unit, type, ndwp, o);
                             }
                         } else {
-                            addSecondLevelProposalInternal(offset, prefix, controller,
-                                result, dec, scope, requiredType, ol, unit, type, ndwp, m);
+                            addSecondLevelProposalInternal(offset, prefix,
+                                controller, result, dec, scope, requiredType,
+                                ol, unit, type, ndwp, m);
                         }
                     }
                 }
@@ -177,10 +184,15 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
             else true;
             
             if (cond) {
-                value addParameterTypesInCompletions = controller.options.parameterTypesInCompletion;
+                value addParameterTypesInCompletions
+                        = controller.options.parameterTypesInCompletion;
                 value qualifier = dec.name + ".";
-                value desc = qualifier + getPositionalInvocationDescriptionFor(mwp, m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
-                value text = qualifier + getPositionalInvocationTextFor(m, ol, ptr, unit, false, null, addParameterTypesInCompletions);
+                value desc = qualifier + getPositionalInvocationDescriptionFor(
+                    mwp, m, ol, ptr, unit, false, null,
+                    addParameterTypesInCompletions);
+                value text = qualifier + getPositionalInvocationTextFor(m, ol,
+                    ptr, unit, false, null, addParameterTypesInCompletions);
+                
                 result.add(newInvocationCompletion(offset, prefix,
                         desc, text, m, ptr, scope, controller, true,
                         true, false,
@@ -205,7 +217,8 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         
         if (is Functional fd = dec) {
             value unit = cmp.lastCompilationUnit.unit;
-            value isAbstract = if (is TypeDeclaration dec, dec.abstract) then true else false;
+            value isAbstract = if (is TypeDeclaration dec, dec.abstract)
+                               then true else false;
             value pls = fd.parameterLists;
             
             if (!pls.empty) {
@@ -231,18 +244,25 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
 
                     value parameters = getParameters(parameterList, false, false);
                     if (ps.size() != parameters.size()) {
-                        value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
-                        value text = getPositionalInvocationTextFor(dec, ol, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        value desc = getPositionalInvocationDescriptionFor(
+                            dwp, dec, ol, pr, unit, false, typeArgs,
+                            addParameterTypesInCompletions);
+                        value text = getPositionalInvocationTextFor(dec, ol, pr,
+                            unit, false, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, false, true, false, inheritance, isMember, null));
+                        result.add(newInvocationCompletion(offset, prefix, desc,
+                            text, dec, pr, scope, cmp, false, true, false,
+                            inheritance, isMember, null));
                     }
 
-                    value desc = getPositionalInvocationDescriptionFor(dwp, dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
-                    value text = getPositionalInvocationTextFor(dec, ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                    value desc = getPositionalInvocationDescriptionFor(dwp, dec,
+                        ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                    value text = getPositionalInvocationTextFor(dec, ol, pr,
+                        unit, true, typeArgs, addParameterTypesInCompletions);
 
-                    result.add(newInvocationCompletion(offset, prefix, desc, text, dec,
-                        pr, scope, cmp, true, true, false, inheritance, isMember, null));
+                    result.add(newInvocationCompletion(offset, prefix, desc,
+                        text, dec, pr, scope, cmp, true, true, false, inheritance,
+                        isMember, null));
                 }
                 if (named, parameterList.namedParametersSupported, exists pr,
                     !isAbstract && !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
@@ -253,25 +273,33 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
                     //suggest a named argument invocation
                     value parameters = getParameters(parameterList, false, true);
                     if (ps.size() != parameters.size()) {
-                        value desc = getNamedInvocationDescriptionFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
-                        value text =  getNamedInvocationTextFor(dec, pr, unit, false, typeArgs, addParameterTypesInCompletions);
+                        value desc = getNamedInvocationDescriptionFor(dec, pr,
+                            unit, false, typeArgs, addParameterTypesInCompletions);
+                        value text =  getNamedInvocationTextFor(dec, pr, unit,
+                            false, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, false, false, true, inheritance, isMember, null));
+                        result.add(newInvocationCompletion(offset, prefix, desc,
+                            text, dec, pr, scope, cmp, false, false, true,
+                            inheritance, isMember, null));
                     }
                     if (!ps.empty) {
-                        value desc = getNamedInvocationDescriptionFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
-                        value text = getNamedInvocationTextFor(dec, pr, unit, true, typeArgs, addParameterTypesInCompletions);
+                        value desc = getNamedInvocationDescriptionFor(dec, pr,
+                            unit, true, typeArgs, addParameterTypesInCompletions);
+                        value text = getNamedInvocationTextFor(dec, pr, unit,
+                            true, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newInvocationCompletion(offset, prefix, desc, text,
-                            dec, pr, scope, cmp, true, false, true, inheritance, isMember, null));
+                        result.add(newInvocationCompletion(offset, prefix, desc,
+                            text, dec, pr, scope, cmp, true, false, true,
+                            inheritance, isMember, null));
                     }
                 }
             }
         }
     }
     
-    shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc, MutableList<CompletionResult> result) {
+    shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc,
+        MutableList<CompletionResult> result) {
+        
         Tree.CompilationUnit? upToDateAndTypeChecked = cpc.typecheckedRootNode;
         if (!exists upToDateAndTypeChecked) {
             return;
@@ -279,11 +307,17 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
         object extends Visitor() {
             shared actual void visit(Tree.InvocationExpression that) {
                 if (exists pal=that.positionalArgumentList else that.namedArgumentList) {
-                    if (exists startIndex = pal.startIndex, exists startIndex2 = node.startIndex, 
+                    if (exists startIndex = pal.startIndex,
+                        exists startIndex2 = node.startIndex, 
                         startIndex.intValue() == startIndex2.intValue()) {
+                        
                         if (is Tree.MemberOrTypeExpression primary = that.primary) {
-                            if (exists decl = primary.declaration, exists target = primary.target) {
-                                result.add(newParameterInfo(startIndex.intValue(), decl, target, node.scope, cpc, pal is Tree.NamedArgumentList));
+                            if (exists decl = primary.declaration,
+                                
+                                exists target = primary.target) {
+                                result.add(newParameterInfo(startIndex.intValue(),
+                                    decl, target, node.scope, cpc,
+                                    pal is Tree.NamedArgumentList));
                             }
                         }
                     }
@@ -304,9 +338,11 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
 }
 
 shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
-    (variable Integer _offset, String prefix, String desc, String text, Declaration declaration, Reference? producedReference,
-    Scope scope, Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, Boolean inheritance,
-    Boolean qualified, Declaration? qualifyingValue, InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
+    (variable Integer _offset, String prefix, String desc, String text,
+    Declaration declaration, Reference? producedReference, Scope scope,
+    Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
+    Boolean namedInvocation, Boolean inheritance, Boolean qualified,
+    Declaration? qualifyingValue, InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
         extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
         (_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
@@ -314,17 +350,19 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
         given IdeArtifact satisfies Object {
     
-    shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc, Integer index);
+    shared formal CompletionResult newNestedLiteralCompletionProposal(String val,
+        Integer loc, Integer index);
     
-    shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Declaration? qualifier, Integer loc,
-        Integer index, Boolean basic, String op);
+    shared formal CompletionResult newNestedCompletionProposal(Declaration dec,
+        Declaration? qualifier, Integer loc, Integer index, Boolean basic, String op);
     
     shared String getNestedCompletionText(String op, Unit unit, Declaration dec,
         Declaration? qualifier, Boolean basic, Boolean description) {
         value sb = StringBuilder().append(op);
         sb.append(getProposedName(qualifier, dec, unit));
         if (dec is Functional, !basic) {
-            appendPositionalArgs(dec, dec.reference, unit, sb, false, description, false);
+            appendPositionalArgs(dec, dec.reference, unit, sb, false,
+                description, false);
         }
         
         return sb.string;
@@ -355,7 +393,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         if (is Generic declaration) {
             value generic = declaration;
             variable ParameterList? paramList = null;
-            if (is Functional fd = declaration, (positionalInvocation || namedInvocation)) {
+            if (is Functional fd = declaration,
+                (positionalInvocation || namedInvocation)) {
+                
                 value pls = fd.parameterLists;
                 if (!pls.empty, !pls.get(0).parameters.empty) {
                     paramList = pls.get(0);
@@ -421,7 +461,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         if (text.endsWith(";")) {
             end--;
         }
-        comma = findCharCount(1, document, start, end, ",;", "", true, getDocChar) - start;
+        comma = findCharCount(1, document, start, end, ",;", "", true, getDocChar)
+                - start;
         
         if (comma < 0) {
             Integer? index;
@@ -441,7 +482,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         JList<TypeParameter>? typeParams, IdeComponent cpc) {
         
         value proposeTypeArguments = !(params exists);
-        value paramCount = if (proposeTypeArguments) then (typeParams?.size() else 0) else (params?.size() else 0);
+        value paramCount = if (proposeTypeArguments)
+                           then (typeParams?.size() else 0)
+                           else (params?.size() else 0);
         if (paramCount == 0) {
             return;
         }
@@ -460,7 +503,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             variable value param = 0;
             while (next>0 && param<paramCount) {
                 // if proposeTypeArguments is false, params *should* exist
-                value voidParam = !proposeTypeArguments && (params?.get(param)?.declaredVoid else false);
+                value voidParam = !proposeTypeArguments
+                        && (params?.get(param)?.declaredVoid else false);
                 if (proposeTypeArguments || positionalInvocation
                         //don't create linked positions for
                         //void callable parameters in named
@@ -470,7 +514,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     value props = ArrayList<CompletionResult>();
                     if (proposeTypeArguments) {
                         assert(exists typeParams);
-                        addTypeArgumentProposals(typeParams.get(seq), loc, first, props, seq);
+                        addTypeArgumentProposals(typeParams.get(seq), loc,
+                            first, props, seq);
                     } else if (!voidParam) {
                         assert(exists params);
                         addValueArgumentProposals(params.get(param), loc, first,
@@ -483,7 +528,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                         start++;
                         len = 0;
                     }
-                    addEditableRegion(linkedMode, document, start, len, seq, props.sequence());
+                    addEditableRegion(linkedMode, document, start, len, seq,
+                        props.sequence());
                     first = first + next + 1;
                     next = getNextPosition(document, first);
                     seq++;
@@ -499,7 +545,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
     }
     
     void addValueArgumentProposals(Parameter param, Integer loc, Integer first,
-        MutableList<CompletionResult> props, Integer index, Boolean last, IdeComponent cpc) {
+        MutableList<CompletionResult> props, Integer index, Boolean last,
+        IdeComponent cpc) {
         
         if (param.model.dynamicallyTyped) {
             return;
@@ -527,7 +574,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         //stuff with fuzzily-matching name 
         for (dwp in proposals) {
             if (dwp.proximity <= 1) {
-                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null, cpc);
+                addValueArgumentProposal(param, loc, props, index, last,
+                    type, unit, dwp, null, cpc);
             }
         }
         if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
@@ -544,13 +592,15 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         //stuff with lower proximity
         for (dwp in proposals) {
             if (dwp.proximity > 1) {
-                addValueArgumentProposal(param, loc, props, index, last, type, unit, dwp, null, cpc);
+                addValueArgumentProposal(param, loc, props, index, last, type,
+                    unit, dwp, null, cpc);
             }
         }
     }
     
-    void addValueArgumentProposal(Parameter p, Integer loc, MutableList<CompletionResult> props, 
-        Integer index, Boolean last, Type type, Unit unit, DeclarationWithProximity dwp,
+    void addValueArgumentProposal(Parameter p, Integer loc,
+        MutableList<CompletionResult> props, Integer index, Boolean last,
+        Type type, Unit unit, DeclarationWithProximity dwp,
         DeclarationWithProximity? qualifier, IdeComponent cpc) {
         
         if (!exists qualifier, dwp.unimported) {
@@ -562,7 +612,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             return;
         }
         value pname = d.unit.\ipackage.nameAsString;
-        value isInLanguageModule = !(qualifier exists) && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
+        value isInLanguageModule = !(qualifier exists)
+                && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
         value qdec = if (!exists qualifier) then null else qualifier.declaration;
         if (is Value d) {
             value \ivalue = d;
@@ -574,15 +625,20 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             Type? vt = \ivalue.type;
             if (exists vt, !vt.nothing) {
                 if (vt.isSubtypeOf(type) || withinBounds(td, vt)) {
-                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                    value isIterArg = namedInvocation && last
+                            && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
                     value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(newNestedCompletionProposal(d, qdec, loc, index, false, op));
+                    props.add(newNestedCompletionProposal(d, qdec, loc,
+                        index, false, op));
                 }
                 if (!exists qualifier, cpc.options.chainLinkedModeArguments) {
-                    value members = \ivalue.typeDeclaration.getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                    value members = \ivalue.typeDeclaration
+                            .getMatchingMemberDeclarations(unit, scope, "", 0)
+                            .values();
                     for (mwp in CeylonIterable(members)) {
-                        addValueArgumentProposal(p, loc, props, index, last, type, unit, mwp, dwp, cpc);
+                        addValueArgumentProposal(p, loc, props, index, last,
+                            type, unit, mwp, dwp, cpc);
                     }
                 }
             }
@@ -596,10 +652,12 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
             Type? mt = method.type;
             if (exists mt, !mt.nothing) {
                 if (mt.isSubtypeOf(type) || withinBounds(td, mt)) {
-                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                    value isIterArg = namedInvocation && last
+                            && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
                     value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(newNestedCompletionProposal(d, qdec, loc, index, false, op));
+                    props.add(newNestedCompletionProposal(d, qdec, loc, index,
+                        false, op));
                 }
             }
         }
@@ -612,8 +670,12 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     }
                 }
                 Type? ct = clazz.type;
-                if (exists ct, (withinBounds(td, ct) || clazz.equals(type.declaration) || ct.isSubtypeOf(type))) {
-                    value isIterArg = namedInvocation && last && unit.isIterableParameterType(type);
+                if (exists ct, (withinBounds(td, ct)
+                    || clazz.equals(type.declaration)
+                    || ct.isSubtypeOf(type))) {
+                    
+                    value isIterArg = namedInvocation && last
+                            && unit.isIterableParameterType(type);
                     value isVarArg = p.sequenced && positionalInvocation;
                     
                     if (clazz.parameterList exists) {
@@ -634,7 +696,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
         }
     }
     
-    void addTypeArgumentProposals(TypeParameter tp, Integer loc, Integer first, MutableList<CompletionResult> props, Integer index) {
+    void addTypeArgumentProposals(TypeParameter tp, Integer loc, Integer first,
+        MutableList<CompletionResult> props, Integer index) {
+        
         value ed = cu.unit.exceptionDeclaration;
         
         for (dwp in CeylonIterable(getSortedProposedValues(scope, cu.unit))) {
@@ -656,7 +720,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,Comp
                     }
                     if (inheritance && tp.isSelfType() then scope == td
                         else isInBounds(tp.satisfiedTypes, t)) {
-                        props.add(newNestedCompletionProposal(dec, null, loc, index, true, ""));
+                        props.add(newNestedCompletionProposal(dec, null, loc,
+                            index, true, ""));
                     }
                 }
             }
