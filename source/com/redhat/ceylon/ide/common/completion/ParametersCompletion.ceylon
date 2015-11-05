@@ -21,9 +21,8 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     List
 }
-shared interface ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface ParametersCompletion<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newParametersCompletionProposal(Integer offset,
         String prefix, String desc, String text, List<Type> argTypes, Node node, Unit unit);

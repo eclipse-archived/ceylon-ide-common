@@ -10,17 +10,14 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
     IdeModelLoader,
     BaseIdeModule,
     BaseIdeModuleManager,
     BaseIdeModuleSourceMapper,
-    CrossProjectSourceFile,
     ModelAliases
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit,
-    CrossProjectPhasedUnit,
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
@@ -30,7 +27,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.ide.common.vfs {
     ResourceVirtualFile,
     FolderVirtualFile,
-    FileVirtualFile,
     VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -63,9 +59,10 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
         given NativeFile satisfies NativeResource {
     
     CeylonProjectAlias ceylonProject;
-    BaseIdeModule defaultModule = ceylonProject.modules.default;
-    BaseIdeModuleManager moduleManager = ceylonProject.modules.manager;
-    BaseIdeModuleSourceMapper moduleSourceMapper = ceylonProject.modules.sourceMapper;
+    assert(exists modules=ceylonProject.modules);
+    BaseIdeModule defaultModule = modules.default;
+    BaseIdeModuleManager moduleManager = modules.manager;
+    BaseIdeModuleSourceMapper moduleSourceMapper = modules.sourceMapper;
     IdeModelLoader modelLoader = moduleManager.modelLoader;
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     TypeChecker typeChecker = ceylonProject.typechecker;

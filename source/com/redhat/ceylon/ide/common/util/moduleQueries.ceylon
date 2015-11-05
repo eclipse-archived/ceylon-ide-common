@@ -3,7 +3,7 @@ import com.redhat.ceylon.cmr.api {
     ModuleVersionQuery
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    BaseCeylonProject
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module
@@ -14,7 +14,7 @@ import com.redhat.ceylon.common {
 
 shared object moduleQueries {
     
-    shared ModuleQuery getModuleQuery<IdeArtifact>(String prefix, Module? mod, CeylonProject<out IdeArtifact>? project) {
+    shared ModuleQuery getModuleQuery(String prefix, Module? mod, BaseCeylonProject? project) {
         if (exists mod) {
             if (exists backends = mod.nativeBackends) {
                 value compileToJava = backends.supports(Backend.\iJava);
@@ -32,7 +32,7 @@ shared object moduleQueries {
         return getModuleQuery2(prefix, project);
     }
 
-    shared ModuleQuery getModuleQuery2<IdeArtifact>(String prefix, CeylonProject<out IdeArtifact>? project) {
+    shared ModuleQuery getModuleQuery2(String prefix, BaseCeylonProject? project) {
         if (exists project) {
             Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
             Boolean compileToJs = project.ideConfiguration.compileToJs else false;
@@ -49,7 +49,7 @@ shared object moduleQueries {
         return ModuleQuery(prefix, ModuleQuery.Type.\iCODE);
     }
     
-    shared ModuleVersionQuery getModuleVersionQuery<IdeArtifact>(String name, String version, CeylonProject<IdeArtifact>? project) {
+    shared ModuleVersionQuery getModuleVersionQuery(String name, String version, BaseCeylonProject? project) {
         if (exists project) {
             Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
             Boolean compileToJs = project.ideConfiguration.compileToJs else false;

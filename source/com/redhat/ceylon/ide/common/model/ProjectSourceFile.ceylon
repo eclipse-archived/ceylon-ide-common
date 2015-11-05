@@ -1,10 +1,8 @@
  import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit,
     PhasedUnit
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit,
-    CrossProjectPhasedUnit,
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.model.delta {
@@ -27,7 +25,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import org.antlr.runtime {
-    CommonTokenStream,
     CommonToken
 }
 import com.redhat.ceylon.compiler.java.loader {
@@ -36,8 +33,11 @@ import com.redhat.ceylon.compiler.java.loader {
 import java.util {
     JList = List
 }
-import com.redhat.ceylon.compiler.java.runtime.metamodel {
-    ModelError
+import java.lang {
+    Error
+}
+import ceylon.interop.java {
+    javaClassFromInstance
 }
 
 DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
@@ -95,7 +95,7 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
                         currentTypechecker.context,
                         theTokens) {
                         shared actual Boolean isAllowedToChangeModel(Declaration declaration) =>
-                                ! IdePhasedUnitUtils.isCentralModelDeclaration(declaration);
+                                ! isCentralModelDeclaration(declaration);
                     };
             }.parseFileToPhasedUnit(
                 currentModuleManager, 
@@ -121,8 +121,14 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
                 }
             }
         } catch(Exception e) {
-        } catch(AssertionError | ModelError e) {
+        } catch(AssertionError e) {
             e.printStackTrace();
+        } catch(Error e) {
+            if (javaClassFromInstance(e).name == "com.redhat.ceylon.compiler.java.runtime.metamodel.ModelError") {
+                e.printStackTrace();
+            } else {
+                throw e;
+            }
         }
         
         return null;

@@ -5,14 +5,8 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
-}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer,
@@ -24,12 +18,23 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.compiler.typechecker.util {
     NewlineFixingStringStream
 }
+import com.redhat.ceylon.ide.common.model {
+    ModelAliases
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit,
+    TypecheckerAliases
+}
 import com.redhat.ceylon.ide.common.vfs {
-    FolderVirtualFile,
-    FileVirtualFile,
     BaseFileVirtualFile,
     BaseFolderVirtualFile,
     VfsAliases
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
 }
 
 import java.io {
@@ -39,23 +44,15 @@ import java.io {
 import java.lang {
     RuntimeException
 }
+import java.util {
+    List
+}
 
 import org.antlr.runtime {
     ANTLRStringStream,
     CommonTokenStream,
     RecognitionException,
     CommonToken
-}
-import java.util {
-    List
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
-    ModelAliases
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit,
-    TypecheckerAliases
 }
 
 shared interface CeylonSourceParser<ResultPhasedUnit>
@@ -141,14 +138,15 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
     shared CeylonProjectAlias ceylonProject;
     shared FileVirtualFileAlias unitFile;
     shared FolderVirtualFileAlias srcDir;
-
+    assert(exists modules=ceylonProject.modules);
+    
     shared actual default ProjectPhasedUnitAlias createPhasedUnit(
         Tree.CompilationUnit cu,
         Package pkg,
         List<CommonToken> tokens)
         => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg,
-            ceylonProject.modules.manager,
-            ceylonProject.modules.sourceMapper,
+            modules.manager,
+            modules.sourceMapper,
             ceylonProject.typechecker,
             tokens);
 

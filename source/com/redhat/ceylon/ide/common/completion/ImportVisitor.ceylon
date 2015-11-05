@@ -21,9 +21,9 @@ import org.antlr.runtime {
 
 class ImportVisitor<IdeComponent,IdeArtifact,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
     IdeComponent cpc, MutableList<CompletionResult> result, ProgressMonitor monitor,
-    IdeCompletionManager<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
+    IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager)
         extends Visitor()
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeComponent satisfies LocalAnalysisResult<Document>
         given IdeArtifact satisfies Object {
     
     shared actual void visit(Tree.ModuleDescriptor that) {

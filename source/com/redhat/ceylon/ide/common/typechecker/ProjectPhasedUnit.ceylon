@@ -1,49 +1,50 @@
-import com.redhat.ceylon.ide.common.util {
-    synchronize
+import ceylon.interop.java {
+    CeylonIterable
 }
-import java.util {
-    WeakHashMap,
-    JList=List
+
+import com.redhat.ceylon.compiler.typechecker {
+    TypeChecker
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleSourceMapper {
+        ModuleDependencyAnalysisError
+    }
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
     TypecheckerUnit
-}
-import com.redhat.ceylon.ide.common.model {
-    IdeModule,
-    CeylonProject,
-    ProjectSourceFile,
-    BaseIdeModule,
-    ModelAliases
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper { ModuleDependencyAnalysisError }
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package
-}
-import com.redhat.ceylon.ide.common.vfs {
-    FolderVirtualFile,
-    FileVirtualFile,
-    VfsAliases
-}
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
-}
-import java.lang.ref {
-    WeakReference
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
     Node
 }
+import com.redhat.ceylon.ide.common.model {
+    ProjectSourceFile,
+    BaseIdeModule,
+    ModelAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    synchronize
+}
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
+}
+
+import java.lang.ref {
+    WeakReference
+}
+import java.util {
+    WeakHashMap,
+    JList=List
+}
+
 import org.antlr.runtime {
     CommonToken
 }

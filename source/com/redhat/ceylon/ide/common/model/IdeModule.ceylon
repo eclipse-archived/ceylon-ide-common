@@ -1,18 +1,40 @@
-import com.redhat.ceylon.model.loader.model {
-    LazyModule
+import ceylon.collection {
+    linked,
+    HashMap,
+    HashSet,
+    ArrayList,
+    MutableSet,
+    MutableList
 }
-import java.lang {
-    JString=String,
-    RuntimeException
+import ceylon.interop.java {
+    javaString,
+    CeylonIterable
 }
-import com.redhat.ceylon.model.cmr {
-    ArtifactResult,
-    JDKUtils,
-    ArtifactResultType,
-    PathFilter,
-    VisibilityType,
-    Repository,
-    ImportType
+
+import com.redhat.ceylon.cmr.api {
+    ArtifactContext
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnitMap,
+    PhasedUnit
+}
+import com.redhat.ceylon.compiler.typechecker.io {
+    VirtualFile,
+    ClosableVirtualFile
+}
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer,
+    CeylonParser
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.compiler.typechecker.util {
+    NewlineFixingStringStream
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ExternalPhasedUnit,
+    CrossProjectPhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     synchronize,
@@ -26,80 +48,59 @@ import com.redhat.ceylon.ide.common.util {
     toJavaString,
     SingleSourceUnitPackage,
     platformUtils,
-    Status
-}
-import com.redhat.ceylon.cmr.api {
-    ArtifactContext
-}
-import java.lang.ref {
-    WeakReference,
-    SoftReference
-}
-import java.io {
-    File,
-    IOException
-}
-import ceylon.interop.java {
-    javaString,
-    CeylonIterable
-}
-import java.util {
-    JSet=Set,
-    Collections,
-    JList=List,
-    Enumeration
-}
-import ceylon.collection {
-    linked,
-    HashMap,
-    HashSet,
-    ArrayList,
-    MutableSet,
-    MutableList
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnitMap,
-    PhasedUnit
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    ExternalPhasedUnit,
-    CrossProjectPhasedUnit
-}
-import java.util.zip {
-    ZipFile,
-    ZipEntry
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VirtualFile,
-    ClosableVirtualFile
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Module,
-    Package,
-    Unit,
-    ModelUtil,
-    Modules,
-    Declaration,
-    TypeDeclaration
-}
-import com.redhat.ceylon.compiler.typechecker.util {
-    NewlineFixingStringStream
-}
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer,
-    CeylonParser
+    Status,
+    toJavaList
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
     ZipEntryVirtualFile,
     BaseResourceVirtualFile
 }
+import com.redhat.ceylon.model.cmr {
+    ArtifactResult,
+    JDKUtils,
+    ArtifactResultType,
+    PathFilter,
+    VisibilityType,
+    Repository,
+    ImportType
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyModule
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Module,
+    Package,
+    Unit,
+    ModelUtil,
+    Declaration,
+    TypeDeclaration
+}
+
+import java.io {
+    File,
+    IOException
+}
+import java.lang {
+    JString=String,
+    RuntimeException
+}
+import java.lang.ref {
+    WeakReference,
+    SoftReference
+}
+import java.util {
+    JList=List,
+    Enumeration
+}
+import java.util.zip {
+    ZipFile,
+    ZipEntry
+}
+
 import org.antlr.runtime {
     CommonToken,
     CommonTokenStream
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
 }
 
 shared class ModuleType of 
@@ -156,6 +157,8 @@ shared abstract class BaseIdeModule()
     shared formal {String*} toBinaryUnitRelativePaths(String? sourceUnitRelativePath);
     
     shared formal {PhasedUnit*} phasedUnits;
+    shared JList<PhasedUnit> phasedUnitsAsJavaList
+        => toJavaList(phasedUnits);
 
     shared formal ExternalPhasedUnit? getPhasedUnit(
         "Either the **absolute path** or a [[virtual file|VirtualFile]]
@@ -189,6 +192,7 @@ shared abstract class BaseIdeModule()
 
 shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseIdeModule()
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -203,16 +207,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     variable Map<String, String> javaImplFilesToCeylonDeclFiles = HashMap<String, String>();
     variable String? _sourceArchivePath = null;
     variable WeakReference<CeylonProjectAlias>? _originalProject = WeakReference<CeylonProjectAlias>(null);
-    variable BaseIdeModule? _originalModule = null;
+    variable IdeModuleAlias? _originalModule = null;
     variable MutableSet<String> originalUnitsToRemove = HashSet<String> { stability = linked; };
     variable MutableSet<String> originalUnitsToAdd = HashSet<String> { stability = linked; };
     variable ArtifactResultType _artifactType = ArtifactResultType.\iOTHER;
     variable Exception? resolutionException = null;
     variable ModuleDependencies? _projectModuleDependencies = null;
     
-    JSet<JString> \iJVM_BACKEND = Collections.singleton(javaString("jvm"));
-    
-    shared alias CeylonProjectAlias => CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared actual CeylonProjectAlias? ceylonProject => moduleManager.ceylonProject;
     
     shared formal actual IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager;
@@ -762,24 +763,16 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     shared actual JString? sourceArchivePath =>
             toJavaString(_sourceArchivePath);
     
-    shared actual BaseCeylonProject? originalProject =>
+    shared actual CeylonProjectAlias? originalProject =>
             _originalProject?.get();
     
-    shared actual BaseIdeModule? originalModule {
-        if (exists p=_originalProject?.get()) {
+    shared actual IdeModuleAlias? originalModule {
+        if (exists p=_originalProject?.get(),
+            exists modules=p.modules) {
             if (! _originalModule exists) {
-                Modules? modules = p.typechecker.context.modules;
-                if (exists modules) {
-                    for (m in CeylonIterable(modules.listOfModules)) {
-                        if (m.nameAsString == nameAsString) {
-                            assert(is BaseIdeModule m);
-                            if (m.isProjectModule) {
-                                _originalModule = m;
-                                break;
-                            }
-                        }
-                    }
-                }
+                _originalModule = modules.find(
+                    (m) => m.nameAsString == nameAsString 
+                            && m.isProjectModule);
             }
             return _originalModule;
         }
@@ -840,7 +833,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    shared actual {BaseIdeModule*} moduleInReferencingProjects {
+    shared actual {IdeModuleAlias*} moduleInReferencingProjects {
         if (!isProjectModule) {
             return [];
         }
@@ -848,7 +841,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         value project = moduleManager.ceylonProject;
         if (exists project) {
             return project.referencingCeylonProjects
-                    .flatMap((p) => p.modules.fromProject)
+                    .flatMap((p) => (p.modules?.fromProject else empty))
                     .filter((m) => m.signature == signature);
         } else {
             return [];
@@ -875,8 +868,6 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         Package? pkg = getPackageFromRelativePath(sourceUnitRelativePath);
         if (exists pkg) {
             try {
-                BaseIdeModuleManager theModuleManager = moduleManager;
-                BaseIdeModuleSourceMapper theModuleSourceMapper = moduleSourceMapper;
                 variable ZipFileVirtualFile? theSourceArchive = null;
                 try {
                     theSourceArchive = ZipFileVirtualFile.fromFile(sourceArchiveFile);
@@ -893,11 +884,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             Tree.CompilationUnit cu = parser.compilationUnit();
                             assert(is JList<CommonToken> theTokens = tokenStream.tokens);
                             
-                            SingleSourceUnitPackage proxyPackage = object extends SingleSourceUnitPackage(pkg, ceylonSourceUnitFullPath) {
-                                shared actual JSet<JString> scopedBackends {
-                                    return \iJVM_BACKEND;
-                                }
-                            };
+                            SingleSourceUnitPackage proxyPackage = SingleSourceUnitPackage(pkg, ceylonSourceUnitFullPath);
                             
                             if (exists op = _originalProject?.get()) {
                                 phasedUnit = object extends CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, project.typechecker, theTokens, op) {

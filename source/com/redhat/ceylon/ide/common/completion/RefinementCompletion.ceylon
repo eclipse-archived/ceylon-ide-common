@@ -45,9 +45,8 @@ import com.redhat.ceylon.ide.common.util {
 }
 
 // see RefinementCompletionProposal
-shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult, Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newRefinementCompletionProposal(Integer offset, 
         String prefix, Reference? pr, String desc, String text, IdeComponent cmp,
@@ -144,7 +143,7 @@ shared interface RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
 }
 
-shared abstract class RefinementCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
         (Integer _offset, String prefix, Reference pr, String desc, 
         String text, IdeComponent cpc, Declaration declaration, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
@@ -152,8 +151,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,IdeArtifact,Comp
         (_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc);
     shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Integer loc);

@@ -35,7 +35,7 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
     shared actual LinkedHashMap<String,Type>? parameters,
     ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals,
     Indents<out Anything> indents,
-    IdeCompletionManager<out Anything,out Anything,out Anything,out Anything> completionManager)
+    IdeCompletionManager<out Anything,out Anything,out Anything> completionManager)
         extends DefinitionGenerator() {
     
     shared actual Boolean isFormalSupported => classGenerator;
@@ -281,7 +281,7 @@ ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(String brok
     Tree.MemberOrTypeExpression node, Tree.CompilationUnit rootNode,
     ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals,
     Indents<out Anything> indents,
-    IdeCompletionManager<out Anything,out Anything,out Anything,out Anything> completionManager) {
+    IdeCompletionManager<out Anything,out Anything,out Anything> completionManager) {
     
     value isUpperCase = brokenName.first?.uppercase else false;
     value fav = FindArgumentsVisitor(node);

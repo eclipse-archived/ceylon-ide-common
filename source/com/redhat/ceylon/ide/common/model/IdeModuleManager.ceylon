@@ -18,7 +18,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import com.redhat.ceylon.common {
-    Backend    
+    Backend,
+    Backends    
 }
 
 import com.redhat.ceylon.ide.common.util {
@@ -199,7 +200,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     shared formal BaseIdeModule newModule(String moduleName, String version);
 
     
-    shared actual JSet<JString> supportedBackends {
+    shared actual Backends supportedBackends {
         // We detect which backends are enabled in the project settings and
         // we return those instead of relying on our super class which will
         // only (and correctly!) return "JVM".
@@ -207,13 +208,13 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         // manager even for the JS backend.
         // TODO At some point we'll need an actual module manager for the
         // JS backend and an IDE that can somehow merge the two when needed
-        value backends = HashSet<JString>();
+        value backends = Backends.\iANY;
         if (exists theProject = ceylonProject) {
             if (theProject.compileToJava) {
-                backends.add(toJavaString(Backend.\iJava.nativeAnnotation));
+                backends.merged(Backend.\iJava);
             }
             if (theProject.compileToJs) {
-                backends.add(toJavaString(Backend.\iJavaScript.nativeAnnotation));
+                backends.merged(Backend.\iJavaScript);
             }
         }
         return backends;

@@ -246,9 +246,9 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 }
 
 // see CodeCompletions.getDocDescriptionFor
-shared String getDocDescriptionFor<Document,IdeArtifact>(Declaration decl,
-    Reference? pr, Unit unit, LocalAnalysisResult<Document,IdeArtifact> cmp) {
-    
+shared String getDocDescriptionFor<Document>(Declaration decl,
+    Reference? pr, Unit unit, LocalAnalysisResult<Document> cmp) {
+
     StringBuilder result = StringBuilder();
     appendDeclarationHeader(decl, pr, unit, result, true);
     appendTypeParametersWithArguments(decl, pr, unit, result, true);
@@ -733,8 +733,8 @@ shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     appendParameters(d, pr, unit, result, null, false);
 }
 
-void appendParameters<Document,IdeArtifact>(Declaration d, Reference? pr,
-    Unit unit, StringBuilder result, LocalAnalysisResult<Document,IdeArtifact>? cpc,
+void appendParameters<Document>(Declaration d, Reference? pr,
+    Unit unit, StringBuilder result, LocalAnalysisResult<Document>? cpc,
     Boolean descriptionOnly) {
     
     if (is Functional d) {
@@ -773,9 +773,9 @@ void appendParameter(StringBuilder result, Reference? pr, Parameter p,
 
 
 // see CodeCompletions.appendParametersDescription
-void appendParametersDescription<Document,IdeArtifact>(Declaration d,
+void appendParametersDescription<Document>(Declaration d,
     Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
-    LocalAnalysisResult<Document,IdeArtifact> cmp) {
+    LocalAnalysisResult<Document> cmp) {
     
     appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
 }

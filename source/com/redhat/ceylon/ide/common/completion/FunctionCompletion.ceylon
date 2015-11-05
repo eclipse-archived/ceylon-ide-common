@@ -15,16 +15,15 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashSet
 }
-shared interface FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newFunctionCompletionProposal(Integer offset, String prefix,
            String desc, String text, Declaration dec, Unit unit, IdeComponent cmp);
     
     shared void addFunctionProposal(Integer offset, IdeComponent cpc, Tree.Primary primary, 
             MutableList<CompletionResult> result, Declaration dec,
-            IdeCompletionManager<IdeComponent, IdeArtifact, CompletionResult, Document> cm) {
+            IdeCompletionManager<IdeComponent, CompletionResult, Document> cm) {
 
         variable Tree.Term arg = primary;
         while (is Tree.Expression a = arg) {

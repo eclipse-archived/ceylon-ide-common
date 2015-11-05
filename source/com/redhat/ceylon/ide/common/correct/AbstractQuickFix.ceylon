@@ -27,7 +27,7 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     
     shared formal ImportProposals<out Anything,out Anything,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
     
-    shared formal IdeCompletionManager<out Anything,out Anything,out ICompletionResult,IDocument> completionManager;
+    shared formal IdeCompletionManager<out Anything,out ICompletionResult,IDocument> completionManager;
     
     shared formal PhasedUnit? getPhasedUnit(Unit? u, Data data);
 }

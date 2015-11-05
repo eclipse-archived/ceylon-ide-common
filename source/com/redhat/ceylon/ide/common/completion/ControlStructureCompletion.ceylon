@@ -20,9 +20,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
-shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
         String desc, String text, Declaration dec, IdeComponent cpc, Node? node = null);

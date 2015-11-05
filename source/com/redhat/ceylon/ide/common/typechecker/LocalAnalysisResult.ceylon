@@ -14,7 +14,7 @@ import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    BaseCeylonProject
 }
 import com.redhat.ceylon.ide.common.settings {
     CompletionOptions
@@ -23,8 +23,7 @@ import com.redhat.ceylon.ide.common.settings {
 "The result of the local typechecking of a CompilationUnit.
  For example, this can be used when a file is being modified,
  but the resulting PhasedUnit should not be added to the global model."
-shared interface LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface LocalAnalysisResult<Document> {
     shared formal Tree.CompilationUnit lastCompilationUnit;
     shared formal Tree.CompilationUnit parsedRootNode;
     shared formal Tree.CompilationUnit? typecheckedRootNode;
@@ -32,6 +31,6 @@ shared interface LocalAnalysisResult<Document,IdeArtifact>
     shared formal Document document;
     shared formal List<CommonToken>? tokens;
     shared formal TypeChecker typeChecker;
-    shared formal CeylonProject<IdeArtifact>? ceylonProject;
+    shared formal BaseCeylonProject? ceylonProject;
     shared formal CompletionOptions options;
 }

@@ -1,6 +1,9 @@
 import java.io {
     File
 }
+import com.redhat.ceylon.model.typechecker.model {
+    TypecheckerModules=Modules
+}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -10,17 +13,6 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import com.redhat.ceylon.ide.common.util {
     Path
 }
-
-shared interface Modules satisfies {BaseIdeModule*} {
-    shared formal BaseIdeModule default;
-    shared formal BaseIdeModule language;
-    shared formal {BaseIdeModule*} fromProject;
-    shared formal {BaseIdeModule*} external;
-    
-    shared formal BaseIdeModuleManager manager;
-    shared formal BaseIdeModuleSourceMapper sourceMapper;
-}
-
 
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
@@ -109,7 +101,17 @@ shared abstract class BaseCeylonProject() {
     
     shared formal ModuleDependencies moduleDependencies;
 
-    shared formal Modules modules; 
+    shared default abstract class Modules() satisfies {BaseIdeModule*} {
+        shared formal BaseIdeModule default;
+        shared formal BaseIdeModule language;
+        shared formal {BaseIdeModule*} fromProject;
+        shared formal {BaseIdeModule*} external;
+        
+        shared formal BaseIdeModuleManager manager;
+        shared formal BaseIdeModuleSourceMapper sourceMapper;
+    }
+
+    shared formal Modules? modules; 
 }
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
@@ -123,41 +125,54 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
     
-    shared actual Modules modules => object satisfies Modules {
-        iterator() => object satisfies Iterator<BaseIdeModule> {
-            value it = phasedUnits.moduleManager.modules.listOfModules.iterator();
-            shared actual BaseIdeModule next() { 
-                assert(is BaseIdeModule m=it.next());
+    shared actual abstract class Modules() 
+            extends super.Modules() 
+            satisfies {IdeModuleAlias*} {
+        shared formal TypecheckerModules typecheckerModules;
+        
+        shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
+            value it = typecheckerModules.listOfModules.iterator();
+            shared actual IdeModuleAlias|Finished next() {
+                assert(is IdeModuleAlias m=it.next());
                 return m;
             }
         };
         
-        shared actual BaseIdeModule default {
-            assert(is BaseIdeModule m=phasedUnits.moduleManager.modules.defaultModule);
+        shared actual IdeModuleAlias default {
+            assert(is IdeModuleAlias m=typecheckerModules.defaultModule);
             return m;
         }
         
-        shared actual BaseIdeModule language {
-            assert(is BaseIdeModule m=phasedUnits.moduleManager.modules.languageModule);
+        shared actual IdeModuleAlias language {
+            assert(is IdeModuleAlias m=typecheckerModules.languageModule);
             return m; 
         }
         
-        shared actual {BaseIdeModule*} fromProject
+        shared actual {IdeModuleAlias*} fromProject
                 => filter((m) => m.isProjectModule);
         
-        shared actual {BaseIdeModule*} external
+        shared actual {IdeModuleAlias*} external
                 => filter((m) => ! m.isProjectModule);
         
-        shared actual BaseIdeModuleManager manager {
-            assert(is BaseIdeModuleManager mm=phasedUnits.moduleManager);
+        shared actual IdeModuleManagerAlias manager {
+            assert(is IdeModuleManagerAlias mm=phasedUnits.moduleManager);
             return mm; 
         }
         
-        shared actual BaseIdeModuleSourceMapper sourceMapper {
-            assert(is BaseIdeModuleSourceMapper msm=phasedUnits.moduleSourceMapper);
+        shared actual IdeModuleSourceMapperAlias sourceMapper {
+            assert(is IdeModuleSourceMapperAlias msm=phasedUnits.moduleSourceMapper);
             return msm;
         }
-    };
+    }
+    
+    shared actual Modules? modules => 
+            if (exists tcMods = phasedUnits.moduleManager.modules)
+            then 
+                object extends Modules() {
+                    typecheckerModules = tcMods;
+                }
+            else
+                null;
     
     shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
     shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);

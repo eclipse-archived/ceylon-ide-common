@@ -38,9 +38,8 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> 
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface PackageCompletion<IdeComponent,CompletionResult,Document> 
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     // see PackageCompletions.addPackageCompletions()
     shared void addPackageCompletions(IdeComponent lar, Integer offset, String prefix,
@@ -167,14 +166,13 @@ shared abstract class PackageCompletionProposal<IFile, CompletionResult, Documen
     }
 }
 
-shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent,IdeArtifact>
+shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent>
         (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, IdeComponent cpc)
         extends PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
         (offset, prefix, memberPackageSubname, withBody, fullPackageName)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, Region selection, LinkedMode lm);
     

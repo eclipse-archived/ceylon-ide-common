@@ -12,9 +12,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope
 }
 
-shared interface BasicCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface BasicCompletion<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newBasicCompletionProposal(Integer offset,
         String prefix, String text, String escapedText, Declaration decl,

@@ -76,23 +76,22 @@ import org.antlr.runtime {
     Token
 }
 
-shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionResult,Document>()
-        satisfies InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & ParametersCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
+shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Document>()
+        satisfies InvocationCompletion<IdeComponent,CompletionResult,Document>
+                & ParametersCompletion<IdeComponent,CompletionResult,Document>
                 & KeywordCompletion<CompletionResult>
-                & MemberNameCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & BasicCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & RefinementCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & FunctionCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-                & ControlStructureCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,Document>
+                & MemberNameCompletion<IdeComponent,CompletionResult,Document>
+                & BasicCompletion<IdeComponent,CompletionResult,Document>
+                & RefinementCompletion<IdeComponent,CompletionResult,Document>
+                & PackageCompletion<IdeComponent,CompletionResult,Document>
+                & TypeArgumentListCompletions<IdeComponent,CompletionResult,Document>
+                & ModuleCompletion<IdeComponent,CompletionResult,Document>
+                & FunctionCompletion<IdeComponent,CompletionResult,Document>
+                & ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
                 & TypeCompletion<CompletionResult,Document>
                 & AnonFunctionCompletion<CompletionResult>
         given CompletionResult satisfies Object
-        given IdeComponent satisfies LocalAnalysisResult<Document, IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared alias Proposals
             => Map<JString,DeclarationWithProximity>;

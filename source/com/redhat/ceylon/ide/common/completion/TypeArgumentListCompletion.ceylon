@@ -20,12 +20,11 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface TypeArgumentListCompletions<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface TypeArgumentListCompletions<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared void addTypeArgumentListProposal(Integer offset, IdeComponent cpc, Node node,
-        Scope scope, MutableList<CompletionResult> result, IdeCompletionManager<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager) {
+        Scope scope, MutableList<CompletionResult> result, IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager) {
         JInteger? startIndex2 = node.startIndex;
         value stopIndex2 = node.endIndex;
         

@@ -48,9 +48,8 @@ import java.util {
     JList=List
 }
 
-shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact> 
-        given IdeArtifact satisfies Object {
+shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newInvocationCompletion(Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
@@ -337,18 +336,17 @@ shared interface InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,
     }
 }
 
-shared abstract class InvocationCompletionProposal<IdeComponent,IdeArtifact,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
     (variable Integer _offset, String prefix, String desc, String text,
     Declaration declaration, Reference? producedReference, Scope scope,
     Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
     Boolean namedInvocation, Boolean inheritance, Boolean qualified,
-    Declaration? qualifyingValue, InvocationCompletion<IdeComponent,IdeArtifact,CompletionResult,Document> completionManager)
+    Declaration? qualifyingValue, InvocationCompletion<IdeComponent,CompletionResult,Document> completionManager)
         extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
         (_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val,
         Integer loc, Integer index);

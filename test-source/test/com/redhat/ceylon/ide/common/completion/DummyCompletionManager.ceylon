@@ -16,7 +16,8 @@ import com.redhat.ceylon.ide.common.completion {
     IdeCompletionManager
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    CeylonProject,
+    BaseCeylonProject
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -64,9 +65,8 @@ class Result(shared String kind, shared String insertedText, shared String descr
     }
 }
 
-class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<String, Nothing> {
-    suppressWarnings("expressionTypeNothing")
-    shared actual CeylonProject<Nothing>? ceylonProject => nothing;
+class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<String> {
+    shared actual BaseCeylonProject? ceylonProject => nothing;
     
     shared actual String document => code;
     
@@ -90,7 +90,7 @@ object dummyMonitor satisfies ProgressMonitor {
     shared actual void worked(Integer amount) {}
 }
 
-object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothing,Result,String>() {
+object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result,String>() {
 
     shared actual String getDocumentSubstring(String doc, Integer start, Integer length)
             => doc.span(start, start + length - 1);

@@ -180,7 +180,7 @@ String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
     return fullPath.string;
 }
 
-Integer nextTokenType<Document,IdeArtifact>(LocalAnalysisResult<Document,IdeArtifact> cpc, CommonToken token) {
+Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
     assert(exists tokens = cpc.tokens);
     while (i < tokens.size()) {
@@ -193,7 +193,7 @@ Integer nextTokenType<Document,IdeArtifact>(LocalAnalysisResult<Document,IdeArti
     return -1;
 }
 
-String getDefaultValueDescription<Document,IdeArtifact>(Parameter p, LocalAnalysisResult<Document,IdeArtifact>? cpc) {
+String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Document>? cpc) {
     if (p.defaulted) {
         if (is Functional m = p.model) {
             return " => ...";
@@ -205,7 +205,7 @@ String getDefaultValueDescription<Document,IdeArtifact>(Parameter p, LocalAnalys
     }
 }
 
-shared String getInitialValueDescription<Document,IdeArtifact>(Declaration dec, LocalAnalysisResult<Document,IdeArtifact>? cpc) {
+shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysisResult<Document>? cpc) {
     if (exists cpc) {
         value refnode = nodes.getReferencedNode(dec);
         variable Tree.SpecifierOrInitializerExpression? sie = null;

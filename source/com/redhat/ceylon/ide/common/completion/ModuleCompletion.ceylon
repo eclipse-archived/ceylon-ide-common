@@ -44,9 +44,8 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, ModuleDetails mod, Boolean withBody,
@@ -156,15 +155,14 @@ shared interface ModuleCompletion<IdeComponent,IdeArtifact,CompletionResult,Docu
 
 }
 
-shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent,IdeArtifact>
+shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent>
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
          Boolean withBody, ModuleVersionDetails version, String name, Node node, IdeComponent cpc)
         extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
         (offset, prefix, versioned, versioned.spanFrom(len))
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared actual Region getSelectionInternal(Document document) {
         value off = offset + versioned.size - prefix.size - len;
