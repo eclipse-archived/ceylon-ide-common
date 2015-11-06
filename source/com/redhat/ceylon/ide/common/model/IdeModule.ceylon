@@ -170,7 +170,7 @@ shared abstract class BaseIdeModule()
     shared formal void removedOriginalUnit(String relativePathToSource);
     shared formal void addedOriginalUnit(String relativePathToSource);
     
-    shared formal JString? sourceArchivePath;
+    shared formal String? sourceArchivePath;
     
     shared formal BaseCeylonProject? originalProject;
     shared formal BaseIdeModule? originalModule;
@@ -760,8 +760,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         else null;
     }
     
-    shared actual JString? sourceArchivePath =>
-            toJavaString(_sourceArchivePath);
+    shared actual String? sourceArchivePath =>
+            _sourceArchivePath;
     
     shared actual CeylonProjectAlias? originalProject =>
             _originalProject?.get();
@@ -887,13 +887,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             SingleSourceUnitPackage proxyPackage = SingleSourceUnitPackage(pkg, ceylonSourceUnitFullPath);
                             
                             if (exists op = _originalProject?.get()) {
-                                phasedUnit = object extends CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, project.typechecker, theTokens, op) {
+                                phasedUnit = object extends CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, moduleManager.typeChecker, theTokens, op) {
                                     isAllowedToChangeModel(Declaration declaration) =>
                                             !isCentralModelDeclaration(declaration);
                                 };
                             }
                             else {
-                                phasedUnit = object extends ExternalPhasedUnit(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, project.typechecker, theTokens) {
+                                phasedUnit = object extends ExternalPhasedUnit(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, moduleManager.typeChecker, theTokens) {
                                     isAllowedToChangeModel(Declaration declaration) =>
                                             !isCentralModelDeclaration(declaration);
                                 };

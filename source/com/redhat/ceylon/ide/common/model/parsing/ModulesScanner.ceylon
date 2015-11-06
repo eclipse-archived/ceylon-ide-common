@@ -65,7 +65,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     BaseIdeModuleSourceMapper moduleSourceMapper = modules.sourceMapper;
     IdeModelLoader modelLoader = moduleManager.modelLoader;
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
-    TypeChecker typeChecker = ceylonProject.typechecker;
+    TypeChecker typeChecker = moduleManager.typeChecker;
     late variable BaseIdeModule currentModule;
     ProgressMonitor monitor;
 
@@ -91,7 +91,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
                 pkg,
                 moduleManager,
                 moduleSourceMapper,
-                theCeylonProject.typechecker,
+                moduleManager.typeChecker,
                 theTokens) {
 
                 shared actual Boolean isAllowedToChangeModel(Declaration? declaration) => false;

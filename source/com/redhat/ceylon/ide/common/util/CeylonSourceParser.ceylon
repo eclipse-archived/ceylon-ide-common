@@ -147,7 +147,7 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
         => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject, unitFile, srcDir, cu, pkg,
             modules.manager,
             modules.sourceMapper,
-            ceylonProject.typechecker,
+            modules.manager.typeChecker,
             tokens);
 
     shared actual default String charset(BaseFileVirtualFile file)

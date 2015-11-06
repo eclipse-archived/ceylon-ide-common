@@ -24,17 +24,17 @@ shared abstract class BaseCeylonProject() {
     shared formal File rootDirectory;
     shared formal Boolean hasConfigFile;
 
-    "Only here for compatibility with legacy code
-     This should be removed, since the real entry point is the [[PhasedUnits]] object
-     
-     The only interesting data contained in the [[TypeChecker]] is the
-     [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
-     should be managed in a modular way in each [[IdeModule]] object accessible from the
-     [[PhasedUnits]]"
-    shared TypeChecker typechecker=>nothing;
+    deprecated("Only here for compatibility with legacy code
+                This should be removed, since the real entry point is the [[PhasedUnits]] object
+                
+                The only interesting data contained in the [[TypeChecker]] is the
+                [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
+                should be managed in a modular way in each [[IdeModule]] object accessible from the
+                [[PhasedUnits]]")
+    shared TypeChecker? typechecker=>nothing;
     
-    "Should be hidden in the future, when implemented directy here in Ceylon"
-    shared PhasedUnits phasedUnits=>nothing;
+    deprecated("Should be hidden in the future, when implemented directy here in Ceylon")
+    shared PhasedUnits? phasedUnits=>nothing;
     
     shared CeylonProjectConfig configuration {
         if (exists config = ceylonConfig) {
@@ -155,18 +155,20 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 => filter((m) => ! m.isProjectModule);
         
         shared actual IdeModuleManagerAlias manager {
-            assert(is IdeModuleManagerAlias mm=phasedUnits.moduleManager);
+            assert(exists units=phasedUnits,
+                    is IdeModuleManagerAlias mm=units.moduleManager);
             return mm; 
         }
         
         shared actual IdeModuleSourceMapperAlias sourceMapper {
-            assert(is IdeModuleSourceMapperAlias msm=phasedUnits.moduleSourceMapper);
+            assert(exists units=phasedUnits,
+                    is IdeModuleSourceMapperAlias msm=units.moduleSourceMapper);
             return msm;
         }
     }
     
     shared actual Modules? modules => 
-            if (exists tcMods = phasedUnits.moduleManager.modules)
+            if (exists tcMods = phasedUnits?.moduleManager?.modules)
             then 
                 object extends Modules() {
                     typecheckerModules = tcMods;
