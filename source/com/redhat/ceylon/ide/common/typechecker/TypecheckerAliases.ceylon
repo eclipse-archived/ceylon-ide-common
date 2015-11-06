@@ -5,6 +5,6 @@ shared interface TypecheckerAliases<NativeProject, NativeResource, NativeFolder,
         given NativeFile satisfies NativeResource {
     shared alias ModifiablePhasedUnitAlias => ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias ProjectPhasedUnitAlias => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
-    shared alias EditedPhasedUnitAlias => EditedPhasedUnit<NativeResource, NativeFolder, NativeFile>;
+    shared alias EditedPhasedUnitAlias => EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias CrossProjectPhasedUnitAlias => CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>;
 }

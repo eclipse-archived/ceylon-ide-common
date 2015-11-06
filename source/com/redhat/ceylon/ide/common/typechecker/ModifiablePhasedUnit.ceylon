@@ -53,6 +53,7 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
             moduleSourceMapper, 
             typeChecker, 
             tokenStream) {
+        
     }
 
     shared new clone(PhasedUnit other) 
