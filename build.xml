@@ -166,6 +166,7 @@
             <path>
                 <fileset dir="${osgi.build}/tempRepo" includes="**/*.car"/>
                 <fileset dir="${osgi.build}/tempRepo" includes="**/*jgrapht*.jar"/>
+                <fileset dir="${osgi.build}/tempRepo" includes="**/*zip4j*.jar"/>
             </path>
         </foreach>
         <makeurl property="rootUrl" file="${osgi.dist}"/>
