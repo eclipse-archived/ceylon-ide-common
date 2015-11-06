@@ -111,7 +111,7 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Nothin
             => Result("newBasicCompletionProposal", escapedText, text);
     
     shared actual Result newControlStructureCompletionProposal(Integer offset, String prefix,
-        String desc, String text, Declaration dec, CompletionData cpc)
+        String desc, String text, Declaration dec, CompletionData cpc, Node? node)
             => Result("newControlStructureCompletionProposal", desc, text);
 
     shared actual Result newCurrentPackageProposal(Integer offset, String prefix, String packageName, CompletionData cmp)

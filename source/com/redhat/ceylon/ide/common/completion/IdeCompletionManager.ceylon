@@ -875,6 +875,20 @@ shared abstract class IdeCompletionManager<IdeComponent,IdeArtifact,CompletionRe
                 value primary = node.primary;
                 addFunctionProposal(offset, cmp, primary, result, dwp.declaration, this);
             }
+            
+            if (is Tree.StaticMemberOrTypeExpression bme = node.primary) {
+                value dwp = DeclarationWithProximity(bme.declaration, 0);
+                // we don't care what the text is, we just need the correct length
+                value textToReplace = "-".repeat(offset - node.startIndex.intValue());
+                // the expression to wrap, may need to be assigned
+                value expr = (if (is Tree.BaseMemberExpression bme)
+                             then "" else "val = ")
+                            + getDocumentSubstring(doc,
+                        bme.startIndex.intValue(), bme.distance.intValue());
+                
+                addIfExistsProposal(offset, textToReplace, cmp,
+                    result, dwp, bme.declaration, bme, expr);
+            }
         }
         if (previousTokenType==CeylonLexer.\iOBJECT_DEFINITION) {
             addKeywordProposals(cu, offset, prefix, 

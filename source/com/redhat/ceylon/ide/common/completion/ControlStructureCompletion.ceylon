@@ -11,7 +11,8 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    Indents
+    Indents,
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -24,7 +25,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         given IdeArtifact satisfies Object {
     
     shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
-        String desc, String text, Declaration dec, IdeComponent cpc);
+        String desc, String text, Declaration dec, IdeComponent cpc, Node? node = null);
     
     shared void addForProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
@@ -48,17 +49,21 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
         }
     }
     
-    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
-        DeclarationWithProximity dwp, Declaration d) {
+    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc,
+        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
+        Declaration d, Node? node = null, String? forcedText = null) {
         
         if (!dwp.unimported) {
             if (is Value v = d) {
                 if (exists type = v.type, d.unit.isOptionalType(type), !v.variable) {
                     value unit = cpc.lastCompilationUnit.unit;
-                    value desc = "if (exists " + getDescriptionFor(d, unit) + ")";
-                    value text = "if (exists " + getTextFor(d, unit) + ") {}";
+                    value desc = "if (exists " 
+                            + (forcedText else getDescriptionFor(d, unit)) + ")";
+                    value text = "if (exists "
+                            + (forcedText else getTextFor(d, unit)) + ") {}";
                     
-                    result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
+                    result.add(newControlStructureCompletionProposal(offset, prefix,
+                        desc, text, d, cpc, node));
                 }
             }
         }
@@ -160,5 +165,47 @@ shared interface ControlStructureCompletionProposal<IdeComponent,IdeArtifact,Com
                 }
             }
         }
+    }
+}
+
+shared abstract class ControlStructureProposal<IdeComponent,IdeArtifact,
+        IFile,CompletionResult,Document, InsertEdit,TextEdit,TextChange,
+        Region,LinkedMode>
+        (Integer offset, String prefix, String desc, String text,
+            Node? node, Declaration dec, IdeComponent cpc)
+        
+        extends AbstractCompletionProposal<IFile,CompletionResult,Document,
+                InsertEdit,TextEdit,TextChange,Region>
+        (offset, prefix, desc, text)
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
+        given InsertEdit satisfies TextEdit
+        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
+        given IdeArtifact satisfies Object {
+
+    shared formal CompletionResult newNameCompletion(String? name);
+    
+    shared void enterLinkedMode(Document doc) {
+        if (exists loc = text.firstInclusion(" val =")) {
+            value lm = newLinkedMode();
+            
+            value exitOffset = (text.endsWith("{}"))
+                               then offset + text.size - 1
+                               else offset + text.size;
+            value names = nodes.nameProposals(node).array.map(
+                (_) => newNameCompletion(_?.string)
+            ).sequence();
+            
+            value startOffset = node?.startIndex?.intValue() else offset;
+            
+            addEditableRegion(lm, doc, startOffset + loc + 1, 3, exitOffset, names);
+            
+            installLinkedMode(doc, lm, this, 1, exitOffset);
+        }
+    }
+    
+    shared actual Region getSelectionInternal(Document document) {
+        value loc = text.firstOccurrence('}') 
+                    else ((text.firstOccurrence(';') else - 1) + 1);
+        return newRegion(offset + loc - prefix.size, 0);
     }
 }
