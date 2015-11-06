@@ -90,6 +90,7 @@ shared interface DocGenerator<Document,IdeArtifact> {
     shared formal String getUnitName(Unit u);
     shared formal PhasedUnit? getPhasedUnit(Unit u);
     shared formal String? getLiveValue(Declaration dec, Unit unit);
+    shared formal Boolean supportsQuickAssists;
     
     "Get the Node referenced by the given model, searching
      in all relevant compilation units."
@@ -188,7 +189,12 @@ shared interface DocGenerator<Document,IdeArtifact> {
             value text = "Inferred type:&nbsp;<tt>``printer.print(model, node.unit)``</tt>";
             addIconAndText(builder, Icons.types, text);
             builder.append("<br/>");
-            // TODO add quick assist
+            if (supportsQuickAssists, !model.containsUnknowns()) {
+                builder.append("One quick assist available:<br/>");
+                value link = "<a href=\"stp:" + node.startIndex.string + 
+                    "\">Specify explicit type</a>";
+                addIconAndText(builder, Icons.quickAssists, link);
+            }
             appendPageEpilog(builder);
             return builder.string;
         }
@@ -226,8 +232,6 @@ shared interface DocGenerator<Document,IdeArtifact> {
             } else if (is Tree.FloatLiteral term) {
                 appendFloatInfo(term, builder);
             }
-            
-            // TODO quick assists
             
             appendPageEpilog(builder);
             return builder.string;
@@ -414,7 +418,6 @@ shared interface DocGenerator<Document,IdeArtifact> {
             addNothingTypeInfo(builder);
         } else {
             addUnitInfo(decl, builder);
-            // TODO extra actions
         }
         
         appendPageEpilog(builder);
