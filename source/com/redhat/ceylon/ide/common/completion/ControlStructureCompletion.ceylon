@@ -184,28 +184,38 @@ shared abstract class ControlStructureProposal<IdeComponent,IdeArtifact,
 
     shared formal CompletionResult newNameCompletion(String? name);
     
+    shared actual void applyInternal(Document document) {
+        super.applyInternal(document);
+
+        enterLinkedMode(document);
+    }
+    
     shared void enterLinkedMode(Document doc) {
         if (exists loc = text.firstInclusion(" val =")) {
             value lm = newLinkedMode();
             
-            value exitOffset = (text.endsWith("{}"))
-                               then offset + text.size - 1
-                               else offset + text.size;
             value names = nodes.nameProposals(node).array.map(
                 (_) => newNameCompletion(_?.string)
             ).sequence();
             
             value startOffset = node?.startIndex?.intValue() else offset;
+            value exitOffset = (text.endsWith("{}"))
+                                then startOffset + text.size - 1
+                                else startOffset + text.size;
             
-            addEditableRegion(lm, doc, startOffset + loc + 1, 3, exitOffset, names);
+            addEditableRegion(lm, doc, startOffset + loc + 1, 3, 0, names);
             
             installLinkedMode(doc, lm, this, 1, exitOffset);
         }
     }
     
     shared actual Region getSelectionInternal(Document document) {
-        value loc = text.firstOccurrence('}') 
-                    else ((text.firstOccurrence(';') else - 1) + 1);
-        return newRegion(offset + loc - prefix.size, 0);
+        if (exists loc = text.firstInclusion(" val =")) {
+            return newRegion(offset + loc + 1 - prefix.size, 3);
+        } else {
+            value loc = text.firstOccurrence('}') 
+                        else ((text.firstOccurrence(';') else - 1) + 1);
+            return newRegion(offset + loc - prefix.size, 0);
+        }
     }
 }
