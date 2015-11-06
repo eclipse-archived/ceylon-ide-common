@@ -77,7 +77,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
     
     shared alias IdeComponent => LocalAnalysisResult<Document,IdeArtifact>;
     
-    shared formal String buildLink(Referenceable model, String text, String protocol = "doc");
+    shared formal String buildLink(Referenceable|String model, String text,
+        String protocol = "doc");
     shared formal TypePrinter printer;
     shared formal String color(Object? what, Colors how);
     shared formal String markdown(String text, IdeComponent cmp, Scope? linkScope = null, Unit? unit = null);
@@ -191,8 +192,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
             builder.append("<br/>");
             if (supportsQuickAssists, !model.containsUnknowns()) {
                 builder.append("One quick assist available:<br/>");
-                value link = "<a href=\"stp:" + node.startIndex.string + 
-                    "\">Specify explicit type</a>";
+                value link = buildLink(node.startIndex.string,
+                    "Specify explicit type", "stp");
                 addIconAndText(builder, Icons.quickAssists, link);
             }
             appendPageEpilog(builder);
