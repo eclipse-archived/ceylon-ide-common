@@ -13,6 +13,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import java.util {
+    List
+}
 
 shared interface RequiredType {
     shared formal Type? type;
@@ -47,7 +50,7 @@ shared object types {
             assert (is TypeDeclaration? _dec = declaration.container);
             variable TypeDeclaration? dec = _dec;
             
-            value signature = ModelUtil.getSignature(declaration);
+            List<Type>? signature = ModelUtil.getSignature(declaration);
             Declaration? refined = declaration.refinedDeclaration;
             while (exists d = dec) {
                 if (exists extended = d.extendedType) {
