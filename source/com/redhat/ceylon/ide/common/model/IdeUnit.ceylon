@@ -7,7 +7,7 @@ import com.redhat.ceylon.model.typechecker.model {
 
 shared abstract class IdeUnit() 
         extends TypecheckerUnit() 
-        satisfies IUnit {
+        satisfies IUnit & SourceAware  {
     
     shared actual BaseIdeModule ceylonModule {
         assert(is BaseIdeModule ideModule=\ipackage.\imodule);
@@ -18,7 +18,7 @@ shared abstract class IdeUnit()
         return \ipackage;
     }
 
-    shared formal String? sourceFileName;
-    shared formal String? sourceRelativePath;
-    shared formal String? sourceFullPath;
+    shared actual formal String? sourceFileName;
+    shared actual formal String? sourceRelativePath;
+    shared actual formal String? sourceFullPath;
 }

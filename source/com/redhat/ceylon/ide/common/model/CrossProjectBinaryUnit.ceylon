@@ -1,33 +1,28 @@
-import java.lang.ref {
-    WeakReference
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
 import com.redhat.ceylon.ide.common.typechecker {
-    CrossProjectPhasedUnit,
-    ProjectPhasedUnit,
     TypecheckerAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
-shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,NativeFolder,NativeFile,JavaClassFile,JavaClassRoot,JavaElement>
-        extends CeylonBinaryUnit<NativeProject,JavaClassFile,JavaClassRoot,JavaElement> 
+import java.lang.ref {
+    WeakReference
+}
+
+shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
+        extends CeylonBinaryUnit<NativeProject,JavaClassRoot,JavaElement> 
         satisfies ICrossProjectReference<NativeProject,NativeResource,NativeFolder,NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource
-        given JavaClassFile satisfies JavaClassRoot {
+        given NativeFile satisfies NativeResource {
     
     variable value originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(null);
     
-    shared new (JavaClassFile typeRoot, String fileName, String relativePath, String fullPath, Package pkg) 
-            extends CeylonBinaryUnit<NativeProject, JavaClassFile, JavaClassRoot, JavaElement>(
+    shared new (JavaClassRoot typeRoot, String fileName, String relativePath, String fullPath, Package pkg) 
+            extends CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>(
                 typeRoot,
                 fileName,
                 relativePath,

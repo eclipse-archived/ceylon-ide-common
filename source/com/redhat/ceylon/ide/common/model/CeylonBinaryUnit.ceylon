@@ -9,14 +9,15 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
-shared abstract class CeylonBinaryUnit<NativeProject, JavaClassFile, JavaClassRoot, JavaElement>(typeRoot, filename, relativePath, fullPath, \ipackage)
-        extends CeylonUnit() satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement> 
-        given JavaClassFile satisfies JavaClassRoot {
+shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>(typeRoot, filename, relativePath, fullPath, \ipackage)
+        extends CeylonUnit() 
+        satisfies IJavaModelAware<NativeProject,JavaClassRoot, JavaElement>
+        & BinaryWithSources {
     shared variable actual String filename;
     shared variable actual String relativePath;
     shared variable actual String fullPath;
     shared variable actual Package \ipackage;
-    shared actual JavaClassFile typeRoot;
+    shared actual JavaClassRoot typeRoot;
     
     shared actual default ExternalPhasedUnit? phasedUnit {
         assert(is ExternalPhasedUnit? epu=super.phasedUnit);
@@ -48,21 +49,6 @@ shared abstract class CeylonBinaryUnit<NativeProject, JavaClassFile, JavaClassRo
         else null;
     }
     
-    String? computeFullPath(String? relativePath) =>
-            if (exists archivePath = ceylonModule.sourceArchivePath,
-                exists relativePath)
-            then "``archivePath``!/``relativePath``"
-            else null;
-    
-    shared actual String? sourceFileName =>
-            sourceRelativePath?.split('/'.equals)?.last;
-    
-    shared actual String? sourceRelativePath =>
-            ceylonModule.toSourceUnitRelativePath(relativePath);
-    
-    shared actual String? sourceFullPath => 
-            computeFullPath(sourceRelativePath);
-    
     shared actual String? ceylonSourceRelativePath =>
             ceylonModule.getCeylonDeclarationFile(sourceRelativePath);
     
@@ -74,4 +60,13 @@ shared abstract class CeylonBinaryUnit<NativeProject, JavaClassFile, JavaClassRo
                     !crp.empty)
             then crp.split('/'.equals).last
             else null;
+    
+    binaryRelativePath => relativePath;
+    
+    shared actual String? sourceFileName =>
+            (this of BinaryWithSources).sourceFileName;
+    shared actual String? sourceFullPath =>
+            (this of BinaryWithSources).sourceFullPath;
+    shared actual String? sourceRelativePath =>
+            (this of BinaryWithSources).sourceRelativePath;
 }
