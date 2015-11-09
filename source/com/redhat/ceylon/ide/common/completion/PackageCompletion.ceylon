@@ -30,7 +30,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Module,
     Package,
     ModelUtil,
-    Declaration
+    Declaration,
+    Modules
 }
 
 import java.lang {
@@ -93,11 +94,13 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
                 ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
                 for (md in CeylonIterable(msr.results)) {
                     value version = md.lastVersion;
-                    for (packageName in CeylonIterable(version.members)) {
-                        if (packageName.startsWith(fullPrefix)) {
-                            result.add(newQueriedModulePackageProposal(offset, prefix, 
-                                packageName.substring(fullPath.size), withBody, packageName.string,
-                                controller, version, unit, md));
+                    if (!alreadyImported(version, controller.typeChecker.context.modules)) {
+                        for (packageName in CeylonIterable(version.members)) {
+                            if (packageName.startsWith(fullPrefix)) {
+                                result.add(newQueriedModulePackageProposal(offset, prefix, 
+                                    packageName.substring(fullPath.size), withBody, packageName.string,
+                                    controller, version, unit, md));
+                            }
                         }
                     }
                 }
@@ -105,6 +108,12 @@ shared interface PackageCompletion<IdeComponent,IdeArtifact,CompletionResult,Doc
         }
     }
     
+    Boolean alreadyImported(ModuleVersionDetails version, Modules modules) {
+        return CeylonIterable(modules.listOfModules).find(
+            (m) => m.nameAsString == version.\imodule
+        ) exists;
+    }
+
     shared void addPackageDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, 
             MutableList<CompletionResult> result) {
         if (!"package".startsWith(prefix)) {
