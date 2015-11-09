@@ -303,11 +303,11 @@ ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(String brok
     }
     if (exists paramTypes, isUpperCase) {
         value supertype = supertypeDeclaration(returnType) else "";
-        value desc = "class '" + brokenName + supertype + "'";
+        value desc = "'class " + brokenName + supertype + "'";
         return ObjectClassDefinitionGenerator(brokenName, node, rootNode, desc, Icons.localClass, returnType, paramTypes,
             importProposals, indents, completionManager);
     } else if (!exists paramTypes, !isUpperCase) {
-        value desc = "object '" + brokenName + "'";
+        value desc = "'object " + brokenName + "'";
         return ObjectClassDefinitionGenerator(brokenName, node, rootNode, desc, Icons.localAttribute, returnType, null,
             importProposals, indents, completionManager);
     } else {

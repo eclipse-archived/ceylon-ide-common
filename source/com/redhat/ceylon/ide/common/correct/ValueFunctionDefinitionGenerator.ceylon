@@ -147,11 +147,11 @@ ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator
     value paramTypes = getParameters(fav);
     
     if (exists paramTypes) {
-        value desc = "function '" + brokenName + "'";
+        value desc = "'function " + brokenName + "'";
         return ValueFunctionDefinitionGenerator(brokenName, node, rootNode, desc, 
             Icons.localMethod, returnType, paramTypes, null, importProposals);
     } else {
-        value desc = "value '" + brokenName + "'";
+        value desc = "'value " + brokenName + "'";
         return ValueFunctionDefinitionGenerator(brokenName, node, rootNode, desc,
             Icons.localAttribute, returnType, null, fav.isVariable, importProposals);
     }
