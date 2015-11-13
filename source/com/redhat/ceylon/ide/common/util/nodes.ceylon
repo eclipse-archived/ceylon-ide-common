@@ -216,50 +216,76 @@ shared object nodes {
 
     shared Node? getIdentifyingNode(Node? node) {
         if (is Tree.Declaration node) {
-            if (!node.identifier exists && 
-                !node is Tree.MissingDeclaration) {
-                //TODO: whoah! this is really ugly!
-                return if (exists tok = node.mainToken) 
-                then Tree.Identifier(CommonToken(tok)) 
-                else null;
+            if (exists id = node.identifier) {
+                return id;
             }
-            return node.identifier;
+            else if (node is Tree.MissingDeclaration) {
+                return null;
+            }
+            else {
+                //TODO: whoah! this is really ugly!
+                return 
+                    if (exists tok = node.mainToken) 
+                    then Tree.Identifier(CommonToken(tok)) 
+                    else null;
+            }
         }
         else if (is Tree.ModuleDescriptor node) {
-            return node.importPath;
+            if (exists ip = node.importPath) {
+                return ip;
+            }
         }
         else if (is Tree.PackageDescriptor node) {
-            return node.importPath;
+            if (exists ip = node.importPath) {
+                return ip;
+            }
         }
         else if (is Tree.Import node) {
-            return node.importPath;
+            if (exists ip = node.importPath) {
+                return ip;
+            }
         }
         else if (is Tree.ImportModule node) {
-            return node.importPath;
+            if (exists ip = node.importPath) {
+                return ip;
+            }
+            else if (exists p = node.quotedLiteral) {
+                return p;
+            }
         }
         else if (is Tree.NamedArgument node) {
-            Tree.Identifier? id = node.identifier;
-
-            return if (exists t = id?.token) then id else node;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is Tree.StaticMemberOrTypeExpression node) {
-            return node.identifier;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is CustomTree.ExtendedTypeExpression node) {
             //TODO: whoah! this is really ugly!
             return node.type.identifier;
         }
         else if (is Tree.SimpleType node) {
-            return node.identifier;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is Tree.ImportMemberOrType node) {
-            return node.identifier;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is Tree.InitializerParameter node) {
-            return node.identifier;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is Tree.MemberLiteral node) {
-            return node.identifier;
+            if (exists id = node.identifier) {
+                return id;
+            }
         }
         else if (is Tree.TypeLiteral node) {
             return getIdentifyingNode(node.type);
@@ -280,9 +306,7 @@ shared object nodes {
             }
             return node;
          }*/
-        else {
-            return node;
-        }
+        return node;
     }
 
     shared JIterator<CommonToken>? getTokenIterator(JList<CommonToken>? tokens, DefaultRegion region) {
