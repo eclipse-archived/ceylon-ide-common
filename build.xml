@@ -48,6 +48,7 @@
 
         <reposet id="reposet.compile.test">
             <repo url="${out.repo}"/>
+            <repo url="${basedir}/repo"/>
         </reposet>
     
         <reposet id="reposet.run.test">
@@ -79,6 +80,7 @@
             pack200="true"
             out="${out.repo}"
             fork="true">
+            <reposet refid="reposet.compile.source"/>
             <moduleset refid="modules.source"/>
         </ceylon-compile>
     </target>
