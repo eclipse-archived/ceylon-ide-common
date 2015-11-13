@@ -2,23 +2,19 @@ import ceylon.collection {
     HashMap
 }
 
-import java.util.concurrent.locks { ReentrantReadWriteLock,
-    Lock }
-import java.lang {
-    InterruptedException
-}
-import com.redhat.ceylon.ide.common.vfs {
-    ResourceVirtualFile,
-    FolderVirtualFile,
-    FileVirtualFile,
-    VfsAliases
-}
 import com.redhat.ceylon.ide.common.util {
     Path
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit,
-    CrossProjectPhasedUnit
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
+}
+
+import java.lang {
+    InterruptedException
+}
+import java.util.concurrent.locks {
+    ReentrantReadWriteLock,
+    Lock
 }
 
 shared abstract class BaseCeylonProjects() {

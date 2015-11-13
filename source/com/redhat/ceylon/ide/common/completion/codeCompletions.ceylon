@@ -248,7 +248,6 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 // see CodeCompletions.getDocDescriptionFor
 shared String getDocDescriptionFor<Document>(Declaration decl,
     Reference? pr, Unit unit, LocalAnalysisResult<Document> cmp) {
-
     StringBuilder result = StringBuilder();
     appendDeclarationHeader(decl, pr, unit, result, true);
     appendTypeParametersWithArguments(decl, pr, unit, result, true);
@@ -736,7 +735,6 @@ shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
 void appendParameters<Document>(Declaration d, Reference? pr,
     Unit unit, StringBuilder result, LocalAnalysisResult<Document>? cpc,
     Boolean descriptionOnly) {
-    
     if (is Functional d) {
         if (exists plists = d.parameterLists) {
             for (params in CeylonIterable(plists)) {

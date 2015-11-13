@@ -167,7 +167,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
     }
 }
 
-shared abstract class ControlStructureProposal<IdeComponent,IdeArtifact,
+shared abstract class ControlStructureProposal<IdeComponent,
         IFile,CompletionResult,Document, InsertEdit,TextEdit,TextChange,
         Region,LinkedMode>
         (Integer offset, String prefix, String desc, String text,
@@ -178,8 +178,7 @@ shared abstract class ControlStructureProposal<IdeComponent,IdeArtifact,
         (offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document,IdeArtifact>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newNameCompletion(String? name);
     

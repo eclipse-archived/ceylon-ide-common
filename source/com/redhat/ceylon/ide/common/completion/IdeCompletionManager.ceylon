@@ -23,7 +23,7 @@ import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
     types,
     escaping,
-    ProgressMonitor,
+    BaseProgressMonitor,
     Indents,
     RequiredType
 }
@@ -105,7 +105,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
     shared CompletionResult[] getContentProposals(Tree.CompilationUnit typecheckedRootNode, IdeComponent analysisResult, 
-            Integer offset, Integer line, Boolean secondLevel, ProgressMonitor monitor, Boolean returnedParamInfo = false) {
+            Integer offset, Integer line, Boolean secondLevel, BaseProgressMonitor monitor, Boolean returnedParamInfo = false) {
         value tokens = analysisResult.tokens;
         value document = analysisResult.document;
 
@@ -239,7 +239,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     
     CompletionResult[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
             Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
-            Integer tokenType, ProgressMonitor monitor) {
+            Integer tokenType, BaseProgressMonitor monitor) {
         value result = ArrayList<CompletionResult>();
 
         if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {

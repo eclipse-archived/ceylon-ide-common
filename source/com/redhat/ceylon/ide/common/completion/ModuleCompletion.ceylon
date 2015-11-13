@@ -28,7 +28,7 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    ProgressMonitor,
+    BaseProgressMonitor,
     toCeylonStringIterable,
     moduleQueries,
     nodes
@@ -58,14 +58,14 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
                 String versioned, String name);
 
     shared void addModuleCompletions(IdeComponent cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
-        MutableList<CompletionResult> result, Boolean withBody, ProgressMonitor monitor) {
+        MutableList<CompletionResult> result, Boolean withBody, BaseProgressMonitor monitor) {
         value fp = fullPath(offset, prefix, path);
         
         addModuleCompletionsInternal(offset, prefix, node, result, fp.size, fp + prefix, cpc, withBody, monitor);
     }
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
-        Integer len, String pfp, IdeComponent cpc, Boolean withBody, ProgressMonitor monitor) {
+        Integer len, String pfp, IdeComponent cpc, Boolean withBody, BaseProgressMonitor monitor) {
         
         if (pfp.startsWith("java.")) {
             for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {

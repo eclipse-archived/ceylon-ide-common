@@ -1,14 +1,33 @@
-import com.redhat.ceylon.model.loader.model {
-    LazyModuleManager
+import ceylon.interop.java {
+    javaString,
+    CeylonIterable
 }
-import java.util {
-    JSet=Set,
-    HashSet,
-    Collections,
-    JList=List
+
+import com.redhat.ceylon.common {
+    Backend,
+    Backends
+}
+import com.redhat.ceylon.compiler.java.util {
+    Util
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    TypecheckerAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    toJavaStringList,
+    Path
+}
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
+}
+import com.redhat.ceylon.model.loader {
+    AbstractModelLoader
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyModuleManager
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -17,35 +36,15 @@ import com.redhat.ceylon.model.typechecker.model {
     ModuleImport
 }
 
-import com.redhat.ceylon.common {
-    Backend,
-    Backends    
-}
-
-import com.redhat.ceylon.ide.common.util {
-    toJavaStringList,
-    Path,
-    toJavaString
-}
 import java.lang {
     JString=String,
     JIterable=Iterable
 }
-import com.redhat.ceylon.compiler.java.util {
-    Util
-}
-import ceylon.interop.java {
-    javaString,
-    CeylonIterable
-}
-import com.redhat.ceylon.model.loader {
-    AbstractModelLoader
-}
-import com.redhat.ceylon.ide.common.vfs {
-    VfsAliases
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    TypecheckerAliases
+import java.util {
+    JSet=Set,
+    HashSet,
+    Collections,
+    JList=List
 }
 shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() {

@@ -45,7 +45,6 @@ import com.redhat.ceylon.ide.common.util {
     CarUtils,
     toCeylonStringIterable,
     toJavaStringList,
-    toJavaString,
     SingleSourceUnitPackage,
     platformUtils,
     Status,

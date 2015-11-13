@@ -1,56 +1,41 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleSourceMapper
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit,
-    PhasedUnits,
     TypecheckerUnit
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package,
-    Unit,
-    Declaration
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.model {
+    ModelAliases,
+    EditedSourceFile,
+    isCentralModelDeclaration
+}
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    FileVirtualFile,
-    ZipEntryVirtualFile,
-    ZipFileVirtualFile
+    FileVirtualFile
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Package,
+    Declaration
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
 }
 
 import java.lang.ref {
     WeakReference
 }
 import java.util {
-    JList=List,
-    WeakHashMap
+    JList=List
 }
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.util {
-    synchronize
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
-    IdeModule,
-    ModelAliases,
-    EditedSourceFile,
-    isCentralModelDeclaration
 }
 
 

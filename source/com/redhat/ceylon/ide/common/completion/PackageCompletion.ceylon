@@ -23,7 +23,7 @@ import com.redhat.ceylon.ide.common.typechecker {
 import com.redhat.ceylon.ide.common.util {
     escaping,
     moduleQueries,
-    ProgressMonitor
+    BaseProgressMonitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
@@ -44,7 +44,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
     // see PackageCompletions.addPackageCompletions()
     shared void addPackageCompletions(IdeComponent lar, Integer offset, String prefix,
         Tree.ImportPath? path, Node node, MutableList<CompletionResult> result, Boolean withBody,
-        ProgressMonitor monitor) {
+        BaseProgressMonitor monitor) {
         
         String fp = fullPath(offset, prefix, path);
         addPackageCompletionsFullPath(offset, prefix, fp, withBody, node.unit, lar, result, monitor);
@@ -52,7 +52,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-            IdeComponent controller, MutableList<CompletionResult> result, ProgressMonitor monitor) {
+            IdeComponent controller, MutableList<CompletionResult> result, BaseProgressMonitor monitor) {
         if (exists unit) { //a null unit can occur if we have not finished parsing the file
             variable Boolean found = false;
             Module mod = unit.\ipackage.\imodule;

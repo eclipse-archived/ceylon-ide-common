@@ -7,6 +7,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
+shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
+    shared formal NativeFile? javaClassRootToNativeFile(JavaClassRoot javaClassRoot);
+    shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
+}
+
 shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>(
             filename, 
             relativePath, 
@@ -14,16 +19,14 @@ shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRo
             \ipackage)
         extends IdeUnit()
         satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement> 
-        & IResourceAware<NativeProject, NativeFolder, NativeFile> {
+        & IResourceAware<NativeProject, NativeFolder, NativeFile>
+        & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
     
     shared actual variable String filename;
     shared actual variable String relativePath;
     shared actual variable String fullPath;
     shared actual variable Package \ipackage;
     
-    shared formal NativeFile? javaClassRootToNativeFile(JavaClassRoot javaClassRoot);
-    shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
-
     shared actual NativeFile? resourceFile =>
             javaClassRootToNativeFile(typeRoot);
     
@@ -33,14 +36,6 @@ shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRo
     shared actual NativeFolder? resourceRootFolder {
         if (exists rf=resourceFile) {
             return javaClassRootToNativeRootFolder(typeRoot);
-            //try {
-            //    assert (is IPackageFragmentRoot root = typeRoot.getAncestor(IJavaElement.\iPACKAGE_FRAGMENT_ROOT));
-            //    if (exists root) {
-            //        return root.correspondingResource;
-            //    }
-            //} catch (JavaModelException e) {
-            //    e.printStackTrace();
-            //}
         }
         
         return null;

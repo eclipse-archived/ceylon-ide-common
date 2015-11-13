@@ -1,9 +1,3 @@
-import java.io {
-    File
-}
-import com.redhat.ceylon.model.typechecker.model {
-    TypecheckerModules=Modules
-}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -12,6 +6,13 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.ide.common.util {
     Path
+}
+import com.redhat.ceylon.model.typechecker.model {
+    TypecheckerModules=Modules
+}
+
+import java.io {
+    File
 }
 
 shared abstract class BaseCeylonProject() {
@@ -31,10 +32,10 @@ shared abstract class BaseCeylonProject() {
                 [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
                 should be managed in a modular way in each [[IdeModule]] object accessible from the
                 [[PhasedUnits]]")
-    shared TypeChecker? typechecker=>nothing;
+    shared formal TypeChecker? typechecker;
     
     deprecated("Should be hidden in the future, when implemented directy here in Ceylon")
-    shared PhasedUnits? phasedUnits=>nothing;
+    shared default PhasedUnits? phasedUnits=>typechecker?.phasedUnits;
     
     shared CeylonProjectConfig configuration {
         if (exists config = ceylonConfig) {

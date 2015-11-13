@@ -40,8 +40,7 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
     ZipEntryVirtualFile,
-    BaseFileVirtualFile,
-    VfsAliases
+    BaseFileVirtualFile
 }
 import com.redhat.ceylon.model.cmr {
     ArtifactResult
@@ -86,6 +85,9 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
         return mm;
     }
 
+    shared actual Context context =>
+            super.context;
+    
     shared formal BaseCeylonProject? ceylonProject;
     shared variable late TypeChecker typeChecker;
 

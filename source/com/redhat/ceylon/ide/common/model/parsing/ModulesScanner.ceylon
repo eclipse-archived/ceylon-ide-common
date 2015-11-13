@@ -21,7 +21,7 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    ProgressMonitor,
+    BaseProgressMonitor,
     ProjectSourceParser
 }
 import com.redhat.ceylon.ide.common.vfs {
@@ -67,7 +67,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     TypeChecker typeChecker = moduleManager.typeChecker;
     late variable BaseIdeModule currentModule;
-    ProgressMonitor monitor;
+    BaseProgressMonitor monitor;
 
 
     class ModuleDescriptorParser(

@@ -13,18 +13,17 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    ProgressMonitor
+    BaseProgressMonitor
 }
 import org.antlr.runtime {
     CommonToken
 }
 
-class ImportVisitor<IdeComponent,IdeArtifact,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
-    IdeComponent cpc, MutableList<CompletionResult> result, ProgressMonitor monitor,
+class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
+    IdeComponent cpc, MutableList<CompletionResult> result, BaseProgressMonitor monitor,
     IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager)
         extends Visitor()
-        given IdeComponent satisfies LocalAnalysisResult<Document>
-        given IdeArtifact satisfies Object {
+        given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared actual void visit(Tree.ModuleDescriptor that) {
         super.visit(that);

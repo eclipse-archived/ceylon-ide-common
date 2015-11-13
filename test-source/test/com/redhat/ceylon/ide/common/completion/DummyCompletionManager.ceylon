@@ -23,7 +23,7 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    ProgressMonitor,
+    BaseProgressMonitor,
     Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -84,7 +84,7 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
     shared actual CompletionOptions options = CompletionOptions();
 }
 
-object dummyMonitor satisfies ProgressMonitor {
+object dummyMonitor satisfies BaseProgressMonitor {
     shared actual void subTask(String? desc) {}
     shared actual variable Integer workRemaining = 0;
     shared actual void worked(Integer amount) {}
