@@ -7,8 +7,14 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.ide.common.completion {
     IdeCompletionManager
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Unit
+}
 
-shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,ICompletionResult=Anything> {
+shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
+        Region,Project,Data,ICompletionResult=Anything>
+        given Data satisfies QuickFixData<Project> {
+
     shared formal Indents<IDocument> indents;
     
     shared formal Region newRegion(Integer start, Integer length);
@@ -22,4 +28,6 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     shared formal ImportProposals<out Anything,out Anything,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
     
     shared formal IdeCompletionManager<out Anything,out Anything,out ICompletionResult,IDocument> completionManager;
+    
+    shared formal PhasedUnit? getPhasedUnit(Unit? u, Data data);
 }

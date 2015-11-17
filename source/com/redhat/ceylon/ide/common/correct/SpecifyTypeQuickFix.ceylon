@@ -1,10 +1,8 @@
-import ceylon.collection {
-    ArrayList,
-    MutableList
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
+}
+import com.redhat.ceylon.ide.common.completion {
+    LinkedModeSupport
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -13,9 +11,7 @@ import com.redhat.ceylon.model.typechecker.model {
     },
     Declaration
 }
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
-}
+
 import java.util {
     HashSet
 }
@@ -23,7 +19,7 @@ import java.util {
 shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         TextChange,Region,Project,Data,CompletionResult,LinkedMode>
         satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
-        Region,Project,CompletionResult>
+        Region,Project,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
                 & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
         given InsertEdit satisfies TextEdit

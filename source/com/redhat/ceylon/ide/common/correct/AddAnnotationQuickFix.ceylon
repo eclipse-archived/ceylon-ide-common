@@ -10,6 +10,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
+import com.redhat.ceylon.ide.common.imports {
+    AbstractModuleImportUtil
+}
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor,
     types
@@ -23,7 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     UnknownType,
     Class,
-    Unit,
     ClassOrInterface,
     TypeAlias,
     TypedDeclaration,
@@ -39,12 +41,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
-}
 
 shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
@@ -232,24 +231,15 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     void addAddAnnotationProposal(Node? node, String annotation, String desc,
         Referenceable? dec, Project project, Data data) {
         
-        if (exists dec, !(node is Tree.MissingDeclaration)) {
-            Unit? u = dec.unit;
-            // TODO
-            //if (is EditedSourceFile u) {
-            //    value esf = u;
-            //    u = esf.originalSourceFile;
-            //}
-            for (unit in getUnits(project)) {
-                if (exists u, u.equals(unit.unit)) {
-                    value fdv = FindDeclarationNodeVisitor(dec);
-                    // TODO use CorrectionUtil.getRootNode
-                    unit.compilationUnit.visit(fdv);
-                    value decNode = fdv.declarationNode;
-                    if (exists decNode) {
-                        addAddAnnotationProposal2(annotation, desc, dec, unit, node, decNode, data);
-                    }
-                    break;
-                }
+        if (exists dec, !(node is Tree.MissingDeclaration),
+            exists phasedUnit = getPhasedUnit(dec.unit, data)) {
+
+            value fdv = FindDeclarationNodeVisitor(dec);
+            phasedUnit.compilationUnit.visit(fdv);
+            value decNode = fdv.declarationNode;
+            if (exists decNode) {
+                addAddAnnotationProposal2(annotation, desc, dec, phasedUnit,
+                    node, decNode, data);
             }
         }
     }

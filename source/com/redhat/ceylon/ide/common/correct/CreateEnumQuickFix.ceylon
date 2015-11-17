@@ -17,7 +17,7 @@ import com.redhat.ceylon.ide.common.util {
 
 shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,ICompletionResult>
+                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
     

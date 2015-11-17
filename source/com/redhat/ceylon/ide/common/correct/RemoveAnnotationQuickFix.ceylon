@@ -15,13 +15,12 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
-    Unit,
     ModelUtil,
     ClassOrInterface
 }
 
 shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
@@ -53,31 +52,25 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         addRemoveAnnotationProposal2(node, "final", "Make Nonfinal", dec, project, data);
     }
     
-    void addRemoveAnnotationProposal2(Node node, String annotation, String desc, Declaration? dec, Project project, Data data) {
-        if (exists dec, exists d = dec.name) {
-            Unit? u = dec.unit;
-            // TODO
-            //if (is EditedSourceFile u) {
-            //    value esf = u;
-            //    u = esf.originalSourceFile;
-            //}
-            for (unit in getUnits(project)) {
-                if (exists u, u.equals(unit.unit)) {
-                    //TODO: "object" declarations?
-                    value fdv = FindDeclarationNodeVisitor(dec);
-                    // TODO use CorrectionUtil.getRootNode
-                    unit.compilationUnit.visit(fdv);
-                    assert (is Tree.Declaration? decNode = fdv.declarationNode);
-                    if (exists decNode) {
-                        addRemoveAnnotationProposalInternal(annotation, desc, dec, unit, decNode, data);
-                    }
-                    break;
-                }
+    void addRemoveAnnotationProposal2(Node node, String annotation, String desc,
+        Declaration? dec, Project project, Data data) {
+        
+        if (exists dec, exists d = dec.name,
+            exists phasedUnit = getPhasedUnit(dec.unit, data)) {
+
+            //TODO: "object" declarations?
+            value fdv = FindDeclarationNodeVisitor(dec);
+            phasedUnit.compilationUnit.visit(fdv);
+            assert (is Tree.Declaration? decNode = fdv.declarationNode);
+            if (exists decNode) {
+                addRemoveAnnotationProposalInternal(annotation, desc, dec,
+                    phasedUnit, decNode, data);
             }
         }
     }
     
-    void addRemoveAnnotationProposalInternal(String annotation, String desc, Declaration dec, PhasedUnit unit, Tree.Declaration decNode, Data data) {
+    void addRemoveAnnotationProposalInternal(String annotation, String desc,
+        Declaration dec, PhasedUnit unit, Tree.Declaration decNode, Data data) {
         value change = newTextChange(desc, unit);
         initMultiEditChange(change);
 

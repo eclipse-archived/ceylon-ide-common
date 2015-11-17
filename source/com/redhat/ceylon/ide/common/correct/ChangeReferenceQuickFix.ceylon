@@ -23,7 +23,7 @@ import java.util {
 }
 shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Data,Region,CompletionResult>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,CompletionResult>
+                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
    

@@ -24,7 +24,7 @@ import com.redhat.ceylon.ide.common.util {
 }
 
 shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,ICompletionResult> 
+        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult> 
                 & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
