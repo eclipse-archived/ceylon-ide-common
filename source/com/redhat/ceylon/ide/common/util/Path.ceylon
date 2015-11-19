@@ -578,10 +578,10 @@ shared final class Path satisfies List<String> {
             this === obj) {
             return true;
         }
-        if (!(obj is Path)) {
+        if (!is Path obj) {
             return false;
         }
-        assert(is Path target=obj);
+        value target = obj;
         //check leading separators and hash code
         if (separators.and(_HASH_MASK) != target.separators.and(_HASH_MASK)) {
             return false;

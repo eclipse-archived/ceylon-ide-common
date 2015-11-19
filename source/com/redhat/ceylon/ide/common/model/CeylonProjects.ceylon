@@ -25,7 +25,7 @@ shared abstract class BaseCeylonProjects() {
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -94,7 +94,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         };
 
     shared abstract formal class VirtualFileSystem()
-            satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
+            satisfies VfsAliases<NativeResource, NativeFolder, NativeFile> {
 
         shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource) {
             assert (is NativeFolder | NativeFile resource);

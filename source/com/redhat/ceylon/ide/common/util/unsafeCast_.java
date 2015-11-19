@@ -26,5 +26,4 @@ public final class unsafeCast_ {
             final Object instance) {
         return (Return) instance;
     }
-    
 }

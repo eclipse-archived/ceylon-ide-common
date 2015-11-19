@@ -8,6 +8,9 @@ import com.redhat.ceylon.ide.common.typechecker {
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>(typeRoot, filename, relativePath, fullPath, \ipackage)
         extends CeylonUnit() 
@@ -19,10 +22,8 @@ shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement
     shared variable actual Package \ipackage;
     shared actual JavaClassRoot typeRoot;
     
-    shared actual default ExternalPhasedUnit? phasedUnit {
-        assert(is ExternalPhasedUnit? epu=super.phasedUnit);
-        return epu;
-    }
+    shared actual default ExternalPhasedUnit? phasedUnit =>
+            unsafeCast<ExternalPhasedUnit?>(super.phasedUnit);
     
     shared actual ExternalPhasedUnit? setPhasedUnitIfNecessary() {
         variable IdePhasedUnit? phasedUnit = null;
@@ -64,9 +65,9 @@ shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement
     binaryRelativePath => relativePath;
     
     shared actual String? sourceFileName =>
-            (this of BinaryWithSources).sourceFileName;
+            (super of BinaryWithSources).sourceFileName;
     shared actual String? sourceFullPath =>
-            (this of BinaryWithSources).sourceFullPath;
+            (super of BinaryWithSources).sourceFullPath;
     shared actual String? sourceRelativePath =>
-            (this of BinaryWithSources).sourceRelativePath;
+            (super of BinaryWithSources).sourceRelativePath;
 }

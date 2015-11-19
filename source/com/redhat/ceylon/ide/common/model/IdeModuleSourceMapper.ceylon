@@ -35,7 +35,8 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    CeylonSourceParser
+    CeylonSourceParser,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
@@ -181,10 +182,8 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 
     shared actual CeylonProjectAlias? ceylonProject => theModuleManager.ceylonProject;
     
-	shared actual default IdeModuleManagerAlias moduleManager {
-		assert(is IdeModuleManagerAlias mm=super.moduleManager);
-		return mm;
-	}
+	shared actual default IdeModuleManagerAlias moduleManager =>
+            unsafeCast<IdeModuleManagerAlias>(super.moduleManager);
 	
 	value currentSourceMapper => this;
 	

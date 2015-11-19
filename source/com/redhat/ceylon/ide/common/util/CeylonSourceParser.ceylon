@@ -104,7 +104,7 @@ shared interface CeylonSourceParser<ResultPhasedUnit>
         }
         parserErrors.clear();
 
-        assert(is List<CommonToken> tokens = tokenStream.tokens);
+        value tokens = unsafeCast<List<CommonToken>>(tokenStream.tokens);
         return createPhasedUnit(cu, pkg, tokens);
     }
 
@@ -129,7 +129,7 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
 
         given NativeProject satisfies Object
         given NativeResource satisfies Object

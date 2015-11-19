@@ -1,5 +1,7 @@
 import com.redhat.ceylon.ide.common.typechecker {
-    TypecheckerAliases
+    TypecheckerAliases,
+    ProjectPhasedUnit,
+    CrossProjectPhasedUnit
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
@@ -7,6 +9,9 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.lang.ref {
     WeakReference
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 
 shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
@@ -39,10 +44,8 @@ shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,Native
     shared actual NativeFile? resourceFile =>
             phasedUnit?.originalProjectPhasedUnit?.resourceFile;
     
-    shared actual CrossProjectPhasedUnitAlias? phasedUnit {
-        assert(is CrossProjectPhasedUnitAlias? cppu=super.phasedUnit);
-        return cppu;
-    }
+    shared actual CrossProjectPhasedUnitAlias? phasedUnit =>
+            unsafeCast<CrossProjectPhasedUnitAlias?>(super.phasedUnit);
     
     shared actual ProjectSourceFileAlias? originalSourceFile =>
             originalPhasedUnit?.unit;

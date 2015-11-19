@@ -15,7 +15,8 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
-    CeylonSourceParser
+    CeylonSourceParser,
+    unsafeCast
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -47,17 +48,14 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
         extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(thePhasedUnit)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
 
-    shared actual ProjectPhasedUnitAlias phasedUnit {
-        assert(is ProjectPhasedUnitAlias cppu =
-            super.phasedUnit);
-        return cppu;
-    }
+    shared actual ProjectPhasedUnitAlias phasedUnit =>
+            unsafeCast<ProjectPhasedUnitAlias>(super.phasedUnit);
 
     shared actual NativeFile? resourceFile => 
             phasedUnit.resourceFile;

@@ -2,6 +2,9 @@ import com.redhat.ceylon.ide.common.typechecker {
     EditedPhasedUnit,
     TypecheckerAliases
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared class EditedSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
         extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -15,10 +18,8 @@ shared class EditedSourceFile<NativeProject, NativeResource, NativeFolder, Nativ
             extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(phasedUnit) {
     }
 
-    shared actual EditedPhasedUnitAlias? phasedUnit {
-        assert(is EditedPhasedUnitAlias? epu=super.phasedUnit);
-        return epu;
-    }
+    shared actual EditedPhasedUnitAlias? phasedUnit =>
+            unsafeCast<EditedPhasedUnitAlias?>(super.phasedUnit);
     
     shared ProjectSourceFileAlias? originalSourceFile =>
             phasedUnit?.originalPhasedUnit?.unit;

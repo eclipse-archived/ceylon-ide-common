@@ -12,7 +12,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
-    equalsWithNulls
+    equalsWithNulls,
+    unsafeCast
 }
 "
  Used when the external declarations come from a source archive
@@ -20,10 +21,8 @@ import com.redhat.ceylon.ide.common.util {
 shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit) 
         extends SourceFile(thePhasedUnit) {
         
-        shared actual default ExternalPhasedUnit phasedUnit {
-            assert(is ExternalPhasedUnit pu=super.phasedUnit);
-            return pu;
-        }
+        shared actual default ExternalPhasedUnit phasedUnit =>
+                unsafeCast<ExternalPhasedUnit>(super.phasedUnit);
         
         shared Boolean binaryDeclarationSource {
             return ceylonModule.isCeylonBinaryArchive && (ceylonPackage is SingleSourceUnitPackage);

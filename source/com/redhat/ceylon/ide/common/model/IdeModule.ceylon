@@ -588,7 +588,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             doWithPhasedUnitsObject { 
         function action(AnyPhasedUnitMap phasedUnitMap) { 
             PhasedUnit? phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePathToSource);
-            assert(is ExternalPhasedUnit phasedUnit);
+            assert(is ExternalPhasedUnit? phasedUnit);
             return phasedUnit;
         }
         defaultValue = null; 

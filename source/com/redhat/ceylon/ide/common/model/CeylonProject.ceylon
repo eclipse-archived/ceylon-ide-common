@@ -134,18 +134,18 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
             value it = typecheckerModules.listOfModules.iterator();
             shared actual IdeModuleAlias|Finished next() {
-                assert(is IdeModuleAlias m=it.next());
+                assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=it.next());
                 return m;
             }
         };
         
         shared actual IdeModuleAlias default {
-            assert(is IdeModuleAlias m=typecheckerModules.defaultModule);
+            assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=typecheckerModules.defaultModule);
             return m;
         }
         
         shared actual IdeModuleAlias language {
-            assert(is IdeModuleAlias m=typecheckerModules.languageModule);
+            assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=typecheckerModules.languageModule);
             return m; 
         }
         
@@ -157,13 +157,13 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         
         shared actual IdeModuleManagerAlias manager {
             assert(exists units=phasedUnits,
-                    is IdeModuleManagerAlias mm=units.moduleManager);
+                    is IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> mm=units.moduleManager);
             return mm; 
         }
         
         shared actual IdeModuleSourceMapperAlias sourceMapper {
             assert(exists units=phasedUnits,
-                    is IdeModuleSourceMapperAlias msm=units.moduleSourceMapper);
+                    is IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> msm=units.moduleSourceMapper);
             return msm;
         }
     }

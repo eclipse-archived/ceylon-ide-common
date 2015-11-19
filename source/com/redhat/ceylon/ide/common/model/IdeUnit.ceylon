@@ -4,19 +4,19 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared abstract class IdeUnit() 
         extends TypecheckerUnit() 
         satisfies IUnit & SourceAware  {
     
-    shared actual BaseIdeModule ceylonModule {
-        assert(is BaseIdeModule ideModule=\ipackage.\imodule);
-        return ideModule;
-    }
+    shared actual BaseIdeModule ceylonModule =>
+            unsafeCast<BaseIdeModule>(\ipackage.\imodule);
     
-    shared actual Package ceylonPackage {
-        return \ipackage;
-    }
+    shared actual Package ceylonPackage =>
+            \ipackage;
 
     shared actual formal String? sourceFileName;
     shared actual formal String? sourceRelativePath;

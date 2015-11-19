@@ -1,5 +1,4 @@
-shared interface VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object
+shared interface VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {

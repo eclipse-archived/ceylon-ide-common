@@ -31,6 +31,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Package,
     Unit
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared abstract class IdePhasedUnit
         extends PhasedUnit {
@@ -55,22 +58,18 @@ shared abstract class IdePhasedUnit
         }
     }
 
-    shared actual default BaseFileVirtualFile unitFile {
-        assert(is BaseFileVirtualFile theUnitFile = super.unitFile);
-        return theUnitFile;
-    }
+    shared actual default BaseFileVirtualFile unitFile =>
+            unsafeCast<BaseFileVirtualFile>(super.unitFile);
 
-    shared actual default BaseFolderVirtualFile srcDir {
-        assert(is BaseFolderVirtualFile theSrcDir = super.srcDir);
-        return theSrcDir;
-    }
+    shared actual default BaseFolderVirtualFile srcDir =>
+            unsafeCast<BaseFolderVirtualFile>(super.srcDir);
 
     shared TypeChecker? typeChecker {
         return typeCheckerRef?.get();
     }
 
     shared actual default TypecheckerUnit createUnit() {
-        Unit? oldUnit = unit;
+        Unit? oldUnit = super.unit;
         value theNewUnit = newUnit();
         if (exists oldUnit) {
             theNewUnit.filename = oldUnit.filename;

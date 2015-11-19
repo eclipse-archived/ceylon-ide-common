@@ -27,12 +27,17 @@ import com.redhat.ceylon.ide.common.model {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FileVirtualFile,
-    FolderVirtualFile
+    FolderVirtualFile,
+    VfsAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 
 shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends IdePhasedUnit
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
@@ -60,14 +65,10 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
             extends IdePhasedUnit.clone(other) {
     }
     
-    shared actual FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile {
-        assert(is FileVirtualFile<NativeResource, NativeFolder, NativeFile> uf=super.unitFile);
-        return uf;
-    }
+    shared actual FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile =>
+            unsafeCast<FileVirtualFileAlias>(super.unitFile);
 
-    shared actual FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir {
-        assert(is FolderVirtualFile<NativeResource, NativeFolder, NativeFile> sd=super.srcDir);
-        return sd;
-    }
+    shared actual FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir =>
+            unsafeCast<FolderVirtualFileAlias>(super.srcDir);
 }
 

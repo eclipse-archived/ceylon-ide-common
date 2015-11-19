@@ -33,6 +33,9 @@ import com.redhat.ceylon.ide.common.vfs {
     ZipEntryVirtualFile,
     ZipFileVirtualFile
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
         extends ExternalPhasedUnit
         given NativeProject satisfies Object
@@ -86,12 +89,9 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         return null;
     }
     
-    shared actual TypecheckerUnit newUnit() {
-        return CrossProjectSourceFile(this);
-    }
+    shared actual TypecheckerUnit newUnit() =>
+            CrossProjectSourceFile(this);
     
-    shared actual CrossProjectSourceFileAlias unit {
-        assert(is CrossProjectSourceFileAlias cpsf = super.unit);
-        return cpsf;
-    }
+    shared actual CrossProjectSourceFileAlias unit =>
+            unsafeCast<CrossProjectSourceFileAlias>(super.unit);
 }

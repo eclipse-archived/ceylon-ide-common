@@ -25,7 +25,8 @@ import com.redhat.ceylon.ide.common.model {
     ModelAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    synchronize
+    synchronize,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -53,7 +54,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -95,10 +96,8 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     shared actual NativeFolder resourceRootFolder => 
             srcDir.nativeResource;
 
-    shared actual ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> unit { 
-        assert(is ProjectSourceFileAlias psf=super.unit);
-        return psf; 
-    }
+    shared actual ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> unit =>
+            unsafeCast<ProjectSourceFileAlias>(super.unit);
     
     shared void addWorkingCopy(EditedPhasedUnitAlias workingCopy) {
         synchronize {
@@ -125,7 +124,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     shared void install() {
         if (exists tc = typeChecker) {
             PhasedUnits phasedUnits = tc.phasedUnits;
-            if (is ProjectPhasedUnitAlias oldPhasedUnit = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
+            if (is ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> oldPhasedUnit = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
                 if (oldPhasedUnit === this) {
                     return; // Nothing to do : the PhasedUnit is already installed in the typechecker
                 }

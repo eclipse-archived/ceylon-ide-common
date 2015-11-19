@@ -1,10 +1,16 @@
 import com.redhat.ceylon.ide.common.typechecker {
     IdePhasedUnit,
-    ModifiablePhasedUnit
+    ModifiablePhasedUnit,
+    TypecheckerAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 shared abstract class ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
         extends SourceFile 
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
@@ -13,9 +19,6 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
             extends SourceFile(phasedUnit) {
     }
     
-    shared actual default ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? phasedUnit {
-        assert(is ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? mpu = 
-            super.phasedUnit);
-        return mpu;
-    }
+    shared actual default ModifiablePhasedUnitAlias? phasedUnit =>
+            unsafeCast<ModifiablePhasedUnitAlias?> (super.phasedUnit);
 }

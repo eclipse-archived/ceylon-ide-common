@@ -30,6 +30,9 @@ import org.antlr.runtime {
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared class ExternalPhasedUnit 
         extends IdePhasedUnit {
@@ -55,17 +58,12 @@ shared class ExternalPhasedUnit
     shared actual default TypecheckerUnit newUnit() =>
             ExternalSourceFile(this);
     
-    shared actual default ExternalSourceFile unit {
-        assert(is ExternalSourceFile externalSourceFile=super.unit);
-        return externalSourceFile;
-    }
+    shared actual default ExternalSourceFile unit =>
+            unsafeCast<ExternalSourceFile>(super.unit);
     
-    shared actual ZipFileVirtualFile srcDir { 
-        assert(is ZipFileVirtualFile d=super.srcDir);
-        return d;
-    }
-    shared actual ZipEntryVirtualFile unitFile { 
-        assert(is ZipEntryVirtualFile f=super.unitFile);
-        return f; 
-    }
+    shared actual ZipFileVirtualFile srcDir =>
+            unsafeCast<ZipFileVirtualFile>(super.srcDir);
+
+    shared actual ZipEntryVirtualFile unitFile => 
+            unsafeCast<ZipEntryVirtualFile>(super.unitFile);
 }

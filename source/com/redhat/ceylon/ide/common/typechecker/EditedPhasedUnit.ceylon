@@ -37,6 +37,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 
 
@@ -83,10 +86,8 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
         return EditedSourceFile(this);
     }
     
-    shared actual EditedSourceFileAlias? unit {
-        assert(is EditedSourceFileAlias? esf=super.unit);
-        return esf;
-    }
+    shared actual EditedSourceFileAlias? unit =>
+            unsafeCast<EditedSourceFileAlias?>(super.unit);
 
     shared ProjectPhasedUnitAlias? originalPhasedUnit =>
             savedPhasedUnitRef.get();

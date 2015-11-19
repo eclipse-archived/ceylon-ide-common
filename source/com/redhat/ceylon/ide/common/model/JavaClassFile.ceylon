@@ -20,9 +20,9 @@ shared abstract class JavaClassFile<NativeProject, NativeFolder, NativeFile, Jav
     binaryRelativePath => relativePath;
     
     shared actual String? sourceFileName =>
-            (this of BinaryWithSources).sourceFileName;
+            (super of BinaryWithSources).sourceFileName;
     shared actual String? sourceFullPath =>
-            (this of BinaryWithSources).sourceFullPath;
+            (super of BinaryWithSources).sourceFullPath;
     shared actual String? sourceRelativePath =>
-            (this of BinaryWithSources).sourceRelativePath;
+            (super of BinaryWithSources).sourceRelativePath;
 }

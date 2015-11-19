@@ -18,7 +18,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     toJavaStringList,
-    Path
+    Path,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -225,15 +226,13 @@ shared abstract class IdeModuleManager<NativeProject, NativeResource, NativeFold
         extends BaseIdeModuleManager(theCeylonProject)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared actual CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? ceylonProject {
-        assert(is CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? cp=super.ceylonProject);
-        return cp;
-    }
+    shared actual CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? ceylonProject =>
+            unsafeCast<CeylonProjectAlias?>(super.ceylonProject);
 
 }
 
