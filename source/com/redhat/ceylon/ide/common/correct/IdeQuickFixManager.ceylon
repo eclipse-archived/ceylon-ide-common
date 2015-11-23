@@ -36,6 +36,11 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
+    // temporary
+    shared formal void addCreateTypeParameterProposal<Data>(Data data,
+        Tree.BaseType bt, String brokenName)
+            given Data satisfies QuickFixData<Project>;
+
     shared void addQuickFixes(Data data, TypeChecker? tc, IFile file) {
         
         value node = data.node;
@@ -243,7 +248,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             Tree.Identifier? id = bt.identifier;
             if (exists id) {
                 value brokenName = id.text;
-                //TODO addCreateTypeParameterProposal(data, bt, brokenName);
+                addCreateTypeParameterProposal(data, bt, brokenName);
             }
         }
     }
