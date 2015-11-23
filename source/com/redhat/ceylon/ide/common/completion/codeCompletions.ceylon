@@ -422,7 +422,7 @@ shared void appendTypeParametersWithArguments(Declaration d, Reference? pr, Unit
                             result.append("in ");
                         }
                     }
-                    result.append(tp.name);
+                    result.append(arg.asString(unit));
                 }
                 
                 return false;
@@ -706,5 +706,6 @@ void appendParameter(StringBuilder result, Reference? pr, Parameter p, Unit unit
 // see CodeCompletions.appendParametersDescription
 void appendParametersDescription<Document,IdeArtifact>(Declaration d, Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
     LocalAnalysisResult<Document,IdeArtifact> cmp) {
-    appendParameters(d, null, d.unit, result, cmp, true);
+    
+    appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
 }
