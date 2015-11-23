@@ -71,7 +71,11 @@ import com.redhat.ceylon.ide.common.imports {
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
 
-shared String convertToHTML(String content) => content.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;");
+shared String convertToHTML(String content)
+        => content.replace("&", "&amp;")
+                  .replace("\"", "&quot;")
+                  .replace("<", "&lt;")
+                  .replace(">", "&gt;");
 
 shared interface DocGenerator<Document,IdeArtifact> {
     
@@ -81,8 +85,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
         String protocol = "doc");
     shared formal TypePrinter printer;
     shared formal String color(Object? what, Colors how);
-    shared formal String markdown(String text, IdeComponent cmp, Scope? linkScope = null, Unit? unit = null);
-    shared formal void addIconAndText(StringBuilder builder, Icons|Referenceable icon, String text);
+    shared formal String markdown(String text, IdeComponent cmp,
+        Scope? linkScope = null, Unit? unit = null);
+    shared formal void addIconAndText(StringBuilder builder,
+        Icons|Referenceable icon, String text);
     shared formal String highlight(String text, IdeComponent cmp);
     shared formal void appendJavadoc(Declaration model, StringBuilder buffer);
     shared formal Boolean showMembers;
@@ -97,7 +103,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
      in all relevant compilation units."
     shared formal Node? getReferencedNode(Declaration dec);
     
-    shared formal AbstractModuleImportUtil<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> moduleImportUtil;
+    shared formal AbstractModuleImportUtil<out Anything,out Anything,out Anything,
+            out Anything,out Anything,out Anything> moduleImportUtil;
     
     shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
         if (exists target) {
@@ -177,7 +184,7 @@ shared interface DocGenerator<Document,IdeArtifact> {
         }
     }
     
-    // see SourceInfoHover.getHoverNode(IRegion hoverRegion, CeylonParseController parseController)
+    // see SourceInfoHover.getHoverNode(IRegion, CeylonParseController)
     Node? getHoverNode(Tree.CompilationUnit rootNode, Integer offset) 
             => nodes.findNode(rootNode, null, offset);
     
@@ -187,7 +194,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
             value builder = StringBuilder();
             appendPageProlog(builder);
             
-            value text = "Inferred type:&nbsp;<tt>``printer.print(model, node.unit)``</tt>";
+            value text = "Inferred type:&nbsp;<tt>"
+                    + printer.print(model, node.unit) + "</tt>";
             addIconAndText(builder, Icons.types, text);
             builder.append("<br/>");
             if (supportsQuickAssists, !model.containsUnknowns()) {
@@ -203,7 +211,7 @@ shared interface DocGenerator<Document,IdeArtifact> {
         return null;
     }
     
-    //see getTermTypeHoverText(Node node, String selectedText, IDocument doc, IProject project)        
+    //see getTermTypeHoverText(Node, String, IDocument doc, IProject project)        
     shared String? getTermTypeText(Tree.Term term, String? selection = null) {
         if (exists model = term.typeModel) {
             value builder = StringBuilder();
@@ -213,7 +221,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
                     if (is Tree.Literal term) 
                     then "Literal of type" 
                     else "Expression of type";
-            addIconAndText(builder, Icons.types, "``desc``&nbsp;<tt>``printer.print(model, term.unit)``</tt>");
+            addIconAndText(builder, Icons.types, desc + "&nbsp;<tt>"
+                + printer.print(model, term.unit) + "</tt>");
             
             if (is Tree.StringLiteral term) {
                 appendStringInfo(term, builder);
@@ -374,8 +383,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
             else "&lt;Unknown&gt;";
 
 
-    // see getDocumentationHoverText(Referenceable model, CeylonEditor editor, Node node)
-    shared String? getDocumentationText(Referenceable model, Node? node, Tree.CompilationUnit rootNode, IdeComponent cmp) {
+    // see getDocumentationHoverText(Referenceable, CeylonEditor editor, Node node)
+    shared String? getDocumentationText(Referenceable model, Node? node,
+        Tree.CompilationUnit rootNode, IdeComponent cmp) {
+        
         if (is Declaration model) {
             return getDeclarationDoc(model, node, rootNode, cmp, null);
         } else if (is Package model) {
@@ -387,8 +398,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
         return null;
     }
 
-    // see getDocumentationFor(CeylonParseController controller, Declaration dec, Node node, Reference pr)
-    String getDeclarationDoc(Declaration model, Node? node, Tree.CompilationUnit rootNode, IdeComponent cmp, Reference? pr) {
+    // see getDocumentationFor(CeylonParseController, Declaration, Node, Reference)
+    String getDeclarationDoc(Declaration model, Node? node, 
+        Tree.CompilationUnit rootNode, IdeComponent cmp, Reference? pr) {
+        
         variable value decl = model;
         if (is FunctionOrValue model) {
             TypeDeclaration? typeDecl = model.typeDeclaration;
@@ -444,17 +457,22 @@ shared interface DocGenerator<Document,IdeArtifact> {
     }
     
     // see addMainPackageDescription(Package pack, StringBuilder buffer)
-    void addMainPackageDescription(Package pack, StringBuilder builder, IdeComponent cmp) {
+    void addMainPackageDescription(Package pack, StringBuilder builder,
+        IdeComponent cmp) {
+        
         if (pack.shared) {
-            addIconAndText(builder, Icons.annotations, "<tt>``color("shared ", Colors.annotations)``</tt>");
+            addIconAndText(builder, Icons.annotations,
+                "<tt>``color("shared ", Colors.annotations)``</tt>");
         }
 
-        addIconAndText(builder, pack, "<tt>``highlight("package ``pack.nameAsString``", cmp)``</tt>");
+        addIconAndText(builder, pack,
+            "<tt>``highlight("package ``pack.nameAsString``", cmp)``</tt>");
     }
     
-    // see addPackageDocumentation(CeylonParseController cpc, Package pack, StringBuilder buffer)
+    // see addPackageDocumentation(CeylonParseController, Package, StringBuilder)
     void addPackageDocumentation(Package pack, StringBuilder builder, IdeComponent cmp) {
-        if (exists pu = getPhasedUnit(pack.unit), !pu.compilationUnit.packageDescriptors.empty,
+        if (exists pu = getPhasedUnit(pack.unit),
+            !pu.compilationUnit.packageDescriptors.empty,
             exists refnode = pu.compilationUnit.packageDescriptors.get(0)) {
             
             appendDocAnnotationContent(refnode.annotationList, builder, pack, cmp);
@@ -493,7 +511,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
                     buffer.append(", ");
                 }
                 
-                buffer.append("<tt>").append(buildLink(dec, dec.nameAsString)).append("</tt>");
+                buffer.append("<tt>").append(
+                    buildLink(dec, dec.nameAsString)).append("</tt>");
             }
         }
         if (!first) {
@@ -550,16 +569,18 @@ shared interface DocGenerator<Document,IdeArtifact> {
             buffer.append("<p>This module is implemented in Java.</p>");
         }
         if (mod.default) {
-            buffer.append("<p>The default module for packages which do not belong to explicit module.</p>");
+            buffer.append("<p>The default module for packages which do not
+                           belong to explicit module.</p>");
         }
         if (JDKUtils.isJDKModule(mod.nameAsString)) {
             buffer.append("<p>This module forms part of the Java SDK.</p>");            
         }
     }
 
-    // see addModuleDocumentation(CeylonParseController cpc, Module mod, StringBuilder buffer)
+    // see addModuleDocumentation(CeylonParseController, Module, StringBuilder)
     void addModuleDocumentation(Module mod, StringBuilder buffer, IdeComponent cmp) {
-        if (exists pu = getPhasedUnit(mod.unit), !pu.compilationUnit.moduleDescriptors.empty,
+        if (exists pu = getPhasedUnit(mod.unit),
+            !pu.compilationUnit.moduleDescriptors.empty,
             exists refnode = pu.compilationUnit.moduleDescriptors.get(0)) {
             
             value linkScope = mod.getPackage(mod.nameAsString);
@@ -583,7 +604,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
                     buffer.append(", ");
                 }
 
-                buffer.append("<tt>").append(buildLink(pack, pack.nameAsString)).append("</tt>");
+                buffer.append("<tt>").append(
+                    buildLink(pack, pack.nameAsString)).append("</tt>");
             }
         }
         if (!first) {
@@ -591,25 +613,36 @@ shared interface DocGenerator<Document,IdeArtifact> {
         }
     }
     
-    void addMainDescription(StringBuilder builder, Declaration decl, Node? node, Reference? pr, IdeComponent cmp, Unit unit) {
+    void addMainDescription(StringBuilder builder, Declaration decl, Node? node,
+        Reference? pr, IdeComponent cmp, Unit unit) {
+        
         value annotationsBuilder = StringBuilder();
         if (decl.shared) { annotationsBuilder.append("shared&nbsp;"); }
         if (decl.actual) { annotationsBuilder.append("actual&nbsp;"); }
         if (decl.default) { annotationsBuilder.append("default&nbsp;"); }
         if (decl.formal) { annotationsBuilder.append("formal&nbsp;"); }
         if (is Value decl, decl.late) { annotationsBuilder.append("late&nbsp;"); }
-        if (is TypedDeclaration decl, decl.variable) { annotationsBuilder.append("variable&nbsp;"); }
+        if (is TypedDeclaration decl, decl.variable) {
+            annotationsBuilder.append("variable&nbsp;");
+        }
         if (decl.native) { annotationsBuilder.append("native"); }
-        if (exists backends = decl.nativeBackends, !backends.none(), backends != Backends.\iHEADER) {
+        if (exists backends = decl.nativeBackends, !backends.none(),
+            backends != Backends.\iHEADER) {
+            
             value buf = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf, backends);
-            annotationsBuilder.append("(").append(color(buf.string, Colors.annotationStrings)).append(")");
+            annotationsBuilder.append("(").append(
+                color(buf.string, Colors.annotationStrings)).append(")");
         }
         if (decl.native) { annotationsBuilder.append("&nbsp;"); }
         if (is TypeDeclaration decl) {
             if (decl.sealed) { annotationsBuilder.append("sealed&nbsp;"); }
-            if (decl.final, !decl is Constructor) { annotationsBuilder.append("final&nbsp;"); }
-            if (is Class decl, decl.abstract) { annotationsBuilder.append("abstract&nbsp;"); }
+            if (decl.final, !decl is Constructor) {
+                annotationsBuilder.append("final&nbsp;");
+            }
+            if (is Class decl, decl.abstract) {
+                annotationsBuilder.append("abstract&nbsp;");
+            }
         }
         if (decl.annotation) { annotationsBuilder.append("annotation&nbsp;"); }
         
@@ -637,8 +670,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
         addIconAndText(builder, decl, desc);
     }
 
-    // see description(Declaration dec, Node node,  Reference pr, CeylonParseController cpc, Unit unit)
-    shared String description(Declaration decl, Node? node, Reference? _pr, IdeComponent cmp, Unit unit) {
+    // see description(Declaration, Node,  Reference, CeylonParseController, Unit)
+    shared String description(Declaration decl, Node? node, Reference? _pr,
+        IdeComponent cmp, Unit unit) {
+        
         value pr = _pr else appliedReference(decl, node);
         value doc = getDocDescriptionFor(decl, pr, unit, cmp);
         value description = StringBuilder();
@@ -648,7 +683,9 @@ shared interface DocGenerator<Document,IdeArtifact> {
         if (is TypeDeclaration decl, decl.\ialias, exists et = decl.extendedType) {
             description.append(" => ").append(et.asString());
         }
-        if (is FunctionOrValue decl, (decl is Value && !decl.variable) || decl is Function) {
+        if (is FunctionOrValue decl,
+            (decl is Value && !decl.variable) || decl is Function) {
+            
             description.append(getInitialValueDescription(decl, cmp));
         }
         
@@ -658,8 +695,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
         return if (exists liveValue) then result + liveValue else result;
     }
 
-    // see addInheritanceInfo(Declaration dec, Node node, Reference pr, StringBuilder buffer, Unit unit)
-    Boolean addInheritanceInfo(Declaration decl, Node? node, Reference? pr, StringBuilder builder, Unit unit) {
+    // see addInheritanceInfo(Declaration, Node, Reference, StringBuilder, Unit)
+    Boolean addInheritanceInfo(Declaration decl, Node? node, Reference? pr,
+        StringBuilder builder, Unit unit) {
+        
         value div = "<div style='padding-left:20px'>";
         builder.append(div);
         variable Boolean obj = false;
@@ -683,17 +722,22 @@ shared interface DocGenerator<Document,IdeArtifact> {
         return obj;
     }
 
-    // see documentInheritance(TypeDeclaration dec, Node node, Reference pr, StringBuilder buffer, Unit unit)
-    void documentInheritance(TypeDeclaration decl, Node? node, Reference? _pr, StringBuilder builder, Unit unit) {
+    // see documentInheritance(TypeDeclaration, Node, Reference, StringBuilder, Unit)
+    void documentInheritance(TypeDeclaration decl, Node? node, Reference? _pr,
+        StringBuilder builder, Unit unit) {
+        
         value pr = _pr else appliedReference(decl, node);
         value type = if (is Type pr) then pr else decl.type;
         
         if (exists cases = type.caseTypes) {
             value casesBuilder = StringBuilder();
 
+            value casesString = CeylonIterable(cases)
+                    .map((c) => printer.print(c, unit));
+            
             casesBuilder.append(" <tt><span style='font-size:90%'>")
                 .append("of&nbsp")
-                .append(" | ".join(CeylonIterable(cases).map((c) => printer.print(c, unit))));
+                .append(" | ".join(casesString));
             
             if (exists it = decl.selfType) {
                 builder.append(" (self type)");
@@ -712,9 +756,12 @@ shared interface DocGenerator<Document,IdeArtifact> {
         if (!decl.satisfiedTypes.empty) {
             value satisfiesBuilder = StringBuilder();
             
+            value typesString = CeylonIterable(decl.satisfiedTypes)
+                    .map((s) => printer.print(s, unit));
+            
             satisfiesBuilder.append("<tt><span style='font-size:90%'>")
                 .append("satisfies&nbsp;")
-                .append(" &amp; ".join(CeylonIterable(decl.satisfiedTypes).map((s) => printer.print(s, unit))))
+                .append(" &amp; ".join(typesString))
                 .append("</span></tt>");
             
             addIconAndText(builder, Icons.satisfiedTypes, satisfiesBuilder.string);
@@ -722,10 +769,14 @@ shared interface DocGenerator<Document,IdeArtifact> {
 
     }
     
-    // see documentTypeParameters(Declaration dec, Node node, Reference pr, StringBuilder buffer, Unit unit)
-    void documentTypeParameters(Declaration decl, Node? node, Reference? _pr, StringBuilder builder, Unit unit) {
+    // see documentTypeParameters(Declaration, Node, Reference, StringBuilder, Unit)
+    void documentTypeParameters(Declaration decl, Node? node, Reference? _pr,
+        StringBuilder builder, Unit unit) {
+        
         Reference? pr = _pr else appliedReference(decl, node);
-        value typeParameters = if (is Generic decl) then decl.typeParameters else Collections.emptyList<TypeParameter>();
+        value typeParameters = if (is Generic decl)
+            then decl.typeParameters
+            else Collections.emptyList<TypeParameter>();
 
         for (tp in CeylonIterable(typeParameters)) {
             value bounds = StringBuilder();
@@ -740,8 +791,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
             
             if (exists liveValue) {
                 arg = liveValue;
-            } else if (exists typeArg = pr?.typeArguments?.get(tp), !tp.type.isExactly(typeArg)) {
-                 arg = "&nbsp;=&nbsp;" + printer.print(typeArg, unit);
+            } else if (exists typeArg = pr?.typeArguments?.get(tp),
+                !tp.type.isExactly(typeArg)) {
+                
+                arg = "&nbsp;=&nbsp;" + printer.print(typeArg, unit);
             }
             
             value tpLink = buildLink(tp, tp.name);
@@ -794,18 +847,26 @@ shared interface DocGenerator<Document,IdeArtifact> {
             builder.append("Type parameter of");
             appendParameterLink(builder, decl.declaration);
             builder.append(".");
-        } else if (decl.classOrInterfaceMember, is ClassOrInterface outerClass = decl.container,
+        } else if (decl.classOrInterfaceMember,
+                is ClassOrInterface outerClass = decl.container,
                 exists qt = getQualifyingType(node, outerClass)) {
             value desc = switch (decl)
                 case (is Constructor)
-                    if (exists n = decl.name) then "Constructor of" else "Default constructor of"
+                    if (exists n = decl.name)
+                    then "Constructor of"
+                    else "Default constructor of"
                 case (is Value)
-                    if (decl.staticallyImportable) then "Static attribute of" else "Attribute of"
+                    if (decl.staticallyImportable)
+                    then "Static attribute of"
+                    else "Attribute of"
                 case (is Function)
-                    if (decl.staticallyImportable) then "Static method of" else "Method of"
+                    if (decl.staticallyImportable)
+                    then "Static method of"
+                    else "Method of"
                 else
-                    if (decl.staticallyImportable) then "Static member of" else "Member of"
-                ;
+                    if (decl.staticallyImportable)
+                    then "Static member of"
+                    else "Member of";
             
             value typeDesc = if (qt.declaration.name.startsWith("anonymous#"))
                 then " anonymous class"
@@ -864,7 +925,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
         if (exists pkg, decl.toplevel) {
             value label = if (pkg.nameAsString.empty)
                 then "<span>Member of default package.</span>"
-                else "<span>Member of package&nbsp;``buildLink(pkg, pkg.qualifiedNameString)``.</span>";
+                else "<span>Member of package&nbsp;"
+                    + buildLink(pkg, pkg.qualifiedNameString) + ".</span>";
             
             builder.append("<div class='paragraph'>");
             addIconAndText(builder, pkg, label);
@@ -903,24 +965,33 @@ shared interface DocGenerator<Document,IdeArtifact> {
         }
     }
     
-    // see appendDeprecatedAnnotationContent(Tree.AnnotationList annotationList, StringBuilder documentation, Scope linkScope)
-    void appendDeprecatedAnnotationContent(Tree.AnnotationList? annotationList, StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
-        if (exists annotationList, exists ann = findAnnotation(annotationList, "deprecated"),
-             exists argList = ann.positionalArgumentList, !argList.positionalArguments.empty,
-             is Tree.ListedArgument a = argList.positionalArguments.get(0),
-             exists text = a.expression.term.text) {
+    // see appendDeprecatedAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
+    void appendDeprecatedAnnotationContent(Tree.AnnotationList? annotationList,
+        StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
+        
+        if (exists annotationList,
+            exists ann = findAnnotation(annotationList, "deprecated"),
+            exists argList = ann.positionalArgumentList,
+            !argList.positionalArguments.empty,
+            is Tree.ListedArgument a = argList.positionalArguments.get(0),
+            exists text = a.expression.term.text) {
             
-            documentation.append(markdown("_(This is a deprecated program element.)_\n\n" + text, cmp, linkScope, annotationList.unit));
+            documentation.append(
+                markdown("_(This is a deprecated program element.)_\n\n" + text,
+                    cmp, linkScope, annotationList.unit));
         }
     }
     
-    // see appendDocAnnotationContent(Tree.AnnotationList annotationList, StringBuilder documentation, Scope linkScope)
-    void appendDocAnnotationContent(Tree.AnnotationList? annotationList, StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
+    // see appendDocAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
+    void appendDocAnnotationContent(Tree.AnnotationList? annotationList,
+        StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
+        
         if (exists annotationList) {
             value unit = annotationList.unit;
             
             if (exists aa = annotationList.anonymousAnnotation) {
-                documentation.append(markdown(aa.stringLiteral.text, cmp, linkScope, unit));
+                documentation.append(markdown(aa.stringLiteral.text, cmp, 
+                    linkScope, unit));
             }
 
             if (exists ann = findAnnotation(annotationList, "doc"),
@@ -935,9 +1006,12 @@ shared interface DocGenerator<Document,IdeArtifact> {
         }
     }
     
-    // see appendThrowAnnotationContent(Tree.AnnotationList annotationList, StringBuilder documentation, Scope linkScope)
-    void appendThrowAnnotationContent(Tree.AnnotationList? annotationList, StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
-        if (exists annotationList, exists annotation = findAnnotation(annotationList, "throws"),
+    // see appendThrowAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
+    void appendThrowAnnotationContent(Tree.AnnotationList? annotationList,
+        StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
+        
+        if (exists annotationList,
+            exists annotation = findAnnotation(annotationList, "throws"),
             exists argList = annotation.positionalArgumentList,
             !argList.positionalArguments.empty) {
             value args = argList.positionalArguments;
@@ -948,25 +1022,32 @@ shared interface DocGenerator<Document,IdeArtifact> {
                 value typeArgTerm = typeArg.expression.term;
                 value text = textArg?.expression?.term?.text else "";
                 
-                if (is Tree.MetaLiteral typeArgTerm, exists dec = typeArgTerm.declaration) {
+                if (is Tree.MetaLiteral typeArgTerm,
+                    exists dec = typeArgTerm.declaration) {
                     value dn = dec.name;
-                    value doc = "throws <tt>" + buildLink(dec, dn) + "</tt>" + markdown(text, cmp, linkScope, annotationList.unit);
+                    value doc = "throws <tt>" + buildLink(dec, dn) + "</tt>"
+                            + markdown(text, cmp, linkScope, annotationList.unit);
                     addIconAndText(documentation, Icons.exceptions, doc);
                 }
             }
         }
     }
     
-    void appendSeeAnnotationContent(Tree.AnnotationList? annotationList, StringBuilder documentation, IdeComponent cmp) {
-        if (exists annotationList, exists annotation = findAnnotation(annotationList, "see"),
+    void appendSeeAnnotationContent(Tree.AnnotationList? annotationList,
+        StringBuilder documentation, IdeComponent cmp) {
+        
+        if (exists annotationList,
+            exists annotation = findAnnotation(annotationList, "see"),
             exists argList = annotation.positionalArgumentList) {
             value sb = StringBuilder();
             
             for (arg in CeylonIterable(argList.positionalArguments)) {
-                if (is Tree.ListedArgument arg, is Tree.MetaLiteral ml = arg.expression.term,
+                if (is Tree.ListedArgument arg,
+                    is Tree.MetaLiteral ml = arg.expression.term,
                     exists dec = ml.declaration) {
                     
-                    value dn = if (dec.classOrInterfaceMember, is ClassOrInterface container = dec.container)
+                    value dn = if (dec.classOrInterfaceMember,
+                        is ClassOrInterface container = dec.container)
                         then container.name + "." + dec.name
                         else dec.name;
                     
@@ -994,8 +1075,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
         });
     }
     
-    // see addRefinementInfo(Declaration dec, Node node, StringBuilder buffer,  boolean hasDoc, Unit unit)
-    void addRefinementInfo(Declaration dec, Node? node, StringBuilder buffer, Boolean hasDoc, Unit unit, IdeComponent cmp) {
+    // see addRefinementInfo(Declaration, Node, StringBuilder,  boolean, Unit)
+    void addRefinementInfo(Declaration dec, Node? node, StringBuilder buffer,
+        Boolean hasDoc, Unit unit, IdeComponent cmp) {
+        
         if (exists rd = dec.refinedDeclaration, rd != dec) {
             buffer.append("<p>");
             
@@ -1004,20 +1087,24 @@ shared interface DocGenerator<Document,IdeArtifact> {
             
             value sup = getQualifyingType(node, outerCls)?.getSupertype(superclass);
             value icon = if (rd.formal) then Icons.implementation else Icons.override;
-            value text = "Refines&nbsp;" + buildLink(rd, rd.nameAsString) + "&nbsp;declared by&nbsp;<tt>"
-                + printer.print(sup, unit) + "</tt>.";
+            value text = "Refines&nbsp;" + buildLink(rd, rd.nameAsString)
+                    + "&nbsp;declared by&nbsp;<tt>"
+                    + printer.print(sup, unit) + "</tt>.";
             
             addIconAndText(buffer, icon, text);
             buffer.append("</p>");
             
             if (!hasDoc, is Tree.Declaration decNode = nodes.getReferencedNode(rd)) {
-                appendDocAnnotationContent(decNode.annotationList, buffer, resolveScope(rd), cmp);
+                appendDocAnnotationContent(decNode.annotationList,
+                    buffer, resolveScope(rd), cmp);
             }
         }
     }
     
-    // see addReturnType(Declaration dec, StringBuilder buffer, Node node, Reference pr, boolean obj, Unit unit)
-    void addReturnType(Declaration dec, StringBuilder buffer, Node? node, Reference? _pr, Boolean obj, Unit unit) {
+    // see addReturnType(Declaration, StringBuilder, Node, Reference, boolean, Unit)
+    void addReturnType(Declaration dec, StringBuilder buffer, Node? node,
+        Reference? _pr, Boolean obj, Unit unit) {
+        
         if (is TypedDeclaration dec, !obj) {
             value pr = _pr else appliedReference(dec, node);
             
@@ -1036,35 +1123,37 @@ shared interface DocGenerator<Document,IdeArtifact> {
         }
     }
     
-    // see addParameters(CeylonParseController cpc, Declaration dec, Node node, Reference pr, StringBuilder buffer, Unit unit)
-    void addParameters(IdeComponent cmp, Declaration dec, Node? node, Reference? _pr, StringBuilder buffer, Unit unit) {
-        if (is Functional dec) {
-            value pr = _pr else appliedReference(dec, node);
+    // see addParameters(CeylonParseController, Declaration, Node, Reference, StringBuilder, Unit)
+    void addParameters(IdeComponent cmp, Declaration dec, Node? node,
+        Reference? _pr, StringBuilder buffer, Unit unit) {
+        
+        if (is Functional dec,
+            exists pr = _pr else appliedReference(dec, node)) {
             
-            if (exists pr) {
-                for (pl in CeylonIterable(dec.parameterLists)) {
-                    if (!pl.parameters.empty) {
-                        buffer.append("<div class='paragraph'>");
-                        
-                        for (p in CeylonIterable(pl.parameters)) {
-                            if (exists model = p.model) {
-                                value param = StringBuilder();
-                                param.append("Accepts&nbsp;");
-                                appendParameter(param, pr, p, unit);
-                                param.append("<tt>")
-                                    .append(highlight(getInitialValueDescription(model, cmp), cmp))
-                                    .append("</tt>")
-                                    .append(".");
-                                
-                                if (is Tree.Declaration refNode = getReferencedNode(model)) {
-                                    appendDocAnnotationContent(refNode.annotationList, param, resolveScope(dec), cmp);
-                                }
-                                
-                                addIconAndText(buffer, Icons.parameters, param.string);
+            for (pl in CeylonIterable(dec.parameterLists)) {
+                if (!pl.parameters.empty) {
+                    buffer.append("<div class='paragraph'>");
+                    
+                    for (p in CeylonIterable(pl.parameters)) {
+                        if (exists model = p.model) {
+                            value param = StringBuilder();
+                            param.append("Accepts&nbsp;");
+                            appendParameter(param, pr, p, unit);
+                            value desc = getInitialValueDescription(model, cmp);
+                            param.append("<tt>")
+                                .append(highlight(desc, cmp))
+                                .append("</tt>")
+                                .append(".");
+                            
+                            if (is Tree.Declaration refNode = getReferencedNode(model)) {
+                                appendDocAnnotationContent(refNode.annotationList,
+                                    param, resolveScope(dec), cmp);
                             }
+                            
+                            addIconAndText(buffer, Icons.parameters, param.string);
                         }
-                        buffer.append("</div>");
                     }
+                    buffer.append("</div>");
                 }
             }
         }
@@ -1107,7 +1196,9 @@ shared interface DocGenerator<Document,IdeArtifact> {
     }
     
     // see appendParameters(Declaration dec, Reference pr, Unit unit, StringBuilder result
-    void appendParameters(Declaration dec, Reference? pr, Unit unit, StringBuilder result) {
+    void appendParameters(Declaration dec, Reference? pr, Unit unit,
+        StringBuilder result) {
+        
         if (is Functional dec, exists plists = dec.parameterLists) {
             for (params in CeylonIterable(plists)) {
                 if (params.parameters.empty) {
@@ -1131,7 +1222,9 @@ shared interface DocGenerator<Document,IdeArtifact> {
             variable Boolean first = true;
             
             for (mem in CeylonIterable(dec.members)) {
-                if (ModelUtil.isResolvable(mem), mem.shared, !mem.overloaded || mem.abstraction) {
+                if (ModelUtil.isResolvable(mem), mem.shared,
+                    !mem.overloaded || mem.abstraction) {
+                    
                     if (first) {
                         buffer.append("<p>Members:&nbsp;");
                         first = false;
@@ -1157,8 +1250,10 @@ shared interface DocGenerator<Document,IdeArtifact> {
     
     // see addUnitInfo(Declaration dec, StringBuilder buffer)
     void addUnitInfo(Declaration decl, StringBuilder builder) {
-        builder.append("<div class='paragraph'>"); // <p> was replaced with <div> because <p> can't contain <div>s
-        value text = "<span>Declared in&nbsp;<tt>``buildLink(decl, getUnitName(decl.unit), "dec")``</tt>.</span>";
+        // <p> was replaced with <div> because <p> can't contain <div>s
+        builder.append("<div class='paragraph'>");
+        value text = "<span>Declared in&nbsp;<tt>"
+                + buildLink(decl, getUnitName(decl.unit), "dec") + "</tt>.</span>";
 
         addIconAndText(builder, Icons.units, text);
         addPackageModuleInfo(decl.unit.\ipackage, builder);
