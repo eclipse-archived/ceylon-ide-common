@@ -161,7 +161,7 @@ shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
     }
     appendDeclarationHeaderText(d, pr, unit, result);
     appendTypeParameters(d, result);
-    appendParameters(d, pr, unit, result, null, true);
+    appendParameters(d, pr, unit, result, null, false);
     if (is Class d) {
         result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
                 .append(" extends super.").append(escaping.escapeName(d));
