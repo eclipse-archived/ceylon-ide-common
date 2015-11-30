@@ -14,12 +14,9 @@ import com.redhat.ceylon.ide.common.completion {
     FindImportNodeVisitor
 }
 import com.redhat.ceylon.ide.common.util {
-    Escaping {
-        escapeName,
-        escapePackageName
-    },
     nodes,
-    Indents
+    Indents,
+    escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -151,7 +148,9 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             if(!exists aliases){
                 for(d in CeylonIterable(declarations)){
                     if(d.unit.\ipackage == p){
-                        text.appendCharacter(',').append(delim).append(indents.defaultIndent).append(escapeName(d));
+                        text.appendCharacter(',').append(delim)
+                                .append(indents.defaultIndent)
+                                .append(escaping.escapeName(d));
                     }
                 }
             }
@@ -164,7 +163,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                         if(exists theAlias, theAlias != d.name) {
                             text.append(theAlias).appendCharacter('=');
                         }
-                        text.append(escapeName(d));
+                        text.append(escaping.escapeName(d));
                     }
                 }
             }
@@ -187,7 +186,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             else {
                 Integer insertPosition = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
-                text.insert(0,"import "+escapePackageName(p)+" {"+delim).append(delim + "}");
+                text.insert(0,"import " + escaping.escapePackageName(p)
+                    + " {" + delim).append(delim + "}");
                 if(insertPosition == 0){
                     text.append(delim);
                 }

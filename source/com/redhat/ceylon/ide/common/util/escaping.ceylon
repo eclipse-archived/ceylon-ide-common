@@ -7,6 +7,10 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 
+import java.lang {
+    JString=String
+}
+
 
 shared object escaping {
     
@@ -16,6 +20,13 @@ shared object escaping {
         "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while", 
         "try", "catch", "finally", "this", "outer", "super", "is", "exists", "nonempty", "then",
         "dynamic", "new", "let"};
+    
+    shared String concatenateKeywords(String delim)
+        => delim.join(keywords);
+    
+    shared Boolean isKeyword(String|JString identifier) {
+        return keywords.contains(identifier.string);
+    }
     
     shared String escape(String name) {
         return if (keywords.contains(name))
