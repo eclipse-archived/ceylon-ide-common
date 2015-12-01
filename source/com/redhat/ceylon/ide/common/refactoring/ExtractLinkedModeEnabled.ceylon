@@ -6,6 +6,8 @@ import java.lang {
 shared class DefaultRegion(start, length) {
     shared Integer start;
     shared Integer length;
+    
+    string => "[``start``-``length``]";
 }
 
 shared interface ExtractLinkedModeEnabled<Region=DefaultRegion> {

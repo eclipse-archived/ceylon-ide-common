@@ -15,4 +15,5 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
     shared formal TextEdit newReplaceEdit(Integer start, Integer length, String text);
 
+    shared formal Boolean hasChildren(TextChange change);
 }
