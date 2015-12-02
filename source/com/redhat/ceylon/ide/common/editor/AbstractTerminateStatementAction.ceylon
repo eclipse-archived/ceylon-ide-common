@@ -12,9 +12,6 @@ import com.redhat.ceylon.ide.common.correct {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
@@ -33,14 +30,15 @@ shared interface AbstractTerminateStatementAction
         satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit {
     
-    shared formal LocalAnalysisResult<IDocument,out Anything> parse();
+    shared formal [Tree.CompilationUnit, List<CommonToken>] parse(IDocument doc);
 
     shared formal TextChange newChange(String desc, IDocument doc);
     
     shared formal void applyChange(TextChange change);
     
-    // [start offset, end offset, content]
-    shared formal [DefaultRegion, String] getLineInfo(Integer line);
+    shared formal [DefaultRegion, String] getLineInfo(IDocument doc, Integer line);
+
+    shared formal Character getChar(IDocument doc, Integer offset);
     
     shared void terminateStatement(IDocument doc, Integer line) {
         
@@ -58,21 +56,19 @@ shared interface AbstractTerminateStatementAction
         
         value change = newChange("Terminate Statement", doc);
         initMultiEditChange(change);
-        value parser = parse();
-        value rootNode = parser.parsedRootNode;
-        value tokens = parser.tokens;
-        if (exists tokens) {
-            value info = getLineInfo(line);
-            value startOfCodeInLine = getCodeStart(info[0], info[1], tokens);
-            value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
+        value parsed = parse(doc);
+        value rootNode = parsed[0];
+        value tokens = parsed[1];
+        value info = getLineInfo(doc, line);
+        value startOfCodeInLine = getCodeStart(info[0], info[1], tokens);
+        value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
+        
+        TerminateWithBraceProcessor(startOfCodeInLine,
+            endOfCodeInLine, change).visit(rootNode);
             
-            TerminateWithBraceProcessor(startOfCodeInLine,
-                endOfCodeInLine, change).visit(rootNode);
-                
-            if (hasChildren(change)) {
-                applyChange(change);
-                return true;
-            }
+        if (hasChildren(change)) {
+            applyChange(change);
+            return true;
         }
         return false;
     }
@@ -81,23 +77,22 @@ shared interface AbstractTerminateStatementAction
         
         value change = newChange("Terminate Statement", doc);
         initMultiEditChange(change);
-        value parser = parse();
-        value rootNode = parser.parsedRootNode;
-        value tokens = parser.tokens;
-        if (exists tokens) {
-            value info = getLineInfo(line);
-            value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
+        value parsed = parse(doc);
+        value rootNode = parsed[0];
+        value tokens = parsed[1];
+        value info = getLineInfo(doc, line);
+        value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
 
-            if (!'-' == ';') {
-                TerminateWithSemicolonProcessor(
-                    endOfCodeInLine, change).visit(rootNode);
-                
-                if (hasChildren(change)) {
-                    applyChange(change);
-                    return true;
-                }
+        if (!getChar(doc, endOfCodeInLine) == ';') {
+            TerminateWithSemicolonProcessor(
+                endOfCodeInLine, change).visit(rootNode);
+            
+            if (hasChildren(change)) {
+                applyChange(change);
+                return true;
             }
         }
+
         return false;
     }
 

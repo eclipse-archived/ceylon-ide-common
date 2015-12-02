@@ -1,9 +1,8 @@
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
+import ceylon.test {
+    test,
+    assertEquals
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
+
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer,
     CeylonParser
@@ -14,14 +13,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.editor {
     AbstractTerminateStatementAction
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
-import com.redhat.ceylon.ide.common.settings {
-    CompletionOptions
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 
 import java.util {
@@ -41,16 +37,6 @@ import test.com.redhat.ceylon.ide.common.correct {
     CommonDocumentChanges,
     Ref
 }
-import ceylon.test {
-    test,
-    assertEquals
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
-import test.com.redhat.ceylon.ide.common.util {
-    unsafeCast
-}
 
 
 shared test void missingBraceInFunction()
@@ -68,12 +54,12 @@ shared test void missingSemi()
 void testAndAssert(String code, Integer line, String expected) {
     value ref = Ref<String>(code);
     
-    TerminateStatementAction(ref).terminateStatement(ref, line);
+    TerminateStatementAction().terminateStatement(ref, line);
     
     assertEquals(ref.val, expected);
 }
 
-class TerminateStatementAction(Ref<String> doc)
+class TerminateStatementAction()
         satisfies AbstractTerminateStatementAction
         <Ref<String>, InsertEdit, TextEdit, TextChange>
         & CommonDocumentChanges {
@@ -88,7 +74,7 @@ class TerminateStatementAction(Ref<String> doc)
     shared actual TextChange newChange(String desc, Ref<String> doc) 
             => TextChange(doc);
     
-    shared actual LocalAnalysisResult<Ref<String>,out Anything> parse() {
+    shared actual [Tree.CompilationUnit, List<CommonToken>] parse(Ref<String> doc) {
         value stream = ANTLRStringStream(doc.val);
         value lexer = CeylonLexer(stream);
         value tokenStream = CommonTokenStream(lexer);
@@ -97,20 +83,10 @@ class TerminateStatementAction(Ref<String> doc)
         
         value toks = unsafeCast<List<CommonToken>>(tokenStream.tokens);
         
-        return object satisfies LocalAnalysisResult<Ref<String>,Object> {
-            shared actual CeylonProject<Object>? ceylonProject => nothing;
-            shared actual Ref<String> document => nothing;
-            shared actual Tree.CompilationUnit lastCompilationUnit => cu;
-            shared actual PhasedUnit lastPhasedUnit => nothing;
-            shared actual CompletionOptions options => nothing;
-            shared actual Tree.CompilationUnit parsedRootNode => cu;
-            shared actual List<CommonToken>? tokens => toks;
-            shared actual TypeChecker typeChecker => nothing;
-            shared actual Tree.CompilationUnit? typecheckedRootNode => cu;
-        };
+        return [cu, toks];
     }
     
-    shared actual [DefaultRegion, String] getLineInfo(Integer line) {
+    shared actual [DefaultRegion, String] getLineInfo(Ref<String> doc, Integer line) {
         value lines = doc.val.split('\n'.equals).sequence();
         
         value startOffset = if (line > 1) 
@@ -121,12 +97,6 @@ class TerminateStatementAction(Ref<String> doc)
         return [DefaultRegion(startOffset, l.size), l];
     }
     
-}
-
-shared void coin() {
-    value ref = Ref<String>("coin
-                             meuh");
-    value a = TerminateStatementAction(ref);
-    
-    print(a.getLineInfo(2));
+    shared actual Character getChar(Ref<String> doc, Integer offset)
+        => doc.val[offset] else ' ';
 }

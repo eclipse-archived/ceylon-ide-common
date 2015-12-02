@@ -1,4 +1,4 @@
-package test.com.redhat.ceylon.ide.common.util;
+package com.redhat.ceylon.ide.common.util;
 
 import com.redhat.ceylon.compiler.java.metadata.Ceylon;
 import com.redhat.ceylon.compiler.java.metadata.Ignore;
