@@ -1252,8 +1252,8 @@ shared interface DocGenerator<Document,IdeArtifact> {
     void addUnitInfo(Declaration decl, StringBuilder builder) {
         // <p> was replaced with <div> because <p> can't contain <div>s
         builder.append("<div class='paragraph'>");
-        value text = "<span>Declared in&nbsp;<tt>"
-                + buildLink(decl, getUnitName(decl.unit), "dec") + "</tt>.</span>";
+        value text = "<span>Declared in&nbsp;"
+                + buildLink(decl, getUnitName(decl.unit), "dec") + ".</span>";
 
         addIconAndText(builder, Icons.units, text);
         addPackageModuleInfo(decl.unit.\ipackage, builder);
