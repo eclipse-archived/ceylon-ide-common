@@ -48,7 +48,8 @@ import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
     platformUtils,
     Status,
-    toJavaList
+    toJavaList,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
@@ -299,7 +300,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
         
         shared actual ExternalPhasedUnit? getPhasedUnit(String path) {
-            if (!phasedUnitPerPath.containsKey(path)) {
+            if (!phasedUnitPerPath.containsKey(javaString(path))) {
                 if (path.endsWith(".java")) {
                     // Case of a Ceylon file with a Java implementation, the classesToSources key is the Java source file.
                     String? ceylonFileRelativePath = getCeylonDeclarationFile(path.replace("``existingSourceArchivePath``!/", ""));
@@ -316,7 +317,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             if (relativePath.startsWith("/")) {
                 relativePath = relativePath.spanFrom(1);
             }
-            if (!relativePathToPath.containsKey(relativePath)) {
+            if (!relativePathToPath.containsKey(javaString(relativePath))) {
                 if (relativePath.endsWith(".java")) {
                     String? ceylonFileRelativePath = getCeylonDeclarationFile(relativePath);
                     if (exists ceylonFileRelativePath) {
@@ -355,9 +356,10 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
         
         shared actual void removePhasedUnitForRelativePath(String relativePath) {
-            JString? path = relativePathToPath.get(relativePath);
-            relativePathToPath.remove(relativePath);
-            phasedUnitPerPath.remove(path);
+            JString relPath = javaString(relativePath);
+            JString? fullPath = relativePathToPath.get(relPath);
+            relativePathToPath.remove(relPath);
+            phasedUnitPerPath.remove(fullPath);
         }
         
     }
@@ -431,7 +433,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                         carPath, 
                         ArtifactContext.\iJAR, 
                         if (artifactResult.type() == ArtifactResultType.\iMAVEN) 
-                        then ArtifactContext.\iMAVEN_SRC 
+                        then ArtifactContext.\iLEGACY_SRC 
                         else ArtifactContext.\iSRC);
                 }
             }
@@ -542,7 +544,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             phasedUnitMap = sourceModulePhasedUnits?.get();
         }
         if (exists theMap=phasedUnitMap) {
-            synchronize { 
+            return synchronize { 
                 on = theMap; 
                 do() => action(theMap);
             };
@@ -586,33 +588,25 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     shared actual ExternalPhasedUnit? getPhasedUnitFromRelativePath(String relativePathToSource) =>
             doWithPhasedUnitsObject { 
-        function action(AnyPhasedUnitMap phasedUnitMap) { 
-            PhasedUnit? phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePathToSource);
-            assert(is ExternalPhasedUnit? phasedUnit);
-            return phasedUnit;
-        }
-        defaultValue = null; 
-    };
+                function action(AnyPhasedUnitMap phasedUnitMap) { 
+                    PhasedUnit? phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePathToSource);
+                    assert(is ExternalPhasedUnit? phasedUnit);
+                    return phasedUnit;
+                }
+                defaultValue = null; 
+            };
     
-    shared actual JList<Package> allVisiblePackages {
-        return synchronize {
-            on = modelLoader;
-            function do() {
+    shared actual JList<Package> allVisiblePackages => 
+            let(do=() {
                 loadAllPackages(HashSet<String>());
-                return currentModule.allVisiblePackages;
-            }
-        };
-    }
+                return super.allVisiblePackages;
+            }) synchronize(modelLoader, do);
     
-    shared actual JList<Package> allReachablePackages {
-        return synchronize {
-            on = modelLoader;
-            function do() {
+    shared actual JList<Package> allReachablePackages => 
+            let(do = () {
                 loadAllPackages(HashSet<String>());
-                return currentModule.allReachablePackages;
-            }
-        };
-    }
+                return super.allReachablePackages;
+            }) synchronize(modelLoader, do);
     
     void loadAllPackages(MutableSet<String> alreadyScannedModules) {
         value packageList = listPackages();
@@ -635,8 +629,6 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
      However it is *not* intended to be used by external classes"
     shared formal Set<String> listPackages();
     
-    TypedIdeModule currentModule => this;
-    
     shared actual void loadPackageList(ArtifactResult artifact) {
         try {
             super.loadPackageList(artifact);
@@ -644,20 +636,19 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         catch (Exception e) {
             platformUtils.log(Status._ERROR,"Failed loading the package list of module " + signature, e);
         }
-        
-        synchronize {
-            on = modelLoader;
-            void do() {
-                value name = nameAsString;
-                for (pkg in toCeylonStringIterable(jarPackages)) {
-                    if (name == "ceylon.language" &&
-                        !pkg.startsWith("ceylon.language")) {
-                        continue;
-                    }
-                    modelLoader.findOrCreatePackage(currentModule, pkg);
+
+        void do() {
+            value name = nameAsString;
+            for (pkg in toCeylonStringIterable(jarPackages)) {
+                if (name == "ceylon.language" &&
+                    !pkg.startsWith("ceylon.language")) {
+                    continue;
                 }
+                modelLoader.findOrCreatePackage(this, pkg);
             }
-        };
+        }
+        
+        synchronize(modelLoader, do);
     }
     
     shared actual void removedOriginalUnit(String relativePathToSource) {
@@ -784,7 +775,6 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     shared actual JList<Package> packages => 
             super.packages;
     
-    alias TypedIdeModule => IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>;
     alias AnyIdeModule => IdeModule<out Object, out Object, out Object, out Object>;
     
     shared actual void clearCache(TypeDeclaration declaration) {
@@ -881,7 +871,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             CommonTokenStream tokenStream = CommonTokenStream(lexer);
                             CeylonParser parser = CeylonParser(tokenStream);
                             Tree.CompilationUnit cu = parser.compilationUnit();
-                            assert(is JList<CommonToken> theTokens = tokenStream.tokens);
+                            value theTokens = unsafeCast<JList<CommonToken>>(tokenStream.tokens);
                             
                             SingleSourceUnitPackage proxyPackage = SingleSourceUnitPackage(pkg, ceylonSourceUnitFullPath);
                             
