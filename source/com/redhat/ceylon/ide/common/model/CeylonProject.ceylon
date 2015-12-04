@@ -5,7 +5,8 @@ import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits
 }
 import com.redhat.ceylon.ide.common.util {
-    Path
+    Path,
+    unsafeCast
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules
@@ -134,8 +135,12 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
             value it = typecheckerModules.listOfModules.iterator();
             shared actual IdeModuleAlias|Finished next() {
-                assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=it.next());
-                return m;
+                if (it.hasNext()) {
+                    assert(is BaseIdeModule m=it.next());
+                    return unsafeCast<IdeModuleAlias>(m);
+                } else {
+                    return finished;
+                }
             }
         };
         
