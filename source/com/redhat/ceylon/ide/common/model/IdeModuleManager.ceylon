@@ -208,13 +208,13 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         // manager even for the JS backend.
         // TODO At some point we'll need an actual module manager for the
         // JS backend and an IDE that can somehow merge the two when needed
-        value backends = Backends.\iANY;
+        variable value backends = Backends.\iANY;
         if (exists theProject = ceylonProject) {
             if (theProject.compileToJava) {
-                backends.merged(Backend.\iJava);
+                backends = backends.merged(Backend.\iJava);
             }
             if (theProject.compileToJs) {
-                backends.merged(Backend.\iJavaScript);
+                backends = backends.merged(Backend.\iJavaScript);
             }
         }
         return backends;
