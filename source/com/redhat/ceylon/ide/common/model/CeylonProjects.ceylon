@@ -6,7 +6,10 @@ import com.redhat.ceylon.ide.common.util {
     Path
 }
 import com.redhat.ceylon.ide.common.vfs {
-    VfsAliases
+    VfsAliases,
+    LocalFileVirtualFile,
+    LocalFolderVirtualFile,
+    ZipFileVirtualFile
 }
 
 import java.lang {
@@ -15,6 +18,17 @@ import java.lang {
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
+}
+import com.redhat.ceylon.compiler.typechecker.io {
+    VFS,
+    VirtualFile,
+    ClosableVirtualFile
+}
+import java.io {
+    File
+}
+import java.util.zip {
+    ZipFile
 }
 
 shared abstract class BaseCeylonProjects() {
@@ -93,7 +107,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             interrupted() => null;
         };
 
-    shared abstract formal class VirtualFileSystem()
+    shared abstract default class VirtualFileSystem() extends VFS()
             satisfies VfsAliases<NativeResource, NativeFolder, NativeFile> {
 
         shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource) {
@@ -110,6 +124,23 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
         shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder);
         shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
+        
+        shared actual VirtualFile getFromFile(File file) =>
+                if (file.directory) 
+                then LocalFolderVirtualFile(file) 
+                else LocalFileVirtualFile(file);
+        
+        shared actual VirtualFile getFromZipFile(ZipFile zipFile) =>
+                ZipFileVirtualFile(zipFile);
+        
+        shared actual ClosableVirtualFile getFromZipFile(File zipFile) =>
+                ZipFileVirtualFile(ZipFile(zipFile), true);
+        
+        shared actual ClosableVirtualFile? openAsContainer(VirtualFile virtualFile) =>
+                switch(virtualFile)
+                case(is ZipFileVirtualFile) virtualFile
+                case(is LocalFileVirtualFile) getFromZipFile(virtualFile.file)
+                else null;
     }
     
     shared formal VirtualFileSystem vfs;
