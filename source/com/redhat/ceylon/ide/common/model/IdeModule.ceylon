@@ -830,7 +830,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         value project = moduleManager.ceylonProject;
         if (exists project) {
             return project.referencingCeylonProjects
-                    .flatMap((p) => (p.modules?.fromProject else empty))
+                    .flatMap((p) => (p.modules?.external else empty))
                     .filter((m) => m.signature == signature);
         } else {
             return [];
