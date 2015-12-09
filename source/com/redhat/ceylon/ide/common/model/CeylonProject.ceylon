@@ -6,7 +6,8 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.ide.common.util {
     Path,
-    unsafeCast
+    unsafeCast,
+    platformUtils
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules
@@ -15,14 +16,26 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.io {
     File
 }
+import java.util.concurrent.locks {
+    ReentrantReadWriteLock,
+    ReadWriteLock
+}
+import java.util.concurrent {
+    TimeUnit
+}
+import java.lang {
+    InterruptedException,
+    RuntimeException
+}
 
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
     variable CeylonProjectConfig? ceylonConfig = null;
     variable CeylonIdeConfig? ideConfig = null;
+    shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     
     shared formal BaseCeylonProjects model;
-
+    shared formal String name;
     shared formal File rootDirectory;
     shared formal Boolean hasConfigFile;
 
@@ -113,7 +126,57 @@ shared abstract class BaseCeylonProject() {
         shared formal BaseIdeModuleSourceMapper sourceMapper;
     }
 
-    shared formal Modules? modules; 
+    shared formal Modules? modules;
+    
+    "
+     Allows synchronizing operations that involve the source-related
+     Ceylon model, for example:
+     - setting up the typechecker,
+     - creating or typechecking PhasedUnits,
+     - etc ...
+     
+     It's based on a ReentrantReadWriteLock.
+
+     To avoid deadlock, it always takes a time limit,
+     after which the it stops waiting for the source 
+     model availability and throws a [[RuntimeException|java.lang::RuntimeException]] Exception.
+     The thrown exception is the one produced by 
+     [[IdePlatformUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.util::IdePlatformUtils.newOperationCanceledException]]
+     "
+    shared Return withSourceModel<Return>(Boolean readonly, Return() do, Integer waitForModelInSeconds=20) {
+        try {
+            value theLock = 
+                    if (readonly) 
+                    then sourceModelLock.readLock() 
+                    else sourceModelLock.writeLock();
+            if (theLock.tryLock(waitForModelInSeconds, TimeUnit.\iSECONDS)) {
+                try {
+                    return do();
+                } finally {
+                    theLock.unlock();
+                }
+            } else {
+                throw platformUtils.newOperationCanceledException(
+                    "The source model ``
+                    if (readonly) then "read" else "write"
+                    `` lock of project ``
+                    name 
+                    `` could not be acquired within ``
+                    waitForModelInSeconds`` seconds");
+            }
+        } catch(InterruptedException ie) {
+            throw platformUtils.newOperationCanceledException(
+                "The thread was interrupted while waiting for the source model ``
+                if (readonly) then "read" else "write"
+                `` lock of project ``name``");
+        } catch(Exception e) {
+            if (is RuntimeException e) {
+                throw e;
+            } else {
+                throw RuntimeException(e);
+            }
+        }
+    }
 }
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()

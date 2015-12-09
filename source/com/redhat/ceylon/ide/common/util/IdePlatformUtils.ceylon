@@ -1,3 +1,6 @@
+import java.lang {
+    RuntimeException
+}
 shared class Status of _OK | _INFO | _WARNING | _ERROR {
     String _string;
     shared new _OK { _string = "OK"; }
@@ -13,6 +16,11 @@ shared interface IdePlatformUtils {
     }
     
     shared formal void log(Status status, String message, Exception? e=null);
+    
+    "Creates a [[RuntimeException|java.lang::RuntimeException]]
+     with the exception type typically used in an IDE platform in case of 
+     operation cancellation."
+    shared formal RuntimeException newOperationCanceledException(String message);
 }
 
 shared class DefaultPlatformUtils() satisfies IdePlatformUtils {
@@ -29,6 +37,8 @@ shared class DefaultPlatformUtils() satisfies IdePlatformUtils {
         printFunction("``status``: ``message``");
     }
     
+    shared actual RuntimeException newOperationCanceledException(String message) => 
+            RuntimeException("Operation Cancelled : ``message``");
 }
 
 variable IdePlatformUtils _platformUtils = DefaultPlatformUtils();

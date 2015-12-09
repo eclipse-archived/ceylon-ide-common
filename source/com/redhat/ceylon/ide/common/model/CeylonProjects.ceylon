@@ -13,7 +13,8 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 
 import java.lang {
-    InterruptedException
+    InterruptedException,
+    JBoolean=Boolean
 }
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
@@ -30,11 +31,22 @@ import java.io {
 import java.util.zip {
     ZipFile
 }
+import com.redhat.ceylon.model.typechecker.context {
+    TypeCache
+}
 
 shared abstract class BaseCeylonProjects() {
     
 }
 
+shared T withCeylonModelCaching<T>(T() do) {
+    JBoolean? was = TypeCache.setEnabled(JBoolean.\iTRUE);
+    try {
+        return do();
+    } finally {
+        TypeCache.setEnabled(was);
+    }
+}
 
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
@@ -46,8 +58,10 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         given NativeFile satisfies NativeResource {
     
     value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
-    
     value lock = ReentrantReadWriteLock(true);
+
+    TypeCache.setEnabledByDefault(false);
+    
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
         try {

@@ -14,6 +14,11 @@ import java.lang {
     JIterable=Iterable,
     JBoolean=Boolean
 }
+
+import java.util.concurrent {
+    JCallable=Callable
+}
+
 import java.util {
     JList=List,
     JMap=Map
@@ -58,3 +63,9 @@ shared JList<Type> toJavaList<Type>({Type*} ceylonIterable) =>
 
 shared JIterable<Type> toJavaIterable<Type>({Type*} ceylonIterable) =>
         JavaIterable(ceylonIterable);
+
+shared JCallable<T> toCallable<T>(T() fun) =>
+        object satisfies JCallable<T> {
+            call = fun; 
+        };
+        
