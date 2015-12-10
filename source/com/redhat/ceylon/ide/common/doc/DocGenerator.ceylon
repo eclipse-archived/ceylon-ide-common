@@ -84,6 +84,7 @@ shared interface DocGenerator<Document> {
     shared formal String buildLink(Referenceable|String model, String text,
         String protocol = "doc");
     shared formal TypePrinter printer;
+    shared formal TypePrinter verbosePrinter;
     shared formal String color(Object? what, Colors how);
     shared formal String markdown(String text, IdeComponent cmp,
         Scope? linkScope = null, Unit? unit = null);
@@ -190,15 +191,12 @@ shared interface DocGenerator<Document> {
     
     // see getInferredTypeHoverText(Node node, IProject project)
     String? getInferredTypeText(Tree.LocalModifier node, IdeComponent cmp) {
-        if (exists model = node.typeModel) {
+        if (exists type = node.typeModel) {
             value builder = StringBuilder();
             appendPageProlog(builder);
-            
-            value text = "Inferred type:&nbsp;<tt>"
-                    + printer.print(model, node.unit) + "</tt>";
-            addIconAndText(builder, Icons.types, text);
+            appendTypeInfo(builder, "Inferredn&nbsp;type", node.unit, type);
             builder.append("<br/>");
-            if (supportsQuickAssists, !model.containsUnknowns()) {
+            if (supportsQuickAssists, !type.containsUnknowns()) {
                 builder.append("One quick assist available:<br/>");
                 value link = buildLink(node.startIndex.string,
                     "Specify explicit type", "stp");
@@ -211,18 +209,34 @@ shared interface DocGenerator<Document> {
         return null;
     }
     
+    void appendTypeInfo(StringBuilder builder,
+        String description, Unit unit, Type type) {
+        value abbreviated = printer.print(type, unit);
+        value unabbreviated = verbosePrinter.print(type, unit);
+        value simplified = printer.print(unit.denotableType(type), unit);
+        addIconAndText(builder, Icons.types, 
+            description + "&nbsp;<tt>" + printer.print(type, unit) + "</tt> ");
+        if (!abbreviated.equals(unabbreviated)) {
+            builder.append("<p>Abbreviation&nbsp;of&nbsp;").append(unabbreviated).append("</p>");
+        }
+        
+        if (!simplified.equals(unabbreviated)) {
+            builder.append("<p>Simplifies&nbsp;to&nbsp;").append(simplified).append("</p>");
+        }
+    }
+
+    
     //see getTermTypeHoverText(Node, String, IDocument doc, IProject project)        
     shared String? getTermTypeText(Tree.Term term, String? selection = null) {
-        if (exists model = term.typeModel) {
+        if (exists type = term.typeModel) {
             value builder = StringBuilder();
             
             appendPageProlog(builder);
             value desc = 
                     if (is Tree.Literal term) 
-                    then "Literal of type" 
-                    else "Expression of type";
-            addIconAndText(builder, Icons.types, desc + "&nbsp;<tt>"
-                + printer.print(model, term.unit) + "</tt>");
+                    then "Literaln&nbsp;ofn&nbsp;type" 
+                    else "Expressionn&nbsp;ofn&nbsp;type";
+            appendTypeInfo(builder, desc, term.unit, type);
             
             if (is Tree.StringLiteral term) {
                 appendStringInfo(term, builder);
