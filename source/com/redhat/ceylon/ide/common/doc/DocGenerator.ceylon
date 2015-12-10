@@ -194,7 +194,7 @@ shared interface DocGenerator<Document> {
         if (exists type = node.typeModel) {
             value builder = StringBuilder();
             appendPageProlog(builder);
-            appendTypeInfo(builder, "Inferredn&nbsp;type", node.unit, type);
+            appendTypeInfo(builder, "Inferred&nbsp;type", node.unit, type);
             builder.append("<br/>");
             if (supportsQuickAssists, !type.containsUnknowns()) {
                 builder.append("One quick assist available:<br/>");
@@ -234,8 +234,8 @@ shared interface DocGenerator<Document> {
             appendPageProlog(builder);
             value desc = 
                     if (is Tree.Literal term) 
-                    then "Literaln&nbsp;ofn&nbsp;type" 
-                    else "Expressionn&nbsp;ofn&nbsp;type";
+                    then "Literal&nbsp;of&nbsp;type" 
+                    else "Expression&nbsp;of&nbsp;type";
             appendTypeInfo(builder, desc, term.unit, type);
             
             if (is Tree.StringLiteral term) {
