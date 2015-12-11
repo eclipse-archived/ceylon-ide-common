@@ -614,14 +614,10 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
         value qdec = if (!exists qualifier) then null else qualifier.declaration;
         if (is Value d) {
-            value \ivalue = d;
-            if (isInLanguageModule) {
-                if (isIgnoredLanguageModuleValue(\ivalue)) {
-                    return;
-                }
+            if (isInLanguageModule, isIgnoredLanguageModuleValue(d)) {
+                return;
             }
-            Type? vt = \ivalue.type;
-            if (exists vt, !vt.nothing) {
+            if (exists vt = d.type, !vt.nothing) {
                 if (vt.isSubtypeOf(type) || withinBounds(td, vt)) {
                     value isIterArg = namedInvocation && last
                             && unit.isIterableParameterType(type);
@@ -631,7 +627,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                         index, false, op));
                 }
                 if (!exists qualifier, cpc.options.chainLinkedModeArguments) {
-                    value members = \ivalue.typeDeclaration
+                    value members = d.typeDeclaration
                             .getMatchingMemberDeclarations(unit, scope, "", 0)
                             .values();
                     for (mwp in CeylonIterable(members)) {
@@ -641,14 +637,11 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 }
             }
         }
-        if (is Function method = d, !d.annotation) {
-            if (isInLanguageModule) {
-                if (isIgnoredLanguageModuleMethod(method)) {
-                    return;
-                }
+        if (is Function d, !d.annotation) {
+            if (isInLanguageModule, isIgnoredLanguageModuleMethod(d)) {
+                return;
             }
-            Type? mt = method.type;
-            if (exists mt, !mt.nothing) {
+            if (exists mt = d.type, !mt.nothing) {
                 if (mt.isSubtypeOf(type) || withinBounds(td, mt)) {
                     value isIterArg = namedInvocation && last
                             && unit.isIterableParameterType(type);
@@ -659,35 +652,29 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 }
             }
         }
-        if (is Class d) {
-            value clazz = d;
-            if (!clazz.abstract, !d.annotation) {
-                if (isInLanguageModule) {
-                    if (isIgnoredLanguageModuleClass(clazz)) {
-                        return;
-                    }
+        if (is Class d, !d.abstract, !d.annotation) {
+            if (isInLanguageModule, isIgnoredLanguageModuleClass(d)) {
+                return;
+            }
+            if (exists ct = d.type, (withinBounds(td, ct)
+                || d.equals(type.declaration)
+                || ct.isSubtypeOf(type))) {
+                
+                value isIterArg = namedInvocation && last
+                        && unit.isIterableParameterType(type);
+                value isVarArg = p.sequenced && positionalInvocation;
+                
+                if (d.parameterList exists) {
+                    value op = if (isIterArg || isVarArg) then "*" else "";
+                    props.add(newNestedCompletionProposal(d,
+                        qdec, loc, index, false, op));
                 }
-                Type? ct = clazz.type;
-                if (exists ct, (withinBounds(td, ct)
-                    || clazz.equals(type.declaration)
-                    || ct.isSubtypeOf(type))) {
-                    
-                    value isIterArg = namedInvocation && last
-                            && unit.isIterableParameterType(type);
-                    value isVarArg = p.sequenced && positionalInvocation;
-                    
-                    if (clazz.parameterList exists) {
-                        value op = if (isIterArg || isVarArg) then "*" else "";
-                        props.add(newNestedCompletionProposal(d,
-                            qdec, loc, index, false, op));
-                    }
 
-                    for (m in CeylonIterable(clazz.members)) {
-                        if (is Constructor m, m.shared, m.name exists) {
-                            value op = if (isIterArg || isVarArg) then "*" else "";
-                            props.add(newNestedCompletionProposal(m,
-                                qdec, loc, index, false, op));
-                        }
+                for (m in CeylonIterable(d.members)) {
+                    if (is Constructor m, m.shared, m.name exists) {
+                        value op = if (isIterArg || isVarArg) then "*" else "";
+                        props.add(newNestedCompletionProposal(m,
+                            qdec, loc, index, false, op));
                     }
                 }
             }
