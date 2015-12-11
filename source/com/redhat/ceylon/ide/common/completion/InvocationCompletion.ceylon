@@ -38,7 +38,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Module,
     Value,
     Function,
-    Constructor,
     NothingType
 }
 
@@ -612,7 +611,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         value pname = d.unit.\ipackage.nameAsString;
         value isInLanguageModule = !(qualifier exists)
                 && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
-        value qdec = if (!exists qualifier) then null else qualifier.declaration;
+        value qdec = qualifier?.declaration;
         if (is Value d) {
             if (isInLanguageModule, isIgnoredLanguageModuleValue(d)) {
                 return;
@@ -671,10 +670,10 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 }
 
                 for (m in CeylonIterable(d.members)) {
-                    if (is Constructor m, m.shared, m.name exists) {
+                    if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
                         value op = if (isIterArg || isVarArg) then "*" else "";
                         props.add(newNestedCompletionProposal(m,
-                            qdec, loc, index, false, op));
+                            d, loc, index, false, op));
                     }
                 }
             }
