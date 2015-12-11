@@ -131,7 +131,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                         .getMatchingMemberDeclarations(unit, scope, "", 0).values();
                 for (ndwp in CeylonIterable(members)) {
                     value m = ndwp.declaration;
-                    if ((m is FunctionOrValue || m is Class),
+                    if (m is FunctionOrValue || m is Class,
                         !ModelUtil.isConstructor(m)) {
                         
                         if (m.abstraction) {
@@ -153,7 +153,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                 value members = type.declaration.members;
                 
                 for (m in CeylonIterable(members)) {
-                    if (ModelUtil.isConstructor(m), m.shared, m.name exists) {
+                    if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
                         addSecondLevelProposalInternal(offset, prefix, controller,
                             result, dec, scope, requiredType, ol, unit, type, null, m);
                     }
