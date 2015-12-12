@@ -60,7 +60,5 @@ shared interface AbstractRefactoring<RefactoringData> satisfies Refactoring & No
 
     shared default Integer countReferences(Tree.CompilationUnit cu) => 0;
 
-    shared actual default String toString(Node node) => node.text;
-
     shared formal Anything build(RefactoringData refactoringData);
 }
