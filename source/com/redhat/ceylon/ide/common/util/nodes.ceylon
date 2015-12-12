@@ -84,9 +84,8 @@ shared object nodes {
     }
 
     shared Tree.OperatorExpression? findOperator(Tree.CompilationUnit cu, Node node) {
-        class FindBinaryVisitor() extends Visitor() {
-            shared variable Tree.OperatorExpression? result=null;
-
+        variable Tree.OperatorExpression? result=null;
+        cu.visit(object extends Visitor() {
             shared actual void visit(Tree.OperatorExpression that) {
                 if (node.startIndex.intValue() >= that.startIndex.intValue() &&
                     node.endIndex.intValue() <= that.endIndex.intValue()) {
@@ -94,12 +93,8 @@ shared object nodes {
                 }
                 super.visit(that);
             }
-        }
-
-        FindBinaryVisitor fcv = FindBinaryVisitor();
-        cu.visit(fcv);
-
-        return fcv.result;
+        });
+        return result;
     }
 
     shared Tree.Statement? findStatement(Tree.CompilationUnit cu, Node node) {
@@ -120,102 +115,94 @@ shared object nodes {
             else d;
 
     shared Tree.Declaration? getContainer(Tree.CompilationUnit cu, Declaration dec) {
-        class FindContainer() extends Visitor() {
+        variable Tree.Declaration? result=null;
+        cu.visit(object extends Visitor() {
             Scope container = dec.container;
-            shared variable Tree.Declaration? result=null;
-
             shared actual void visit(Tree.Declaration that) {
                 super.visit(that);
                 if (that.declarationModel.equals(container)) {
                     result = that;
                 }
             }
-        }
-
-        FindContainer fc = FindContainer();
-        cu.visit(fc);
-        return fc.result;
+        });
+        return result;
     }
 
-    shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit? cu, Node? node) {
-        if (is Tree.ImportMemberOrType node) {
+    shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit cu, Node node) {
+        Declaration? declaration;
+        switch (node)
+        case (is Tree.ImportMemberOrType) {
             return node;
         }
-
-        variable Declaration? declaration;
-
-        if (is Tree.MemberOrTypeExpression node) {
+        case (is Tree.MemberOrTypeExpression) {
             declaration = node.declaration;
-        } else if (is Tree.SimpleType node) {
+        } 
+        case (is Tree.SimpleType) {
             declaration = node.declarationModel;
-        } else if (is Tree.MemberLiteral node) {
+        } 
+        case (is Tree.MemberLiteral) {
             declaration = node.declaration;
-        } else {
+        }
+        else {
             return null;
         }
 
-        class FindImportVisitor() extends Visitor() {
-            shared variable Tree.ImportMemberOrType? result=null;
-
-            shared actual void visit(Tree.Declaration that) {}
-
-            shared actual void visit(Tree.ImportMemberOrType that) {
-                super.visit(that);
-                Declaration? dec = that.declarationModel;
-                if (exists dec, exists d = declaration, dec.equals(d)) {
-                    result = that;
-                }
-            }
-        }
-
         if (exists d = declaration) {
-            value visitor = FindImportVisitor();
-            visitor.visit(cu);
-            return visitor.result;
+            variable Tree.ImportMemberOrType? result=null;
+            object extends Visitor() {
+                shared actual void visit(Tree.Declaration that) {}
+                shared actual void visit(Tree.ImportMemberOrType that) {
+                    super.visit(that);
+                    if (exists dec = that.declarationModel, 
+                        exists d = declaration, dec==d) {
+                        result = that;
+                    }
+                }
+            }.visit(cu);
+            return result;
         }
         return null;
     }
 
-    "Finds the most specific node within [[node]] for which the selection given by [[startOffset]] and [[endOffset]]
+    "Finds the most specific node within [[node]] for which 
+     the selection given by [[startOffset]] and [[endOffset]]
      is contained within the node plus surrounding whitespace.
      
      [[startOffset]] is the index of the first selected character,
-     and [[endOffset]] is the index of the first character past the selection.
-     Thus, the length of the selection is `endOffset - startOffset`."
-    shared Node? findNode(Node node, JList<CommonToken>? tokens, Integer startOffset, Integer endOffset = startOffset) {
+     and [[endOffset]] is the index of the first character past 
+     the selection. Thus, the length of the selection is 
+     `endOffset - startOffset`."
+    shared Node? findNode(Node node, JList<CommonToken>? tokens, 
+        Integer startOffset, Integer endOffset = startOffset) {
         FindNodeVisitor visitor = FindNodeVisitor(tokens, startOffset, endOffset);
-
         node.visit(visitor);
-
         return visitor.node;
     }
 
-    shared Node? findScope(Tree.CompilationUnit cu, Integer startOffset, Integer endOffset) {
+    shared Node? findScope(Tree.CompilationUnit cu, 
+        Integer startOffset, Integer endOffset) {
         value visitor = FindScopeVisitor(endOffset, endOffset);
         cu.visit(visitor);
         return visitor.scope;
     }
 
-    shared Integer getIdentifyingStartOffset(Node? node) {
-        return getNodeStartOffset(getIdentifyingNode(node));
-    }
+    shared Integer getIdentifyingStartOffset(Node? node) 
+            => getNodeStartOffset(getIdentifyingNode(node));
 
-    shared Integer getIdentifyingEndOffset(Node? node) {
-        return getNodeEndOffset(getIdentifyingNode(node));
-    }
+    shared Integer getIdentifyingEndOffset(Node? node) 
+            => getNodeEndOffset(getIdentifyingNode(node));
 
-    shared Integer getIdentifyingLength(Node? node) {
-        return getIdentifyingEndOffset(node) -
+    shared Integer getIdentifyingLength(Node? node) 
+            => getIdentifyingEndOffset(node) -
                 getIdentifyingStartOffset(node);
-    }
 
-    shared Integer getNodeLength(Node? node) {
-        return getNodeEndOffset(node) -
+    shared Integer getNodeLength(Node? node) 
+            => getNodeEndOffset(node) -
                 getNodeStartOffset(node);
-    }
 
     shared Node? getIdentifyingNode(Node? node) {
-        if (is Tree.Declaration node) {
+        switch (node)
+        case (is Tree.Declaration) {
             if (exists id = node.identifier) {
                 return id;
             }
@@ -230,22 +217,22 @@ shared object nodes {
                     else null;
             }
         }
-        else if (is Tree.ModuleDescriptor node) {
+        case (is Tree.ModuleDescriptor) {
             if (exists ip = node.importPath) {
                 return ip;
             }
         }
-        else if (is Tree.PackageDescriptor node) {
+        case (is Tree.PackageDescriptor) {
             if (exists ip = node.importPath) {
                 return ip;
             }
         }
-        else if (is Tree.Import node) {
+        case (is Tree.Import) {
             if (exists ip = node.importPath) {
                 return ip;
             }
         }
-        else if (is Tree.ImportModule node) {
+        case (is Tree.ImportModule) {
             if (exists ip = node.importPath) {
                 return ip;
             }
@@ -253,43 +240,44 @@ shared object nodes {
                 return p;
             }
         }
-        else if (is Tree.NamedArgument node) {
+        case (is Tree.NamedArgument) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is Tree.StaticMemberOrTypeExpression node) {
+        case (is Tree.StaticMemberOrTypeExpression) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is CustomTree.ExtendedTypeExpression node) {
+        case (is CustomTree.ExtendedTypeExpression) {
             //TODO: whoah! this is really ugly!
             return node.type.identifier;
         }
-        else if (is Tree.SimpleType node) {
+        case (is Tree.SimpleType) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is Tree.ImportMemberOrType node) {
+        case (is Tree.ImportMemberOrType) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is Tree.InitializerParameter node) {
+        case (is Tree.InitializerParameter) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is Tree.MemberLiteral node) {
+        case (is Tree.MemberLiteral) {
             if (exists id = node.identifier) {
                 return id;
             }
         }
-        else if (is Tree.TypeLiteral node) {
+        case (is Tree.TypeLiteral) {
             return getIdentifyingNode(node.type);
         }
+        else {}
         //TODO: this would be better for navigation to refinements
         //      so I guess we should split this method into two
         //      versions :-/
@@ -345,7 +333,8 @@ shared object nodes {
         while (high > low) {
             Integer mid = (high + low) / 2;
             assert (is CommonToken midElement = tokens.get(mid));
-            if (offset >= midElement.startIndex && offset <= midElement.stopIndex) {
+            if (offset >= midElement.startIndex 
+                && offset <= midElement.stopIndex) {
                 return mid;
             } else if (offset < midElement.startIndex) {
                 high = mid;
@@ -356,42 +345,40 @@ shared object nodes {
         return -(low - 1);
     }
 
-    shared Integer getNodeStartOffset(Node? node) {
-        return node?.startIndex?.intValue() else 0;
-    }
+    shared Integer getNodeStartOffset(Node? node) 
+            => node?.startIndex?.intValue() else 0;
 
-    shared Integer getNodeEndOffset(Node? node) {
-        return node?.endIndex?.intValue() else 0;
-    }
+    shared Integer getNodeEndOffset(Node? node) 
+            => node?.endIndex?.intValue() else 0;
 
     shared Node? getReferencedNode(Referenceable? model) {
-        if (exists model) {
-            if (exists unit = model.unit) {
-                // TODO!
-            }
+        if (exists model, exists unit = model.unit) {
+            // TODO!
         }
-
         return null;
     }
-
+    
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
-        Referenceable? dec = getReferencedDeclaration(node);
-        if (exists dec, exists node,
-                exists unit = dec.unit,
+        if (exists node, exists dec = getReferencedDeclaration(node)) {
+            if (exists unit = dec.unit,
                 exists nodeUnit = node.unit,
                 unit==nodeUnit) {
-            FindDeclarationNodeVisitor fdv =
-                    FindDeclarationNodeVisitor(dec);
-            fdv.visit(rn);
-
-            if (is Tree.Variable decNode = fdv.declarationNode) {
-                if (is Tree.SyntheticVariable type = decNode.type) {
+                
+                FindDeclarationNodeVisitor fdv =
+                        FindDeclarationNodeVisitor(dec);
+                fdv.visit(rn);
+                
+                if (is Tree.Variable decNode = fdv.declarationNode, 
+                    is Tree.SyntheticVariable type = decNode.type) {
                     value term = decNode.specifierExpression.expression.term;
                     return getReferencedExplicitDeclaration(term, rn);
                 }
             }
+            return dec;
         }
-        return dec;
+        else {
+            return null;
+        }
     }
 
     shared Referenceable? getReferencedDeclaration(Node? node) {
@@ -451,8 +438,7 @@ shared object nodes {
     shared Node? getReferencedNodeInUnit(variable Referenceable? model, Tree.CompilationUnit? rootNode) {
         if (exists rootNode, exists m = model) {
             if (is Declaration decl = model) {
-                Unit? unit = decl.unit;
-                if (exists unit, !unit.filename.lowercased.endsWith(".ceylon")) {
+                if (exists unit = decl.unit, !unit.filename.lowercased.endsWith(".ceylon")) {
                     variable Boolean foundTheCeylonDeclaration = false;
                     // TODO
                     //if (is CeylonBinaryUnit unit) {
@@ -479,10 +465,9 @@ shared object nodes {
                     //}
                     if (!foundTheCeylonDeclaration) {
                         if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
-                            Declaration? headerDeclaration = ModelUtil.getNativeHeader(decl.container, decl.name);
-                            if (exists headerDeclaration) {
-                                JList<Declaration>? overloads = headerDeclaration.overloads;
-                                if (exists overloads) {
+                            if (exists headerDeclaration 
+                                    = ModelUtil.getNativeHeader(decl.container, decl.name)) {
+                                if (exists overloads = headerDeclaration.overloads) {
                                     for (overload in CeylonIterable(overloads)) {
                                         if (overload.nativeBackends.header()) {
                                             model = overload;
@@ -509,7 +494,6 @@ shared object nodes {
         for (pl in CeylonIterable(fa.parameterLists)) {
             result.append("(");
             variable Boolean first = true;
-
             for (p in CeylonIterable(pl.parameters)) {
                 if (first) {
                     first = false;
@@ -552,14 +536,11 @@ shared object nodes {
         }
     }
     
-    shared String toString(Node term, JList<CommonToken>? tokens) {
+    shared String text(Node term, JList<CommonToken> tokens) {
         value start = term.startIndex.intValue();
         value length = term.endIndex.intValue() - start;
-        value region = DefaultRegion(start, length);
         value exp = StringBuilder();
-        value ti = getTokenIterator(tokens, region);
-
-        if (exists ti) {
+        if (exists ti = getTokenIterator(tokens, DefaultRegion(start, length))) {
             while (ti.hasNext()) {
                 value token = ti.next();
                 value type = token.type;
@@ -575,9 +556,8 @@ shared object nodes {
         return exp.string;
     }
 
-    shared Integer getTokenLength(CommonToken token) {
-        return token.stopIndex - token.startIndex + 1;
-    }
+    shared Integer getTokenLength(CommonToken token) 
+            => token.stopIndex - token.startIndex + 1;
 
     shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
         value names = HashSet<String>();
