@@ -25,7 +25,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Package,
     Module,
     Functional,
-    FunctionOrValue,
     DeclarationWithProximity,
     Scope,
     Function,
@@ -157,16 +156,16 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
     }
 }
 
-Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu) {
-    return if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) then true else false;
-}
+Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu) 
+        => if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) 
+            then true else false;
 
-Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) {
-    return if (exists cu, 
+Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) 
+        => if (exists cu, 
                exists u = cu.unit,
                u.filename == "package.ceylon",
-               cu.packageDescriptors.empty) then true else false; 
-}
+               cu.packageDescriptors.empty) 
+            then true else false;
 
 String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
     StringBuilder fullPath = StringBuilder();
@@ -207,75 +206,72 @@ String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Doc
 
 shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysisResult<Document>? cpc) {
     if (exists cpc) {
-        value refnode = nodes.getReferencedNode(dec);
         variable Tree.SpecifierOrInitializerExpression? sie = null;
         variable String arrow = "";
-        if (is Tree.AttributeDeclaration refnode) {
+        switch (refnode = nodes.getReferencedNode(dec))
+        case (is Tree.AttributeDeclaration) {
             value ad = refnode;
             sie = ad.specifierOrInitializerExpression;
             arrow = " = ";
-        } else if (is Tree.MethodDeclaration refnode) {
+        }
+        case (is Tree.MethodDeclaration) {
             value md = refnode;
             sie = md.specifierExpression;
             arrow = " => ";
         }
+        else {}
         if (!exists s = sie) {
-            class FindInitializerVisitor() extends Visitor() {
-                shared variable Tree.SpecifierOrInitializerExpression? result = null;
-                
+            variable Tree.SpecifierOrInitializerExpression? result = null;
+            object extends Visitor() {
                 shared actual void visit(Tree.InitializerParameter that) {
                     super.visit(that);
-                    FunctionOrValue? d = that.parameterModel.model;
-                    if (exists d, d.equals(dec)) {
+                    if (exists d = that.parameterModel.model, d==dec) {
                         result = that.specifierExpression;
                     }
                 }
-            }
-            value fiv = FindInitializerVisitor();
-            (fiv of Visitor).visit(cpc.lastCompilationUnit);
-            sie = fiv.result;
+            }.visit(cpc.lastCompilationUnit);
+            sie = result;
         }
-        if (exists s = sie) {
-            Tree.Expression? e = s.expression;
-            if (exists e) {
-                Tree.Term? term = e.term;
-                if (is Tree.Literal term) {
-                    value text = term.token.text;
-                    if (text.size < 20) {
-                        return arrow + text;
-                    }
-                } else if (is Tree.BaseMemberOrTypeExpression term) {
-                    value bme = term;
-                    Tree.Identifier? id = bme.identifier;
-                    if (exists id, !exists b = bme.typeArguments) {
-                        return arrow + id.text;
-                    }
-                } else if (exists term, term.unit.equals(cpc.lastCompilationUnit.unit)) {
-                    value impl = nodes.toString(term, cpc.tokens);
-                    if (impl.size < 10) {
-                        return arrow + impl;
-                    }
+        if (exists term = sie?.expression?.term) {
+            switch (term)
+            case (is Tree.Literal) {
+                value text = term.token.text;
+                if (text.size < 20) {
+                    return arrow + text;
                 }
-                //don't have the token stream :-/
-                //TODO: figure out where to get it from!
-                return arrow + "...";
+            } 
+            case (is Tree.BaseMemberOrTypeExpression) {
+                if (exists id = term.identifier, 
+                    !exists b = term.typeArguments) {
+                    return arrow + id.text;
+                }
             }
+            else if (exists tokens = cpc.tokens, 
+                    term.unit == cpc.lastCompilationUnit.unit) {
+                value impl = nodes.text(term, tokens);
+                if (impl.size < 10) {
+                    return arrow + impl;
+                }
+            }
+            //don't have the token stream :-/
+            //TODO: figure out where to get it from!
+            return arrow + "...";
         }
     }
     return "";
 }
 
-String? getPackageName(Tree.CompilationUnit cu) {
-    if (is Package pack = cu.scope) {
-        return pack.qualifiedNameString;
-    }
-    return null;
-}
+String? getPackageName(Tree.CompilationUnit cu) 
+        => if (is Package pack = cu.scope) 
+            then pack.qualifiedNameString 
+            else null;
 
 shared Boolean isInBounds(List<Type> upperBounds, Type t) {
     variable value ok = true;
     for (ub in CeylonIterable(upperBounds)) {
-        if (!t.isSubtypeOf(ub), !(ub.involvesTypeParameters() && t.declaration.inherits(ub.declaration))) {
+        if (!t.isSubtypeOf(ub), 
+            !(ub.involvesTypeParameters() && 
+              t.declaration.inherits(ub.declaration))) {
             ok = false;
             break;
         }
@@ -287,7 +283,7 @@ shared Boolean isInBounds(List<Type> upperBounds, Type t) {
 shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
     value map = scope.getMatchingDeclarations(unit, "", 0);
     if (exists exactName) {
-        for (dwp in CeylonIterable(ArrayList<DeclarationWithProximity>(map.values()))) {
+        for (dwp in CeylonIterable(ArrayList(map.values()))) {
             if (!dwp.unimported, !dwp.\ialias,
                 ModelUtil.isNameMatching(dwp.name, exactName)) {
                 
@@ -295,7 +291,7 @@ shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit 
             }
         }
     }
-    value results = ArrayList<DeclarationWithProximity>(map.values());
+    value results = ArrayList(map.values());
     Collections.sort(results, ArgumentProposalComparator(exactName));
     return results;
 }
