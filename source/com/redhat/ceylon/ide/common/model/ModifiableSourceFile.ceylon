@@ -1,6 +1,5 @@
 import com.redhat.ceylon.ide.common.typechecker {
     IdePhasedUnit,
-    ModifiablePhasedUnit,
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {

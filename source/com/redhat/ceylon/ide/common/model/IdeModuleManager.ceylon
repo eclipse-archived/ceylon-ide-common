@@ -48,7 +48,8 @@ import java.util {
     JList=List
 }
 shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
-        extends LazyModuleManager() {
+        extends LazyModuleManager() 
+        satisfies LazyModuleManagerEx {
 
     shared default BaseCeylonProject? ceylonProject = theCeylonProject;
 
@@ -59,7 +60,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     
     shared variable late TypeChecker typeChecker;
     
-    variable IdeModelLoader? _modelLoader=null;
+    variable BaseIdeModelLoader? _modelLoader=null;
     
     if (exists theCeylonProject) {
         loadDependenciesFromModelLoaderFirst = theCeylonProject.loadDependenciesFromModelLoaderFirst;
@@ -72,7 +73,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         sourceModules.add(Module.\iLANGUAGE_MODULE_NAME);
     }
 
-    shared actual default IdeModelLoader modelLoader {
+    shared actual default BaseIdeModelLoader modelLoader {
         if (exists ml = _modelLoader) {
             return ml;
         } else {
@@ -83,11 +84,13 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             return newModelLoader(this, moduleSourceMapper, modules);
         }
     }
-    assign modelLoader {
+    
+    shared actual void initModelLoader(AbstractModelLoader modelLoader) {
+        assert(is BaseIdeModelLoader modelLoader);
         _modelLoader = modelLoader;
     }
     
-    shared formal IdeModelLoader newModelLoader(
+    shared formal BaseIdeModelLoader newModelLoader(
         BaseIdeModuleManager self, 
         BaseIdeModuleSourceMapper sourceMapper, 
         Modules modules);

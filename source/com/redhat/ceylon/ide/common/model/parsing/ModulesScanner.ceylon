@@ -10,11 +10,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
-    IdeModelLoader,
     BaseIdeModule,
     BaseIdeModuleManager,
     BaseIdeModuleSourceMapper,
-    ModelAliases
+    ModelAliases,
+    BaseIdeModelLoader
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit,
@@ -63,7 +63,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
     BaseIdeModule defaultModule = modules.default;
     BaseIdeModuleManager moduleManager = modules.manager;
     BaseIdeModuleSourceMapper moduleSourceMapper = modules.sourceMapper;
-    IdeModelLoader modelLoader = moduleManager.modelLoader;
+    BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
     FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir;
     TypeChecker typeChecker = moduleManager.typeChecker;
     late variable BaseIdeModule currentModule;
