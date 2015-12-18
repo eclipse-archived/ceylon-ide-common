@@ -593,7 +593,8 @@ shared interface DocGenerator<Document> {
 
     // see addModuleDocumentation(CeylonParseController, Module, StringBuilder)
     void addModuleDocumentation(Module mod, StringBuilder buffer, IdeComponent cmp) {
-        if (exists pu = getPhasedUnit(mod.unit),
+        if (exists unit=mod.unit, 
+            exists pu = getPhasedUnit(unit),
             !pu.compilationUnit.moduleDescriptors.empty,
             exists refnode = pu.compilationUnit.moduleDescriptors.get(0)) {
             

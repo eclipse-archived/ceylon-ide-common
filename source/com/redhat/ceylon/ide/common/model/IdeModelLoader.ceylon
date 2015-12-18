@@ -24,12 +24,15 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.model.mirror {
     SourceDeclarationHolder,
-    SourceClass
+    SourceClass,
+    IdeClassMirror
 }
 import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     synchronize,
-    equalsWithNulls
+    equalsWithNulls,
+    platformUtils,
+    Status
 }
 import com.redhat.ceylon.model.loader {
     TypeParser,
@@ -48,7 +51,8 @@ import com.redhat.ceylon.model.loader.model {
     LazyInterface,
     AnnotationProxyMethod,
     AnnotationProxyClass,
-    LazyElement
+    LazyElement,
+    LazyModule
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -73,6 +77,18 @@ import java.util {
     JList=List,
     JArrayList=ArrayList,
     Collections
+}
+import com.redhat.ceylon.common {
+    JVMModuleUtil
+}
+import com.redhat.ceylon.model.cmr {
+    ArtifactResult
+}
+import com.redhat.ceylon.compiler.java.util {
+    Util
+}
+import com.redhat.ceylon.compiler.java.codegen {
+    Naming
 }
 
 shared abstract class BaseIdeModelLoader(
@@ -482,10 +498,165 @@ shared abstract class BaseIdeModelLoader(
        }) synchronize (lock, do);
    }
    
+   shared formal ClassMirror? buildClassMirrorInternal(String string);
 
+   shared actual ClassMirror? lookupNewClassMirror(Module ideModule, String name) {
+       return let(do = (){
+           String topLevelPartiallyQuotedName = getToplevelQualifiedName(name);
+           variable SourceDeclarationHolder? foundSourceDeclaration = sourceDeclarations.get(topLevelPartiallyQuotedName);
+           if (exists sourceDeclaration=foundSourceDeclaration,
+               !forceLoadFromBinaries(
+               sourceDeclaration.astDeclaration)) {
+               return SourceClass(sourceDeclaration);
+           }
+           
+           variable ClassMirror? classMirror = buildClassMirrorInternal(JVMModuleUtil.quoteJavaKeywords(name));
+           if (! classMirror exists 
+               && lastPartHasLowerInitial(name)
+                   && !name.endsWith("_")) {
+               // We have to try the unmunged name first, so that we find the symbol
+               // from the source in preference to the symbol from any 
+               // pre-existing .class file
+               classMirror = buildClassMirrorInternal(JVMModuleUtil.quoteJavaKeywords(name + "_"));
+           }
+           
+           if(exists existingMirror = classMirror) {
+               Module? classMirrorModule = findModuleForClassMirror(existingMirror);
+               if(! exists classMirrorModule){
+                   logVerbose("Found a class mirror with no module");
+                   return null;
+               }
+               // make sure it's imported
+               if(isImported(ideModule, classMirrorModule)){
+                   return classMirror;
+               }
+               logVerbose("Found a class mirror that is not imported: "+name);
+               return null;
+           } else {
+               if (exists sourceDeclaration=foundSourceDeclaration) {
+                   return SourceClass(sourceDeclaration);
+               }
+               
+               return null;
+           }
+           
+       }) synchronize(lock, do);
+   }
+   
+   shared formal void addModuleToClasspathInternal(ArtifactResult? artifact);
+
+   shared actual void addModuleToClassPath(Module ideModule, ArtifactResult? artifact) {
+       if(exists artifact, is LazyModule ideModule) {
+           ideModule.loadPackageList(artifact);
+       }
+       
+       if (is BaseIdeModule ideModule) {
+           if (ideModule != languageModule 
+               && (ideModule.isCeylonBinaryArchive 
+                    || ideModule.isJavaBinaryArchive)) {
+               addModuleToClasspathInternal(artifact);
+           }
+       }
+       modulesInClassPath.add(ideModule.signature);
+   }
+   
+   shared default String getMirrorFileName(ClassMirror c) {
+       if (is SourceClass c) {
+           return c.modelDeclaration.unit.filename;
+       }
+       return "<undefined>";
+   }
+   
+   shared default String getMirrorFullPath(ClassMirror c) {
+       if (is SourceClass c) {
+           return c.modelDeclaration.unit.filename;
+       }
+       return "<undefined>";
+   }
+
+   shared formal Unit? newCompiledUnit(LazyPackage pkg, IdeClassMirror classMirror);
+
+   shared actual Unit getCompiledUnit(LazyPackage pkg, ClassMirror? classMirror) {
+       variable Unit? unit = null;
+       if (is IdeClassMirror classMirror) {
+           value unitName = classMirror.fileName;
+           
+           if (!classMirror.isBinary,
+               exists foundUnit = CeylonIterable(pkg.units)
+                       .find((u) => u.filename == unitName)) {
+               // This search is for source Java classes since several classes might have the same file name 
+               //  and live inside the same Java source file => into the same Unit
+                   return foundUnit;
+           }
+           
+           unit = newCompiledUnit(pkg, classMirror);
+       }
+       
+       if (exists u=unit) {
+           return u;
+       } else {
+           unit = unitsByPackage.get(pkg);
+           if (exists u=unit) {
+               return u;
+           } else {
+               value newUnit = newPackageTypeFactory(pkg);
+               newUnit.\ipackage = pkg;
+               unitsByPackage.put(pkg, newUnit);
+               return newUnit;
+           }
+       }
+   }
+
+   shared actual void logError(String message) {
+       platformUtils.log(Status._ERROR, message);
+   }
+   
+   shared actual void logWarning(String message) {
+       platformUtils.log(Status._ERROR, message);
+   }
+   
+   shared actual void logVerbose(String message) {
+       platformUtils.log(Status._ERROR, message);
+   }
+   
+   shared void setModuleAndPackageUnits() {
+       for (ideModule in CeylonIterable(moduleManager.modules.listOfModules)) {
+           if (is BaseIdeModule ideModule) {
+               if (ideModule.isCeylonBinaryArchive) {
+                   for (p in CeylonIterable(ideModule.packages)) {
+                       if (! p.unit exists) {
+                           variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME);
+                           if (! packageClassMirror exists) {
+                               packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME.rest);
+                           }
+                           // some modules do not declare their main package, because they don't have any declaration to share
+                           // there, for example, so this can be null
+                           if(is IdeClassMirror pcm=packageClassMirror) {
+                               assert(is LazyPackage p);
+                               p.unit = newCompiledUnit(p, pcm);
+                           }
+                       }
+                       if (p.nameAsString == ideModule.nameAsString) {
+                           if (! ideModule.unit exists) {
+                               variable ClassMirror? moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iMODULE_DESCRIPTOR_CLASS_NAME);
+                               if (! moduleClassMirror exists) {
+                                   moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iOLD_MODULE_DESCRIPTOR_CLASS_NAME);
+                               }
+                               if (is IdeClassMirror mcm=moduleClassMirror) {
+                                   assert(is LazyPackage p);
+                                   ideModule.unit = newCompiledUnit(p, mcm);
+                               }
+                           }
+                       }
+                   }
+               }
+           }
+       }
+       
+   }
 }
 
-shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile> extends BaseIdeModelLoader {
+shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot> extends BaseIdeModelLoader {
     shared new (
         IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager,
         IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper,
@@ -499,4 +670,52 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
     shared actual IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper => 
             unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleSourceMapper);
 
+    shared formal JavaClassRoot getJavaClassRoot(ClassMirror classMirror);
+
+    shared formal Unit newCrossProjectBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+    shared formal Unit newJavaCompilationUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+    shared formal Unit newCeylonBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+    shared formal Unit newJavaClassFile(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+
+    shared actual Unit? newCompiledUnit(LazyPackage pkg, IdeClassMirror classMirror) {
+        Unit unit;
+        JavaClassRoot? typeRoot = getJavaClassRoot(classMirror);
+        if (! exists typeRoot) {
+            return null;
+        }
+        
+        String fileName = getMirrorFileName(classMirror);
+        
+        String relativePath = "/".join (
+            {fileName}.follow(CeylonIterable(pkg.name).map((name) => Util.quoteIfJavaKeyword(name.string))));
+                
+        String fullPath = classMirror.fullPath;
+        
+        if (!classMirror.isBinary) {
+            unit = newJavaCompilationUnit(typeRoot, relativePath, fileName,
+                fullPath, pkg);
+        }
+        else {
+            if (classMirror.isCeylon) {
+                if (is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> ideModule = pkg.\imodule) {
+                    CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? originalProject = ideModule.originalProject;
+                    if (exists originalProject) {
+                        unit = newCrossProjectBinaryUnit(typeRoot, relativePath,
+                            fileName, fullPath, pkg);
+                    } else {
+                        unit = newCeylonBinaryUnit(typeRoot, relativePath,
+                            fileName, fullPath, pkg);
+                    }
+                } else {
+                    unit = newCeylonBinaryUnit(typeRoot, fileName, relativePath, fullPath, pkg);
+                }
+            }
+            else {
+                unit = newJavaClassFile(typeRoot, relativePath, fileName,
+                    fullPath, pkg);
+            }
+        }
+        
+        return unit;
+    }
 }
