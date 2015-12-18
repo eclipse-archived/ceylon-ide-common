@@ -598,11 +598,11 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared actual void logWarning(String message) {
-       platformUtils.log(Status._ERROR, message);
+       platformUtils.log(Status._WARNING, message);
    }
    
    shared actual void logVerbose(String message) {
-       platformUtils.log(Status._ERROR, message);
+       platformUtils.log(Status._INFO, message);
    }
    
    shared void setModuleAndPackageUnits() {
@@ -673,7 +673,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
         String fileName = classMirror.fileName;
         
         String relativePath = "/".join (
-            {fileName}.follow(CeylonIterable(pkg.name).map((name) => Util.quoteIfJavaKeyword(name.string))));
+            CeylonIterable(pkg.name).map((JString name) => Util.quoteIfJavaKeyword(name.string)).chain({fileName}));
                 
         String fullPath = classMirror.fullPath;
         
