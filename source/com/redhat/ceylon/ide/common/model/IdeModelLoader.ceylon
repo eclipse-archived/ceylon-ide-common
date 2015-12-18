@@ -560,20 +560,6 @@ shared abstract class BaseIdeModelLoader(
        modulesInClassPath.add(ideModule.signature);
    }
    
-   shared default String getMirrorFileName(ClassMirror c) {
-       if (is SourceClass c) {
-           return c.modelDeclaration.unit.filename;
-       }
-       return "<undefined>";
-   }
-   
-   shared default String getMirrorFullPath(ClassMirror c) {
-       if (is SourceClass c) {
-           return c.modelDeclaration.unit.filename;
-       }
-       return "<undefined>";
-   }
-
    shared formal Unit? newCompiledUnit(LazyPackage pkg, IdeClassMirror classMirror);
 
    shared actual Unit getCompiledUnit(LazyPackage pkg, ClassMirror? classMirror) {
@@ -684,7 +670,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             return null;
         }
         
-        String fileName = getMirrorFileName(classMirror);
+        String fileName = classMirror.fileName;
         
         String relativePath = "/".join (
             {fileName}.follow(CeylonIterable(pkg.name).map((name) => Util.quoteIfJavaKeyword(name.string))));
