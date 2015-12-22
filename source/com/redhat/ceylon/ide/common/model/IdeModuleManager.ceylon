@@ -199,7 +199,10 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         }
     }
 
+    "Checks if the [[ceylonProject]] knows how to find the sources for the
+     module [[moduleName]]."
     shared formal Boolean moduleFileInProject(String moduleName, BaseCeylonProject? ceylonProject);
+    
     shared formal BaseIdeModule newModule(String moduleName, String version);
 
     
