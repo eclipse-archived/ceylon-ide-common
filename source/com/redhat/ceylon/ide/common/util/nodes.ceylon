@@ -48,6 +48,11 @@ import java.util.regex {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit,
+    CeylonBinaryUnit,
+    BaseIdeModule
+}
 
 shared object nodes {
 
@@ -352,8 +357,8 @@ shared object nodes {
             => node?.endIndex?.intValue() else 0;
 
     shared Node? getReferencedNode(Referenceable? model) {
-        if (exists model, exists unit = model.unit) {
-            // TODO!
+        if (exists model, is CeylonUnit unit = model.unit) {
+            return getReferencedNodeInUnit(model, unit.compilationUnit);
         }
         return null;
     }
@@ -440,29 +445,28 @@ shared object nodes {
             if (is Declaration decl = model) {
                 if (exists unit = decl.unit, !unit.filename.lowercased.endsWith(".ceylon")) {
                     variable Boolean foundTheCeylonDeclaration = false;
-                    // TODO
-                    //if (is CeylonBinaryUnit unit) {
-                    //    value \imodule = (unit.\ipackage.\imodule);
-                    //    value sourceRelativePath = \imodule.toSourceUnitRelativePath(unit.relativePath);
-                    //    if (exists sourceRelativePath) {
-                    //        value ceylonSourceRelativePath = \imodule.getCeylonDeclarationFile(sourceRelativePath);
-                    //        if (exists ceylonSourceRelativePath) {
-                    //            value externalPhasedUnit = \imodule.getPhasedUnitFromRelativePath(ceylonSourceRelativePath);
-                    //            if (exists externalPhasedUnit) {
-                    //                value sourceFile = externalPhasedUnit.unit;
-                    //                if (exists sourceFile) {
-                    //                    for (sourceDecl in sourceFile.declarations) {
-                    //                        if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
-                    //                            model = sourceDecl;
-                    //                            foundTheCeylonDeclaration = true;
-                    //                            break;
-                    //                        }
-                    //                    }
-                    //                }
-                    //            }
-                    //        }
-                    //    }
-                    //}
+
+                    if (is CeylonBinaryUnit<Anything,Anything,Anything> unit,
+                        is BaseIdeModule mod = unit.\ipackage.\imodule) {
+                        value sourceRelativePath = mod.toSourceUnitRelativePath(unit.relativePath);
+                        if (exists sourceRelativePath) {
+                            value ceylonSourceRelativePath = mod.getCeylonDeclarationFile(sourceRelativePath);
+                            if (exists ceylonSourceRelativePath) {
+                                value externalPhasedUnit = mod.getPhasedUnitFromRelativePath(ceylonSourceRelativePath);
+                                if (exists externalPhasedUnit) {
+                                    value sourceFile = externalPhasedUnit.unit;
+                                    
+                                    for (sourceDecl in CeylonIterable(sourceFile.declarations)) {
+                                        if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
+                                            model = sourceDecl;
+                                            foundTheCeylonDeclaration = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if (!foundTheCeylonDeclaration) {
                         if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
                             if (exists headerDeclaration 
