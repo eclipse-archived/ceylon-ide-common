@@ -3,7 +3,8 @@ import ceylon.collection {
 }
 
 import com.redhat.ceylon.ide.common.util {
-    Path
+    Path,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
@@ -51,7 +52,7 @@ shared T withCeylonModelCaching<T>(T() do) {
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -122,18 +123,25 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         };
 
     shared abstract default class VirtualFileSystem() extends VFS()
-            satisfies VfsAliases<NativeResource, NativeFolder, NativeFile> {
+            satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
 
+        
         shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource) {
             assert (is NativeFolder | NativeFile resource);
-            if (is NativeFolder resource) {
-                return createVirtualFolder(resource);
+            if (isFolder(resource)) {
+                return createVirtualFolder(unsafeCast<NativeFolder>(resource));
             }
             else {
-                return createVirtualFile(resource);
+                return createVirtualFile(unsafeCast<NativeFile>(resource));
             }
         }
         
+        shared formal NativeFolder? getParent(NativeResource resource);
+        shared formal NativeFile? findFile(NativeFolder resource, String fileName);
+        shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
+        shared formal Boolean isFolder(NativeResource resource);
+        shared formal Boolean existsOnDisk(NativeResource resource);
+
         shared formal FileVirtualFileAlias createVirtualFile(NativeFile file);
         shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
         shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder);

@@ -15,7 +15,7 @@ import java.io {
 shared class LocalFileSystemTest() extends BaseTest() {
     shared actual Path rootCeylonPath = resourcesRoot.childResource("local").path;
     
-    shared actual FolderVirtualFile<JFile,JFile,JFile> rootVirtualFile =
+    shared actual FolderVirtualFile<Nothing,JFile,JFile,JFile> rootVirtualFile =
             LocalFolderVirtualFile(JFile(rootCeylonPath.absolutePath.string));
     
     test

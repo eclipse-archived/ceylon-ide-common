@@ -55,8 +55,8 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
     WeakReference<ProjectPhasedUnitAlias> savedPhasedUnitRef;
     
     shared new (
-            FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile, 
-            FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir, 
+            FileVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> unitFile, 
+            FolderVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> srcDir, 
             Tree.CompilationUnit cu, 
             Package p, 
             ModuleManager moduleManager, 

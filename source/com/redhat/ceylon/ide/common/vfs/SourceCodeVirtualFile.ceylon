@@ -13,9 +13,13 @@ import java.io {
 import java.lang {
     System
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject
+}
 
-shared class SourceCodeVirtualFile<NativeResource,NativeFolder,NativeFile> 
-        satisfies FileVirtualFile<NativeResource,NativeFolder,NativeFile> 
+shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
+        satisfies FileVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
+        given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
@@ -54,11 +58,13 @@ shared class SourceCodeVirtualFile<NativeResource,NativeFolder,NativeFile>
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeResource => nothing;
     suppressWarnings("expressionTypeNothing")
-    shared actual FolderVirtualFile<NativeResource,NativeFolder,NativeFile>? parent => nothing;
+    shared actual FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? parent => nothing;
     
     shared actual Integer hash =>
-            (super of FileVirtualFile<NativeResource,NativeFolder,NativeFile>).hash;
+            (super of FileVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile>).hash;
     
     shared actual Boolean equals(Object that) =>
-            (super of FileVirtualFile<NativeResource,NativeFolder,NativeFile>).equals(that);
+            (super of FileVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile>).equals(that);
+    
+    shared actual Nothing ceylonProject => nothing;
 }

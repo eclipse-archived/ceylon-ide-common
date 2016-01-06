@@ -232,7 +232,7 @@ shared abstract class IdeModuleManager<NativeProject, NativeResource, NativeFold
         extends BaseIdeModuleManager(theCeylonProject)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource

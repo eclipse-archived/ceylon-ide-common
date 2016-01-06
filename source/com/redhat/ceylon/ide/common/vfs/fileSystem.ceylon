@@ -16,10 +16,13 @@ import java.lang {
 import java.util {
     Collections
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProject
+}
 
-alias LocalResourceVirtualFileAlias => ResourceVirtualFile<File, File, File>;
-alias LocalFolderVirtualFileAlias => FolderVirtualFile<File, File, File>;
-alias LocalFileVirtualFileAlias => FileVirtualFile<File, File, File>;
+alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
+alias LocalFolderVirtualFileAlias => FolderVirtualFile<Nothing,File, File, File>;
+alias LocalFileVirtualFileAlias => FileVirtualFile<Nothing,File, File, File>;
 
 String normalizeSeparators(String path) 
         => if ('\\' == File.separatorChar)
@@ -27,7 +30,7 @@ String normalizeSeparators(String path)
             else path;
 
 
-shared interface FileSystemVitualFile satisfies WithParentVirtualFile{
+shared interface FileSystemVirtualFile satisfies WithParentVirtualFile{
     shared formal File file;
 
     shared actual default String name 
@@ -36,24 +39,25 @@ shared interface FileSystemVitualFile satisfies WithParentVirtualFile{
     shared actual default String path
         => normalizeSeparators(file.path);
     
-    shared actual default FolderVirtualFile<File,File,File>? parent 
+    shared actual default FolderVirtualFile<Nothing,File,File,File>? parent 
         => if (exists nativeParent = file.parentFile)
             then LocalFolderVirtualFile(nativeParent)
             else null;
+
+    shared actual default Boolean \iexists() => file.\iexists();
 }    
     
 shared class LocalFileVirtualFile(file)
-            satisfies FileVirtualFile<File, File, File> & 
-                       FileSystemVitualFile {
+            satisfies FileVirtualFile<Nothing,File, File, File> & 
+                       FileSystemVirtualFile {
     shared actual File file;
     
-    name => (super of FileSystemVitualFile).name;
+    name => (super of FileSystemVirtualFile).name;
     
-    path => (super of FileSystemVitualFile).path;
+    path => (super of FileSystemVirtualFile).path;
     
-    parent => (super of FileSystemVitualFile).parent;
+    parent => (super of FileSystemVirtualFile).parent;
 
-    \iexists() => file.\iexists();
     
     throws(`class RuntimeException`)
     shared actual InputStream inputStream {
@@ -64,9 +68,9 @@ shared class LocalFileVirtualFile(file)
         }
     }
 
-    equals(Object that) => (super of FileVirtualFile<File,File,File>).equals(that);
+    equals(Object that) => (super of FileVirtualFile<Nothing,File,File,File>).equals(that);
     
-    hash => (super of FileVirtualFile<File,File,File>).hash;
+    hash => (super of FileVirtualFile<Nothing,File,File,File>).hash;
 
     string => StringBuilder()
                 .append("FileSystemVirtualFile")
@@ -79,20 +83,24 @@ shared class LocalFileVirtualFile(file)
     charset => null;
 
     nativeResource => file;
+    
+    shared actual Nothing ceylonProject => nothing;
+    
+    shared actual Boolean \iexists() => (super of FileSystemVirtualFile).\iexists();
+    
 }
 
 shared class LocalFolderVirtualFile(file) 
-            satisfies FolderVirtualFile<File, File, File> &
-                       FileSystemVitualFile {
+            satisfies FolderVirtualFile<Nothing,File, File, File> &
+                       FileSystemVirtualFile {
     shared actual File file;
     
-    name => (super of FileSystemVitualFile).name;
+    name => (super of FileSystemVirtualFile).name;
     
-    path => (super of FileSystemVitualFile).path;
+    path => (super of FileSystemVirtualFile).path;
     
-    parent => (super of FileSystemVitualFile).parent;
+    parent => (super of FileSystemVirtualFile).parent;
     
-    \iexists() => file.\iexists();
     
     children 
         => let(ObjectArray<File>? theChildren = file.listFiles())
@@ -104,11 +112,11 @@ shared class LocalFolderVirtualFile(file)
                                                 then LocalFolderVirtualFile(f)
                                                 else LocalFileVirtualFile(f);
                                 }.sequence())
-                    else Collections.emptyList<ResourceVirtualFile<File, File, File>>();
+                    else Collections.emptyList<ResourceVirtualFile<Nothing,File, File, File>>();
 
-    equals(Object that) => (super of FolderVirtualFile<File,File,File>).equals(that);
+    equals(Object that) => (super of FolderVirtualFile<Nothing,File,File,File>).equals(that);
     
-    hash => (super of FolderVirtualFile<File,File,File>).hash;
+    hash => (super of FolderVirtualFile<Nothing,File,File,File>).hash;
     
     string => StringBuilder()
                 .append("FileSystemVirtualFile")
@@ -145,4 +153,9 @@ shared class LocalFolderVirtualFile(file)
         }
         return [];
     }
+
+    shared actual Nothing ceylonProject => nothing;
+    
+    shared actual Boolean \iexists() => (super of FileSystemVirtualFile).\iexists();
+    
 }

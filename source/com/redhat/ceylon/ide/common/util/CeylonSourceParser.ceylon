@@ -129,7 +129,7 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
 
         given NativeProject satisfies Object
         given NativeResource satisfies Object

@@ -48,7 +48,7 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
         extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(thePhasedUnit)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource

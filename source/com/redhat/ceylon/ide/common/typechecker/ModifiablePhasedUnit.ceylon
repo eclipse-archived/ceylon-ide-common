@@ -37,14 +37,15 @@ import com.redhat.ceylon.ide.common.util {
 shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends IdePhasedUnit
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
-        & VfsAliases<NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
     
     shared new (
-        FileVirtualFile<NativeResource,NativeFolder,NativeFile> unitFile, 
-        FolderVirtualFile<NativeResource,NativeFolder,NativeFile> srcDir, 
+        FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> unitFile, 
+        FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> srcDir, 
         Tree.CompilationUnit cu, Package p, ModuleManager moduleManager, 
         ModuleSourceMapper moduleSourceMapper, 
         TypeChecker typeChecker, 
@@ -65,10 +66,10 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
             extends IdePhasedUnit.clone(other) {
     }
     
-    shared actual FileVirtualFile<NativeResource, NativeFolder, NativeFile> unitFile =>
+    shared actual FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> unitFile =>
             unsafeCast<FileVirtualFileAlias>(super.unitFile);
 
-    shared actual FolderVirtualFile<NativeResource, NativeFolder, NativeFile> srcDir =>
+    shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir =>
             unsafeCast<FolderVirtualFileAlias>(super.srcDir);
 }
 
