@@ -24,8 +24,7 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor,
-    ProjectSourceParser,
-    unsafeCast
+    ProjectSourceParser
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -46,9 +45,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VirtualFile
 }
 
 shared abstract class SourceDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
@@ -184,7 +180,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
                 pkg.name = JavaList(pkgName.map((String s)=> javaString(s)).sequence());
 
                 try {
-                    value moduleVirtualFile = ceylonProject.model.vfs.createVirtualFile(moduleFile);
+                    value moduleVirtualFile = ceylonProject.model.vfs.createVirtualFile(moduleFile, ceylonProject);
                     value tempPhasedUnit = parser(moduleVirtualFile).parseFileToPhasedUnit(moduleManager, typeChecker, moduleVirtualFile, srcDir, pkg);
 
                     Module? m = tempPhasedUnit.visitSrcModulePhase();

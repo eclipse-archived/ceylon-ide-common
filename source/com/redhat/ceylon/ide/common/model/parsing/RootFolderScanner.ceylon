@@ -1,43 +1,23 @@
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
 import com.redhat.ceylon.ide.common.model {
     ModelAliases,
-    BaseIdeModelLoader,
-    BaseIdeModuleManager,
-    BaseIdeModuleSourceMapper,
     BaseIdeModule,
     CeylonProject
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    TypecheckerAliases,
-    ProjectPhasedUnit
+    TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    BaseProgressMonitor,
-    ProjectSourceParser
+    BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    VfsAliases,
-    ResourceVirtualFile
+    VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
-}
-
-import java.util {
-    JList=List
-}
-
-import org.antlr.runtime {
-    CommonToken
 }
 
 shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
@@ -108,7 +88,7 @@ shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFol
                 // TODO factorize the common logic between ModulesScanner and RootFolderScanner inside ResourceTreeVisitor
                 // TODO Rename the visit method to be compatible with the visit throws CoreException method inside Eclipse
                 
-                value sourceVirtualFile = ceylonProject.model.vfs.createVirtualFile(resource);
+                value sourceVirtualFile = ceylonProject.model.vfs.createVirtualFile(resource, ceylonProject);
                 value pu = parser(
                     sourceVirtualFile
                 ).parseFileToPhasedUnit(moduleManager, typeChecker, sourceVirtualFile, srcDir, currentPackage);

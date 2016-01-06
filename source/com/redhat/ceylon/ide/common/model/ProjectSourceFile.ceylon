@@ -71,8 +71,8 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
             value modelPhasedUnit  = phasedUnit;
             
             value vfs = modelPhasedUnit.ceylonProject.model.vfs;
-            value virtualSrcFile = vfs.createVirtualFile(modelPhasedUnit.resourceFile);
-            value virtualSrcDir = vfs.createVirtualFolder(modelPhasedUnit.resourceRootFolder);
+            value virtualSrcFile = vfs.createVirtualFile(modelPhasedUnit.resourceFile, modelPhasedUnit.ceylonProject);
+            value virtualSrcDir = vfs.createVirtualFolder(modelPhasedUnit.resourceRootFolder, modelPhasedUnit.ceylonProject);
             value currentTypechecker = modelPhasedUnit.typeChecker;
             if (! exists currentTypechecker) {
                 return null;

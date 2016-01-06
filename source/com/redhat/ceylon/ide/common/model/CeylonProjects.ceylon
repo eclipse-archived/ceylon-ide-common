@@ -126,13 +126,14 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
 
         
-        shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource) {
+        shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource,
+            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject) {
             assert (is NativeFolder | NativeFile resource);
             if (isFolder(resource)) {
-                return createVirtualFolder(unsafeCast<NativeFolder>(resource));
+                return createVirtualFolder(unsafeCast<NativeFolder>(resource), ceylonProject);
             }
             else {
-                return createVirtualFile(unsafeCast<NativeFile>(resource));
+                return createVirtualFile(unsafeCast<NativeFile>(resource), ceylonProject);
             }
         }
         
@@ -142,9 +143,11 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         shared formal Boolean isFolder(NativeResource resource);
         shared formal Boolean existsOnDisk(NativeResource resource);
 
-        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file);
+        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, 
+            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject);
         shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
-        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder);
+        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder,
+            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject);
         shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
         
         shared actual VirtualFile getFromFile(File file) =>

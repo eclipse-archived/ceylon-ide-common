@@ -60,7 +60,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared formal actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children;
     shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? parent =>
             if (exists folderParent = vfs.getParent(nativeResource))
-            then vfs.createVirtualFolder(folderParent)
+            then vfs.createVirtualFolder(folderParent, ceylonProject)
             else null;
     
     shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
@@ -92,7 +92,7 @@ shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, 
 
     shared actual default FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? findFile(String fileName) =>
             if (exists nativeFile = vfs.findFile(nativeResource, fileName))
-            then vfs.createVirtualFile(nativeFile)
+            then vfs.createVirtualFile(nativeFile, ceylonProject)
             else null;
 }
 
