@@ -554,12 +554,14 @@ shared interface DocGenerator<Document> {
         if (mod.native) {
             buf.append("native");
         }
-        
+
         value nativeBackends = mod.nativeBackends;
         if (!nativeBackends.none(), !Backends.\iHEADER == nativeBackends) {
-            moduleImportUtil.appendNativeBackends(buf, nativeBackends);
-            value desc = color(buf.string, Colors.annotationStrings);
-            buf.append(desc);
+            value buf2 = StringBuilder();
+            moduleImportUtil.appendNativeBackends(buf2, nativeBackends);
+            buf.append("(")
+                    .append(color(buf2.string, Colors.annotationStrings))
+                    .append(")");
         }
         
         if (mod.native) {
