@@ -62,7 +62,9 @@ import java.lang {
     }
 }
 import java.util {
-    Collections
+    Collections,
+    ArrayList,
+    JList=List
 }
 import com.redhat.ceylon.ide.common.imports {
     AbstractModuleImportUtil
@@ -764,16 +766,16 @@ shared interface DocGenerator<Document> {
             addIconAndText(builder, Icons.enumeration, casesBuilder.string);
         }
 
-        if (is Class decl, exists sup = decl.extendedType) {
+        if (is Class decl, exists sup = type.extendedType) {
             value text = "<tt><span style='font-size:90%'>extends&nbsp;"
                     + printer.print(sup, unit) + "</span></tt>";
             addIconAndText(builder, Icons.extendedType, text);
         }
 
-        if (!decl.satisfiedTypes.empty) {
+        if (!type.satisfiedTypes.empty) {
             value satisfiesBuilder = StringBuilder();
             
-            value typesString = CeylonIterable(decl.satisfiedTypes)
+            value typesString = CeylonIterable(type.satisfiedTypes)
                     .map((s) => printer.print(s, unit));
             
             satisfiesBuilder.append("<tt><span style='font-size:90%'>")
@@ -819,21 +821,45 @@ shared interface DocGenerator<Document> {
         }
     }
 
+    JList<Type> getTypeParameters(Declaration dec) {
+        if (is Generic dec) {
+            value typeParameters = dec.typeParameters;
+            if (typeParameters.empty) {
+                return Collections.emptyList<Type>();
+            } else {
+                value list = ArrayList<Type>();
+                for (p in CeylonIterable(typeParameters)) {
+                    list.add(p.type);
+                }
+                
+                return list;
+            }
+        } else {
+            return Collections.emptyList<Type>();
+        }
+    }
+
     Reference? appliedReference(Declaration decl, Node? node) {
-        if (is TypeDeclaration decl) {
+        if (is Tree.TypeDeclaration node, is TypeDeclaration decl) {
             return decl.type;
         } else if (is Tree.MemberOrTypeExpression node) {
             return node.target;
         } else if (is Tree.Type node) {
             return node.typeModel;
         } else {
-            variable Type? qt = null;
+            //a member declaration - unfortunately there is 
+            //nothing matching TypeDeclaration.getType() for
+            //TypedDeclarations!
+            Type? qt;
             
-            if (decl.classOrInterfaceMember, is ClassOrInterface ci = decl.container) {
+            if (decl.classOrInterfaceMember,
+                is ClassOrInterface ci = decl.container) {
                 qt = ci.type;
+            } else {
+                qt = null; 
             }
             
-            return decl.appliedReference(qt, null);
+            return decl.appliedReference(qt, getTypeParameters(decl));
         }
     }
 
