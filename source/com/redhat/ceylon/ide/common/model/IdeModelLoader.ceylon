@@ -2,7 +2,9 @@ import ceylon.collection {
     HashSet,
     MutableSet,
     naturalOrderTreeMap,
-    naturalOrderTreeSet
+    naturalOrderTreeSet,
+    MutableMap,
+    HashMap
 }
 import ceylon.interop.java {
     createJavaObjectArray,
@@ -100,6 +102,7 @@ shared abstract class BaseIdeModelLoader(
     value _sourceDeclarations = naturalOrderTreeMap<String, SourceDeclarationHolder> {};
     variable Boolean mustResetLookupEnvironment = false;
     shared MutableSet<String> modulesInClassPath = naturalOrderTreeSet<String> {};
+    shared MutableMap<String,Boolean> packageExistence = HashMap<String, Boolean>();
     
     shared late AnnotationLoader annotationLoader;
     shared default BaseIdeModuleSourceMapper moduleSourceMapper = theModuleSourceMapper;
@@ -114,7 +117,6 @@ shared abstract class BaseIdeModelLoader(
     shared actual Unit newTypeFactory(Context context) => GlobalTypeFactory(context);
     shared actual Timer newTimer() => Timer(false);
    
-    BaseIdeModelLoader this_ => this;
     shared Map<String, SourceDeclarationHolder> sourceDeclarations => _sourceDeclarations;
 
     shared class GlobalTypeFactory(Context context) 
@@ -127,7 +129,7 @@ shared abstract class BaseIdeModelLoader(
                             .getDirectPackage(Module.\iLANGUAGE_MODULE_NAME);
                     }
                     return super.\ipackage;
-                }) synchronize(this_, do); 
+                }) synchronize(lock, do); 
             
        assign \ipackage {
            super.\ipackage = \ipackage;
@@ -144,7 +146,7 @@ shared abstract class BaseIdeModelLoader(
    
    shared void resetJavaModelSourceIfNecessary(Runnable resetAction) {
        synchronize {
-           on = this;
+           on = lock;
            void do() {
                if (mustResetLookupEnvironment) {
                    resetAction.run();
@@ -174,7 +176,7 @@ shared abstract class BaseIdeModelLoader(
                }
            }
            return pkg;
-       }) synchronize(this, do);
+       }) synchronize(lock, do);
        
    shared actual Module loadLanguageModuleAndPackage() {
        value lm = languageModule;
@@ -260,7 +262,9 @@ shared abstract class BaseIdeModelLoader(
                classMirrorCache.remove(keyToRemove);
            }
            Package pkg = findPackage(packageName);
-           loadedPackages.remove(javaString(cacheKeyByModule(pkg.\imodule, packageName)));
+           value packageCacheKey = cacheKeyByModule(pkg.\imodule, packageName);
+           loadedPackages.remove(javaString(packageCacheKey));
+           packageExistence.remove(packageCacheKey);
            mustResetLookupEnvironment = true;
        }
        synchronize(lock, do);
@@ -498,6 +502,11 @@ shared abstract class BaseIdeModelLoader(
        }) synchronize (lock, do);
    }
    
+   shared actual Declaration convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
+       return super.convertToDeclaration(ideModule, classMirror, declarationType);
+   }
+   
+   
    shared formal ClassMirror? buildClassMirrorInternal(String string);
 
    shared actual ClassMirror? lookupNewClassMirror(Module ideModule, String name) {
@@ -638,11 +647,10 @@ shared abstract class BaseIdeModelLoader(
                }
            }
        }
-       
    }
 }
 
-shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot> extends BaseIdeModelLoader {
+shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot, JavaClassOrInterface> extends BaseIdeModelLoader {
     shared new (
         IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager,
         IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper,
@@ -650,13 +658,13 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
     ) extends BaseIdeModelLoader(moduleManager, moduleSourceMapper, modules){
     }
     
-    shared actual IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager => 
+    shared actual default IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager => 
             unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleManager);
     
-    shared actual IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper => 
+    shared actual default IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper => 
             unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleSourceMapper);
 
-    shared formal JavaClassRoot getJavaClassRoot(ClassMirror classMirror);
+    shared formal JavaClassRoot? getJavaClassRoot(ClassMirror classMirror);
 
     shared formal Unit newCrossProjectBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
     shared formal Unit newJavaCompilationUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
@@ -703,5 +711,93 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
         }
         
         return unit;
+    }
+    
+    shared formal String typeName(JavaClassOrInterface type);
+
+    shared formal class PackageLoader(ideModule) {
+        shared BaseIdeModule ideModule;        
+        
+        "Performs any pre-requisite action that might be required 
+         before being able to check for package existence or load its members"
+        shared default void preLoadPackage(String quotedPackageName) => noop();
+        
+        "Performs any pre-requisite action that might be required 
+         before being able to load the package members"
+        shared default void populatePackage(String quotedPackageName) => noop();
+        
+        "Checks if the given package exists"
+        shared formal Boolean packageExists(String quotedPackageName);
+        
+        "Returns the various *existing* members (class of Interface) of a package, 
+         or [[null]] if the package itself doesn't exist"
+        shared formal {JavaClassOrInterface*}? packageMembers(String quotedPackageName);
+        
+        "Returns [[true]] when the Java type (class of interface) must be omitted
+         during package member loading. This happens in the following cases:
+         - "
+        shared formal Boolean shouldBeOmitted(JavaClassOrInterface type);
+    }
+    
+    shared actual Boolean loadPackage(Module mod, variable String packageName, Boolean loadDeclarations) {
+        return let(do = (){
+            assert(is BaseIdeModule mod);
+            packageName = Util.quoteJavaKeywords(packageName);
+            value cacheKey = cacheKeyByModule(mod, packageName);
+            if(loadDeclarations) {
+                if(!loadedPackages.add(javaString(cacheKey))) {
+                    // If declarations were already loaded for this package
+                    return true;
+                }
+            } else {
+                value packageExists = packageExistence.get(cacheKey);
+                if(exists packageExists) {
+                    return packageExists;
+                }
+            }
+            
+            value packageLoader = PackageLoader(mod);
+            
+            packageLoader.preLoadPackage(packageName);
+            if (!loadDeclarations) {
+                value itExists = packageLoader.packageExists(packageName);
+                packageExistence.put(cacheKey, itExists);
+                return itExists;
+            }
+            
+            packageLoader.populatePackage(packageName);
+            
+            if (exists members = packageLoader.packageMembers(packageName)) {
+                members
+                    .map((type) 
+                            => [getToplevelQualifiedName(packageName, typeName(type)), type])
+                    .filter ((member) => 
+                            let([fqn,type] = member)
+                            ! any { 
+                                packageLoader.shouldBeOmitted(type),
+                                sourceDeclarations.defines(fqn),
+                                isTypeHidden(mod, fqn)
+                            })
+                    .each ((member) {
+                            value [fqn,type] = member;
+                            // Some languages like Scala generate classes like com.foo.package which we would
+                            // quote to com.foo.$package, which does not exist, so we'd get a null leading to an NPE
+                            // So ATM we just avoid it, presumably we don't support what it does anyways
+                            if(exists classMirror = lookupClassMirror(mod, fqn)) {
+                                convertToDeclaration(mod, classMirror, DeclarationType.\iVALUE);
+                            }
+                        });
+
+                if(mod.nameAsString == \iJAVA_BASE_MODULE_NAME
+                    && packageName == "java.lang") {
+                    loadJavaBaseArrays();
+                }
+
+                return true;
+            } else {
+                return false;
+            }
+        }) synchronize(lock, do);
+        
     }
 }
