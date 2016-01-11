@@ -446,7 +446,7 @@ shared object nodes {
                 if (exists unit = decl.unit, !unit.filename.lowercased.endsWith(".ceylon")) {
                     variable Boolean foundTheCeylonDeclaration = false;
 
-                    if (is CeylonBinaryUnit<Anything,Anything,Anything> unit,
+                    if (is CeylonBinaryUnit<out Anything,out Anything,out Anything> unit,
                         is BaseIdeModule mod = unit.\ipackage.\imodule) {
                         value sourceRelativePath = mod.toSourceUnitRelativePath(unit.relativePath);
                         if (exists sourceRelativePath) {
