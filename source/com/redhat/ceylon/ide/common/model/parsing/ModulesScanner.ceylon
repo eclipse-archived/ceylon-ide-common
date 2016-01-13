@@ -3,28 +3,20 @@ import ceylon.interop.java {
     javaString
 }
 
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
     BaseIdeModule,
-    BaseIdeModuleManager,
-    BaseIdeModuleSourceMapper,
     ModelAliases,
-    BaseIdeModelLoader,
-    CeylonProject,
-    CeylonProjects
+    CeylonProject
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit,
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    BaseProgressMonitor,
-    ProjectSourceParser
+    BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -47,58 +39,13 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared abstract class SourceDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
-            ceylonProject,
-            srcDir,
-            monitor) 
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile> 
-        given NativeProject satisfies Object
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
-    shared CeylonProjectAlias ceylonProject;
-    assert(exists modules=ceylonProject.modules);
-    shared BaseIdeModule defaultModule = modules.default;
-    shared BaseIdeModuleManager moduleManager = modules.manager;
-    shared BaseIdeModuleSourceMapper moduleSourceMapper = modules.sourceMapper;
-    shared BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
-    shared FolderVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> srcDir;
-    shared TypeChecker typeChecker = moduleManager.typeChecker;
-    shared late variable BaseIdeModule currentModule;
-    shared BaseProgressMonitor monitor;
-    shared NativeFolder nativeSourceDir = srcDir.nativeResource;
-    shared CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>.VirtualFileSystem vfs => ceylonProject.model.vfs;
-    
-    shared default ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> parser(
-        FileVirtualFileAlias sourceFile) =>
-            object extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
-                                outer.ceylonProject,
-                                sourceFile,
-                                outer.srcDir) {
-                    createPhasedUnit(
-                        Tree.CompilationUnit cu,
-                        Package pkg,
-                        JList<CommonToken> theTokens)
-                            => ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
-                            outer.ceylonProject,
-                            sourceFile,
-                            outer.srcDir,
-                            cu,
-                            pkg,
-                            moduleManager,
-                            moduleSourceMapper,
-                            moduleManager.typeChecker,
-                            theTokens);
-            };
-}
 
-shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
+
+shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
             CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
             FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir,
             BaseProgressMonitor monitor)
-        extends SourceDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
+        extends RootDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
                 ceylonProject,
                 srcDir,
                 monitor
@@ -116,7 +63,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
             object extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
             outer.ceylonProject,
             moduleFile,
-            outer.srcDir) {
+            outer.rootDir) {
         createPhasedUnit(
             Tree.CompilationUnit cu,
             Package pkg,
@@ -136,11 +83,11 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
         };
     };
     
-    shared Boolean visit(NativeResource resource) {
+    shared actual Boolean visitNativeResource(NativeResource resource) {
         monitor.workRemaining = 10000;
         monitor.worked(1);
         if (is NativeFolder resource,
-            resource == nativeSourceDir) {
+            resource == nativeRootDir) {
             value moduleFile = vfs.findFile(resource, ModuleManager.\iMODULE_FILE);
             if (exists moduleFile) {
                 moduleSourceMapper.addTopLevelModuleError();
@@ -149,7 +96,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
         }
 
         if (exists parent = vfs.getParent(resource),
-            parent == nativeSourceDir) {
+            parent == nativeRootDir) {
             // We've come back to a source directory child :
             //  => reset the current Module to default and set the package to emptyPackage
             currentModule = defaultModule;
@@ -157,7 +104,7 @@ shared abstract class ModulesScanner<NativeProject, NativeResource, NativeFolder
 
         if (vfs.isFolder(resource)) {
             assert(is NativeFolder resource);
-            value pkgName = vfs.toPackageName(resource, nativeSourceDir);
+            value pkgName = vfs.toPackageName(resource, nativeRootDir);
             value pkgNameAsString = ".".join(pkgName);
 
             if ( currentModule != defaultModule ) {

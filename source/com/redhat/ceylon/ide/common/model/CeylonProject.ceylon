@@ -9,8 +9,12 @@ import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     platformUtils
 }
+import com.redhat.ceylon.ide.common.vfs {
+    FolderVirtualFile
+}
 import com.redhat.ceylon.model.typechecker.model {
-    TypecheckerModules=Modules
+    TypecheckerModules=Modules,
+    Package
 }
 
 import java.io {
@@ -26,6 +30,9 @@ import java.util.concurrent {
 import java.lang {
     InterruptedException,
     RuntimeException
+}
+import java.lang.ref {
+    WeakReference
 }
 
 shared abstract class BaseCeylonProject() {
@@ -257,5 +264,31 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             referencingNativeProjects(ideArtifact)
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;
+    
+    shared formal void setPackageForNativeFolder(NativeFolder folder, WeakReference<Package> p);
+    shared formal void setRootForNativeFolder(NativeFolder folder, WeakReference<FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> root);
+    shared formal void setRootIsForSource(NativeFolder rootFolder, Boolean isSource);
+    
+    shared Boolean isCompilable(NativeFile file) {
+        if (isCeylon(file)) {
+            return true;
+        }
+        if (isJava(file) && compileToJava) {
+            return true;
+        }
+        if (isJavascript(file) && compileToJs) {
+            return true;
+        }
+        return false;
+    }
+    
+    shared default Boolean isCeylon(NativeFile file) => 
+            model.vfs.getShortName(file).endsWith(".ceylon");
+    
+    shared default Boolean isJava(NativeFile file) =>
+            isJavaLikeFileName(model.vfs.getShortName(file));
+    
+    shared default Boolean isJavascript(NativeFile file) =>
+            model.vfs.getShortName(file).endsWith(".js");
 }
 

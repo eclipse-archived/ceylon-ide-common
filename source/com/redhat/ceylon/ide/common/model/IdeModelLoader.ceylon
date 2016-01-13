@@ -602,15 +602,15 @@ shared abstract class BaseIdeModelLoader(
        }
    }
 
-   shared actual void logError(String message) {
+   shared actual default void logError(String message) {
        platformUtils.log(Status._ERROR, message);
    }
    
-   shared actual void logWarning(String message) {
+   shared actual default void logWarning(String message) {
        platformUtils.log(Status._WARNING, message);
    }
    
-   shared actual void logVerbose(String message) {
+   shared actual default void logVerbose(String message) {
        platformUtils.log(Status._INFO, message);
    }
    
@@ -714,6 +714,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
     }
     
     shared formal String typeName(JavaClassOrInterface type);
+    shared formal Boolean typeExists(JavaClassOrInterface type);
 
     shared formal class PackageLoader(ideModule) {
         shared BaseIdeModule ideModule;        
@@ -777,7 +778,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
                                 packageLoader.shouldBeOmitted(type),
                                 sourceDeclarations.defines(fqn),
                                 isTypeHidden(mod, fqn)
-                            })
+                            } && typeExists(type))
                     .each ((member) {
                             value [fqn,type] = member;
                             // Some languages like Scala generate classes like com.foo.package which we would

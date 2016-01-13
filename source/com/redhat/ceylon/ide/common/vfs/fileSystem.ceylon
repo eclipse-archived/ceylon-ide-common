@@ -16,9 +16,6 @@ import java.lang {
 import java.util {
     Collections
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject
-}
 
 alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
 alias LocalFolderVirtualFileAlias => FolderVirtualFile<Nothing,File, File, File>;
@@ -56,9 +53,11 @@ shared class LocalFileVirtualFile(file)
     
     path => (super of FileSystemVirtualFile).path;
     
-    parent => (super of FileSystemVirtualFile).parent;
+    shared actual FolderVirtualFile<Nothing, File, File, File>  parent {
+        assert(exists theParent = (super of FileSystemVirtualFile).parent);
+        return theParent;
+    }
 
-    
     throws(`class RuntimeException`)
     shared actual InputStream inputStream {
         try {
@@ -84,10 +83,10 @@ shared class LocalFileVirtualFile(file)
 
     nativeResource => file;
     
-    shared actual Nothing ceylonProject => nothing;
-    
     shared actual Boolean \iexists() => (super of FileSystemVirtualFile).\iexists();
     
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing ceylonProject => nothing;
 }
 
 shared class LocalFolderVirtualFile(file) 
@@ -154,8 +153,14 @@ shared class LocalFolderVirtualFile(file)
         return [];
     }
 
-    shared actual Nothing ceylonProject => nothing;
-    
     shared actual Boolean \iexists() => (super of FileSystemVirtualFile).\iexists();
-    
+
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing ceylonProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing ceylonPackage => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing isSource => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing rootFolder => nothing;
 }

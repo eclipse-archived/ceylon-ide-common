@@ -142,6 +142,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
         shared formal Boolean isFolder(NativeResource resource);
         shared formal Boolean existsOnDisk(NativeResource resource);
+        shared formal String getShortName(NativeResource resource);
 
         shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, 
             CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject);

@@ -2,9 +2,6 @@ import java.util {
     JList=List,
     Collections
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonProject
-}
 
 shared class DummyFolder<NativeProject,NativeResource,NativeFolder,NativeFile> 
         satisfies FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> 
@@ -38,5 +35,12 @@ shared class DummyFolder<NativeProject,NativeResource,NativeFolder,NativeFile>
     shared actual Boolean equals(Object that) =>
             (super of FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>).equals(that);
     
+    suppressWarnings("expressionTypeNothing")
     shared actual Nothing ceylonProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing ceylonPackage => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing isSource => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing rootFolder => nothing;
 }

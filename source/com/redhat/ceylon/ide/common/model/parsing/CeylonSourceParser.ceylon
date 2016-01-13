@@ -54,6 +54,9 @@ import org.antlr.runtime {
     RecognitionException,
     CommonToken
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 
 shared interface CeylonSourceParser<ResultPhasedUnit>
         given ResultPhasedUnit satisfies PhasedUnit {
@@ -151,5 +154,5 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
             tokens);
 
     shared actual default String charset(BaseFileVirtualFile file)
-        => file.charset else ceylonProject.defaultCharset;
+        => ceylonProject.defaultCharset;
 }

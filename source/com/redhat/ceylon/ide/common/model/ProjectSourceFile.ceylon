@@ -15,7 +15,6 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
-    CeylonSourceParser,
     unsafeCast
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -39,6 +38,9 @@ import java.lang {
 }
 import ceylon.interop.java {
     javaClassFromInstance
+}
+import com.redhat.ceylon.ide.common.model.parsing {
+    CeylonSourceParser
 }
 
 DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();

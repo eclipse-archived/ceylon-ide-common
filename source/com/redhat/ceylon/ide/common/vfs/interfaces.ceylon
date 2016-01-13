@@ -8,12 +8,19 @@ import java.io {
 import com.redhat.ceylon.compiler.typechecker.io {
     VirtualFile
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+
 import ceylon.interop.java {
     CeylonIterable
 }
 import com.redhat.ceylon.ide.common.model {
     CeylonProject,
     CeylonProjects
+}
+import com.redhat.ceylon.ide.common.util {
+    equalsWithNulls
 }
 
 shared interface WithParentVirtualFile satisfies VirtualFile {
@@ -66,6 +73,10 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
     
     shared actual default Boolean \iexists() => vfs.existsOnDisk(nativeResource);
+    
+    shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
+    shared formal Boolean isSource;
+    shared formal Package? ceylonPackage;
 }
 
 shared interface BaseFolderVirtualFile
@@ -94,6 +105,9 @@ shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, 
             if (exists nativeFile = vfs.findFile(nativeResource, fileName))
             then vfs.createVirtualFile(nativeFile, ceylonProject)
             else null;
+
+    shared default Boolean isRoot =>
+            equalsWithNulls(rootFolder, this);
 }
 
 shared interface BaseFileVirtualFile 
@@ -112,4 +126,17 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
         given NativeFile satisfies NativeResource {
     shared actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children => Collections.emptyList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
     shared actual formal NativeFile nativeResource;
+    shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> parent {
+        assert(exists existingParent = super.parent);
+        return existingParent;
+    }
+    
+    shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder =>
+            parent.rootFolder;
+    
+    shared actual Boolean isSource =>
+            parent.isSource;
+
+    shared actual Package? ceylonPackage =>
+            parent.ceylonPackage;
 }

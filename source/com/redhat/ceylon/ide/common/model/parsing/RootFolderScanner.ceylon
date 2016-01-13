@@ -1,3 +1,7 @@
+import ceylon.collection {
+    MutableList
+}
+
 import com.redhat.ceylon.ide.common.model {
     ModelAliases,
     BaseIdeModule,
@@ -7,26 +11,31 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    BaseProgressMonitor
+    BaseProgressMonitor,
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    VfsAliases
+    VfsAliases,
+    FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
+
+import java.lang.ref {
+    WeakReference
 }
 
-shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
+shared class RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
     CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
-    FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir,
+    FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> rootDir,
+    Boolean rootDirIsForSource,
+    MutableList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> scannedFiles,
     BaseProgressMonitor monitor)
-        extends SourceDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
+        extends RootDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
         ceylonProject,
-        srcDir,
+        rootDir,
         monitor
     )
         satisfies ModelAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
@@ -39,46 +48,81 @@ shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFol
     
     late variable Package currentPackage;
 
-    shared Boolean visit(NativeResource resource) {
+    shared actual Boolean visitNativeResource(NativeResource resource) {
         monitor.workRemaining = 10000;
         monitor.worked(1);
         
-        if (resource == nativeSourceDir) {
+        if (resource == nativeRootDir) {
+            assert(is NativeFolder resource);
+            ceylonProject.setPackageForNativeFolder(resource, WeakReference(modelLoader.findPackage("")));
+            ceylonProject.setRootForNativeFolder(resource, WeakReference(rootDir));
+            ceylonProject.setRootIsForSource(resource, rootDirIsForSource);
             return true;
         }
         
         if (exists parent = vfs.getParent(resource),
-            parent == nativeSourceDir) {
+            parent == nativeRootDir) {
             // We've come back to a source directory child :
             //  => reset the current Module to default and set the package to emptyPackage
             currentModule = defaultModule;
             currentPackage = modelLoader.findPackage("");
         }
         
+
+        NativeFolder pkgFolder;
         if (vfs.isFolder(resource)) {
-            assert(is NativeFolder resource);
-            value pkgName = vfs.toPackageName(resource, nativeSourceDir);
-            value pkgNameAsString = ".".join(pkgName);
-            
-            if (currentModule != defaultModule) {
-                if (!pkgNameAsString.startsWith(currentModule.nameAsString + ".")) {
-                    // We've ran above the last module => reset module to default
-                    currentModule = defaultModule;
-                }
+            pkgFolder = unsafeCast<NativeFolder>(resource);
+        } else {
+            assert(exists parent = vfs.getParent(resource));
+            pkgFolder = parent;
+        }
+        
+        value pkgName = vfs.toPackageName(pkgFolder, nativeRootDir);
+        value pkgNameAsString = ".".join(pkgName);
+                
+        if (currentModule != defaultModule) {
+            if (!pkgNameAsString.startsWith(currentModule.nameAsString + ".")) {
+                // We've ran above the last module => reset module to default
+                currentModule = defaultModule;
             }
-            
-            if (exists moduleFile = vfs.findFile(resource, ModuleManager.\iMODULE_FILE)) {
-                value m = modelLoader.getLoadedModule(pkgNameAsString, null);
-                assert (is BaseIdeModule m);
-                currentModule = m;
-            }
-            
-            currentPackage = modelLoader.findOrCreatePackage(currentModule, pkgNameAsString);
-            
+        }
+
+        if (exists realModule = modelLoader.getLoadedModule(pkgNameAsString, null)) {
+            assert(is BaseIdeModule realModule);
+            currentModule = realModule;
+        }
+
+        currentPackage = modelLoader.findOrCreatePackage(currentModule, pkgNameAsString);
+        
+
+        if (vfs.isFolder(resource)) {
+            assert(is NativeFolder folder=resource);
+            ceylonProject.setPackageForNativeFolder(folder, WeakReference(currentPackage));
+            ceylonProject.setRootForNativeFolder(folder, WeakReference(rootDir));
             return true;
         } else {
-            assert(is NativeFile resource);
+            assert(is NativeFile file=resource);
             if (vfs.existsOnDisk(resource)) {
+                if (ceylonProject.isCompilable(file) || 
+                    ! rootDirIsForSource) {
+                    FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> virtualFile = vfs.createVirtualFile(file, ceylonProject);
+                    scannedFiles.add(virtualFile);
+                    
+                    if (rootDirIsForSource && 
+                        ceylonProject.isCeylon(file)) {
+                        try {
+                            value newPhasedUnit = parser(
+                                virtualFile
+                            ).parseFileToPhasedUnit(moduleManager, typeChecker, virtualFile, rootDir, currentPackage);
+                            
+                            typeChecker.phasedUnits.addPhasedUnit(virtualFile, newPhasedUnit);
+                        } 
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                
                 // TODO check if file is compilable + in source folder 
                 // TODO add it in the list of scanned files
                 // TODO ................. in ResourceVirtualFile add the rootFolder, rootType, and ceylonPackage members.
@@ -87,13 +131,6 @@ shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFol
                 // TODO And also in the list of files per project, add FileVritualFile objects.
                 // TODO factorize the common logic between ModulesScanner and RootFolderScanner inside ResourceTreeVisitor
                 // TODO Rename the visit method to be compatible with the visit throws CoreException method inside Eclipse
-                
-                value sourceVirtualFile = ceylonProject.model.vfs.createVirtualFile(resource, ceylonProject);
-                value pu = parser(
-                    sourceVirtualFile
-                ).parseFileToPhasedUnit(moduleManager, typeChecker, sourceVirtualFile, srcDir, currentPackage);
-                
-                typeChecker.phasedUnits.addPhasedUnit(sourceVirtualFile, pu);
             }
         }
         

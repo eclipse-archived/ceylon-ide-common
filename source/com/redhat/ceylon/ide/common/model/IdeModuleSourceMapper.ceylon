@@ -35,7 +35,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    CeylonSourceParser,
     unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
@@ -69,6 +68,9 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
+}
+import com.redhat.ceylon.ide.common.model.parsing {
+    CeylonSourceParser
 }
 
 shared abstract class ExternalModulePhasedUnits(Context context, ModuleManagerFactory moduleManagerFactory) 
