@@ -487,7 +487,8 @@ shared interface DocGenerator<Document> {
     
     // see addPackageDocumentation(CeylonParseController, Package, StringBuilder)
     void addPackageDocumentation(Package pack, StringBuilder builder, IdeComponent cmp) {
-        if (exists pu = getPhasedUnit(pack.unit),
+        if (exists unit = pack.unit,
+            exists pu = getPhasedUnit(unit),
             !pu.compilationUnit.packageDescriptors.empty,
             exists refnode = pu.compilationUnit.packageDescriptors.get(0)) {
             
