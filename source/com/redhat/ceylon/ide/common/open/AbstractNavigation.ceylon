@@ -30,9 +30,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         if (!exists model) {
             return null;
         } else {
-            value unit = model.unit;
-            if (is CeylonUnit unit) {
-                value ceylonUnit = unit;
+            if (is CeylonUnit ceylonUnit = model.unit) {
                 value node = nodes.getReferencedNodeInUnit(model,
                     ceylonUnit.compilationUnit);
                 
@@ -51,7 +49,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
                     return null;
                 }
             } else if (is Declaration model,
-                is JavaUnit<out Anything,out Anything,out Anything,out Anything,out Anything> unit) {
+                is JavaUnit<out Anything,out Anything,out Anything,out Anything,out Anything> unit = model.unit) {
                 
                 return gotoJavaNode(model);
             } else {
