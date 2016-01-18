@@ -14,7 +14,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    OccurrenceLocation
+    OccurrenceLocation,
+    ProgressMonitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
@@ -38,7 +39,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     Interface,
     Value,
-    TypeAlias
+    TypeAlias,
+    Cancellable
 }
 
 import java.lang {
@@ -81,7 +83,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
 
     shared Proposals getProposals(Node node,
             Scope? scope, String prefix, Boolean memberOp,
-            Tree.CompilationUnit rootNode) {
+            Tree.CompilationUnit rootNode, Cancellable cancellable) {
 
         Unit? unit = node.unit;
 
@@ -168,7 +170,7 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                             prefix, 0);
             } else if (exists scope) {
                 return scope.getMatchingDeclarations(
-                    unit, prefix, 0);
+                    unit, prefix, 0, cancellable);
             } else {
                 return noProposals;
             }
@@ -187,17 +189,17 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
                                 unit, scope, prefix, 0);
                 } else if (exists scope) {
                     return scope.getMatchingDeclarations(
-                        unit, prefix, 0);
+                        unit, prefix, 0, cancellable);
                 } else {
                     return noProposals;
                 }
             } else if (exists scope) {
                 return scope.getMatchingDeclarations(
-                    unit, prefix, 0);
+                    unit, prefix, 0, cancellable);
             }
             else {
                 return getUnparsedProposals(
-                    rootNode, prefix);
+                    rootNode, prefix, cancellable);
             }
         }
     }
@@ -220,13 +222,13 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     }
 
     shared Proposals getFunctionProposals(Node node,
-            Scope scope, String prefix, Boolean memberOp)
+            Scope scope, String prefix, Boolean memberOp, Cancellable cancellable)
             => if (exists type
                     = getFunctionProposalType(node, memberOp),
                     !isTypeUnknown(type))
             then collectUnaryFunctions(type,
                 scope.getMatchingDeclarations(node.unit,
-                    prefix, 0))
+                    prefix, 0, cancellable))
             else noProposals;
 
     Proposals collectUnaryFunctions(Type type,
@@ -312,11 +314,11 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
         }
     }
 
-    Proposals getUnparsedProposals(Node? node, String prefix)
+    Proposals getUnparsedProposals(Node? node, String prefix, Cancellable cancellable)
             => if (exists node,
                     exists pkg = node.unit?.\ipackage)
                 then pkg.\imodule
-                    .getAvailableDeclarations(prefix, 0)
+                    .getAvailableDeclarations(prefix, 0, cancellable)
                 else noProposals;
 
     shared Boolean isQualifiedType(Node node)
