@@ -8,7 +8,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     DeclarationWithProximity,
     Import,
-    TypeDeclaration
+    TypeDeclaration,
+    Cancellable
 }
 import java.util {
     JList=List,
@@ -112,8 +113,8 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
             modelPackage.getInheritingDeclaration(d);
     
     shared actual JMap<JString, DeclarationWithProximity> getMatchingDeclarations(
-        Unit unit, String startingWith, Integer proximity) =>
-            super.getMatchingDeclarations(unit, startingWith, proximity);
+        Unit unit, String startingWith, Integer proximity, Cancellable? cancellable) =>
+            super.getMatchingDeclarations(unit, startingWith, proximity, cancellable);
     
     shared actual Declaration? getMemberOrParameter(Unit modelUnit, String name,
         JList<Type> signature, Boolean ellipsis) =>

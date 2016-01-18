@@ -50,7 +50,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Interface,
     Value,
     TypeAlias,
-    Package
+    Package,
+    Cancellable
 }
 
 import java.lang {
@@ -105,7 +106,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
     shared CompletionResult[] getContentProposals(Tree.CompilationUnit typecheckedRootNode, IdeComponent analysisResult, 
-            Integer offset, Integer line, Boolean secondLevel, BaseProgressMonitor monitor, Boolean returnedParamInfo = false) {
+            Integer offset, Integer line, Boolean secondLevel, BaseProgressMonitor monitor, Boolean returnedParamInfo = false, Cancellable? cancellable = null) {
         value tokens = analysisResult.tokens;
         value document = analysisResult.document;
 
@@ -225,8 +226,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             return completions; 
         }
         else {
-            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, typecheckedRootNode);
-            Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp);
+            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, typecheckedRootNode, cancellable);
+            Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp, cancellable);
             filterProposals(proposals);
             filterProposals(functionProposals);
             value sortedProposals = sortProposals(prefix, required, proposals);
@@ -446,7 +447,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     shared Proposals getProposals(Node node,
             Scope? scope, String prefix, Boolean memberOp,
-            Tree.CompilationUnit rootNode) {
+            Tree.CompilationUnit rootNode, Cancellable? cancellable) {
 
         Unit? unit = node.unit;
 
@@ -533,7 +534,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                             prefix, 0);
             } else if (exists scope) {
                 return scope.getMatchingDeclarations(
-                    unit, prefix, 0);
+                    unit, prefix, 0, cancellable);
             } else {
                 return noProposals;
             }
@@ -552,17 +553,17 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                                 unit, scope, prefix, 0);
                 } else if (exists scope) {
                     return scope.getMatchingDeclarations(
-                        unit, prefix, 0);
+                        unit, prefix, 0, cancellable);
                 } else {
                     return noProposals;
                 }
             } else if (exists scope) {
                 return scope.getMatchingDeclarations(
-                    unit, prefix, 0);
+                    unit, prefix, 0, cancellable);
             }
             else {
                 return getUnparsedProposals(
-                    rootNode, prefix);
+                    rootNode, prefix, cancellable);
             }
         }
     }
@@ -585,13 +586,13 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
     Proposals getFunctionProposals(Node node,
-            Scope scope, String prefix, Boolean memberOp)
+            Scope scope, String prefix, Boolean memberOp, Cancellable? cancellable)
             => if (exists type
                     = getFunctionProposalType(node, memberOp),
                     !isTypeUnknown(type))
             then collectUnaryFunctions(type,
                 scope.getMatchingDeclarations(node.unit,
-                    prefix, 0))
+                    prefix, 0, cancellable))
             else noProposals;
 
     Proposals collectUnaryFunctions(Type type,
@@ -677,11 +678,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
     }
 
-    Proposals getUnparsedProposals(Node? node, String prefix)
+    Proposals getUnparsedProposals(Node? node, String prefix, Cancellable? cancellable)
             => if (exists node,
                     exists pkg = node.unit?.\ipackage)
                 then pkg.\imodule
-                    .getAvailableDeclarations(prefix, 0)
+                    .getAvailableDeclarations(prefix, 0, cancellable)
                 else noProposals;
 
     shared Boolean isQualifiedType(Node node)

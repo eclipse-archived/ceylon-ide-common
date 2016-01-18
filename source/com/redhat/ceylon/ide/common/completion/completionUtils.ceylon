@@ -281,7 +281,7 @@ shared Boolean isInBounds(List<Type> upperBounds, Type t) {
 
 
 shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
-    value map = scope.getMatchingDeclarations(unit, "", 0);
+    value map = scope.getMatchingDeclarations(unit, "", 0, null);
     if (exists exactName) {
         for (dwp in CeylonIterable(ArrayList(map.values()))) {
             if (!dwp.unimported, !dwp.\ialias,

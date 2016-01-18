@@ -70,7 +70,7 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
         if (exists id = nodes.getIdentifyingNode(data.node)) {
             if (exists brokenName = id.text, !brokenName.empty) {
                 value scope = data.node.scope; //for declaration-style named args
-                value dwps = completionManager.getProposals(data.node, scope, "", false, data.rootNode).values();
+                value dwps = completionManager.getProposals(data.node, scope, "", false, data.rootNode, null).values();
                 for (dwp in CeylonIterable(dwps)) {
                     processProposal(data, file, brokenName, dwp.declaration);
                 }
