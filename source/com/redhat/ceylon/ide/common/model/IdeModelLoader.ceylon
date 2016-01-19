@@ -502,7 +502,7 @@ shared abstract class BaseIdeModelLoader(
        }) synchronize (lock, do);
    }
    
-   shared actual Declaration convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
+   shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
        return super.convertToDeclaration(ideModule, classMirror, declarationType);
    }
    
