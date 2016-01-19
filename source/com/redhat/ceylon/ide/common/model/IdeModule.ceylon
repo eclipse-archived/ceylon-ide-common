@@ -178,6 +178,7 @@ shared abstract class BaseIdeModule()
     shared formal Boolean containsClass(String className);
     
     shared formal {Module*} referencingModules;
+    shared formal {Module*} transitiveDependencies;
     
     shared formal Boolean resolutionFailed;
     shared formal void setResolutionException(Exception resolutionException);
@@ -812,6 +813,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     shared actual {Module*} referencingModules =>
             switch (value deps = projectModuleDependencies)
     case (is Object) CeylonIterable(deps.getReferencingModules(this))
+    else [];
+    
+    shared actual {Module*} transitiveDependencies =>
+            switch (value deps = projectModuleDependencies)
+    case (is Object) CeylonIterable(deps.getTransitiveDependencies(this))
     else [];
     
     shared actual Boolean resolutionFailed => resolutionException exists;
