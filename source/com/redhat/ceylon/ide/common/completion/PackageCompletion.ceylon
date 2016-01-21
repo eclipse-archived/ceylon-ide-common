@@ -89,7 +89,10 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
                 query.memberName = fullPrefix;
                 query.memberSearchPackageOnly = true;
                 query.memberSearchExact = false;
-                query.binaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
+                query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
+                query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
                 ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
                 for (md in CeylonIterable(msr.results)) {
                     value version = md.lastVersion;

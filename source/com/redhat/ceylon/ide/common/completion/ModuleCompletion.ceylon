@@ -80,7 +80,10 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
                 value modul = cpc.lastPhasedUnit.\ipackage.\imodule;
                 monitor.subTask("querying module repositories...");
                 value query = moduleQueries.getModuleQuery(pfp, modul, project);
-                query.binaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
+                query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
+                query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
                 ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
                 monitor.subTask(null);
                 //                final ModuleSearchResult results = 
