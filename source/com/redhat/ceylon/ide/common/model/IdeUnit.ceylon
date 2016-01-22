@@ -1,16 +1,18 @@
-import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
-}
 
-shared abstract class IdeUnit() 
-        extends TypecheckerUnit() 
+shared abstract class IdeUnit 
+        extends TypecheckerUnitWithConstructor 
         satisfies IUnit & SourceAware  {
+    shared new() 
+            extends TypecheckerUnitWithConstructor() {}
+    
+    shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
+            extends TypecheckerUnitWithConstructor(theFilename, theRelativePath, theFullPath, thePackage) {}
     
     shared actual BaseIdeModule ceylonModule =>
             unsafeCast<BaseIdeModule>(\ipackage.\imodule);

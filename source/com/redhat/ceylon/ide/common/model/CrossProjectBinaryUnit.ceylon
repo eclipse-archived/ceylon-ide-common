@@ -24,13 +24,13 @@ shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,Native
     
     variable value originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(null);
     
-    shared new (JavaClassRoot typeRoot, String fileName, String relativePath, String fullPath, Package pkg) 
+    shared new (JavaClassRoot typeRoot, String theFileName, String theRelativePath, String theFullPath, Package thePackage) 
             extends CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>(
                 typeRoot,
-                fileName,
-                relativePath,
-                fullPath,
-                pkg) {
+                theFileName,
+                theRelativePath,
+                theFullPath,
+                thePackage) {
     }
     
     shared actual NativeProject? resourceProject =>

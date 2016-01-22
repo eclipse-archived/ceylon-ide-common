@@ -4,15 +4,15 @@ import com.redhat.ceylon.model.typechecker.model {
 
 shared abstract class JavaClassFile<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement> (
                 typeRoot,
-                String filename,
-                String relativePath,
-                String fullPath,
-                Package \ipackage)
+                String theFilename,
+                String theRelativePath,
+                String theFullPath,
+                Package thePackage)
             extends JavaUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(
-                    filename,
-                    relativePath,
-                    fullPath,
-                    \ipackage)
+                    theFilename,
+                    theRelativePath,
+                    theFullPath,
+                    thePackage)
             satisfies BinaryWithSources {
     
     shared actual JavaClassRoot typeRoot;

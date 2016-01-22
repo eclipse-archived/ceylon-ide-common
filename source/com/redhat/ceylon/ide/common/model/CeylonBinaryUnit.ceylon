@@ -12,15 +12,16 @@ import com.redhat.ceylon.ide.common.util {
     unsafeCast
 }
 
-shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>(typeRoot, filename, relativePath, fullPath, \ipackage)
-        extends CeylonUnit() 
+shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>
+        extends CeylonUnit 
         satisfies IJavaModelAware<NativeProject,JavaClassRoot, JavaElement>
         & BinaryWithSources {
-    shared variable actual String filename;
-    shared variable actual String relativePath;
-    shared variable actual String fullPath;
-    shared variable actual Package \ipackage;
     shared actual JavaClassRoot typeRoot;
+    
+    shared new(JavaClassRoot theTypeRoot, String theFilename, String theRelativePath, String theFullPath, Package thePackage)
+                extends CeylonUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {
+        typeRoot = theTypeRoot;
+    }
     
     shared actual default ExternalPhasedUnit? phasedUnit =>
             unsafeCast<ExternalPhasedUnit?>(super.phasedUnit);

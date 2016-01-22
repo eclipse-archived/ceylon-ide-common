@@ -12,20 +12,14 @@ shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
     shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
 }
 
-shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>(
-            filename, 
-            relativePath, 
-            fullPath, 
-            \ipackage)
-        extends IdeUnit()
+shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
+        extends IdeUnit
         satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement> 
         & IResourceAware<NativeProject, NativeFolder, NativeFile>
         & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
     
-    shared actual variable String filename;
-    shared actual variable String relativePath;
-    shared actual variable String fullPath;
-    shared actual variable Package \ipackage;
+    shared new(String theFilename, String theRelativePath, String theFullPath, Package thePackage)
+            extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {}
     
     shared actual NativeFile? resourceFile =>
             javaClassRootToNativeFile(typeRoot);
