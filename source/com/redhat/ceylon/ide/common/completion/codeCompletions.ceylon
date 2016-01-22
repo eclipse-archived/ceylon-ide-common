@@ -686,16 +686,17 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
             assert (is Value \ivalue = m);
             if (!\ivalue.transient) {
                 if (!nt.isSubtypeOf(\ivalue.type)) {
+                    if (found) {
+                        result.append(" && ").append(indent);
+                    }
                     result.append(\ivalue.name).append("==")
-                            .append(p.name).append(".").append(\ivalue.name)
-                            .append(" && ").append(indent);
+                            .append(p.name).append(".").append(\ivalue.name);
                     found = true;
                 }
             }
         }
     }
     if (found) {
-        result.deleteTerminal(4 - indent.size);
         result.append(";");
     } else {
         result.append("true;");
