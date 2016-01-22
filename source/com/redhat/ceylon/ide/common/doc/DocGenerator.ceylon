@@ -21,7 +21,9 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes
+    nodes,
+    unsafeCast,
+    equalsWithNulls
 }
 import com.redhat.ceylon.model.cmr {
     JDKUtils
@@ -49,7 +51,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeParameter,
     Constructor,
     Function,
-    NothingType
+    NothingType,
+    Annotated
 }
 import com.redhat.ceylon.model.typechecker.util {
     TypePrinter
@@ -59,7 +62,8 @@ import java.lang {
     JCharacter=Character {
         UnicodeScript,
         UnicodeBlock
-    }
+    },
+    JString=String
 }
 import java.util {
     Collections,
@@ -68,6 +72,28 @@ import java.util {
 }
 import com.redhat.ceylon.ide.common.imports {
     AbstractModuleImportUtil
+}
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit,
+    BaseCeylonProject
+}
+import com.redhat.ceylon.model.loader.mirror {
+    AnnotatedMirror,
+    AnnotationMirror
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyClass,
+    LazyInterface,
+    LazyClassAlias,
+    LazyInterfaceAlias,
+    LazyValue,
+    LazyFunction,
+    LazyTypeAlias,
+    JavaBeanValue,
+    JavaMethod
+}
+import com.redhat.ceylon.model.loader {
+    LanguageAnnotation
 }
 
 shared abstract class Icon() of annotations {}
@@ -492,9 +518,9 @@ shared interface DocGenerator<Document> {
             !pu.compilationUnit.packageDescriptors.empty,
             exists refnode = pu.compilationUnit.packageDescriptors.get(0)) {
             
-            appendDocAnnotationContent(refnode.annotationList, builder, pack, cmp);
-            appendThrowAnnotationContent(refnode.annotationList, builder, pack, cmp);
-            appendSeeAnnotationContent(refnode.annotationList, builder, cmp);
+            appendDocAnnotationContent(pack, refnode.annotationList, builder, pack, cmp);
+            appendThrowAnnotationContent(pack, refnode.annotationList, builder, pack, cmp);
+            appendSeeAnnotationContent(pack, refnode.annotationList, builder, cmp);
         }
     }
     
@@ -604,9 +630,9 @@ shared interface DocGenerator<Document> {
             exists refnode = pu.compilationUnit.moduleDescriptors.get(0)) {
             
             value linkScope = mod.getPackage(mod.nameAsString);
-            appendDocAnnotationContent(refnode.annotationList, buffer, linkScope, cmp);
-            appendThrowAnnotationContent(refnode.annotationList, buffer, linkScope, cmp);
-            appendSeeAnnotationContent(refnode.annotationList, buffer, cmp);
+            appendDocAnnotationContent(mod, refnode.annotationList, buffer, linkScope, cmp);
+            appendThrowAnnotationContent(mod, refnode.annotationList, buffer, linkScope, cmp);
+            appendSeeAnnotationContent(mod, refnode.annotationList, buffer, cmp);
         }
     }
     
@@ -986,15 +1012,15 @@ shared interface DocGenerator<Document> {
         if (is Tree.SpecifierStatement ss = rn) {
             rn = getReferencedNode(ss.refined);
         }
-        if (is Tree.Declaration td = rn) {
-            Tree.AnnotationList? annotationList = td.annotationList;
+        if (dec.unit is CeylonUnit) {
+            Tree.AnnotationList? annotationList = if (is Tree.Declaration td = rn) then td.annotationList else null;
             value scope = resolveScope(dec);
-            appendDeprecatedAnnotationContent(annotationList, builder, scope, cmp);
+            appendDeprecatedAnnotationContent(dec, annotationList, builder, scope, cmp);
             value len = builder.size;
-            appendDocAnnotationContent(annotationList, builder, scope, cmp);
+            appendDocAnnotationContent(dec, annotationList, builder, scope, cmp);
             hasDoc = builder.size != len;
-            appendThrowAnnotationContent(annotationList, builder, scope, cmp);
-            appendSeeAnnotationContent(annotationList, builder, cmp);
+            appendThrowAnnotationContent(dec, annotationList, builder, scope, cmp);
+            appendSeeAnnotationContent(dec, annotationList, builder, cmp);
         } else {
             appendJavadoc(dec, builder);
         }
@@ -1009,53 +1035,97 @@ shared interface DocGenerator<Document> {
         }
     }
     
+    function findAnnotationModel(Annotated&Referenceable annotated, String name) => 
+            CeylonIterable(annotated.annotations).find((ann) => ann.name == name);
+    
     // see appendDeprecatedAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
-    void appendDeprecatedAnnotationContent(Tree.AnnotationList? annotationList,
+    void appendDeprecatedAnnotationContent(Annotated & Referenceable annotated, Tree.AnnotationList? annotationList,
         StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
         
+        String? text;
+        
+        value name = "deprecated";
         if (exists annotationList,
-            exists ann = findAnnotation(annotationList, "deprecated"),
+            exists ann = findAnnotation(annotationList, name),
             exists argList = ann.positionalArgumentList,
             !argList.positionalArguments.empty,
-            is Tree.ListedArgument a = argList.positionalArguments.get(0),
-            exists text = a.expression.term.text) {
-            
+            is Tree.ListedArgument a = argList.positionalArguments.get(0)) {
+            text = a.expression.term.text;
+        } else if (exists annotation=
+                        findAnnotationModel(annotated, name)){
+            text = CeylonIterable(annotation.positionalArguments).first?.string;
+        } else {
+            text = null;
+        }
+        if (exists text) {
             documentation.append(
                 markdown("_(This is a deprecated program element.)_\n\n" + text,
-                    cmp, linkScope, annotationList.unit));
+                    cmp, linkScope, annotated.unit));
         }
     }
     
     // see appendDocAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
-    void appendDocAnnotationContent(Tree.AnnotationList? annotationList,
+    void appendDocAnnotationContent(Annotated&Referenceable annotated, Tree.AnnotationList? annotationList,
         StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
         
+        value unit = annotated.unit;
+        value name = "doc";
+        
+        String? text;
         if (exists annotationList) {
-            value unit = annotationList.unit;
             
             if (exists aa = annotationList.anonymousAnnotation) {
-                documentation.append(markdown(aa.stringLiteral.text, cmp, 
-                    linkScope, unit));
-            }
-
-            if (exists ann = findAnnotation(annotationList, "doc"),
+                text = aa.stringLiteral.text;
+            } else if (exists ann = findAnnotation(annotationList, name),
                 exists argList = ann.positionalArgumentList,
                 !argList.positionalArguments.empty,
                 exists a = argList.positionalArguments.get(0),
-                is Tree.ListedArgument a,
-                exists text = a.expression.term.text) {
-                
-                documentation.append(markdown(text, cmp, linkScope, unit));
+                is Tree.ListedArgument a) {
+                text = a.expression.term.text;
+            } else {
+                text = null;
             }
+        } else if (exists annotation=findAnnotationModel(annotated, name)){
+            text = CeylonIterable(annotation.positionalArguments).first?.string;
+        } else {
+            text = null;
+        }
+        
+        if (exists text) {
+            documentation.append(markdown(text, cmp, 
+                linkScope, unit));
         }
     }
     
+    AnnotatedMirror? toAnnotatedMirror(Annotated&Referenceable annotated) =>
+            switch(annotated)
+    case(is LazyClass) annotated.classMirror
+    case(is LazyClassAlias) annotated.classMirror
+    case(is LazyInterface) annotated.classMirror
+    case(is LazyInterfaceAlias) annotated.classMirror
+    case(is LazyValue) annotated.classMirror
+    case(is LazyTypeAlias) annotated.classMirror
+    case(is LazyFunction) annotated.methodMirror
+    case(is JavaBeanValue) annotated.mirror
+    case(is JavaMethod) annotated.mirror
+    else null;
+    
     // see appendThrowAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
-    void appendThrowAnnotationContent(Tree.AnnotationList? annotationList,
+    void appendThrowAnnotationContent(Annotated&Referenceable annotated, Tree.AnnotationList? annotationList,
         StringBuilder documentation, Scope? linkScope, IdeComponent cmp) {
         
+        Unit? unit = annotated.unit;
+
+        void addThrowsText(Declaration dec, String text, Unit? unit, StringBuilder documentation) {
+            value dn = dec.name;
+            value doc = "throws <tt>" + buildLink(dec, dn) + "</tt>"
+                    + markdown(text, cmp, linkScope, unit);
+            addIconAndText(documentation, Icons.exceptions, doc);
+        }
+        
+        String name = "throws";
         if (exists annotationList,
-            exists annotation = findAnnotation(annotationList, "throws"),
+            exists annotation = findAnnotation(annotationList, name),
             exists argList = annotation.positionalArgumentList,
             !argList.positionalArguments.empty) {
             value args = argList.positionalArguments;
@@ -1068,37 +1138,123 @@ shared interface DocGenerator<Document> {
                 
                 if (is Tree.MetaLiteral typeArgTerm,
                     exists dec = typeArgTerm.declaration) {
-                    value dn = dec.name;
-                    value doc = "throws <tt>" + buildLink(dec, dn) + "</tt>"
-                            + markdown(text, cmp, linkScope, annotationList.unit);
-                    addIconAndText(documentation, Icons.exceptions, doc);
+                    addThrowsText(dec, text, unit, documentation);
+                }
+            }
+        } else if (exists annotatedMirror=toAnnotatedMirror(annotated)){
+            if (exists annotationMirror = 
+                            annotatedMirror.getAnnotation(LanguageAnnotation.\iTHROWS.annotationType),
+                exists thrownExceptions = 
+                            unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
+                for (thrown in CeylonIterable(thrownExceptions)) {
+                    if (exists typeArg = thrown.getValue("type")?.string,
+                        exists dec = parseAnnotationType(typeArg, cmp.ceylonProject)) {
+                        String textArg = if (is String t=thrown.getValue("when")?.string) then t else "";
+                        addThrowsText(dec, textArg, unit, documentation);
+                    }
                 }
             }
         }
     }
     
-    void appendSeeAnnotationContent(Tree.AnnotationList? annotationList,
-        StringBuilder documentation, IdeComponent cmp) {
+    Declaration? parseAnnotationType(String encodedDeclaration, BaseCeylonProject? project) {
+        String withoutVersion;
+        if (!exists project) {
+            return null;
+        }
+        if (exists first=encodedDeclaration.first,
+            first == ':') {
+            // a version exist
+            value rest = encodedDeclaration.rest;
+            value sentinel = rest.first;
+            if (!exists sentinel) {
+                return null;
+            }
+            value versionEnd = rest.rest.firstOccurrence(sentinel);
+            if (!exists versionEnd) {
+                return null;
+            }
+            withoutVersion = rest.rest.spanFrom(versionEnd+1);
+        } else {
+            withoutVersion = encodedDeclaration;
+        }
         
+        value fromModule = withoutVersion.split(':'.equals, true, false);
+        value moduleName = fromModule.first;
+        Module? mod = project.modules?.find((m) => m.nameAsString == moduleName);
+        if (!exists mod) {
+            return null;
+        }
+
+        value fromPackage = fromModule.rest;
+        value packageName = fromPackage.first;
+        if (!exists packageName) {
+            return null;
+        }
+        Package? pkg = mod.getPackage(
+            if (exists nameStart = packageName.first,
+                nameStart == '.')
+            then packageName.rest
+            else 
+                if (packageName.empty) 
+                then moduleName
+                else "``moduleName``.``packageName``");
+        if (!exists pkg) {
+            return null;
+        }
+        
+        value fromDeclaration = fromPackage.rest;
+        value declaration = fromDeclaration.first;
+        if (!exists declaration) {
+            return null;
+        }
+        if (!fromDeclaration.rest.empty) {
+            return null; // the syntax cannot be parsed
+        }
+        value declarationParts = declaration.split('.'.equals)
+            .map((s) => s.rest);
+        Declaration? topLeveldeclaration = pkg.getMember(declarationParts.first, null, false);
+        
+        function toRealParent(Declaration? parent) =>
+                switch(parent)
+                case (is Null) null
+                case (is LazyValue) 
+                    let (TypeDeclaration? typeDeclaration = parent.typeDeclaration) 
+                        if (equalsWithNulls(typeDeclaration?.qualifiedNameString, parent.qualifiedNameString))
+                        then typeDeclaration else parent
+                else parent;
+        
+        return declarationParts.rest
+                    .fold(topLeveldeclaration)
+                        ((Declaration? parent, String member) => 
+                            toRealParent(parent)?.getMember(member, null, false));
+    }
+    
+    void appendSeeAnnotationContent(Annotated&Referenceable annotated, Tree.AnnotationList? annotationList,
+        StringBuilder documentation, IdeComponent cmp) {
+        String name = "see";
+        value sb = StringBuilder();
+        void addSeeText(Declaration dec, StringBuilder sb) {
+            value dn = if (dec.classOrInterfaceMember,
+                is ClassOrInterface container = dec.container)
+            then container.name + "." + dec.name
+            else dec.name;
+            
+            if (sb.size > 0) {
+                sb.append(", ");
+            }
+            sb.append("<tt>").append(buildLink(dec, dn)).append("</tt>");
+            
+        }
         if (exists annotationList,
-            exists annotation = findAnnotation(annotationList, "see"),
+            exists annotation = findAnnotation(annotationList, name),
             exists argList = annotation.positionalArgumentList) {
-            value sb = StringBuilder();
             
             for (arg in CeylonIterable(argList.positionalArguments)) {
                 if (is Tree.ListedArgument arg,
                     is Tree.MetaLiteral ml = arg.expression.term,
                     exists dec = ml.declaration) {
-                    
-                    value dn = if (dec.classOrInterfaceMember,
-                        is ClassOrInterface container = dec.container)
-                        then container.name + "." + dec.name
-                        else dec.name;
-                    
-                    if (sb.size > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append("<tt>").append(buildLink(dec, dn)).append("</tt>");
+                    addSeeText(dec, sb);
                 }
             }
             
@@ -1107,6 +1263,26 @@ shared interface DocGenerator<Document> {
                 sb.append(".");
                 addIconAndText(documentation, Icons.see, sb.string);
             }
+        } else if (exists annotatedMirror=toAnnotatedMirror(annotated)){
+            if (exists annotationMirror = 
+                annotatedMirror.getAnnotation(LanguageAnnotation.\iSEE.annotationType),
+            exists seeAnnotations = 
+                    unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
+                for (see in CeylonIterable(seeAnnotations)) {
+                    if (exists programElements = unsafeCast<JList<JString>?>(see.getValue("programElements"))) {
+                        for (pe in CeylonIterable(programElements)) {
+                            if (exists dec = parseAnnotationType(pe.string, cmp.ceylonProject)) {
+                                addSeeText(dec, sb);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (sb.size > 0) {
+            sb.prepend("see ");
+            sb.append(".");
+            addIconAndText(documentation, Icons.see, sb.string);
         }
     }
 
@@ -1139,7 +1315,7 @@ shared interface DocGenerator<Document> {
             buffer.append("</p>");
             
             if (!hasDoc, is Tree.Declaration decNode = nodes.getReferencedNode(rd)) {
-                appendDocAnnotationContent(decNode.annotationList,
+                appendDocAnnotationContent(dec, decNode.annotationList,
                     buffer, resolveScope(rd), cmp);
             }
         }
@@ -1190,7 +1366,7 @@ shared interface DocGenerator<Document> {
                                 .append(".");
                             
                             if (is Tree.Declaration refNode = getReferencedNode(model)) {
-                                appendDocAnnotationContent(refNode.annotationList,
+                                appendDocAnnotationContent(model, refNode.annotationList,
                                     param, resolveScope(dec), cmp);
                             }
                             
