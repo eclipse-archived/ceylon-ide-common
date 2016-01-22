@@ -695,7 +695,7 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
         }
     }
     if (found) {
-        result.deleteTerminal(4 - indent.size);
+        result.deleteTerminal(4 + indent.size);
         result.append(";");
     } else {
         result.append("true;");
