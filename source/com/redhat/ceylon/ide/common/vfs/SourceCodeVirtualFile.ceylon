@@ -13,6 +13,9 @@ import java.io {
 import java.lang {
     System
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProjects
+}
 
 shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
         satisfies FileVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
@@ -64,4 +67,9 @@ shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,Na
     shared actual Nothing parent => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing ceylonProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing nativeProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing vfs => nothing;
+    
 }

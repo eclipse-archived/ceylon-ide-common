@@ -127,7 +127,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 pkg.name = JavaList(pkgName.map((String s)=> javaString(s)).sequence());
 
                 try {
-                    value moduleVirtualFile = ceylonProject.model.vfs.createVirtualFile(moduleFile, ceylonProject);
+                    value moduleVirtualFile = ceylonProject.model.vfs.createVirtualFile(moduleFile, ceylonProject.ideArtifact);
                     value tempPhasedUnit = parser(moduleVirtualFile).parseFileToPhasedUnit(moduleManager, typeChecker, moduleVirtualFile, srcDir, pkg);
 
                     Module? m = tempPhasedUnit.visitSrcModulePhase();

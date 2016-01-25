@@ -127,13 +127,13 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
 
         
         shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource,
-            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject) {
+            NativeProject project) {
             assert (is NativeFolder | NativeFile resource);
             if (isFolder(resource)) {
-                return createVirtualFolder(unsafeCast<NativeFolder>(resource), ceylonProject);
+                return createVirtualFolder(unsafeCast<NativeFolder>(resource), project);
             }
             else {
-                return createVirtualFile(unsafeCast<NativeFile>(resource), ceylonProject);
+                return createVirtualFile(unsafeCast<NativeFile>(resource), project);
             }
         }
         
@@ -144,11 +144,9 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         shared formal Boolean existsOnDisk(NativeResource resource);
         shared formal String getShortName(NativeResource resource);
 
-        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, 
-            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject);
+        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, NativeProject project);
         shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
-        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder,
-            CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> ceylonProject);
+        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder, NativeProject project);
         shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
         
         shared actual VirtualFile getFromFile(File file) =>

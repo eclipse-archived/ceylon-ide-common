@@ -105,7 +105,7 @@ shared class RootFolderScanner<NativeProject, NativeResource, NativeFolder, Nati
             if (vfs.existsOnDisk(resource)) {
                 if (ceylonProject.isCompilable(file) || 
                     ! rootDirIsForSource) {
-                    FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> virtualFile = vfs.createVirtualFile(file, ceylonProject);
+                    FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> virtualFile = vfs.createVirtualFile(file, ceylonProject.ideArtifact);
                     scannedFiles.add(virtualFile);
                     
                     if (rootDirIsForSource && 
