@@ -59,15 +59,15 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     shared formal NativeResource nativeResource;
-    shared formal CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject;
+    shared formal CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? ceylonProject;
 
-    shared NativeProject nativeProject => ceylonProject.ideArtifact;
-    shared CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>.VirtualFileSystem vfs => ceylonProject.model.vfs;
+    shared formal NativeProject nativeProject;
+    shared formal CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>.VirtualFileSystem vfs;
 
     shared formal actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children;
     shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? parent =>
             if (exists folderParent = vfs.getParent(nativeResource))
-            then vfs.createVirtualFolder(folderParent, ceylonProject)
+            then vfs.createVirtualFolder(folderParent, nativeProject)
             else null;
     
     shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
@@ -103,7 +103,7 @@ shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, 
 
     shared actual default FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? findFile(String fileName) =>
             if (exists nativeFile = vfs.findFile(nativeResource, fileName))
-            then vfs.createVirtualFile(nativeFile, ceylonProject)
+            then vfs.createVirtualFile(nativeFile, nativeProject)
             else null;
 
     shared default Boolean isRoot =>

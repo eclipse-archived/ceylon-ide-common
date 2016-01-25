@@ -22,13 +22,13 @@ shared class DummyFolder<NativeProject,NativeResource,NativeFolder,NativeFile>
             Collections.emptyList<ResourceVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>>();
 
     suppressWarnings("expressionTypeNothing")
-    shared actual FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? findFile(String fileName) => nothing;
+    shared actual Nothing findFile(String fileName) => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeResource => nothing;
     suppressWarnings("expressionTypeNothing")
-    shared actual FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? parent => nothing;
+    shared actual Nothing parent => nothing;
     suppressWarnings("expressionTypeNothing")
-    shared actual String[] toPackageName(BaseFolderVirtualFile srcDir) => nothing;
+    shared actual Nothing toPackageName(BaseFolderVirtualFile srcDir) => nothing;
     
     shared actual Integer hash =>
             (super of FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>).hash;
@@ -43,4 +43,9 @@ shared class DummyFolder<NativeProject,NativeResource,NativeFolder,NativeFile>
     shared actual Nothing isSource => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing rootFolder => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing nativeProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing vfs => nothing;
+    
 }

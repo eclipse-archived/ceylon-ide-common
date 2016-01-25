@@ -16,6 +16,9 @@ import java.lang {
 import java.util {
     Collections
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonProjects
+}
 
 alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
 alias LocalFolderVirtualFileAlias => FolderVirtualFile<Nothing,File, File, File>;
@@ -87,6 +90,10 @@ shared class LocalFileVirtualFile(file)
     
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing ceylonProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing nativeProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual CeylonProjects<Nothing,File,File,File>.VirtualFileSystem vfs => nothing;
 }
 
 shared class LocalFolderVirtualFile(file) 
@@ -163,4 +170,8 @@ shared class LocalFolderVirtualFile(file)
     shared actual Nothing isSource => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing rootFolder => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing nativeProject => nothing;
+    suppressWarnings("expressionTypeNothing")
+    shared actual Nothing vfs => nothing;
 }
