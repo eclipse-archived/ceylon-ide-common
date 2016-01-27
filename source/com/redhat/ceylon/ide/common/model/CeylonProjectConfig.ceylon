@@ -26,7 +26,8 @@ import java.lang {
     IllegalArgumentException
 }
 import com.redhat.ceylon.common {
-    Constants
+    Constants,
+    Versions
 }
 import java.util {
     EnumSet
@@ -84,11 +85,13 @@ shared class CeylonProjectConfig(project) {
     variable Boolean isOfflineChanged = false;
     variable Boolean isEncodingChanged = false;
     variable Boolean isOverridesChanged = false;
+    variable Boolean isCompilerTargetChanged = false;
     variable Boolean isFlatClasspathChanged = false;
     variable Boolean isAutoExportMavenDependenciesChanged = false;
     variable Boolean? transientOffline = null;
     variable String? transientEncoding = null;
     variable String? transientOverrides = null;
+    variable String? transientCompilerTarget = null;
     variable Boolean? transientFlatClasspath = null;
     variable Boolean? transientAutoExportMavenDependencies = null;
 
@@ -176,6 +179,14 @@ shared class CeylonProjectConfig(project) {
         this.transientOverrides = projectOverrides;
     }
 
+    shared String compilerTarget => DefaultToolOptions.getCompilerTarget(mergedConfig) else Versions.\iCEYLON_VERSION_NUMBER;
+    
+    shared String? projectCompilerTarget => DefaultToolOptions.getCompilerTarget(projectConfig) else Versions.\iCEYLON_VERSION_NUMBER;
+    assign projectCompilerTarget {
+        this.isCompilerTargetChanged = true;
+        this.transientCompilerTarget = projectCompilerTarget;
+    }
+    
     shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
 
     shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH)) option?.booleanValue();
@@ -277,6 +288,7 @@ shared class CeylonProjectConfig(project) {
         transientEncoding = null;
         transientOffline = null;
         transientOverrides = null;
+        transientCompilerTarget = null;
         transientFlatClasspath = null;
         transientAutoExportMavenDependencies = null;
         transientOutputRepo = null;
@@ -365,6 +377,9 @@ shared class CeylonProjectConfig(project) {
                     } else {
                         projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES, null);
                     }
+                }
+                if (isCompilerTargetChanged) {
+                    projectConfig.setOption(DefaultToolOptions.\iCOMPILER_TARGET, transientCompilerTarget);
                 }
                 if (isEncodingChanged) {
                     projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_ENCODING, transientEncoding);

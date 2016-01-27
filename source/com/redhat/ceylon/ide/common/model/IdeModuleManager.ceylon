@@ -95,7 +95,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         BaseIdeModuleSourceMapper sourceMapper, 
         Modules modules);
 
-    shared actual void initCoreModules(variable Modules modules) {
+    shared actual void initCoreModules(variable Modules modules, String distVersion) {
         setModules(modules);
         if (!exists m = modules.languageModule) {
             value defaultModuleName = Collections.singletonList(javaString(Module.\iDEFAULT_MODULE_NAME));
@@ -106,7 +106,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             modules.listOfModules.add(defaultModule);
             modules.defaultModule = defaultModule;
             JList<JString> languageName = toJavaStringList {"ceylon", "language"};
-            variable Module languageModule = createModule(languageName, TypeChecker.\iLANGUAGE_MODULE_VERSION);
+            variable Module languageModule = createModule(languageName, distVersion);
             languageModule.languageModule = languageModule;
             languageModule.available = false;
             modules.languageModule = languageModule;
@@ -115,7 +115,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             defaultModule.languageModule = languageModule;
             createPackage("", defaultModule);
         }
-        super.initCoreModules(modules);
+        super.initCoreModules(modules, distVersion);
     }
     
     shared actual Package createPackage(variable String pkgName, variable Module \imodule) {
