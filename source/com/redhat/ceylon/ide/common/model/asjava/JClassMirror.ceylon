@@ -7,6 +7,9 @@ import com.redhat.ceylon.ide.common.model.asjava {
         mapDeclaration
     }
 }
+import com.redhat.ceylon.ide.common.util {
+    synchronize
+}
 import com.redhat.ceylon.model.loader.mirror {
     ClassMirror,
     TypeParameterMirror,
@@ -20,7 +23,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Module,
     ClassOrInterface,
     Interface,
-    Class
+    Declaration,
+    Type
 }
 
 import java.util {
@@ -28,28 +32,16 @@ import java.util {
     Collections,
     ArrayList
 }
-import com.redhat.ceylon.ide.common.util {
-    synchronize
-}
 
-shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
-    
+shared abstract class AbstractClassMirror(shared default Declaration decl) satisfies ClassMirror {
     variable Boolean initialized = false;
     
     late List<FieldMirror> fields;
     late List<MethodMirror> methods;
     
-    shared actual Boolean abstract => decl.abstract;
-    
     shared actual Boolean annotationType => decl.annotation;
     
     shared actual Boolean anonymous => decl.anonymous;
-    
-    shared actual Boolean ceylonToplevelAttribute => false;
-    
-    shared actual Boolean ceylonToplevelMethod => false;
-    
-    shared actual Boolean ceylonToplevelObject => false;
     
     shared actual Boolean defaultAccess => !decl.shared;
     
@@ -72,7 +64,7 @@ shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
     
     shared actual Boolean enum => decl.javaEnum;
     
-    shared actual Boolean final => decl.final;
+    shared actual Boolean final => if (is ClassOrInterface d = decl) then d.final else true;
     
     shared actual String flatName => qualifiedName.replace("::", ".");
     
@@ -87,7 +79,7 @@ shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
     shared actual List<TypeMirror> interfaces {
         value types = ArrayList<TypeMirror>();
         
-        CeylonIterable(decl.satisfiedTypes).each((s) {
+        CeylonIterable(satisfiedTypes).each((s) {
             types.add(JTypeMirror(s));
         });
         
@@ -100,7 +92,7 @@ shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
     
     shared actual Boolean localClass => false;
     
-    shared actual String name => decl.name;
+    shared actual default String name => decl.name;
     
     shared actual PackageMirror? \ipackage => null;
     
@@ -108,11 +100,12 @@ shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
     
     shared actual Boolean public => decl.shared;
     
-    shared actual String qualifiedName => decl.qualifiedNameString;
+    shared actual String qualifiedName => getJavaQualifiedName(decl);
     
     shared actual Boolean static => false;
     
-    shared actual TypeMirror? superclass => JTypeMirror(decl.extendedType);
+    shared actual TypeMirror? superclass 
+            => if (exists s = supertype) then JTypeMirror(s) else null;
     
     shared actual List<TypeParameterMirror> typeParameters
             => Collections.emptyList<TypeParameterMirror>();
@@ -126,14 +119,39 @@ shared class JClassMirror(shared ClassOrInterface decl) satisfies ClassMirror {
             value members = CeylonIterable(decl.members)
                     .flatMap((m) => mapDeclaration(m));
             
-            methods = ArrayList<MethodMirror>();
+            value _methods = ArrayList<MethodMirror>();
+            methods = _methods;
             members.each((e) {
                 if (is MethodMirror e) {
                     methods.add(e); 
                 }
             });
             
+            scanExtraMembers(_methods);
+            
             initialized = true;            
         });
     }
+    
+    shared default void scanExtraMembers(ArrayList<MethodMirror> methods) {
+        
+    }
+    
+    shared formal Type? supertype;
+    shared formal List<Type> satisfiedTypes;
+}
+
+shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractClassMirror(decl) {
+    
+    abstract => decl.abstract;
+    
+    ceylonToplevelAttribute => false;
+    
+    ceylonToplevelMethod => false;
+    
+    ceylonToplevelObject => false;
+    
+    supertype => decl.extendedType;
+    
+    satisfiedTypes => decl.satisfiedTypes;
 }
