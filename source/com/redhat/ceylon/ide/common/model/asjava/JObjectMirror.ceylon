@@ -68,7 +68,7 @@ class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     
     shared actual Boolean public => true;
     
-    shared actual TypeMirror returnType => JTypeMirror(obj.decl.type);
+    shared actual TypeMirror returnType => ceylonToJavaMapper.mapType(obj.decl.type);
     
     shared actual Boolean static => true;
     
