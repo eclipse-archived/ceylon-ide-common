@@ -475,9 +475,16 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 sourceRelativePaths.add(s); 
             });
         }
-        javaImplFilesToCeylonDeclFiles = toCeylonStringMap(
-            CarUtils.searchCeylonFilesForJavaImplementations(toJavaStringMap(_classesToSources), 
-                File(existingSourceArchivePath)));
+        if (sourceArchiveFile.\iexists()) {
+            javaImplFilesToCeylonDeclFiles = toCeylonStringMap(
+                CarUtils.searchCeylonFilesForJavaImplementations(toJavaStringMap(_classesToSources), 
+                    File(existingSourceArchivePath)));
+        } else {
+            platformUtils.log(Status._WARNING,
+                "No source file found for archive :`` 
+                returnCarFile()?.absolutePath else "unknown" ``");
+            javaImplFilesToCeylonDeclFiles = emptyMap;
+        }
     }
     
     shared actual void setSourcePhasedUnits(ExternalModulePhasedUnits modulePhasedUnits) =>

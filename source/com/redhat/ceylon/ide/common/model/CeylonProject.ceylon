@@ -194,7 +194,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
     
@@ -202,7 +201,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             extends super.Modules() 
             satisfies {IdeModuleAlias*} {
         shared formal TypecheckerModules typecheckerModules;
-        variable Package? _javaLangPackage = null;
         
         shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
             value it = typecheckerModules.listOfModules.iterator();
@@ -226,14 +224,9 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             return m; 
         }
         
-        shared actual Package? javaLangPackage {
-            if (! _javaLangPackage exists) {
-                _javaLangPackage = 
-                    find((m) => m.nameAsString == "java.lang")
-                        ?.getDirectPackage("java.lang");
-            }
-            return _javaLangPackage;
-        }
+        shared actual Package? javaLangPackage =>
+                find((m) => m.nameAsString == "java.base")
+                    ?.getDirectPackage("java.lang");
         
         shared actual {IdeModuleAlias*} fromProject
                 => filter((m) => m.isProjectModule);
@@ -254,7 +247,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         }
     }
     
-    shared actual Modules? modules => 
+    shared actual Modules? modules =>
             if (exists tcMods = phasedUnits?.moduleManager?.modules)
             then 
                 object extends Modules() {
