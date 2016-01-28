@@ -18,4 +18,9 @@ public class TypecheckerUnitWithConstructor extends TypecheckerUnit {
     public TypecheckerUnitWithConstructor() {
         super();
     }
+    
+    @Override
+    public Package getJavaLangPackage() {
+        return super.getJavaLangPackage();
+    }
 }

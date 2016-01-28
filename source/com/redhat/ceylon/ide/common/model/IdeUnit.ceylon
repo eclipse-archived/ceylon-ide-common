@@ -20,6 +20,9 @@ shared abstract class IdeUnit
     shared actual Package ceylonPackage =>
             \ipackage;
 
+    shared actual Package? javaLangPackage => 
+            ceylonModule.ceylonProject?.modules?.javaLangPackage;
+    
     shared actual formal String? sourceFileName;
     shared actual formal String? sourceRelativePath;
     shared actual formal String? sourceFullPath;

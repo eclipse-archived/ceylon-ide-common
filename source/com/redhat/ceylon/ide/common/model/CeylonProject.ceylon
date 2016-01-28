@@ -126,6 +126,7 @@ shared abstract class BaseCeylonProject() {
     shared default abstract class Modules() satisfies {BaseIdeModule*} {
         shared formal BaseIdeModule default;
         shared formal BaseIdeModule language;
+        shared formal Package? javaLangPackage;        
         shared formal {BaseIdeModule*} fromProject;
         shared formal {BaseIdeModule*} external;
         
@@ -201,6 +202,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             extends super.Modules() 
             satisfies {IdeModuleAlias*} {
         shared formal TypecheckerModules typecheckerModules;
+        variable Package? _javaLangPackage = null;
         
         shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
             value it = typecheckerModules.listOfModules.iterator();
@@ -222,6 +224,15 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual IdeModuleAlias language {
             assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=typecheckerModules.languageModule);
             return m; 
+        }
+        
+        shared actual Package? javaLangPackage {
+            if (! _javaLangPackage exists) {
+                _javaLangPackage = 
+                    find((m) => m.nameAsString == "java.lang")
+                        ?.getDirectPackage("java.lang");
+            }
+            return _javaLangPackage;
         }
         
         shared actual {IdeModuleAlias*} fromProject

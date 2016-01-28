@@ -104,7 +104,7 @@ import org.antlr.runtime {
 }
 
 shared class ModuleType of 
-_PROJECT_MODULE | 
+        _PROJECT_MODULE | 
         _CEYLON_SOURCE_ARCHIVE |
         _CEYLON_BINARY_ARCHIVE |
         _JAVA_BINARY_ARCHIVE|
