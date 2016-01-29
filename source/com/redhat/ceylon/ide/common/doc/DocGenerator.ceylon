@@ -52,7 +52,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     Function,
     NothingType,
-    Annotated
+    Annotated,
+    ModuleImport
 }
 import com.redhat.ceylon.model.typechecker.util {
     TypePrinter
@@ -99,7 +100,7 @@ import com.redhat.ceylon.model.loader {
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
 
-shared String convertToHTML(String content)
+String convertToHTML(String content)
         => content.replace("&", "&amp;")
                   .replace("\"", "&quot;")
                   .replace("<", "&lt;")
@@ -445,12 +446,10 @@ shared interface DocGenerator<Document> {
         Tree.CompilationUnit rootNode, IdeComponent cmp, Reference? pr) {
         
         variable value decl = model;
-        if (is FunctionOrValue model) {
-            TypeDeclaration? typeDecl = model.typeDeclaration;
-            
-            if (exists typeDecl, typeDecl.anonymous, !model.type.typeConstructor) {
-                decl = typeDecl;
-            }
+        if (is FunctionOrValue model,
+            exists typeDecl = model.typeDeclaration, 
+            typeDecl.anonymous, !model.type.typeConstructor) {
+            decl = typeDecl;
         }
         
         value builder = StringBuilder();
@@ -563,6 +562,12 @@ shared interface DocGenerator<Document> {
         }
     }
 
+    void addModuleDependencies(Module mod, StringBuilder builder, DocGenerator<Document>.IdeComponent cmp) {
+        for (imp in CeylonIterable(mod.imports)) {
+            addImportDescription(imp, builder, cmp);
+        }
+    }
+    
     // see getDocumentationFor(CeylonParseController controller, Module mod)
     String? getModuleDoc(Module mod, IdeComponent cmp) {
         value builder = StringBuilder();
@@ -571,6 +576,7 @@ shared interface DocGenerator<Document> {
         addMainModuleDescription(mod, builder, cmp);
         addAdditionalModuleInfo(mod, builder);
         addModuleDocumentation(mod, builder, cmp);
+        addModuleDependencies(mod, builder, cmp);
         addModuleMembers(mod, builder);
         appendPageEpilog(builder);
 
@@ -608,6 +614,42 @@ shared interface DocGenerator<Document> {
         buffer.append("</tt>");
     }
 
+    void addImportDescription(ModuleImport imp, StringBuilder buffer, IdeComponent cmp) {
+        value mod = imp.\imodule;
+        if (!mod.nameAsString.empty && !mod.nameAsString.equals("default")) {
+            value label = "<span>Imports&nbsp;``buildLink(mod, mod.nameAsString)``"
+                    + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>.</span>";
+            addIconAndText(buffer, mod, label);
+        }
+        
+        /*value buf = StringBuilder();
+        if (imp.native) {
+            buf.append("native");
+        }
+        
+        value nativeBackends = imp.nativeBackends;
+        if (!nativeBackends.none(), !Backends.\iHEADER == nativeBackends) {
+            value buf2 = StringBuilder();
+            moduleImportUtil.appendNativeBackends(buf2, nativeBackends);
+            buf.append("(")
+                    .append(color(buf2.string, Colors.annotationStrings))
+                    .append(")");
+        }
+        
+        if (imp.native) {
+            buf.append("&nbsp;");
+        }
+        
+        if (!buf.empty) {
+            value desc = "<tt>``color(buf.string, Colors.annotations)``</tt>";
+            addIconAndText(buffer, Icons.annotations, desc);
+        }
+        value description = "import ``mod.nameAsString`` \"``mod.version``\"";
+        buffer.append("<tt>");
+        addIconAndText(buffer, mod, highlight(description, cmp));
+        buffer.append("</tt>");*/
+    }
+    
     // see addAdditionalModuleInfo(StringBuilder buffer, Module mod)
     void addAdditionalModuleInfo(Module mod, StringBuilder buffer) {
         if (mod.java) {
