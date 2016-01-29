@@ -38,6 +38,7 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
     
     late List<FieldMirror> fields;
     late List<MethodMirror> methods;
+    late List<ClassMirror> innerClasses;
     
     shared actual Boolean annotationType => decl.annotation;
     
@@ -50,8 +51,10 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
         return fields;
     }
     
-    shared actual List<ClassMirror> directInnerClasses 
-            => Collections.emptyList<ClassMirror>();
+    shared actual List<ClassMirror> directInnerClasses {
+        scanMembers();
+        return innerClasses;
+    }
     
     shared actual List<MethodMirror> directMethods {
         scanMembers();
@@ -120,10 +123,14 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
                     .flatMap((m) => mapDeclaration(m));
             
             value _methods = ArrayList<MethodMirror>();
+            innerClasses = ArrayList<ClassMirror>();
             methods = _methods;
+
             members.each((e) {
                 if (is MethodMirror e) {
                     methods.add(e); 
+                } else {
+                    innerClasses.add(e);
                 }
             });
             

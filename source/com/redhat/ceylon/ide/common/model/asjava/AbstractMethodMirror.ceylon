@@ -18,7 +18,7 @@ shared abstract class AbstractMethodMirror(FunctionOrValue decl)
     
     shared actual ClassMirror? enclosingClass => null;
     
-    shared actual AnnotationMirror getAnnotation(String? string) => nothing;
+    shared actual AnnotationMirror? getAnnotation(String? string) => null;
     
     shared actual Boolean protected => false;
     
