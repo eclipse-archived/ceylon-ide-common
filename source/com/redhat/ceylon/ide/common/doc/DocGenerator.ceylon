@@ -2,6 +2,9 @@ import ceylon.interop.java {
     CeylonIterable
 }
 
+import com.redhat.ceylon.common {
+    Backends
+}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -44,7 +47,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     Function,
     NothingType,
-    Annotated,
     ModuleImport
 }
 import com.redhat.ceylon.model.typechecker.util {
@@ -59,9 +61,6 @@ import java.lang {
 }
 import java.util {
     Collections
-}
-import com.redhat.ceylon.common {
-    Backends
 }
 
 shared abstract class Icon() of annotations {}
@@ -456,14 +455,14 @@ shared abstract class DocGenerator<IdeComponent>() {
     }
 
     void addImportDescription(ModuleImport imp, StringBuilder buffer, IdeComponent cmp) {
-        value mod = imp.\imodule;
-        if (!mod.nameAsString.empty && !mod.nameAsString.equals("default")) {
-            value label = "<span>Imports&nbsp;``buildLink(mod, mod.nameAsString)``"
-                    + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>.</span>";
-            addIconAndText(buffer, mod, label);
+        /*value buf = StringBuilder();
+        if (imp.export) {
+            buf.append("shared&nbsp;");
+        }
+        if (imp.optional) {
+            buf.append("optional&nbsp;");
         }
         
-        /*value buf = StringBuilder();
         if (imp.native) {
             buf.append("native");
         }
@@ -479,16 +478,16 @@ shared abstract class DocGenerator<IdeComponent>() {
         
         if (imp.native) {
             buf.append("&nbsp;");
+        }*/
+        
+        value mod = imp.\imodule;
+        if (!mod.nameAsString.empty && mod.nameAsString!="default") {
+            //value label = "<span>Depends on&nbsp;``color(buf.string, Colors.annotations)````color("import", Colors.keywords)`` ``buildLink(mod, mod.nameAsString)``"
+            value label = "<span>``imp.export then "Exports" else "Imports"``&nbsp;``buildLink(mod, mod.nameAsString)``"
+                    + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>.</span>";
+            addIconAndText(buffer, Icons.imports, label);
         }
         
-        if (!buf.empty) {
-            value desc = "<tt>``color(buf.string, Colors.annotations)``</tt>";
-            addIconAndText(buffer, Icons.annotations, desc);
-        }
-        value description = "import ``mod.nameAsString`` \"``mod.version``\"";
-        buffer.append("<tt>");
-        addIconAndText(buffer, mod, highlight(description, cmp));
-        buffer.append("</tt>");*/
     }
     
     // see addAdditionalModuleInfo(StringBuilder buffer, Module mod)
