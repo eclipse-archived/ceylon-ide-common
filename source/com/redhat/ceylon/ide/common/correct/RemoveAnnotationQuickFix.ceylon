@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -29,8 +25,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             String desc, Integer offset, TextChange change, Region selection, Data data);
     
     shared void addRemoveAnnotationProposal(Node node, String annotation, Project project, Data data) {
-        value dec = nodes.getReferencedDeclaration(node);
-        if (is Declaration dec) {
+        if (is Declaration dec = nodes.getReferencedDeclaration(node)) {
             addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, project, data);
         }
     }
@@ -38,9 +33,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     shared void addMakeContainerNonfinalProposal(Project project, Node node, Data data) {
         Declaration dec;
         if (is Tree.Declaration node) {
-            value decNode = node;
-            value container = decNode.declarationModel.container;
-            if (is Declaration container) {
+            if (is Declaration container = node.declarationModel.container) {
                 dec = container;
             } else {
                 return;
@@ -61,8 +54,8 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             //TODO: "object" declarations?
             value fdv = FindDeclarationNodeVisitor(dec);
             phasedUnit.compilationUnit.visit(fdv);
-            assert (is Tree.Declaration? decNode = fdv.declarationNode);
-            if (exists decNode) {
+            if (exists decNode = fdv.declarationNode) {
+                assert (is Tree.Declaration decNode);
                 addRemoveAnnotationProposalInternal(annotation, desc, dec,
                     phasedUnit, decNode, data);
             }
@@ -77,11 +70,9 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         value offset = decNode.startIndex;
         for (a in decNode.annotationList.annotations) {
             assert (is Tree.BaseMemberExpression bme = a.primary);
-            Tree.Identifier? id = bme.identifier;
-            if (exists id) {
+            if (exists id = bme.identifier) {
                 if (id.text.equals(annotation)) {
-                    Tree.PositionalArgumentList? pal = a.positionalArgumentList;
-                    value args = (pal?.token exists || a.namedArgumentList exists);
+                    value args = a.positionalArgumentList?.token exists || a.namedArgumentList exists;
                     addEditToChange(change, newDeleteEdit(a.startIndex.intValue(),
                         a.endIndex.intValue() - a.startIndex.intValue()
                                  + (if (args) then 0 else 1))); //get rid of the trailing space
@@ -111,8 +102,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         assert(exists _name = name);
         
         variable value descr = "Make " + _name + "non-" + annotation;
-        value container = dec.container;
-        if (is ClassOrInterface container) {
+        if (is ClassOrInterface container = dec.container) {
             value td = container;
             descr += " in '"+td.name+"'";
         }
@@ -123,8 +113,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     
     shared void addRemoveAnnotationDecProposal(String annotation, Project project, Node node, Data data) {
         if (is Tree.Declaration node) {
-            value decNode = node;
-            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, decNode.declarationModel, project, data);
+            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, node.declarationModel, project, data);
         }
     }
 }
