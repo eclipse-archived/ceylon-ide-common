@@ -109,7 +109,7 @@ List<Parameter> getParameters(ParameterList pl,
     }
     else {
         List<Parameter> list = ArrayList<Parameter>();
-        for (p in CeylonIterable(ps)) {
+        for (p in ps) {
             if (!p.defaulted || 
                 (namedInvocation && spreadable(p, ps))) {
                 list.add(p);
@@ -268,7 +268,7 @@ String? getPackageName(Tree.CompilationUnit cu)
 
 shared Boolean isInBounds(List<Type> upperBounds, Type t) {
     variable value ok = true;
-    for (ub in CeylonIterable(upperBounds)) {
+    for (ub in upperBounds) {
         if (!t.isSubtypeOf(ub), 
             !(ub.involvesTypeParameters() && 
               t.declaration.inherits(ub.declaration))) {
@@ -283,7 +283,7 @@ shared Boolean isInBounds(List<Type> upperBounds, Type t) {
 shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
     value map = scope.getMatchingDeclarations(unit, "", 0, null);
     if (exists exactName) {
-        for (dwp in CeylonIterable(ArrayList(map.values()))) {
+        for (dwp in ArrayList(map.values())) {
             if (!dwp.unimported, !dwp.\ialias,
                 ModelUtil.isNameMatching(dwp.name, exactName)) {
                 

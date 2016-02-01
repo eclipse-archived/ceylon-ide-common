@@ -68,7 +68,7 @@ shared interface KeywordCompletion<CompletionResult> {
     }
     
     void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionResult> result, String keyword) {
-        value text = conditionKeywords.contains(keyword) then "``keyword`` ()" else keyword;
+        value text = keyword in conditionKeywords then "``keyword`` ()" else keyword;
         result.add(newKeywordCompletionProposal(offset, prefix, keyword, text));
     }
 }

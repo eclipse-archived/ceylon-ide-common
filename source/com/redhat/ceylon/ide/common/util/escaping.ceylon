@@ -24,15 +24,13 @@ shared object escaping {
     shared String concatenateKeywords(String delim)
         => delim.join(keywords);
     
-    shared Boolean isKeyword(String|JString identifier) {
-        return keywords.contains(identifier.string);
-    }
+    shared Boolean isKeyword(String|JString identifier) 
+            => identifier.string in keywords;
     
-    shared String escape(String name) {
-        return if (keywords.contains(name))
-            then "\\i``name``"
-            else name;
-    }
+    shared String escape(String name)
+            => if (name in keywords)
+                then "\\i``name``"
+                else name;
     
     shared String escapePackageName(Package p) {
         value path = p.name;
@@ -70,7 +68,7 @@ shared object escaping {
         else {
             assert (exists c = aliass.first);
             if (is TypedDeclaration d, 
-                    c.uppercase || keywords.contains(aliass)) {
+                    c.uppercase || aliass in keywords) {
                 return "\\i``aliass``";
             }
             else if (is TypeDeclaration d, 

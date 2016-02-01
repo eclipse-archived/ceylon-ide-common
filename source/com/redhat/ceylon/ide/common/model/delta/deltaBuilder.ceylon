@@ -354,7 +354,7 @@ shared class DeltaBuilderFactory(
         }
 
         shared actual Ast.ImportModule[] getChildren(AstNode astNode) {
-            if (changes.contains(structuralChange)) {
+            if (structuralChange in changes) {
                 return [];
             }
             assert(is Ast.ModuleDescriptor astNode);
@@ -641,7 +641,8 @@ shared class DeltaBuilderFactory(
                 return TreeSet {
                     compare = (String x, String y) => x.compare(y);
                     for (annotation in CeylonIterable(annotationList.annotations))
-                    if (! ["shared", "license", "by", "see", "doc"].contains(annotationName(annotation))) nodeSigner.sign(annotation)
+                    if (!annotationName(annotation) in ["shared", "license", "by", "see", "doc"]) 
+                    nodeSigner.sign(annotation)
                 };
             }
 

@@ -333,7 +333,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         shared actual ExternalPhasedUnit? fromStoredType(SoftReference<ExternalPhasedUnit> storedValue, String path) {
             variable ExternalPhasedUnit? result = storedValue.get();
             if (! result exists) {
-                if (!sourceCannotBeResolved.contains(path)) {
+                if (!path in sourceCannotBeResolved) {
                     result = buildPhasedUnitForBinaryUnit(path);
                     if (exists existingResult=result) {
                         phasedUnitPerPath.put(javaString(path), toStoredType(existingResult));
@@ -421,6 +421,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 if (exists project) {
                     for (refProject in project.referencedCeylonProjects) {
                         if (refProject.nativeProjectIsAccessible) {
+                            //TODO: why the conversions to javaStringf() here?? 
                             if (javaString(existingArtifact.absolutePath).contains(javaString(refProject.ceylonModulesOutputDirectory.absolutePath))) {
                                 _originalProject = WeakReference(refProject);
                             }
@@ -623,9 +624,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
         
         // now force-load other modules
-        for (mi in CeylonIterable(imports)) {
-            Module? importedModule = mi.\imodule;
-            if (is AnyIdeModule importedModule, 
+        for (mi in imports) {
+            if (is AnyIdeModule importedModule = mi.\imodule, 
                 alreadyScannedModules.add(importedModule.nameAsString)) {
                 importedModule.loadAllPackages(alreadyScannedModules);
             }
@@ -676,7 +676,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     if (exists p) {
                         value units = HashSet<Unit>();
                         try {
-                            for (d in CeylonIterable(p.members)) {
+                            for (d in p.members) {
                                 value u = d.unit;
                                 if (u.relativePath == relativePathOfUnitToRemove) {
                                     units.add(u);
@@ -688,7 +688,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                         }
                         for (u in units) {
                             try {
-                                for (d in CeylonIterable(u.declarations)) {
+                                for (d in u.declarations) {
                                     suppressWarnings("unusedDeclaration")
                                     value unused = d.members;
                                     // Just to fully load the declaration before 
@@ -955,7 +955,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                     Package? p = getPackageFromRelativePath(relativePathOfUnitToRemove);
                                     if (exists p) {
                                         value units = HashSet<Unit>();
-                                        for (d in CeylonIterable(p.members)) {
+                                        for (d in p.members) {
                                             value u = d.unit;
                                             if (u.relativePath == relativePathOfUnitToRemove) {
                                                 units.add(u);

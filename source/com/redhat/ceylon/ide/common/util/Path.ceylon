@@ -140,7 +140,7 @@ shared final class Path satisfies List<String> {
         }
         // check for an occurrence of // in the path.  Start at index 1 to ensure we skip leading UNC //
         // If there are no // then there is nothing to collapse so just return.
-        if (! path.rest.contains("//")) {
+        if (! "//" in path.rest) {
             return path;
         }
 
@@ -374,7 +374,7 @@ shared final class Path satisfies List<String> {
         variable String? devicePart = null;
         if (_WINDOWS) {
             //convert backslash to forward slash
-            fullPath = if (! fullPath.contains('\\') == -1) then fullPath else fullPath.replace("\\", _SEPARATOR.string);
+            fullPath = if (! '\\' in fullPath) then fullPath else fullPath.replace("\\", _SEPARATOR.string);
             //extract device
             value deviceSeparatorIndex = fullPath.firstOccurrence(_DEVICE_SEPARATOR);
             if (exists deviceSeparatorIndex) {
@@ -400,7 +400,7 @@ shared final class Path satisfies List<String> {
     shared new fromDevice(String device, variable String path) {
         if (_WINDOWS) {
             //convert backslash to forward slash
-            path = if (! path.contains('\\')) then path else path.replace("\\", _SEPARATOR.string);
+            path = if (! '\\' in path) then path else path.replace("\\", _SEPARATOR.string);
         }
         initialize(device, path);
     }
@@ -492,7 +492,7 @@ shared final class Path satisfies List<String> {
         "the string path to concatenate"
         String tail) {
         //optimize addition of a single segment
-        if (!tail.contains(_SEPARATOR) && !tail.contains("\\") && !tail.contains(_DEVICE_SEPARATOR)) {
+        if (!_SEPARATOR in tail && !"\\" in tail && !_DEVICE_SEPARATOR in tail) {
             value tailLength = tail.size;
             if (tailLength < 3) {
                 //some special cases

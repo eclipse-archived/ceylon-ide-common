@@ -177,10 +177,10 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     void addProjectRepo(String repo, Integer index, Boolean isLocalRepo) {
-        if (isLocalRepo && projectLocalRepos.contains(repo)) {
+        if (isLocalRepo && repo in projectLocalRepos) {
             return;
         }
-        if (!isLocalRepo && projectRemoteRepos.contains(repo)) {
+        if (!isLocalRepo && repo in projectRemoteRepos) {
             return;
         }
         if (isLocalRepo) {

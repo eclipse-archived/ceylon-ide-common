@@ -27,7 +27,6 @@ import com.redhat.ceylon.model.typechecker.model {
         \iLANGUAGE_MODULE_NAME
     },
     Package,
-    Parameter,
     ParameterList,
     Type,
     TypeDeclaration,
@@ -76,7 +75,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     """This code replace the following original code of the Eclipse plugin :
 
             Set <Declaration> result = HashSet<Declaration> ();
-            for(pkg in CeylonIterable(mod.allVisiblePackages)){
+            for(pkg in mod.allVisiblePackages){
                 if(!pkg.nameAsString.empty){
                     Declaration? member = pkg.getMember(name, null, false);
                     if(exists member){
@@ -114,7 +113,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             return null;
         }
 
-        for (InsertEdit ie in CeylonIterable(ies)) {
+        for (ie in ies) {
             addEditToChange(importChange, ie);
         }
         String proposedName = declaration.name;
@@ -140,13 +139,13 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         String delim = indents.getDefaultLineDelimiter(doc);
         JList <InsertEdit> result = JArrayList<InsertEdit> ();
         JSet<Package> packages = JHashSet<Package> ();
-        for(Declaration declaration in CeylonIterable(declarations)){
+        for(declaration in declarations){
             packages.add(declaration.unit.\ipackage);
         }
-        for(Package p in CeylonIterable(packages)){
+        for(p in packages){
             StringBuilder text = StringBuilder();
             if(!exists aliases){
-                for(d in CeylonIterable(declarations)){
+                for(d in declarations){
                     if(d.unit.\ipackage == p){
                         text.appendCharacter(',').append(delim)
                                 .append(indents.defaultIndent)
@@ -156,7 +155,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             }
             else {
                 JIterator<JString> aliasIter = aliases.iterator();
-                for(d in CeylonIterable(declarations)){
+                for(d in declarations){
                     String? theAlias = aliasIter.next()?.string;
                     if(d.unit.\ipackage == p){
                         text.append(",").append(delim).append(indents.defaultIndent);
@@ -167,8 +166,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                     }
                 }
             }
-            Tree.Import? importNode = findImportNode(rootNode, p.nameAsString);
-            if(exists importNode) {
+            
+            if(exists importNode = findImportNode(rootNode, p.nameAsString)) {
                 Tree.ImportMemberOrTypeList imtl = importNode.importMemberOrTypeList;
                 if(imtl.importWildcard exists){
                     // Do Nothing
@@ -210,19 +209,19 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
 
         value delim = indents.getDefaultLineDelimiter(doc);
         value result = JArrayList<TextEdit>();
-        value set = JHashSet<Declaration>();
-        for(Declaration d in CeylonIterable(declarations)) {
+        value set = HashSet<Declaration>();
+        for(d in declarations) {
             set.add(d);
         }
         StringBuilder text = StringBuilder();
         if(!exists aliases){
-            for(Declaration d in CeylonIterable(declarations)) {
+            for(d in declarations) {
                 text.append(",").append(delim).append(indents.defaultIndent).append(d.name);
             }
         }
         else {
             JIterator<JString> aliasIter = aliases.iterator();
-            for(Declaration d in CeylonIterable(declarations)) {
+            for(d in declarations) {
                 String? \ialias = aliasIter.next()?.string;
                 text.append(",").append(delim).append(indents.defaultIndent);
                 if(exists \ialias, \ialias != d.name) {
@@ -231,37 +230,33 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 text.append(d.name);
             }
         }
-        Tree.Import? oldImportNode = findImportNode(rootNode, oldPackageName);
-        if(exists oldImportNode) {
-            Tree.ImportMemberOrTypeList? imtl = oldImportNode.importMemberOrTypeList;
-            if (exists imtl) {
-                variable value remaining = 0;
-                for(imt in CeylonIterable(imtl.importMemberOrTypes)){
-                    if(!set.contains(imt.declarationModel)){
-                        remaining++;
-                    }
+        if(exists oldImportNode = findImportNode(rootNode, oldPackageName), 
+            exists imtl = oldImportNode.importMemberOrTypeList) {
+            variable value remaining = 0;
+            for(imt in imtl.importMemberOrTypes){
+                if(!imt.declarationModel in set){
+                    remaining++;
                 }
-                if(remaining == 0){
-                    assert(exists startIndex=oldImportNode.startIndex);
-                    assert(exists endIndex=oldImportNode.endIndex);
-                    value start = startIndex.intValue();
-                    value end = endIndex.intValue();
-                    result.add(newDeleteEdit(start, end - start));
-                }
-                else {
-                    assert(exists startIndex=imtl.startIndex);
-                    assert(exists endIndex=imtl.endIndex);
-                    value start = startIndex.intValue();
-                    value end = endIndex.intValue();
-                    String formattedImport = formatImportMembers(delim, indents.defaultIndent, set, imtl);
-                    result.add(newReplaceEdit(start, end - start, formattedImport));
-                }
+            }
+            if(remaining == 0){
+                assert(exists startIndex=oldImportNode.startIndex);
+                assert(exists endIndex=oldImportNode.endIndex);
+                value start = startIndex.intValue();
+                value end = endIndex.intValue();
+                result.add(newDeleteEdit(start, end - start));
+            }
+            else {
+                assert(exists startIndex=imtl.startIndex);
+                assert(exists endIndex=imtl.endIndex);
+                value start = startIndex.intValue();
+                value end = endIndex.intValue();
+                String formattedImport = formatImportMembers(delim, indents.defaultIndent, set, imtl);
+                result.add(newReplaceEdit(start, end - start, formattedImport));
             }
         }
         value pack = rootNode.unit.\ipackage;
         if(pack.qualifiedNameString != newPackageName) {
-            Tree.Import? importNode = findImportNode(rootNode, newPackageName);
-            if(exists importNode){
+            if(exists importNode = findImportNode(rootNode, newPackageName)){
                 Tree.ImportMemberOrTypeList imtl = importNode.importMemberOrTypeList;
                 if(imtl.importWildcard exists){
                     // Do Nothing
@@ -286,11 +281,10 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         }
         return result;
     }
-    shared String formatImportMembers(String delim, String indent, JSet<Declaration> set, Tree.ImportMemberOrTypeList imtl) {
+    shared String formatImportMembers(String delim, String indent, Set<Declaration> set, Tree.ImportMemberOrTypeList imtl) {
         StringBuilder sb = StringBuilder().append("{").append(delim);
-        for(Tree.ImportMemberOrType imt in CeylonIterable(imtl.importMemberOrTypes)) {
-            Declaration? dec = imt.declarationModel;
-            if(!set.contains(dec)){
+        for(imt in imtl.importMemberOrTypes) {
+            if(exists dec = imt.declarationModel, !dec in set){
                 sb.append(indent);
                 if(exists theAlias = imt.\ialias){
                     String aliasText = theAlias.identifier.text;
@@ -345,7 +339,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
 
     shared Integer applyImportsInternal(TextChange change, JIterable<Declaration> declarations, JIterable<JString>? aliases, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted){
         variable Integer il = 0;
-        for(ie in CeylonIterable(importEdits(cu, declarations, aliases, declarationBeingDeleted, doc))){
+        for(ie in importEdits(cu, declarations, aliases, declarationBeingDeleted, doc)){
             il+=getInsertedText(ie).size;
             addEditToChange(change, ie);
         }
@@ -365,8 +359,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         }
         if(is Functional declaration){
             Functional fun = declaration;
-            for(ParameterList pl in CeylonIterable(fun.parameterLists)) {
-                for(Parameter p in CeylonIterable(pl.parameters)) {
+            for(pl in fun.parameterLists) {
+                for(p in pl.parameters) {
                     importSignatureTypes(p.model, rootNode, declarations);
                 }
             }
@@ -375,7 +369,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
 
     shared void importTypes(JSet<Declaration> declarations, JCollection<Type>? types, Tree.CompilationUnit rootNode){
         if(exists types) {
-            for(type in CeylonIterable(types)){
+            for(type in types){
                 importType(declarations, type, rootNode);
             }
         }
@@ -386,12 +380,12 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 // Do Nothing
             }
             else if(type.union){
-                for(t in CeylonIterable(type.caseTypes)) {
+                for(t in type.caseTypes) {
                     importType(declarations, t, rootNode);
                 }
             }
             else if(type.intersection){
-                for(t in CeylonIterable(type.satisfiedTypes)) {
+                for(t in type.satisfiedTypes) {
                     importType(declarations, t, rootNode);
                 }
             }
@@ -400,7 +394,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 TypeDeclaration td = type.declaration;
                 if(type.classOrInterface && td.toplevel){
                     importDeclaration(declarations, td, rootNode);
-                    for(Type arg in CeylonIterable(type.typeArgumentList)){
+                    for(arg in type.typeArgumentList){
                         importType(declarations, arg, rootNode);
                     }
                 }
@@ -424,7 +418,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     }
 
     shared Boolean isImported(Declaration declaration, Tree.CompilationUnit rootNode) {
-        for(i in CeylonIterable(rootNode.unit.imports)) {
+        for(i in rootNode.unit.imports) {
             if(exists abstraction = nodes.getAbstraction(declaration), i.declaration == abstraction) {
                 return true;
             }
@@ -437,7 +431,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             Functional fun = declaration;
             JList<ParameterList> pls = fun.parameterLists;
             if(!pls.empty) {
-                for(p in CeylonIterable(pls.get(0).parameters)) {
+                for(p in pls.get(0).parameters) {
                     FunctionOrValue pm = p.model;
                     importParameterTypes(pm, cu, decs);
                 }
@@ -447,8 +441,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
 
     shared void importParameterTypes(Declaration dec, Tree.CompilationUnit cu, JHashSet<Declaration> decs) {
         if(is Function dec){
-            for(ppl in CeylonIterable(dec.parameterLists)) {
-                for(pp in CeylonIterable(ppl.parameters)){
+            for(ppl in dec.parameterLists) {
+                for(pp in ppl.parameters){
                     importSignatureTypes(pp.model, cu, decs);
                 }
             }

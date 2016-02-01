@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -9,6 +5,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.completion {
     overloads,
     getRefinementTextFor
+}
+import com.redhat.ceylon.ide.common.util {
+    FindBodyContainerVisitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
@@ -18,9 +17,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     HashSet
-}
-import com.redhat.ceylon.ide.common.util {
-    FindBodyContainerVisitor
 }
 
 shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
@@ -128,7 +124,7 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
         //      already refined
         value proposals = ci.getMatchingMemberDeclarations(unit, ci, "", 0).values();
         
-        for (dwp in CeylonIterable(proposals)) {
+        for (dwp in proposals) {
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
                 try {
@@ -142,13 +138,12 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
                 }
             }
         }
-        for (superType in CeylonIterable(ci.supertypeDeclarations)) {
-            for (m in CeylonIterable(superType.members)) {
+        for (superType in ci.supertypeDeclarations) {
+            for (m in superType.members) {
                 try {
                     if (exists name = m.name, m.shared) {
-                        Declaration? r = ci.getMember(m.name, null, false);
                         value doesntRefine =
-                                if (exists r)
+                                if (exists r = ci.getMember(m.name, null, false))
                                 then !r.refines(m) && !r.container.equals(ci)
                                 else true;
                         

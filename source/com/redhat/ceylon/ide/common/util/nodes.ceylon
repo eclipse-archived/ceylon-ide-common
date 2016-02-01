@@ -3,7 +3,6 @@ import ceylon.collection {
     MutableSet
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaString,
     createJavaStringArray
 }
@@ -17,6 +16,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     CustomTree,
     TreeUtil
+}
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit,
+    CeylonBinaryUnit,
+    BaseIdeModule
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -47,11 +51,6 @@ import java.util.regex {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonUnit,
-    CeylonBinaryUnit,
-    BaseIdeModule
 }
 
 shared object nodes {
@@ -456,7 +455,7 @@ shared object nodes {
                                 if (exists externalPhasedUnit) {
                                     value sourceFile = externalPhasedUnit.unit;
                                     
-                                    for (sourceDecl in CeylonIterable(sourceFile.declarations)) {
+                                    for (sourceDecl in sourceFile.declarations) {
                                         if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
                                             model = sourceDecl;
                                             foundTheCeylonDeclaration = true;
@@ -472,7 +471,7 @@ shared object nodes {
                             if (exists headerDeclaration 
                                     = ModelUtil.getNativeHeader(decl.container, decl.name)) {
                                 if (exists overloads = headerDeclaration.overloads) {
-                                    for (overload in CeylonIterable(overloads)) {
+                                    for (overload in overloads) {
                                         if (overload.nativeBackends.header()) {
                                             model = overload;
                                             foundTheCeylonDeclaration = true;
@@ -495,10 +494,10 @@ shared object nodes {
 
 
     shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
-        for (pl in CeylonIterable(fa.parameterLists)) {
+        for (pl in fa.parameterLists) {
             result.append("(");
             variable Boolean first = true;
-            for (p in CeylonIterable(pl.parameters)) {
+            for (p in pl.parameters) {
                 if (first) {
                     first = false;
                 } else {

@@ -199,7 +199,7 @@ shared interface MemberNameCompletion<IdeComponent,CompletionResult,Document>
     
     shared void addCompoundTypeProposal(JList<out Tree.Type> ets, MutableSet<String> proposals, String join) {
         value sb = StringBuilder();
-        for (t in CeylonIterable(ets)) {
+        for (t in ets) {
             value set = HashSet<String>();
             addProposalsForType(t, set);
             if (!is Finished text = set.iterator().next()) {

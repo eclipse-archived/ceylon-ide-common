@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -206,7 +202,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             //if (rds.empty) {
             //    rd = d;
             //} else {
-            //    for (r in CeylonIterable(rds)) {
+            //    for (r in rds) {
             //        if (!r.default) {
             //            rd = r;
             //            break;
@@ -323,9 +319,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         } else {
             return null;
         }
-        value annotationList = getAnnotationList(node);
-        if (exists annotationList) {
-            for (ann in CeylonIterable(annotationList.annotations)) {
+        if (exists annotationList = getAnnotationList(node)) {
+            for (ann in annotationList.annotations) {
                 if (exists id = getAnnotationIdentifier(ann), id == toRemove) {
                     value start = ann.startIndex.intValue();
                     value length = ann.endIndex.intValue() - start;
@@ -340,9 +335,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         value newAnnotationName = getAnnotationWithoutParam(newAnnotation);
         variable Tree.Annotation? prevAnnotation = null;
         variable Tree.Annotation? nextAnnotation = null;
-        value annotationList = getAnnotationList(node);
-        if (exists annotationList) {
-            for (annotation in CeylonIterable(annotationList.annotations)) {
+        if (exists annotationList = getAnnotationList(node)) {
+            for (annotation in annotationList.annotations) {
                 if (exists id = getAnnotationIdentifier(annotation),
                     isAnnotationAfter(newAnnotationName, id)) {
                     prevAnnotation = annotation;
@@ -446,9 +440,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         return index1 >= index2;
     }
     
-    Boolean isAnnotationOnSeparateLine(String annotation) {
-        return annotationsOnSeparateLine.contains(annotation);
-    }
+    Boolean isAnnotationOnSeparateLine(String annotation) 
+            => annotation in annotationsOnSeparateLine;
     
     shared void addMakeActualDecProposal(Project project, Node node, Data data) {
         value dec = annotatedNode(node);
@@ -461,18 +454,16 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         if (is Tree.ClassOrInterface node) {
             value cin = node;
             value ci = cin.declarationModel;
-            Type? extendedType = ci.extendedType;
-            if (exists extendedType) {
+            if (exists extendedType = ci.extendedType) {
                 addMakeSharedProposal2(project, extendedType.declaration, data);
-                for (typeArgument in CeylonIterable(extendedType.typeArgumentList)) {
+                for (typeArgument in extendedType.typeArgumentList) {
                     addMakeSharedProposal2(project, typeArgument.declaration, data);
                 }
             }
-            JList<Type>? satisfiedTypes = ci.satisfiedTypes;
-            if (exists satisfiedTypes) {
-                for (satisfiedType in CeylonIterable(satisfiedTypes)) {
+            if (exists satisfiedTypes = ci.satisfiedTypes) {
+                for (satisfiedType in satisfiedTypes) {
                     addMakeSharedProposal2(project, satisfiedType.declaration, data);
-                    for (typeArgument in CeylonIterable(satisfiedType.typeArgumentList)) {
+                    for (typeArgument in satisfiedType.typeArgumentList) {
                         addMakeSharedProposal2(project, typeArgument.declaration, data);
                     }
                 }
@@ -538,7 +529,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
         addMakeSharedProposal2(project, dec, data);
         if (exists tal = typeArgumentList) {
-            for (typeArgument in CeylonIterable(tal)) {
+            for (typeArgument in tal) {
                 addMakeSharedProposal2(project, typeArgument.declaration, data);
             }
         }

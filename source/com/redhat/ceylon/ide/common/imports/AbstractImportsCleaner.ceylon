@@ -91,7 +91,7 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused, List<Declaration> proposed, IDocument doc) {
         value packages = naturalOrderTreeMap<String,MutableList<Tree.Import>>({});
         if (exists til) {
-            for (i in CeylonIterable(til.imports)) {
+            for (i in til.imports) {
                 value pn = packageName(i);
                 if (exists pn) {
                     value imps = packages.get(pn)
@@ -223,11 +223,11 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
         if (imt.importMemberOrTypeList exists) {
             builder.append(" {");
             variable value found = false;
-            for (nimt in CeylonIterable(imt.importMemberOrTypeList.importMemberOrTypes)) {
+            for (nimt in imt.importMemberOrTypeList.importMemberOrTypes) {
                 if (exists d = nimt.declarationModel,
                     isErrorFree(nimt)) {
                     
-                    if (!unused.contains(d)) {
+                    if (!d in unused) {
                         found = true;
                         builder.append(delim).append(indent).append(indent);
                         value \ialias = nimt.importModel.\ialias;
@@ -260,7 +260,7 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     }
     
     Boolean hasRealErrors(Node node) {
-        for (m in CeylonIterable(node.errors)) {
+        for (m in node.errors) {
             if (is AnalysisError m) {
                 return true;
             }
@@ -275,19 +275,19 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
         
         value list = ArrayList<Tree.ImportMemberOrType>();
         for (ti in imports) {
-            for (imt in CeylonIterable(ti.importMemberOrTypeList.importMemberOrTypes)) {
+            for (imt in ti.importMemberOrTypeList.importMemberOrTypes) {
                 if (exists dm = imt.declarationModel,
                     isErrorFree(imt)) {
                     
                     Tree.ImportMemberOrTypeList? nimtl = imt.importMemberOrTypeList;
                     
-                    if (unused.contains(dm)) {
+                    if (dm in unused) {
                         if (exists nimtl) {
-                            for (nimt in CeylonIterable(nimtl.importMemberOrTypes)) {
+                            for (nimt in nimtl.importMemberOrTypes) {
                                 if (exists ndm = nimt.declarationModel,
                                     isErrorFree(nimt)) {
                                     
-                                    if (!unused.contains(ndm)) {
+                                    if (!ndm in unused) {
                                         list.add(imt);
                                         break;
                                     }
@@ -342,7 +342,7 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     
     Boolean isImportedWithAlias(Declaration d, List<Tree.Import> importList) {
         for (i in importList) {
-            for (imt in CeylonIterable(i.importMemberOrTypeList.importMemberOrTypes)) {
+            for (imt in i.importMemberOrTypeList.importMemberOrTypes) {
                 value name = imt.identifier.text;
                 if (d.name.equals(name), imt.\ialias exists) {
                     return true;

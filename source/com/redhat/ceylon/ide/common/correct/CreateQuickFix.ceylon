@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -11,6 +7,9 @@ import com.redhat.ceylon.compiler.typechecker.parser {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -25,9 +24,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Interface,
     Class
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 // TODO extends InitializerProposal
@@ -81,7 +77,7 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
                 statement.endIndex.intValue() <= body.endIndex.intValue()) {
                 
                 st = statements.get(0);
-                for (s in CeylonIterable(statements)) {
+                for (s in statements) {
                     if (statement.startIndex.intValue() >= s.startIndex.intValue(),
                         statement.endIndex.intValue() <= s.endIndex.intValue()) {
                         

@@ -1,25 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Type,
-    TypeParameter,
-    Declaration,
-    ModelUtil,
-    TypeDeclaration
-}
-import java.util {
-    LinkedHashMap,
-    ArrayList,
-    HashSet,
-    Set
-}
-import com.redhat.ceylon.ide.common.util {
-    Indents
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
 import com.redhat.ceylon.ide.common.completion {
     IdeCompletionManager,
     getRefinementTextFor,
@@ -27,6 +8,23 @@ import com.redhat.ceylon.ide.common.completion {
 }
 import com.redhat.ceylon.ide.common.doc {
     Icons
+}
+import com.redhat.ceylon.ide.common.util {
+    Indents
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Type,
+    TypeParameter,
+    Declaration,
+    ModelUtil,
+    TypeDeclaration
+}
+
+import java.util {
+    LinkedHashMap,
+    ArrayList,
+    HashSet,
+    Set
 }
 
 shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
@@ -126,7 +124,7 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
         value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
-        for (dwp in CeylonIterable(members)) {
+        for (dwp in members) {
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
                 if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
@@ -135,8 +133,8 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
                 }
             }
         }
-        for (superType in CeylonIterable(td.supertypeDeclarations)) {
-            for (m in CeylonIterable(superType.members)) {
+        for (superType in td.supertypeDeclarations) {
+            for (m in superType.members) {
                 if (m.shared) {
                     Declaration? r = td.getMember(m.name, null, false);
                     if (!(r?.refines(m) else false),
@@ -155,7 +153,7 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
         value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
-        for (dwp in CeylonIterable(members)) {
+        for (dwp in members) {
             value dec = dwp.declaration;
             if (ambiguousNames.add(dec.name)) {
                 for (d in overloads(dec)) {
@@ -165,8 +163,8 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
                 }
             }
         }
-        for (superType in CeylonIterable(td.supertypeDeclarations)) {
-            for (m in CeylonIterable(superType.members)) {
+        for (superType in td.supertypeDeclarations) {
+            for (m in superType.members) {
                 if (m.shared) {
                     Declaration? r = td.getMember(m.name, null, false);
                     if (!(r?.refines(m) else false),
@@ -211,7 +209,7 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
             } else if (returnType.\iinterface) {
                 return false;
             } else if (returnType.intersection) {
-                for (st in CeylonIterable(returnType.satisfiedTypes)) {
+                for (st in returnType.satisfiedTypes) {
                     if (st.\iclass) {
                         return rtd.inherits(bd);
                     }
@@ -234,7 +232,7 @@ String? supertypeDeclaration(Type? returnType) {
         } else if (returnType.intersection) {
             variable value extendsClause = "";
             value satisfiesClause = StringBuilder();
-            for (st in CeylonIterable(returnType.satisfiedTypes)) {
+            for (st in returnType.satisfiedTypes) {
                 if (st.\iclass) {
                     extendsClause = " extends " + st.asString() + "()"; //TODO: supertype arguments!
                 } else if (st.\iinterface) {
@@ -266,7 +264,7 @@ Boolean isValidSupertype(Type? returnType) {
             value cd = rtd.unit.callableDeclaration;
             return !rtd.equals(cd);
         } else if (returnType.intersection) {
-            for (st in CeylonIterable(returnType.satisfiedTypes)) {
+            for (st in returnType.satisfiedTypes) {
                 if (!isValidSupertype(st)) {
                     return false;
                 }

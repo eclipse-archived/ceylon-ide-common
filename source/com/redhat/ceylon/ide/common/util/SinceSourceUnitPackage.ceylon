@@ -1,3 +1,6 @@
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit
+}
 import com.redhat.ceylon.model.typechecker.model {
     Package,
     Module,
@@ -11,20 +14,15 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     Cancellable
 }
-import java.util {
-    JList=List,
-    JLinkedList=LinkedList,
-    JMap=Map
-}
+
 import java.lang {
     JString=String,
     JIterable=Iterable
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonUnit
-}
-import ceylon.interop.java {
-    CeylonIterable
+import java.util {
+    JList=List,
+    JLinkedList=LinkedList,
+    JMap=Map
 }
 
 shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypecheck)
@@ -72,7 +70,7 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     
     shared actual JList<Declaration> members {
         JLinkedList<Declaration> ret = JLinkedList<Declaration>();
-        for (Declaration modelDeclaration in CeylonIterable(modelPackage.members)) {
+        for (Declaration modelDeclaration in modelPackage.members) {
             if (! mustSearchDeclarationInSourceFile(modelDeclaration)) {
                 ret.add(modelDeclaration);
             }
@@ -83,12 +81,12 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     
     shared actual JIterable<Unit> units {
         JLinkedList<Unit> units = JLinkedList<Unit>();
-        for (Unit modelUnit in CeylonIterable(modelPackage.units)) {
+        for (modelUnit in modelPackage.units) {
             if (! mustSearchUnitInSourceFile(modelUnit)) {
                 units.add(modelUnit);
             }
         }
-        for (Unit u in CeylonIterable(super.units)) {
+        for (u in super.units) {
             units.add(u);
         }
         return units;

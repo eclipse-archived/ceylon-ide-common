@@ -46,7 +46,7 @@ shared Integer findInLines([String*]lines,
         => calculateContentOffset {
     lines => lines;
     function findLine(Integer->String l)
-            => l.item.contains(searchedText);
+            => searchedText in l.item;
     function findColumn(String line)
             => if (exists textStart = line.firstInclusion(searchedText))
     then textStart + indexInText

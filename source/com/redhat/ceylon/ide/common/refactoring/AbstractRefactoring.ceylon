@@ -47,7 +47,7 @@ shared interface AbstractRefactoring<RefactoringData> satisfies Refactoring & No
 
     shared default Integer countDeclarationOccurrences() {
         variable Integer count = 0;
-        for (pu in CeylonIterable(getAllUnits())) {
+        for (pu in getAllUnits()) {
             if (searchInFile(pu)) {
                 count += countReferences(pu.compilationUnit);
             }

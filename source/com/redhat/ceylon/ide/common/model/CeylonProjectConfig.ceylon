@@ -230,7 +230,7 @@ shared class CeylonProjectConfig(project) {
         } else if (projectSuppressWarningsEnum.containsAll(EnumSet<Warning>.allOf(javaClass<Warning>()))) {
             ws = [""];
         } else {
-            ws = { for (w in CeylonIterable(projectSuppressWarningsEnum)) w.name() };
+            ws = CeylonIterable(projectSuppressWarningsEnum).map((w) => w.name());
         }
         transientSuppressWarnings = ws;
         isSuppressWarningsChanged = true;

@@ -4,7 +4,6 @@ import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -94,14 +93,14 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
                 
                 value supportsLinkedModeInArguments = cpc.options.linkedModeArguments;
                 
-                for (mod in CeylonIterable(results.results)) {
+                for (mod in results.results) {
                     value name = mod.name;
                     if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
                         if (supportsLinkedModeInArguments) {
                             result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, mod.lastVersion.version),
                                 mod, withBody, mod.lastVersion, name, node, cpc));
                         } else {
-                            for (version in CeylonIterable(mod.versions.descendingSet())) {
+                            for (version in mod.versions.descendingSet()) {
                                 result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, version.version),
                                     mod, withBody, version, name, node, cpc));
                             }
@@ -120,7 +119,7 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
         if (!md.empty) {
             Tree.ImportModuleList? iml = md.get(0).importModuleList;
             if (exists iml) {
-                for (im in CeylonIterable(iml.importModules)) {
+                for (im in iml.importModules) {
                     value path = nodes.getImportedModuleName(im);
                     if (exists path, path.equals(mod)) {
                         return true;
@@ -190,7 +189,7 @@ shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,
             value selection = getSelectionInternal(document);
             value proposals = ArrayList<CompletionResult>();
 
-            for (d in CeylonIterable(mod.versions)) {
+            for (d in mod.versions) {
                 proposals.add(newModuleProposal(d, selection, linkedMode));
             }
             

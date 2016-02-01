@@ -422,7 +422,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 || type == CeylonLexer.\iUIDENTIFIER 
                 || type == CeylonLexer.\iAIDENTIFIER 
                 || type == CeylonLexer.\iPIDENTIFIER 
-                || escaping.keywords.contains(token.text.string);
+                || escaping.isKeyword(token.text);
     }
 
     // see CeylonCompletionProcessor.isCommentOrCodeStringLiteral()
@@ -601,7 +601,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 = HashMap<JString,DeclarationWithProximity>();
 
         CeylonIterable(candidates.entrySet())
-                .each(void (candidate) {
+                .each((candidate) {
             if (is Function declaration
                     = candidate.\ivalue.declaration,
                 !declaration.annotation,
@@ -719,7 +719,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
 
         if (is Tree.TypeConstraint node) {
-            for (dwp in CeylonIterable(sortedProposals)) {
+            for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
                 if (isTypeParameterOfCurrentDeclaration(node, dec)) {
                     addReferenceProposal(cu, offset, prefix, cmp,
@@ -772,7 +772,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
             value isPackageOrModuleDescriptor = isModuleDescriptor(cu) || isPackageDescriptor(cu);
 
-            for (dwp in CeylonIterable(sortedProposals)) {
+            for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
 
                 if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit) {
@@ -871,7 +871,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             
             assert(is Tree.QualifiedMemberOrTypeExpression node);
             
-            for (dwp in CeylonIterable(sortedFunctionProposals)) {
+            for (dwp in sortedFunctionProposals) {
                 value primary = node.primary;
                 addFunctionProposal(offset, cmp, primary, result, dwp.declaration, this);
             }
@@ -937,7 +937,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         if (is Type typeOrScope) {
             value superType = typeOrScope;
             if (superType.intersection) {
-                for (pt in CeylonIterable(superType.satisfiedTypes)) {
+                for (pt in superType.satisfiedTypes) {
                     Reference? result = getRefinedProducedReference(pt, d);
                     if (exists result) {
                         return result;
@@ -956,7 +956,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             Type? outerType = typeOrScope.getDeclaringType(d);
             JList<Type> params = JArrayList<Type>();
             if (is Generic d) {
-                CeylonIterable(d.typeParameters).each(void (tp) => params.add(tp.type));
+                CeylonIterable(d.typeParameters).each((tp) => params.add(tp.type));
             }
             return d.appliedReference(outerType, params);
         }
@@ -965,7 +965,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     Reference refinedProducedReference(Type outerType, Declaration d) {
         JList<Type> params = JArrayList<Type>();
         if (is Generic d) {
-            for (tp in CeylonIterable(d.typeParameters)) {
+            for (tp in d.typeParameters) {
                 params.add(tp.type);
             }
         }
@@ -998,7 +998,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
         value addParameterTypesInCompletions = cpc.options.parameterTypesInCompletion;
         
-        for (dwp in CeylonIterable(set)) {
+        for (dwp in set) {
             value dec = dwp.declaration;
             if (!filter, is FunctionOrValue m = dec) {
                 for (d in overloads(dec)) {
@@ -1242,7 +1242,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {
         if (exists requiredType, requiredType.union) {
-            for (td in CeylonIterable(requiredType.caseTypes)) {
+            for (td in requiredType.caseTypes) {
                 if (isValueCaseOfSwitch(td, dec)) {
                     return true;
                 }
@@ -1266,7 +1266,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean isTypeCaseOfSwitch(Type? requiredType, Declaration dec) {
         if (exists requiredType, requiredType.union) {
-            for (Type td in CeylonIterable(requiredType.caseTypes)) {
+            for (td in requiredType.caseTypes) {
                 if (isTypeCaseOfSwitch(td, dec)) {
                     return true;
                 }
@@ -1335,7 +1335,7 @@ shared class FindScopeVisitor(Node node) extends Visitor() {
         super.visit(that);
 
         if (exists al = that.annotationList) {
-            for (ann in CeylonIterable(al.annotations)) {
+            for (ann in al.annotations) {
                 if (ann.primary.startIndex==node.startIndex) {
                     myScope = that.declarationModel.scope;
                 }

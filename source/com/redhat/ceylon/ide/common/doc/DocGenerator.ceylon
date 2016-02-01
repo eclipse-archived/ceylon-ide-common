@@ -538,7 +538,7 @@ shared interface DocGenerator<Document> {
     void addPackageMembers(Package pack, StringBuilder buffer) {
         variable Boolean first = true;
         
-        for (dec in CeylonIterable(pack.members)) {
+        for (dec in pack.members) {
             if (!exists n = dec.name) {
                 continue;
             }
@@ -563,7 +563,7 @@ shared interface DocGenerator<Document> {
     }
 
     void addModuleDependencies(Module mod, StringBuilder builder, DocGenerator<Document>.IdeComponent cmp) {
-        for (imp in CeylonIterable(mod.imports)) {
+        for (imp in mod.imports) {
             addImportDescription(imp, builder, cmp);
         }
     }
@@ -682,7 +682,7 @@ shared interface DocGenerator<Document> {
     void addModuleMembers(Module mod, StringBuilder buffer) {
         variable Boolean first = true;
         
-        for (pack in CeylonIterable(mod.packages)) {
+        for (pack in mod.packages) {
             if (pack.shared) {
                 if (first) {
                     buffer.append("<p>Contains:&nbsp;");
@@ -866,7 +866,7 @@ shared interface DocGenerator<Document> {
             then decl.typeParameters
             else Collections.emptyList<TypeParameter>();
 
-        for (tp in CeylonIterable(typeParameters)) {
+        for (tp in typeParameters) {
             value bounds = StringBuilder();
             CeylonIterable(tp.satisfiedTypes).fold(true)((isFirst, st) {
                 bounds.append(if (isFirst) then " satisfies " else " &amp; ");
@@ -897,7 +897,7 @@ shared interface DocGenerator<Document> {
                 return Collections.emptyList<Type>();
             } else {
                 value list = ArrayList<Type>();
-                for (p in CeylonIterable(typeParameters)) {
+                for (p in typeParameters) {
                     list.add(p.type);
                 }
                 
@@ -1188,7 +1188,7 @@ shared interface DocGenerator<Document> {
                             annotatedMirror.getAnnotation(LanguageAnnotation.\iTHROWS.annotationType),
                 exists thrownExceptions = 
                             unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
-                for (thrown in CeylonIterable(thrownExceptions)) {
+                for (thrown in thrownExceptions) {
                     if (exists typeArg = thrown.getValue("type")?.string,
                         exists dec = parseAnnotationType(typeArg, cmp.ceylonProject)) {
                         String textArg = if (is String t=thrown.getValue("when")?.string) then t else "";
@@ -1292,7 +1292,7 @@ shared interface DocGenerator<Document> {
             exists annotation = findAnnotation(annotationList, name),
             exists argList = annotation.positionalArgumentList) {
             
-            for (arg in CeylonIterable(argList.positionalArguments)) {
+            for (arg in argList.positionalArguments) {
                 if (is Tree.ListedArgument arg,
                     is Tree.MetaLiteral ml = arg.expression.term,
                     exists dec = ml.declaration) {
@@ -1310,9 +1310,9 @@ shared interface DocGenerator<Document> {
                 annotatedMirror.getAnnotation(LanguageAnnotation.\iSEE.annotationType),
             exists seeAnnotations = 
                     unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
-                for (see in CeylonIterable(seeAnnotations)) {
+                for (see in seeAnnotations) {
                     if (exists programElements = unsafeCast<JList<JString>?>(see.getValue("programElements"))) {
-                        for (pe in CeylonIterable(programElements)) {
+                        for (pe in programElements) {
                             if (exists dec = parseAnnotationType(pe.string, cmp.ceylonProject)) {
                                 addSeeText(dec, sb);
                             }
@@ -1392,11 +1392,11 @@ shared interface DocGenerator<Document> {
         if (is Functional dec,
             exists pr = _pr else appliedReference(dec, node)) {
             
-            for (pl in CeylonIterable(dec.parameterLists)) {
+            for (pl in dec.parameterLists) {
                 if (!pl.parameters.empty) {
                     buffer.append("<div class='paragraph'>");
                     
-                    for (p in CeylonIterable(pl.parameters)) {
+                    for (p in pl.parameters) {
                         if (exists model = p.model) {
                             value param = StringBuilder();
                             param.append("Accepts&nbsp;");
@@ -1462,12 +1462,12 @@ shared interface DocGenerator<Document> {
         StringBuilder result) {
         
         if (is Functional dec, exists plists = dec.parameterLists) {
-            for (params in CeylonIterable(plists)) {
+            for (params in plists) {
                 if (params.parameters.empty) {
                     result.append("()");
                 } else {
                     result.append("(");
-                    for (p in CeylonIterable(params.parameters)) {
+                    for (p in params.parameters) {
                         appendParameter(result, pr, p, unit);
                         result.append(", ");
                     }
@@ -1483,7 +1483,7 @@ shared interface DocGenerator<Document> {
         if (is ClassOrInterface dec) {
             variable Boolean first = true;
             
-            for (mem in CeylonIterable(dec.members)) {
+            for (mem in dec.members) {
                 if (ModelUtil.isResolvable(mem), mem.shared,
                     !mem.overloaded || mem.abstraction) {
                     

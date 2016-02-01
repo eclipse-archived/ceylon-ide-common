@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -121,7 +117,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
             result.append("<");
             value len = tpl.typeParameterDeclarations.size();
             variable value i = 0;
-            for (p in CeylonIterable(tpl.typeParameterDeclarations)) {
+            for (p in tpl.typeParameterDeclarations) {
                 result.append(p.identifier.text);
                 if (++i < len) {
                     result.append(", ");
@@ -141,7 +137,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
             result.append("(");
             value len = pl.parameters.size();
             variable value i = 0;
-            for (Tree.Parameter? p in CeylonIterable(pl.parameters)) {
+            for (Tree.Parameter? p in pl.parameters) {
                 if (exists p) {
                     if (is Tree.ParameterDeclaration p) {
                         value td = (p).typedDeclaration;
@@ -168,7 +164,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
             result.append("(");
             value len = pl.parameters.size();
             variable value i = 0;
-            for (Tree.Parameter? p in CeylonIterable(pl.parameters)) {
+            for (Tree.Parameter? p in pl.parameters) {
                 if (exists p) {
                     Tree.Identifier id;
                     if (is Tree.InitializerParameter p) {

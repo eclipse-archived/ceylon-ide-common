@@ -2,9 +2,6 @@ import ceylon.collection {
     MutableList,
     ArrayList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -44,8 +41,8 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
         }
         
         value possibles = ArrayList<Declaration>();
-        value \imodule = cu.unit.\ipackage.\imodule;
-        for (p in CeylonIterable(\imodule.allVisiblePackages)) {
+        value mod = cu.unit.\ipackage.\imodule;
+        for (p in mod.allVisiblePackages) {
             if (exists d = p.getMember(name, null, false),  //TODO: pass sig
                 d.toplevel, d.shared, !d.anonymous) {
                 

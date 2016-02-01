@@ -6,14 +6,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
 import com.redhat.ceylon.ide.common.util {
     nodes
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration
 }
 
 class DetectUnusedImportsVisitor(MutableList<Declaration> result)
@@ -21,13 +18,13 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
     
     shared actual void visit(Tree.Import that) {
         super.visit(that);
-        for (i in CeylonIterable(that.importMemberOrTypeList.importMemberOrTypes)) {
+        for (i in that.importMemberOrTypeList.importMemberOrTypes) {
             if (i.declarationModel exists) {
                 result.add(i.declarationModel);
             }
             
             if (i.importMemberOrTypeList exists) {
-                for (j in CeylonIterable(i.importMemberOrTypeList.importMemberOrTypes)) {
+                for (j in i.importMemberOrTypeList.importMemberOrTypes) {
                     if (j.declarationModel exists) {
                         result.add(j.declarationModel);
                     }

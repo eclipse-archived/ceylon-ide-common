@@ -112,14 +112,13 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     shared actual String? charset => null;
 }
 
-ZipEntryVirtualFile? searchFileChildren(JList<BaseResourceVirtualFile> theChildren, String fileName) {
-    return CeylonIterable(theChildren).map {
-        collecting(VirtualFile vf) 
-                => if (is ZipEntryVirtualFile vf, vf.name == fileName)
-        then vf
-        else null;
-    }.first;
-}
+ZipEntryVirtualFile? searchFileChildren(JList<BaseResourceVirtualFile> theChildren, String fileName) 
+        => CeylonIterable(theChildren).map {
+            collecting(VirtualFile vf)
+                    => if (is ZipEntryVirtualFile vf, vf.name == fileName)
+            then vf
+            else null;
+        }.first;
 
 
 

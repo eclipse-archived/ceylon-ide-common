@@ -29,6 +29,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.compiler.typechecker.util {
     ModuleManagerFactory
 }
+import com.redhat.ceylon.ide.common.model.parsing {
+    CeylonSourceParser
+}
 import com.redhat.ceylon.ide.common.typechecker {
     ExternalPhasedUnit,
     CrossProjectPhasedUnit,
@@ -68,9 +71,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.model.parsing {
-    CeylonSourceParser
 }
 
 shared abstract class ExternalModulePhasedUnits(Context context, ModuleManagerFactory moduleManagerFactory) 
@@ -256,7 +256,7 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 					assert(is ZipFileVirtualFile zipFileVirtualFile = srcDir);
 					String archiveName = zipFileVirtualFile.path;
 					for (refProject in p.referencedCeylonProjects) {
-						if (archiveName.contains(refProject.ceylonModulesOutputDirectory.absolutePath)) {
+						if (refProject.ceylonModulesOutputDirectory.absolutePath in archiveName) {
 							referencedProject = refProject;
 							break;
 						}

@@ -2,9 +2,6 @@ import ceylon.collection {
     MutableList,
     ArrayList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -128,13 +125,13 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                 //add qualified member proposals
                 value members = type.declaration
                         .getMatchingMemberDeclarations(unit, scope, "", 0).values();
-                for (ndwp in CeylonIterable(members)) {
+                for (ndwp in members) {
                     value m = ndwp.declaration;
                     if (m is FunctionOrValue || m is Class,
                         !ModelUtil.isConstructor(m)) {
                         
                         if (m.abstraction) {
-                            for (o in CeylonIterable(m.overloads)) {
+                            for (o in m.overloads) {
                                 addSecondLevelProposalInternal(offset, prefix,
                                     controller, result, dec, scope, requiredType,
                                     ol, unit, type, ndwp, o);
@@ -151,7 +148,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                 //add constructor proposals
                 value members = type.declaration.members;
                 
-                for (m in CeylonIterable(members)) {
+                for (m in members) {
                     if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
                         addSecondLevelProposalInternal(offset, prefix, controller,
                             result, dec, scope, requiredType, ol, unit, type, null, m);
@@ -556,7 +553,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
 
         value unit = cu.unit;
         value exactName = param.name;
-        value proposals = CeylonIterable(getSortedProposedValues(scope, unit, exactName));
+        value proposals = getSortedProposedValues(scope, unit, exactName);
         
         //very special case for print()
         value dname = declaration.qualifiedNameString;
@@ -629,7 +626,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                     value members = d.typeDeclaration
                             .getMatchingMemberDeclarations(unit, scope, "", 0)
                             .values();
-                    for (mwp in CeylonIterable(members)) {
+                    for (mwp in members) {
                         addValueArgumentProposal(p, loc, props, index, last,
                             type, unit, mwp, dwp, cpc);
                     }
@@ -669,7 +666,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                         qdec, loc, index, false, op));
                 }
 
-                for (m in CeylonIterable(d.members)) {
+                for (m in d.members) {
                     if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
                         value op = if (isIterArg || isVarArg) then "*" else "";
                         props.add(newNestedCompletionProposal(m,
@@ -685,7 +682,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         
         value ed = cu.unit.exceptionDeclaration;
         
-        for (dwp in CeylonIterable(getSortedProposedValues(scope, cu.unit))) {
+        for (dwp in getSortedProposedValues(scope, cu.unit)) {
             value dec = dwp.declaration;
             if (is TypeDeclaration dec, !dwp.unimported) {
                 value td = dec;

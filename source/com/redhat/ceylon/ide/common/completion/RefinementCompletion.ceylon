@@ -3,7 +3,6 @@ import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -12,6 +11,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
+}
+import com.redhat.ceylon.ide.common.util {
+    Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -39,9 +41,6 @@ import java.util {
     List,
     JArrayList=ArrayList,
     HashSet
-}
-import com.redhat.ceylon.ide.common.util {
-    Indents
 }
 
 // see RefinementCompletionProposal
@@ -109,20 +108,18 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
         if (is Type scope) {
             value superType = scope;
             if (superType.intersection) {
-                for (pt in CeylonIterable(superType.satisfiedTypes)) {
-                    value result = getRefinedProducedReference(pt, d);
-                    if (exists result) {
+                for (pt in superType.satisfiedTypes) {
+                    if (exists result = getRefinedProducedReference(pt, d)) {
                         return result;
                     }
                 }
                 return null;
             } else {
-                Type? declaringType = superType.declaration.getDeclaringType(d);
-                if (!exists declaringType) {
-                    return null;
-                } else {
+                if (exists declaringType = superType.declaration.getDeclaringType(d)) {
                     value outerType = superType.getSupertype(declaringType.declaration);
                     return refinedProducedReference(outerType, d);
+                } else {
+                    return null;
                 }
             }
         } else {
@@ -135,7 +132,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
         Declaration d) {
         List<Type> params = JArrayList<Type>();
         if (is Generic d) {
-            for (tp in CeylonIterable(d.typeParameters)) {
+            for (tp in d.typeParameters) {
                 params.add(tp.type);
             }
         }
@@ -243,7 +240,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         
         // declarations:
         value td = _type.declaration;
-        for (dwp in CeylonIterable(getSortedProposedValues(scope, unit))) {
+        for (dwp in getSortedProposedValues(scope, unit)) {
             if (dwp.unimported) {
                 //don't propose unimported stuff b/c adding
                 //imports drops us out of linked mode and
@@ -305,7 +302,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
                             props.add(newNestedCompletionProposal(d, loc));
                         }
                         
-                        for (m in CeylonIterable(clazz.members)) {
+                        for (m in clazz.members) {
                             if (is Constructor m, m.shared, m.name exists) {
                                 props.add(newNestedCompletionProposal(m, loc));
                             }

@@ -121,7 +121,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
             value moduleDescriptor = compilationUnit.moduleDescriptors.get(0);            
             value importModules = moduleDescriptor.importModuleList.importModules;
             
-            for (im in CeylonIterable(importModules)) {
+            for (im in importModules) {
                 value importedName = nodes.getImportedModuleName(im);
                 if (exists importedName, exists moduleName,
                     javaString(importedName).equals(moduleName)) {
@@ -141,7 +141,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         IDocument doc, Tree.AnnotationList al) {
         
         variable value result = false;
-        for (a in CeylonIterable(al.annotations)) {
+        for (a in al.annotations) {
             assert (is Tree.BaseMemberExpression bme = a.primary);
             if (bme.declaration.name.equals("shared")) {
                 variable value stop = a.endIndex.intValue();
@@ -258,8 +258,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
     }
     
     shared void appendNativeBackends(StringBuilder builder, Backends backends) {
-        value it = CeylonIterable(backends);
-        builder.append(", ".join(it.map((be) => "\"``be.nativeAnnotation``\"")));
+        builder.append(", ".join(CeylonIterable(backends).map((be) => "\"``be.nativeAnnotation``\"")));
     }
 
     
@@ -271,7 +270,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         
         variable Tree.ImportModule? prev = null;
         
-        for (im in CeylonIterable(iml.importModules)) {
+        for (im in iml.importModules) {
             value ip = nodes.getImportedModuleName(im);
             if (exists ip, ip.equals(moduleName)) {
                 variable value startOffset = im.startIndex.intValue();
@@ -297,7 +296,7 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
             return null;
         }
         
-        for (im in CeylonIterable(iml.importModules)) {
+        for (im in iml.importModules) {
             value ip = nodes.getImportedModuleName(im);
             if (exists ip, ip.equals(moduleName)) {
                 value startOffset = im.startIndex;

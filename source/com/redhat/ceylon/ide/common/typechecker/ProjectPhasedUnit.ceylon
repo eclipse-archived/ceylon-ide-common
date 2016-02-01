@@ -135,7 +135,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
                 object extends Visitor() {
                     shared actual void visitAny(Node node) {
                         super.visitAny(node);
-                        for (error in CeylonIterable(node.errors)) {
+                        for (error in node.errors) {
                             if (is ModuleDependencyAnalysisError error) {
                                 newCompilationUnit.addError(error);
                             }

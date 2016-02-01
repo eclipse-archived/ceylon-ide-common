@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
@@ -218,7 +214,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         }
         
         if (exists switchCaseList = that.switchCaseList) {
-            for (Tree.CaseClause cc in CeylonIterable(switchCaseList.caseClauses)) {
+            for (cc in switchCaseList.caseClauses) {
                 if (cc===node || cc.caseItem===node) {
                     finalResult = srt;
                 }

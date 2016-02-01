@@ -1,23 +1,19 @@
-import com.redhat.ceylon.ide.common.util {
-    nodes,
-    OccurrenceLocation
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
-    Module,
-    NamedArgumentList,
-    ParameterList,
-    FunctionOrValue
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.completion {
     isLocation
 }
+import com.redhat.ceylon.ide.common.util {
+    nodes,
+    OccurrenceLocation
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration,
+    Module,
+    NamedArgumentList
+}
+
 import java.util {
     Collections
 }
@@ -46,7 +42,7 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
                 value ol = nodes.getOccurrenceLocation(data.rootNode, node, problemOffset);
                 if (!isLocation(ol, OccurrenceLocation.\iIMPORT)) {
                     value ies = importProposals.importEdits(data.rootNode, Collections.singleton(dec), null, null, doc);
-                    for (ie in CeylonIterable(ies)) {
+                    for (ie in ies) {
                         importsLength += getInsertedText(ie).size;
                         addEditToChange(change, ie);
                     }
@@ -71,7 +67,7 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
             if (exists brokenName = id.text, !brokenName.empty) {
                 value scope = data.node.scope; //for declaration-style named args
                 value dwps = completionManager.getProposals(data.node, scope, "", false, data.rootNode, null).values();
-                for (dwp in CeylonIterable(dwps)) {
+                for (dwp in dwps) {
                     processProposal(data, file, brokenName, dwp.declaration);
                 }
             }
@@ -89,11 +85,9 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
                     scope = scope.scope; //for declaration-style named args
                 }
                 assert(is NamedArgumentList namedArgumentList = scope);
-                ParameterList? parameterList = namedArgumentList.parameterList;
-                if (exists parameterList) {
-                    for (parameter in CeylonIterable(parameterList.parameters)) {
-                        FunctionOrValue? declaration = parameter.model;
-                        if (exists declaration) {
+                if (exists parameterList = namedArgumentList.parameterList) {
+                    for (parameter in parameterList.parameters) {
+                        if (exists declaration = parameter.model) {
                             processProposal(data, file, brokenName, declaration);
                         }
                     }

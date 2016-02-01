@@ -1,6 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -16,6 +13,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     ModelUtil
 }
+
 import java.util {
     ArrayList,
     List
@@ -101,7 +99,7 @@ object correctionUtil {
     
     shared String asIntersectionTypeString(List<Type> types) {
         value missingSatisfiedTypesText = StringBuilder();
-        for (missingSatisfiedType in CeylonIterable(types)) {
+        for (missingSatisfiedType in types) {
             if (missingSatisfiedTypesText.size != 0) {
                 missingSatisfiedTypesText.append(" & ");
             }
@@ -233,11 +231,10 @@ object correctionUtil {
         value uninitialized = ArrayList<TypedDeclaration>();
         if (exists body) {
             value statements = body.statements;
-            for (st in CeylonIterable(statements)) {
+            for (st in statements) {
                 if (is Tree.AttributeDeclaration st) {
-                    value ad = st;
-                    if (!exists a = ad.specifierOrInitializerExpression) {
-                        value v = ad.declarationModel;
+                    if (!exists a = st.specifierOrInitializerExpression) {
+                        value v = st.declarationModel;
                         if (!v.formal) {
                             uninitialized.add(v);
                         }

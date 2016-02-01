@@ -96,13 +96,13 @@ shared interface CeylonSourceParser<ResultPhasedUnit>
         }
 
         value lexerErrors = lexer.errors;
-        for (le in CeylonIterable(lexerErrors)) {
+        for (le in lexerErrors) {
             cu.addLexError(le);
         }
         lexerErrors.clear();
 
         value parserErrors = parser.errors;
-        for (pe in CeylonIterable(parserErrors)) {
+        for (pe in parserErrors) {
             cu.addParseError(pe);
         }
         parserErrors.clear();

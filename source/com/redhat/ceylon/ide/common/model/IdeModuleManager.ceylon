@@ -42,10 +42,12 @@ import java.lang {
     JIterable=Iterable
 }
 import java.util {
-    JSet=Set,
-    HashSet,
     Collections,
     JList=List
+}
+import ceylon.collection {
+    HashSet,
+    MutableSet
 }
 shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() 
@@ -55,7 +57,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
 
     shared variable default late BaseIdeModuleSourceMapper moduleSourceMapper;
 
-    shared JSet<String> sourceModules;
+    shared MutableSet<String> sourceModules;
     shared Boolean loadDependenciesFromModelLoaderFirst;
     
     shared variable late TypeChecker typeChecker;
@@ -118,22 +120,18 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         super.initCoreModules(modules);
     }
     
-    shared actual Package createPackage(variable String pkgName, variable Module \imodule) {
-        return modelLoader.findOrCreatePackage(\imodule, pkgName);
-    }
+    shared actual Package createPackage(variable String pkgName, variable Module \imodule) 
+            => modelLoader.findOrCreatePackage(\imodule, pkgName);
     
     shared Boolean isExternalModuleLoadedFromSource(String moduleName) 
-            => sourceModules.contains(moduleName);
+            => moduleName in sourceModules;
     
-    shared actual Boolean isModuleLoadedFromSource(variable String moduleName) {
-        if (isExternalModuleLoadedFromSource(moduleName)) {
-            return true;
-        }
-        if (isModuleLoadedFromCompiledSource(moduleName)) {
-            return true;
-        }
-        return false;
-    }
+    shared actual Boolean isModuleLoadedFromSource(variable String moduleName) 
+            => if (isExternalModuleLoadedFromSource(moduleName))
+                then true
+            else if (isModuleLoadedFromCompiledSource(moduleName))
+                then true
+            else false;
     
     shared Boolean isModuleLoadedFromCompiledSource(String moduleName) {
         if (!ceylonProject exists) {

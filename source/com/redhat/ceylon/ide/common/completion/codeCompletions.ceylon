@@ -1,6 +1,7 @@
 import ceylon.interop.java {
     CeylonIterable
 }
+
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
@@ -12,6 +13,7 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     ...
 }
+
 import java.util {
     List,
     Collections
@@ -178,13 +180,13 @@ void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent,
     
     if (is Generic d) {
         value generic = d;
-        for (tp in CeylonIterable(generic.typeParameters)) {
+        for (tp in generic.typeParameters) {
             value sts = tp.satisfiedTypes;
             if (!sts.empty) {
                 result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
                         .append("given ").append(tp.name).append(" satisfies ");
                 variable Boolean first = true;
-                for (st in CeylonIterable(sts)) {
+                for (st in sts) {
                     variable Type _st = st;
                     if (first) {
                         first = false;
@@ -266,7 +268,7 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
         } else if (exists pr) {
             value paramTypes = descriptionOnly && addParameterTypesInCompletions;
             result.append("(");
-            for (p in CeylonIterable(params)) {
+            for (p in params) {
                 value typedParameter = pr.getTypedParameter(p);
                 if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
@@ -314,7 +316,7 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit,
             result.append("()");
         } else {
             result.append("(");
-            for (p in CeylonIterable(params)) {
+            for (p in params) {
                 if (p.sequenced) {
                     result.append("*");
                 }
@@ -349,7 +351,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder resul
         } else {
             value paramTypes = descriptionOnly && addParameterTypesInCompletions;
             result.append(" { ");
-            for (p in CeylonIterable(params)) {
+            for (p in params) {
                 value name = if (descriptionOnly)
                     then p.name
                     else escaping.escapeName(p.model);
@@ -402,7 +404,7 @@ void appendTypeParameters(Declaration d, StringBuilder result,
         value types = (d).typeParameters;
         if (!types.empty) {
             result.append("<");
-            for (tp in CeylonIterable(types)) {
+            for (tp in types) {
                 if (variances) {
                     if (tp.covariant) {
                         result.append("out ");
@@ -445,18 +447,18 @@ shared void appendTypeParametersWithArguments(Declaration d, Reference? pr,
                     result.append(tp.name);
                 } else {
                     if (is Type pr, variances) {
-                        SiteVariance? variance = pr.varianceOverrides.get(tp);
-                        
-                        if (!exists variance) {
+                        if (exists variance = pr.varianceOverrides.get(tp)) {
+                            if (variance == SiteVariance.\iOUT) {
+                                result.append("out ");
+                            } else if (variance == SiteVariance.\iIN) {
+                                result.append("in ");
+                            }
+                        } else {
                             if (tp.covariant) {
                                 result.append("out ");
                             } else if (tp.contravariant) {
                                 result.append("in ");
                             }
-                        } else if (variance == SiteVariance.\iOUT) {
-                            result.append("out ");
-                        } else if (variance == SiteVariance.\iIN) {
-                            result.append("in ");
                         }
                     }
                     result.append(arg.asString(unit));
@@ -681,7 +683,7 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     
     variable value found = false;
     value nt = unit.nullValueDeclaration.type;
-    for (m in CeylonIterable(ci.members)) {
+    for (m in ci.members) {
         if (m is Value, !isObjectField(m), !ModelUtil.isConstructor(m)) {
             assert (is Value \ivalue = m);
             if (!\ivalue.transient) {
@@ -707,7 +709,7 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci) {
     
     value nt = unit.nullValueDeclaration.type;
-    for (m in CeylonIterable(ci.members)) {
+    for (m in ci.members) {
         if (is Value val = m, !isObjectField(m), !ModelUtil.isConstructor(m)) {
             if (!val.transient) {
                 if (!nt.isSubtypeOf(val.type)) {
@@ -738,12 +740,12 @@ void appendParameters<Document>(Declaration d, Reference? pr,
     Boolean descriptionOnly) {
     if (is Functional d) {
         if (exists plists = d.parameterLists) {
-            for (params in CeylonIterable(plists)) {
+            for (params in plists) {
                 if (params.parameters.empty) {
                     result.append("()");
                 } else {
                     result.append("(");
-                    for (p in CeylonIterable(params.parameters)) {
+                    for (p in params.parameters) {
                         appendParameter(result, pr, p, unit, descriptionOnly);
                         if (exists cpc) {
                             result.append(getDefaultValueDescription(p, cpc));

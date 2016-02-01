@@ -75,7 +75,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         initMultiEditChange(change);
 
         value offset = decNode.startIndex;
-        for (a in CeylonIterable(decNode.annotationList.annotations)) {
+        for (a in decNode.annotationList.annotations) {
             assert (is Tree.BaseMemberExpression bme = a.primary);
             Tree.Identifier? id = bme.identifier;
             if (exists id) {

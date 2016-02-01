@@ -1,9 +1,7 @@
 import ceylon.collection {
     MutableList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
@@ -142,7 +140,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
                     value body = StringBuilder();
                     value indent = indents.getIndent(node, cpc.document);
                     value unit = node.unit;
-                    for (pt in CeylonIterable(caseTypes)) {
+                    for (pt in caseTypes) {
                         body.append(indent).append("case (");
                         value ctd = pt.declaration;
                         if (ctd.anonymous) {

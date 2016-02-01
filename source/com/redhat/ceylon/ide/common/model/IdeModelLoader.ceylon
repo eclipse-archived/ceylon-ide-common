@@ -209,14 +209,14 @@ shared abstract class BaseIdeModelLoader(
            
            allDeclarations.addAll(declarations);
            
-           for (declaration in CeylonIterable(declarations)) {
+           for (declaration in declarations) {
                Unit? unit = declaration.unit;
                if (exists unit) {
                    changedPackages.add(unit.\ipackage);
                }
                retrieveInnerDeclarations(declaration, allDeclarations);
            }
-           for (decl in CeylonIterable(allDeclarations)) {
+           for (decl in allDeclarations) {
                String fqn = getToplevelQualifiedName(decl.container.qualifiedNameString, decl.name);
                _sourceDeclarations.remove(fqn);
            }
@@ -239,7 +239,7 @@ shared abstract class BaseIdeModelLoader(
            members = Collections.emptyList<Declaration>();
        }
        allDeclarations.addAll(members);
-       for (member in CeylonIterable(members)) {
+       for (member in members) {
            retrieveInnerDeclarations(member, allDeclarations);
        }
    }
@@ -247,7 +247,7 @@ shared abstract class BaseIdeModelLoader(
    shared void clearCachesOnPackage(String packageName) {
        void do() {
            JList<JString> keysToRemove = JArrayList<JString>(classMirrorCache.size());
-           for (element in CeylonIterable(classMirrorCache.entrySet())) {
+           for (element in classMirrorCache.entrySet()) {
                if (! element.\ivalue exists) {
                    JString? className = element.key;
                    if (exists className) {
@@ -258,7 +258,7 @@ shared abstract class BaseIdeModelLoader(
                    }
                }
            }
-           for (keyToRemove in CeylonIterable(keysToRemove)) {
+           for (keyToRemove in keysToRemove) {
                classMirrorCache.remove(keyToRemove);
            }
            Package pkg = findPackage(packageName);
@@ -285,7 +285,7 @@ shared abstract class BaseIdeModelLoader(
    
     shared void addSourcePhasedUnits(JList<out Object> treeHolders, Boolean isSourceToCompile) {
        synchronize (lock, () {
-           for (Object treeHolder in CeylonIterable(treeHolders)) {
+           for (Object treeHolder in treeHolders) {
                if (is PhasedUnit treeHolder) {
                    value pkgName = treeHolder.\ipackage.qualifiedNameString;
                    treeHolder.compilationUnit.visit(object extends SourceDeclarationVisitor(){
@@ -343,7 +343,7 @@ shared abstract class BaseIdeModelLoader(
             synchronize(lock, () => unsafeCast<LazyPackage>(findPackage(pkgName)));
    
     shared actual Boolean isModuleInClassPath(Module mod) {
-       if (modulesInClassPath.contains(mod.signature)) {
+       if (mod.signature in modulesInClassPath) {
            return true;
        }
        if (is BaseIdeModule mod, mod.isProjectModule) {
@@ -405,9 +405,9 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared String? getNative(Tree.Declaration decl) {
-       for (Tree.Annotation annotation in CeylonIterable(decl.annotationList.annotations)) {
-           String? text = annotation.primary.token.text;
-           if (exists text, text == "native") {
+       for (annotation in decl.annotationList.annotations) {
+           if (exists text = annotation.primary.token.text, 
+               text == "native") {
                variable String backend = "";
                if (exists pal = annotation.positionalArgumentList,
                     exists pas = pal.positionalArguments,
@@ -615,10 +615,10 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared void setModuleAndPackageUnits() {
-       for (ideModule in CeylonIterable(moduleManager.modules.listOfModules)) {
+       for (ideModule in moduleManager.modules.listOfModules) {
            if (is BaseIdeModule ideModule) {
                if (ideModule.isCeylonBinaryArchive) {
-                   for (p in CeylonIterable(ideModule.packages)) {
+                   for (p in ideModule.packages) {
                        if (! p.unit exists) {
                            variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME);
                            if (! packageClassMirror exists) {

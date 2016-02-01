@@ -73,7 +73,7 @@ class JTypeMirror(Type type) satisfies TypeMirror {
     shared actual List<TypeMirror> typeArguments {
         value args = ArrayList<TypeMirror>();
         
-        for (arg in CeylonIterable(type.typeArgumentList)) {
+        for (arg in type.typeArgumentList) {
             args.add(JTypeMirror(arg));
         }
         

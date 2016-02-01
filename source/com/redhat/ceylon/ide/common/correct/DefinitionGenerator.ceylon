@@ -1,10 +1,9 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.util {
     escaping
@@ -22,9 +21,6 @@ import java.util {
     List,
     Map,
     Set
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared abstract class DefinitionGenerator() {
@@ -58,7 +54,7 @@ shared abstract class DefinitionGenerator() {
             buffer.append("()");
         } else {
             buffer.append("(");
-            for (e in CeylonIterable(parameters.entrySet())) {
+            for (e in parameters.entrySet()) {
                 Declaration? member = supertype.getMember(e.key, null, false);
                 if (!(member?.formal else false)) {
                     buffer.append(e.\ivalue.asString()).append(" ");
@@ -83,8 +79,7 @@ shared abstract class DefinitionGenerator() {
             typeParamDef.append("out ");
         }
         typeParamDef.append(typeParam.name);
-        Type? dta = typeParam.defaultTypeArgument;
-        if (typeParam.defaulted, exists dta) {
+        if (typeParam.defaulted, exists dta = typeParam.defaultTypeArgument) {
             typeParamDef.append("=");
             typeParamDef.append(dta.asString());
         }
@@ -92,11 +87,10 @@ shared abstract class DefinitionGenerator() {
         if (typeParam.constrained) {
             typeParamConstDef.append(" given ");
             typeParamConstDef.append(typeParam.name);
-            List<Type>? satisfiedTypes = typeParam.satisfiedTypes;
-            if (exists satisfiedTypes, !satisfiedTypes.empty) {
+            if (exists satisfiedTypes = typeParam.satisfiedTypes, !satisfiedTypes.empty) {
                 typeParamConstDef.append(" satisfies ");
                 variable value firstSatisfiedType = true;
-                for (satisfiedType in CeylonIterable(satisfiedTypes)) {
+                for (satisfiedType in satisfiedTypes) {
                     if (firstSatisfiedType) {
                         firstSatisfiedType = false;
                     } else {
@@ -105,11 +99,10 @@ shared abstract class DefinitionGenerator() {
                     typeParamConstDef.append(satisfiedType.asString());
                 }
             }
-            List<Type>? caseTypes = typeParam.caseTypes;
-            if (exists caseTypes, !caseTypes.empty) {
+            if (exists caseTypes = typeParam.caseTypes, !caseTypes.empty) {
                 typeParamConstDef.append(" of ");
                 variable value firstCaseType = true;
-                for (caseType in CeylonIterable(caseTypes)) {
+                for (caseType in caseTypes) {
                     if (firstCaseType) {
                         firstCaseType = false;
                     } else {
@@ -138,7 +131,7 @@ shared abstract class DefinitionGenerator() {
         StringBuilder typeParamConstDef, Collection<Type>? parameterTypes) {
         
         if (exists parameterTypes) {
-            for (pt in CeylonIterable(parameterTypes)) {
+            for (pt in parameterTypes) {
                 appendTypeParams2(typeParams, typeParamDef, typeParamConstDef, pt);
             }
         }
@@ -148,7 +141,7 @@ shared abstract class DefinitionGenerator() {
 LinkedHashMap<String,Type> getParametersFromPositionalArgs(Tree.PositionalArgumentList pal) {
     value types = LinkedHashMap<String,Type>();
     variable value i = 0;
-    for (pa in CeylonIterable(pal.positionalArguments)) {
+    for (pa in pal.positionalArguments) {
         if (is Tree.ListedArgument pa) {
             value la = pa;
             value e = la.expression;
@@ -188,7 +181,7 @@ LinkedHashMap<String,Type> getParametersFromPositionalArgs(Tree.PositionalArgume
 LinkedHashMap<String,Type> getParametersFromNamedArgs(Tree.NamedArgumentList nal) {
     value types = LinkedHashMap<String,Type>();
     variable value i = 0;
-    for (a in CeylonIterable(nal.namedArguments)) {
+    for (a in nal.namedArguments) {
         if (is Tree.SpecifiedArgument a) {
             value na = a;
             Tree.Expression? e = na.specifierExpression.expression;

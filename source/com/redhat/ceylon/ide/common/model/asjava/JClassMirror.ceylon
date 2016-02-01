@@ -165,7 +165,7 @@ shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractC
     shared default actual List<TypeParameterMirror> typeParameters {
         value types = ArrayList<TypeParameterMirror>();
         
-        for (t in CeylonIterable(decl.typeParameters)) {
+        for (t in decl.typeParameters) {
             types.add(JTypeParameterMirror(t));
         }
         

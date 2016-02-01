@@ -58,7 +58,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
             Module mod = unit.\ipackage.\imodule;
             String fullPrefix = fullPath + prefix;
             
-            for (Package candidate in CeylonIterable(mod.allVisiblePackages)) {
+            for (candidate in mod.allVisiblePackages) {
                 //if (!packages.contains(p)) {
                     //packages.add(p);
                 //if ( p.getModule().equals(module) || p.isShared() ) {
@@ -68,7 +68,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
                     if (!fullPrefix.equals(packageName)) {
                         //don't add already imported packages, unless
                         //it is an exact match to the typed path
-                        for (il in CeylonIterable(unit.importLists)) {
+                        for (il in unit.importLists) {
                             if (exists scope = il.importedScope, scope == candidate) {
                                 already = true;
                             }
@@ -94,10 +94,10 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
                 query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
                 query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
                 ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
-                for (md in CeylonIterable(msr.results)) {
+                for (md in msr.results) {
                     value version = md.lastVersion;
                     if (!alreadyImported(version, controller.typeChecker.context.modules)) {
-                        for (packageName in CeylonIterable(version.members)) {
+                        for (packageName in version.members) {
                             if (packageName.startsWith(fullPrefix)) {
                                 result.add(newQueriedModulePackageProposal(offset, prefix, 
                                     packageName.substring(fullPath.size), withBody, packageName.string,
@@ -110,11 +110,10 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
         }
     }
     
-    Boolean alreadyImported(ModuleVersionDetails version, Modules modules) {
-        return CeylonIterable(modules.listOfModules).find(
-            (m) => m.nameAsString == version.\imodule
-        ) exists;
-    }
+    Boolean alreadyImported(ModuleVersionDetails version, Modules modules) 
+            => CeylonIterable(modules.listOfModules).find(
+                (m) => m.nameAsString == version.\imodule
+            ) exists;
 
     shared void addPackageDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, 
             MutableList<CompletionResult> result) {
@@ -187,7 +186,7 @@ shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Docum
             value selection = getSelectionInternal(document);
             value proposals = ArrayList<CompletionResult>();
             
-            for (d in CeylonIterable(candidate.members)) {
+            for (d in candidate.members) {
                 if (ModelUtil.isResolvable(d), d.shared, !ModelUtil.isOverloadedVersion(d)) {
                     proposals.add(newPackageMemberCompletionProposal(d, selection, linkedMode));
                 }
