@@ -100,7 +100,7 @@ import com.redhat.ceylon.model.loader {
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
 
-String convertToHTML(String content)
+shared String convertToHTML(String content)
         => content.replace("&", "&amp;")
                   .replace("\"", "&quot;")
                   .replace("<", "&lt;")
