@@ -70,7 +70,8 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             }
         }
         case (200) {
-            // TODO
+            assert(is Tree.Type node);
+            specifyTypeQuickFix.addSpecifyTypeProposal(node, data);
         }
         case (300) {
             refineFormalMembersQuickFix.addRefineFormalMembersProposal(data, false);

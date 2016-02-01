@@ -39,22 +39,28 @@ shared interface TypeCompletion<CompletionResult,Document> {
         if (exists kind) {
             size++;
         }
-        if (infType.typeConstructor || infType.union || infType.intersection) {
+        if (infType.typeConstructor
+            || infType.typeParameter
+            || infType.union
+            || infType.intersection) {
             size++;
         }
         
         value proposals = ArrayList<CompletionResult>(size);
-        variable value i = 0;
+
         if (exists kind) {
-            proposals.insert(i++, newTypeProposal(offset, null, kind, kind, rootNode));
+            proposals.add(newTypeProposal(offset, null, kind, kind, rootNode));
         }
         value unit = rootNode.unit;
-        if (infType.typeConstructor || infType.union || infType.intersection) {
-            proposals.insert(i++, newTypeProposal(offset, infType, infType.asSourceCodeString(unit),
+        if (infType.typeConstructor
+            || infType.typeParameter
+            || infType.union
+            || infType.intersection) {
+            proposals.add(newTypeProposal(offset, infType, infType.asSourceCodeString(unit),
                 infType.asString(unit), rootNode));
         }
         
-        supertypes.sort((TypeDeclaration x, TypeDeclaration y) {
+        value sortedSupertypes = supertypes.sort((TypeDeclaration x, TypeDeclaration y) {
             if (x.inherits(y)) {
                 return larger;
             }
@@ -64,10 +70,10 @@ shared interface TypeCompletion<CompletionResult,Document> {
             return y.name.compare(x.name);
         });
         
-        variable value j = supertypes.size - 1;
+        variable value j = sortedSupertypes.size - 1;
         while (j >= 0) {
-            value type = infType.getSupertype(supertypes.get(j));
-            proposals.insert(i++, newTypeProposal(offset, type, type.asSourceCodeString(unit), type.asString(unit), rootNode));
+            value type = infType.getSupertype(sortedSupertypes.get(j));
+            proposals.add(newTypeProposal(offset, type, type.asSourceCodeString(unit), type.asString(unit), rootNode));
             j--;
         }
         
