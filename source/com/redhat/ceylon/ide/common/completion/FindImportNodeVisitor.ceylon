@@ -23,7 +23,6 @@ shared class FindImportNodeVisitor(String packageName) extends Visitor() {
         }
     }
     
-    Boolean identifiersEqual({Tree.Identifier*} identifiers, {String+} components) {
-        return identifiers.map((id) => id.text).sequence() == components.sequence();
-    }
+    Boolean identifiersEqual({Tree.Identifier*} identifiers, {String+} components)
+            => corresponding(identifiers.map(Tree.Identifier.text), components);
 }
