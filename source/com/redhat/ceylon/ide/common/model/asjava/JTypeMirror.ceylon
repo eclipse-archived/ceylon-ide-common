@@ -1,5 +1,6 @@
 import ceylon.interop.java {
-    javaClass
+    javaClass,
+    CeylonIterable
 }
 
 import com.redhat.ceylon.model.loader.impl.reflect.mirror {
@@ -21,7 +22,8 @@ import java.lang {
 }
 import java.util {
     List,
-    Collections
+    Collections,
+    ArrayList
 }
 
 import javax.lang.model.type {
@@ -68,8 +70,15 @@ class JTypeMirror(Type type) satisfies TypeMirror {
     
     shared actual Boolean raw => type.raw;
     
-    shared actual List<TypeMirror> typeArguments 
-            => Collections.emptyList<TypeMirror>();
+    shared actual List<TypeMirror> typeArguments {
+        value args = ArrayList<TypeMirror>();
+        
+        for (arg in CeylonIterable(type.typeArgumentList)) {
+            args.add(JTypeMirror(arg));
+        }
+        
+        return args;
+    }
     
     shared actual TypeParameterMirror? typeParameter => null;
     

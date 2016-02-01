@@ -110,7 +110,7 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
     shared actual TypeMirror? superclass 
             => if (exists s = supertype) then JTypeMirror(s) else null;
     
-    shared actual List<TypeParameterMirror> typeParameters
+    shared default actual List<TypeParameterMirror> typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
     void scanMembers() {
@@ -161,4 +161,15 @@ shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractC
     supertype => decl.extendedType;
     
     satisfiedTypes => decl.satisfiedTypes;
+    
+    shared default actual List<TypeParameterMirror> typeParameters {
+        value types = ArrayList<TypeParameterMirror>();
+        
+        for (t in CeylonIterable(decl.typeParameters)) {
+            types.add(JTypeParameterMirror(t));
+        }
+        
+        return types;
+    }
+
 }
