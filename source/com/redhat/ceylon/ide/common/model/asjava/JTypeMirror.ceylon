@@ -1,6 +1,5 @@
 import ceylon.interop.java {
-    javaClass,
-    CeylonIterable
+    javaClass
 }
 
 import com.redhat.ceylon.model.loader.impl.reflect.mirror {

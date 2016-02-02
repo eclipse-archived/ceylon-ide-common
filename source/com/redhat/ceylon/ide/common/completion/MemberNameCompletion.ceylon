@@ -3,10 +3,14 @@ import ceylon.collection {
     HashSet,
     MutableSet
 }
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
     Visitor
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -16,17 +20,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     ModelUtil
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
+
 import java.lang {
     JInteger=Integer
 }
 import java.util {
     JList=List
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 shared interface MemberNameCompletion<IdeComponent,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {

@@ -3,9 +3,6 @@ import ceylon.collection {
     MutableList,
     naturalOrderTreeMap
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError

@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -24,6 +20,9 @@ import com.redhat.ceylon.ide.common.model {
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit,
     TypecheckerAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     BaseFileVirtualFile,
@@ -53,9 +52,6 @@ import org.antlr.runtime {
     CommonTokenStream,
     RecognitionException,
     CommonToken
-}
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
 }
 
 shared interface CeylonSourceParser<ResultPhasedUnit>

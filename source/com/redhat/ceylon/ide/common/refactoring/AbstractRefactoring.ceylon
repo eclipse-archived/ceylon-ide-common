@@ -1,24 +1,23 @@
-import ceylon.interop.java {
-    CeylonIterable
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+import com.redhat.ceylon.compiler.typechecker.io {
+    VirtualFile
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
-import java.util {
-    List
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VirtualFile
-}
-import org.antlr.runtime {
-    CommonToken
-}
 import com.redhat.ceylon.ide.common.util {
     NodePrinter
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
+
+import java.util {
+    List
+}
+
+import org.antlr.runtime {
+    CommonToken
 }
 
 shared interface AbstractRefactoring<RefactoringData> satisfies Refactoring & NodePrinter {
