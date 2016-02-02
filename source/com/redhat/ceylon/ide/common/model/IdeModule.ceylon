@@ -90,8 +90,7 @@ import java.lang.ref {
     SoftReference
 }
 import java.util {
-    JList=List,
-    Enumeration
+    JList=List
 }
 import java.util.zip {
     ZipFile,
@@ -390,7 +389,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     try {
                         fillSourceRelativePaths();
                     }
-                    catch (Exception e) {
+                    catch (e) {
                         platformUtils.log(Status._WARNING, "Cannot find the source archive for the Ceylon binary module " + signature, e);
                     }
                     value theBInaryPhasedUnits = BinaryPhasedUnits();
@@ -411,7 +410,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     try {
                         fillSourceRelativePaths();
                     }
-                    catch (Exception e) {
+                    catch (e) {
                         e.printStackTrace();
                     }
                     sourceModulePhasedUnits = WeakReference<ExternalModulePhasedUnits>(null);
@@ -421,8 +420,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 if (exists project) {
                     for (refProject in project.referencedCeylonProjects) {
                         if (refProject.nativeProjectIsAccessible) {
-                            //TODO: why the conversions to javaStringf() here?? 
-                            if (javaString(existingArtifact.absolutePath).contains(javaString(refProject.ceylonModulesOutputDirectory.absolutePath))) {
+                            if (refProject.ceylonModulesOutputDirectory.absolutePath in existingArtifact.absolutePath) {
                                 _originalProject = WeakReference(refProject);
                             }
                         }
@@ -455,7 +453,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             try {
                 sourceArchive = ZipFile(sourceArchiveFile);
                 try {
-                    Enumeration<out ZipEntry> entries = sourceArchive.entries();
+                    value entries = sourceArchive.entries();
                     while (entries.hasMoreElements()) {
                         ZipEntry entry = entries.nextElement();
                         sourceRelativePaths.add(entry.name);
@@ -641,7 +639,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         try {
             super.loadPackageList(artifact);
         }
-        catch (Exception e) {
+        catch (e) {
             platformUtils.log(Status._ERROR,"Failed loading the package list of module " + signature, e);
         }
 
@@ -672,8 +670,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                         { relativePathToSource, *toBinaryUnitRelativePaths(relativePathToSource) };
                 
                 for (relativePathOfUnitToRemove in unitPathsToSearch) {
-                    Package? p = getPackageFromRelativePath(relativePathOfUnitToRemove);
-                    if (exists p) {
+                    if (exists p = getPackageFromRelativePath(relativePathOfUnitToRemove)) {
                         value units = HashSet<Unit>();
                         try {
                             for (d in p.members) {
@@ -683,7 +680,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                 }
                             }
                         }
-                        catch (Exception e) {
+                        catch (e) {
                             e.printStackTrace();
                         }
                         for (u in units) {
@@ -697,7 +694,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                     // will not require reading the bindings.
                                 }
                             }
-                            catch (Exception e) {
+                            catch (e) {
                                 e.printStackTrace();
                             }
                         }
@@ -705,7 +702,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 }
             }
         }
-        catch (Exception e) {
+        catch (e) {
             e.printStackTrace();
         }
     }
@@ -718,7 +715,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     }
     
     Package? getPackageFromRelativePath(String relativePathOfClassToRemove) {
-        variable String packageName = 
+        String packageName = 
                 ModelUtil.formatPath(
             toJavaStringList(
                 relativePathOfClassToRemove
@@ -789,9 +786,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         clearCacheLocally(declaration);
         if (exists deps = projectModuleDependencies) {
             value clearModuleCacheAction = object satisfies TraversalAction<Module> {
-                shared actual void applyOn(Module \imodule) {
-                    if (is AnyIdeModule \imodule) {
-                        (\imodule).clearCacheLocally(declaration);
+                shared actual void applyOn(Module mod) {
+                    if (is AnyIdeModule mod) {
+                        mod.clearCacheLocally(declaration);
                     }
                 }
                 
@@ -803,9 +800,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    void clearCacheLocally(TypeDeclaration declaration) {
-        super.clearCache(declaration);
-    }
+    void clearCacheLocally(TypeDeclaration declaration) => super.clearCache(declaration);
     
     ModuleDependencies? projectModuleDependencies {
         if (!exists deps=_projectModuleDependencies) {
@@ -903,7 +898,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                         }
                     }
                 }
-                catch (Exception e) {
+                catch (e) {
                     value error = StringBuilder();
                     error.append("Unable to read source artifact from ");
                     error.append(theSourceArchive?.string else "<null>");
@@ -924,7 +919,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     existingPhasedUnit.validateRefinement();
                 }
             }
-            catch (Exception e) {
+            catch (e) {
                 e.printStackTrace();
                 phasedUnit = null;
             }
@@ -952,8 +947,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                 * toBinaryUnitRelativePaths(relativePathToRemove) };
                                 
                                 for (relativePathOfUnitToRemove in unitPathsToSearch) {
-                                    Package? p = getPackageFromRelativePath(relativePathOfUnitToRemove);
-                                    if (exists p) {
+                                    if (exists p = getPackageFromRelativePath(relativePathOfUnitToRemove)) {
                                         value units = HashSet<Unit>();
                                         for (d in p.members) {
                                             value u = d.unit;
@@ -965,7 +959,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                             try {
                                                 p.removeUnit(u);
                                             }
-                                            catch (Exception e) {
+                                            catch (e) {
                                                 e.printStackTrace();
                                             }
                                         }
@@ -984,14 +978,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                 value zipFile = ZipFileVirtualFile.fromFile(File(_sourceArchivePath));
                                 theSourceArchive = zipFile;
                                 for (relativePathToAdd in originalUnitsToAdd) {
-                                    VirtualFile? archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile);
-                                    if (exists archiveEntry) {
+                                    if (exists archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile)) {
                                         assert(exists pkg = getPackageFromRelativePath(relativePathToAdd));
                                         phasedUnitMap.parseFileInPackage(archiveEntry, zipFile, pkg);
                                     }
                                 }
                             }
-                            catch (Exception e) {
+                            catch (e) {
                                 value error = "Unable to read source artifact from
                                                ``_sourceArchivePath else "<null>"
                                 ``due to connection error: ``e.message``";
@@ -1031,7 +1024,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 );
             }
         }
-        catch (Exception e) {
+        catch (e) {
             e.printStackTrace();
         }
     }
