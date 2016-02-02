@@ -24,20 +24,20 @@ import java.util {
     JMap=Map
 }
 
-shared JList<JString> toJavaStringList(Iterable<String> ceylonStringIterable)
+shared JList<JString> toJavaStringList({String*} ceylonStringIterable)
         => JavaList(ceylonStringIterable.map((s) => javaString(s)).sequence());
 
-shared Iterable<String> toCeylonStringIterable(JIterable<JString> javaStringIterable)
+shared {String*} toCeylonStringIterable(JIterable<JString> javaStringIterable)
     => CeylonIterable(javaStringIterable).map((s) => s.string);
 
 shared JBoolean? toJavaBoolean(Boolean? boolean)
         => if (exists boolean) then JBoolean(boolean) else null;
 
 shared Boolean? toCeylonBoolean(JBoolean? boolean)
-        => boolean?.booleanValue() else null;
+        => boolean?.booleanValue();
 
 shared String? toCeylonString(JString? string)
-        => string?.string else null;
+        => string?.string;
 
 shared JString? toJavaString(String? string)
         => if (exists string) then javaString(string) else null;
@@ -53,8 +53,7 @@ shared JMap<JString, JString> toJavaStringMap(Map<String, String> ceylonStringMa
         JavaMap(
             HashMap { 
                 *ceylonStringMap.map(
-                    (String->String entry) => 
-                            javaString(entry.key)->javaString(entry.item))
+                    (entry) => javaString(entry.key)->javaString(entry.item))
             }
         );
 
