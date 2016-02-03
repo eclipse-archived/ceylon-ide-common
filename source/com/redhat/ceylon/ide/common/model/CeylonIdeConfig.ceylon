@@ -1,9 +1,13 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.common.config {
     CeylonConfig,
-    Repositories,
     CeylonConfigFinder,
     ConfigWriter
 }
+
 import java.io {
     File,
     FileReader,
@@ -14,9 +18,6 @@ import java.lang {
 }
 import java.util {
     Properties
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 import java.util.regex {
     Pattern
@@ -32,8 +33,6 @@ shared interface JavaToCeylonConverterConfig {
 shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     late variable CeylonConfig mergedConfig;
     late variable CeylonConfig ideConfig;
-    late variable Repositories mergedRepositories;
-    late variable Repositories projectRepositories;
 
     variable Boolean? transientCompileToJvm = null;
     variable Boolean? transientCompileToJs = null;
@@ -47,7 +46,6 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
     void initMergedConfig() {
         mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);
-        mergedRepositories = Repositories.withConfig(mergedConfig);
     }
 
     void initIdeConfig() {
@@ -65,7 +63,6 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         } else {
             ideConfig = CeylonConfig();
         }
-        projectRepositories = Repositories.withConfig(ideConfig);
     }
 
     initMergedConfig();
