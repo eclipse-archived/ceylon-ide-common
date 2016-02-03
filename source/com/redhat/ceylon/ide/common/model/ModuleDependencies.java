@@ -504,6 +504,7 @@ public class ModuleDependencies {
                                 ModuleReference target = (ModuleReference)dep.getTarget();
                                 if (dep.exported && isRootExportedBy(target)) {
                                     rootIsExported = true;
+                                    break;
                                 }
                             }
                         }
