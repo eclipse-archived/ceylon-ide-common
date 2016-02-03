@@ -938,22 +938,21 @@ shared interface DocGenerator<Document> {
         builder.append("<p>");
         
         if (decl.parameter, is FunctionOrValue decl) {
-            value pd = decl.initializerParameter.declaration;
-            
-            if (!exists n = pd.name) {
-                if (is Constructor pd) {
-                    builder.append("Parameter of default constructor of");
-                    if (is Declaration c = pd.container) {
-                        appendParameterLink(builder, c);
+            if (exists ip = decl.initializerParameter,
+                exists pd = ip.declaration) {
+                if (exists name = pd.name) {
+                    builder.append("Parameter of");
+                    if (name.startsWith("anonymous#")) {
+                        builder.append(" anonymous function.");
+                    } else {
+                        appendParameterLink(builder, pd);
                         builder.append(".");
                     }
+                } else if (is Constructor pd, is Class c = pd.container) {
+                    builder.append("Parameter of default constructor of");
+                    appendParameterLink(builder, c);
+                    builder.append(".");
                 }
-            } else if (pd.name.startsWith("anonymous#")) {
-                builder.append("Parameter of anonymous function.");
-            } else {
-                builder.append("Parameter of");
-                appendParameterLink(builder, pd);
-                builder.append(".");
             }
         } else if (is TypeParameter decl) {
             builder.append("Type parameter of");
