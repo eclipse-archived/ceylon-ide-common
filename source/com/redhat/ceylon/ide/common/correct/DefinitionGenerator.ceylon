@@ -185,7 +185,7 @@ LinkedHashMap<String,Type> getParametersFromNamedArgs(Tree.NamedArgumentList nal
         if (is Tree.SpecifiedArgument a) {
             value na = a;
             Tree.Expression? e = na.specifierExpression.expression;
-            variable value name = na.identifier.text;
+            variable value name = na.identifier?.text else "";
             value unit = a.unit;
             value type = if (!exists e) then unit.anythingType else unit.denotableType(e.typeModel);
             if (types.containsKey(name)) {
