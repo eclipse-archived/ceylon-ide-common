@@ -1,3 +1,12 @@
+import com.redhat.ceylon.cmr.api {
+    RepositoryManager,
+    Overrides
+}
+import com.redhat.ceylon.cmr.ceylon {
+    CeylonUtils {
+        CeylonRepoManagerBuilder
+    }
+}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -7,7 +16,8 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
-    platformUtils
+    platformUtils,
+    toJavaStringList
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile
@@ -20,19 +30,26 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.io {
     File
 }
-import java.util.concurrent.locks {
-    ReentrantReadWriteLock,
-    ReadWriteLock
+import java.lang {
+    InterruptedException,
+    RuntimeException,
+    IllegalStateException
+}
+import java.lang.ref {
+    WeakReference
 }
 import java.util.concurrent {
     TimeUnit
 }
-import java.lang {
-    InterruptedException,
-    RuntimeException
+import java.util.concurrent.locks {
+    ReentrantReadWriteLock,
+    ReadWriteLock,
+    Lock,
+    ReentrantLock
 }
-import java.lang.ref {
-    WeakReference
+
+import org.xml.sax {
+    SAXParseException
 }
 
 shared abstract class BaseCeylonProject() {
@@ -40,11 +57,105 @@ shared abstract class BaseCeylonProject() {
     variable CeylonProjectConfig? ceylonConfig = null;
     variable CeylonIdeConfig? ideConfig = null;
     shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
+    Lock repositoryManagerLock = ReentrantLock();
+    variable RepositoryManager? _repositoryManager = null;
     
     shared formal BaseCeylonProjects model;
     shared formal String name;
     shared formal File rootDirectory;
     shared formal Boolean hasConfigFile;
+    shared formal String systemRepository;
+    shared formal void createOverridesProblemMarker(
+        Exception theOverridesException, 
+        File absoluteFile, 
+        Integer overridesLine, 
+        Integer overridesColumn);
+    shared formal void removeOverridesProblemMarker();
+
+    function createRepositoryManager() {
+        return object extends CeylonRepoManagerBuilder() {
+            shared actual Overrides? getOverrides(String? path) {
+                if (! path exists) {
+                    removeOverridesProblemMarker();
+                }
+                return super.getOverrides(path);
+            }
+            
+            shared actual Overrides? getOverrides(File absoluteFile) {
+                variable Overrides? result = null;
+                variable Exception? overridesException = null;
+                variable Integer overridesLine = -1;
+                variable Integer overridesColumn = -1;
+                try {
+                    result = super.getOverrides(absoluteFile);
+                } catch(Overrides.InvalidOverrideException e) {
+                    overridesException = e;
+                    overridesLine = e.line;
+                    overridesColumn = e.column;
+                } catch(IllegalStateException e) {
+                    Throwable? cause = e.cause;
+                    if (is SAXParseException cause) {
+                        value parseException =  cause;
+                        overridesException = parseException;
+                        overridesLine = parseException.lineNumber;
+                        overridesColumn = parseException.columnNumber;
+                    } else if (is Exception cause) {
+                        overridesException = cause;
+                    } else {
+                        overridesException = e;
+                    }
+                } catch(Exception e) {
+                    overridesException = e;
+                }
+                
+                if (exists theOverridesException = overridesException) {
+                    createOverridesProblemMarker(
+                        theOverridesException, 
+                        absoluteFile, 
+                        overridesLine, 
+                        overridesColumn);
+                } else {
+                    removeOverridesProblemMarker();
+                }
+                return result;
+            }
+        }.offline(configuration.offline)
+                .cwd(rootDirectory)
+                .systemRepo(systemRepository)
+                .extraUserRepos(
+                    toJavaStringList(
+                        referencedCeylonProjects.map((p) 
+                            => p.ceylonModulesOutputDirectory.absolutePath)))
+                .logger(platformUtils.cmrLogger)
+                .isJDKIncluded(true)
+                .buildManager();
+    }
+    
+    shared RepositoryManager repositoryManager {
+        try {
+            repositoryManagerLock.lock();
+            if (exists theRepoManager=_repositoryManager) {
+                return theRepoManager;
+            } else {
+                value newRepoManager = createRepositoryManager();
+                _repositoryManager = newRepoManager;
+                return newRepoManager;
+            }
+        } finally {
+            repositoryManagerLock.unlock();
+        }
+        
+    }
+
+    shared void resetRepositoryManager() {
+        try {
+            repositoryManagerLock.lock();
+            _repositoryManager = null;
+        } finally {
+            repositoryManagerLock.unlock();
+        }
+        
+    }
 
     deprecated("Only here for compatibility with legacy code
                 This should be removed, since the real entry point is the [[PhasedUnits]] object
@@ -294,5 +405,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     
     shared default Boolean isJavascript(NativeFile file) =>
             model.vfs.getShortName(file).endsWith(".js");
+    
 }
 
