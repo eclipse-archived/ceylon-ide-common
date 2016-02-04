@@ -39,8 +39,10 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         if (!inEditor) {
             initMultiEditChange(change);
             value decs = HashSet<Declaration>();
+            importProposals.importType(decs, infType, rootNode);
             value il = importProposals.applyImports(change, decs, rootNode, document);
             value typeName = infType.asSourceCodeString(rootNode.unit);
+            addEditToChange(change, newReplaceEdit(offset, length, typeName));
             
             return newRegion(offset + il, typeName.size);
         } else {
