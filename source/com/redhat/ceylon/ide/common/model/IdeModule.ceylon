@@ -101,6 +101,9 @@ import org.antlr.runtime {
     CommonToken,
     CommonTokenStream
 }
+import com.redhat.ceylon.common {
+    Constants
+}
 
 shared class ModuleType of 
         _PROJECT_MODULE | 
@@ -373,6 +376,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 value existingArtifact = artifactResult.artifact();
                 _artifact = existingArtifact;
                 _repositoryDisplayString = artifactResult.repositoryDisplayString();
+                if (_repositoryDisplayString == Constants.\iREPO_URL_CEYLON.replaceFirst("https", "http")) {
+                    _repositoryDisplayString = Constants.\iREPO_URL_CEYLON;
+                }
                 if (existingArtifact.name.endsWith(ArtifactContext.\iSRC)) {
                     _moduleType = ModuleType._CEYLON_SOURCE_ARCHIVE;
                 }
