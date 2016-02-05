@@ -149,6 +149,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         case (1000|1001) {
             // TODO
         }
+        case (1020) {
+            // TODO
+        }
         case (1050) {
             // TODO
         }
@@ -198,6 +201,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (1950|1951) {
             removeAnnotations.addRemoveAnnotationDecProposal("annotation", project, node, data);
+        }
+        case (20000) {
+            addAnnotations.addMakeNativeProposal(project, node, file, data);
         }
         else {
         }
