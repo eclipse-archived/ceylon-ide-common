@@ -33,6 +33,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal CreateEnumQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> createEnumQuickFix;
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
+    shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -115,13 +116,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addAnnotations.addMakeSharedProposal(project, node, data);
         }
         case (712) {
-            // TODO
+            exportModuleImportQuickFix.addExportModuleImportProposal(data);
         }
         case (713) {
             addAnnotations.addMakeSharedProposalForSupertypes(project, node, data);
         }
         case (714) {
-            // TODO
+            exportModuleImportQuickFix.addExportModuleImportProposalForSupertypes(data);
         }
         case (800|804) {
             addAnnotations.addMakeVariableProposal(project, node, data);
