@@ -31,7 +31,8 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     Type,
     Declaration,
-    Scope
+    Scope,
+    FunctionOrValue
 }
 
 import java.lang {
@@ -310,6 +311,8 @@ shared object nodes {
         value regionEnd = regionOffset + regionLength - 1;
         if (exists tokens) {
             variable Integer firstTokIdx = getTokenIndexAtCharacter(tokens, regionOffset);
+            // getTokenIndexAtCharacter() answers the negative of the index of the
+            // preceding token if the given offset is not actually within a token.
             if (firstTokIdx < 0) {
                 firstTokIdx = -firstTokIdx + 1;
             }
@@ -323,12 +326,10 @@ shared object nodes {
     }
 
 
-    //
-    // This function returns the index of the token element
-    // containing the offset specified. If such a token does
-    // not exist, it returns the negation of the index of the
-    // element immediately preceding the offset.
-    //
+    "This function returns the index of the token element
+     containing the offset specified. If such a token does
+     not exist, it returns the negation of the index of the
+     element immediately preceding the offset."
     shared Integer getTokenIndexAtCharacter(JList<CommonToken> tokens, Integer offset) {
         //search using bisection
         variable Integer low = 0;
@@ -355,12 +356,42 @@ shared object nodes {
     shared Integer getNodeEndOffset(Node? node) 
             => node?.endIndex?.intValue() else 0;
 
+    "Get the Node referenced by the given model, searching
+     in all relevant compilation units."
     shared Node? getReferencedNode(Referenceable? model) {
         if (exists model, is CeylonUnit unit = model.unit) {
             return getReferencedNodeInUnit(model, unit.compilationUnit);
         }
         return null;
     }
+    
+    shared Referenceable? getReferencedModel(Node node) {
+        if (is Tree.ImportPath node) {
+            value importPath = node;
+            return importPath.model;
+        } else if (is Tree.DocLink node) {
+            value docLink = node;
+            if (!docLink.base exists) {
+                if (docLink.\imodule exists) {
+                    return docLink.\imodule;
+                }
+                
+                if (docLink.pkg exists) {
+                    return docLink.pkg;
+                }
+            }
+        }
+        
+        variable value dec = getReferencedDeclaration(node);
+        if (is FunctionOrValue mv = dec) {
+            if (mv.shortcutRefinement) {
+                dec = mv.refinedDeclaration;
+            }
+        }
+        
+        return dec;
+    }
+
     
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
         if (exists node, exists dec = getReferencedDeclaration(node)) {
@@ -439,6 +470,7 @@ shared object nodes {
         }
     }
 
+    "Find the Node defining the given model within the given CompilationUnit."
     shared Node? getReferencedNodeInUnit(variable Referenceable? model, Tree.CompilationUnit? rootNode) {
         if (exists rootNode, exists m = model) {
             if (is Declaration decl = model) {
