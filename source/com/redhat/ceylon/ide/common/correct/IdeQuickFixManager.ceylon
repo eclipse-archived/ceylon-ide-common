@@ -35,6 +35,8 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
     shared formal AddPunctuationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addPunctuationQuickFix;
+    shared formal AddParameterListQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addParameterListQuickFix;
+    
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
     // temporary
@@ -149,6 +151,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (1000|1001) {
             addPunctuationQuickFix.addEmptyParameterListProposal(data, file);
+            addParameterListQuickFix.addParameterListProposal(data, file, false);
             // TODO
         }
         case (1020) {
@@ -180,6 +183,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (1450) {
             addAnnotations.addMakeFormalDecProposal(project, node, data);
+            addParameterListQuickFix.addParameterListProposal(data, file, false);
             // TODO
         }
         case (1610) {
