@@ -501,7 +501,7 @@ shared object nodes {
                     if (!foundTheCeylonDeclaration) {
                         if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
                             if (exists headerDeclaration 
-                                    = ModelUtil.getNativeHeader(decl.container, decl.name)) {
+                                    = ModelUtil.getNativeHeader(decl)) {
                                 if (exists overloads = headerDeclaration.overloads) {
                                     for (overload in overloads) {
                                         if (overload.nativeBackends.header()) {
