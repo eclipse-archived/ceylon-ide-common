@@ -43,7 +43,6 @@ import org.antlr.runtime {
 }
 
 shared object nodes {
-
     value idPattern = Pattern.compile("(^[a-z]|[A-Z])([A-Z]*)([_a-z]+)");
     value keywords = ["import", "assert",
         "alias", "class", "interface", "object", "given", "value", "assign", "void", "function",
