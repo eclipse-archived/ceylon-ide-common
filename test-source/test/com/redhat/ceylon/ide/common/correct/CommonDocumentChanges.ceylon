@@ -40,6 +40,10 @@ shared interface CommonDocumentChanges
     shared actual TextEdit newReplaceEdit(Integer position, Integer length, String string) {
         return ReplaceEdit(position, length, string);
     }
+    
+    shared actual String getDocContent(Ref<String> doc, Integer start, Integer length) {
+        return doc.val.span(start, start + length);
+    }
 }
 
 shared class TextChange(shared Ref<String> document) {

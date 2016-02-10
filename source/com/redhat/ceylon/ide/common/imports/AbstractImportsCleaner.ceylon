@@ -30,9 +30,6 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     
     shared formal Indents<IDocument> indents;
     
-    "Returns a subset of the `doc` from offset `start` to `start + length`"
-    shared formal String getDocContent(IDocument doc, Integer start, Integer length);
-    
     "Shows a popup to allow the user to select which `Declaration` should
      be imported between the different `proposals`"
     shared formal Declaration? select(List<Declaration> proposals);

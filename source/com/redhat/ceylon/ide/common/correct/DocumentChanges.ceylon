@@ -16,4 +16,7 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
     shared formal TextEdit newReplaceEdit(Integer start, Integer length, String text);
 
     shared formal Boolean hasChildren(TextChange change);
+    
+    "Returns a subset of the `doc` from offset `start` to `start + length`"
+    shared formal String getDocContent(IDocument doc, Integer start, Integer length);
 }
