@@ -98,7 +98,9 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         => withLocking {
             write=true;
             do() => projectMap.remove(nativeProject) exists;
-            interrupted() => false;
+            function interrupted() {
+                throw InterruptedException();
+            }
         };
 
     shared Boolean addProject(NativeProject nativeProject)
@@ -112,14 +114,18 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
                      return true;
                  }
             }
-            interrupted() => false;
+            function interrupted() {
+                 throw InterruptedException();
+            }
         };
 
     shared void clearProjects()
         => withLocking {
             write=true;
             do() => projectMap.clear();
-            interrupted() => null;
+            function interrupted() {
+                throw InterruptedException();
+            }
         };
 
     shared abstract default class VirtualFileSystem() extends VFS()
