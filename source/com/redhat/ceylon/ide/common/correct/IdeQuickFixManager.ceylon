@@ -38,6 +38,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddParameterListQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addParameterListQuickFix;
     shared formal AddParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addParameterQuickFix;
     shared formal AddInitializerQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addInitializerQuickFix;
+    shared formal AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addConstructorQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -154,6 +155,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         case (1000|1001) {
             addPunctuationQuickFix.addEmptyParameterListProposal(data, file);
             addParameterListQuickFix.addParameterListProposal(data, file, false);
+            addConstructorQuickFix.addConstructorProposal(data, file);
             // TODO
         }
         case (1020) {
@@ -188,7 +190,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addParameterQuickFix.addParameterProposals(data, file);
             addInitializerQuickFix.addInitializerProposals(data, file);
             addParameterListQuickFix.addParameterListProposal(data, file, false);
-            // TODO
+            addConstructorQuickFix.addConstructorProposal(data, file);
         }
         case (1610) {
             removeAnnotations.addRemoveAnnotationDecProposal("shared", project, node, data);
