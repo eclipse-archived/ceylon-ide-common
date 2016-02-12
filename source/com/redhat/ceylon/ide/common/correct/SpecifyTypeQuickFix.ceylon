@@ -28,23 +28,29 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     shared formal void newSpecifyTypeProposal(String desc,
         Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);
 
-    shared Region? enterLinkedMode(TextChange change, Tree.Type typeNode,
+    //shared formal void applyChange(TextChange change);
+    
+    shared Region? specifyType(IDocument document, Tree.Type typeNode,
         Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
-        value document = getDocumentForChange(change);
         value infType = rootNode.unit.denotableType(_infType);
         
         if (!inEditor) {
-            initMultiEditChange(change);
-            value decs = HashSet<Declaration>();
-            importProposals.importType(decs, infType, rootNode);
-            value il = importProposals.applyImports(change, decs, rootNode, document);
-            value typeName = infType.asSourceCodeString(rootNode.unit);
-            addEditToChange(change, newReplaceEdit(offset, length, typeName));
-            
-            return newRegion(offset + il, typeName.size);
+            if (is Tree.LocalModifier typeNode) {
+                value change = newTextChange("Specify Type", document);
+                initMultiEditChange(change);
+                value decs = HashSet<Declaration>();
+                importProposals.importType(decs, infType, rootNode);
+                value il = importProposals.applyImports(change, decs, rootNode, document);
+                value typeName = infType.asSourceCodeString(rootNode.unit);
+                addEditToChange(change, newReplaceEdit(offset, length, typeName));
+                
+                //applyChange(change);
+                
+                return newRegion(offset + il, typeName.size);
+            }
         } else {
             value lm = newLinkedMode();
             value proposals = completionManager.getTypeProposals(document, offset,
