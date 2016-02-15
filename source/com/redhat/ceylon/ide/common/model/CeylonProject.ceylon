@@ -20,7 +20,8 @@ import com.redhat.ceylon.ide.common.util {
     toJavaStringList
 }
 import com.redhat.ceylon.ide.common.vfs {
-    FolderVirtualFile
+    FolderVirtualFile,
+    BaseFolderVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules,
@@ -247,6 +248,9 @@ shared abstract class BaseCeylonProject() {
 
     shared formal Modules? modules;
     
+    shared formal {BaseFolderVirtualFile*} sourceFolders;
+    shared formal {BaseFolderVirtualFile*} resourceFolders;
+    
     "
      Allows synchronizing operations that involve the source-related
      Ceylon model, for example:
@@ -367,6 +371,18 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             else
                 null;
     
+    "Virtual folders of existing source folders as read form the IDE native project"
+    shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} sourceFolders =>
+            sourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
+    "Virtual folders of existing resource folders as read form the IDE native project"
+    shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
+            resourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
+
+    "Existing source folders as read form the IDE native project"
+    shared formal {NativeFolder*} sourceNativeFolders;
+    "Existing resource folders as read form the IDE native project"
+    shared formal {NativeFolder*} resourceNativeFolders;
+
     shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
     shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);
     
