@@ -285,7 +285,7 @@ shared class DeltaBuilderFactory(
             => empty;
     }
 
-    function sameBackend([Ast.AnnotationList, TypecheckerUnit] oldNode, [Ast.AnnotationList, TypecheckerUnit] newNode)
+    function sameBackend([Ast.AnnotationList, TypecheckerUnit?] oldNode, [Ast.AnnotationList, TypecheckerUnit?] newNode)
             => let (Backends oldNative = getNativeBackend(*oldNode),
                     Backends newNative = getNativeBackend(*newNode))
                         oldNative == newNative;
