@@ -40,6 +40,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddInitializerQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addInitializerQuickFix;
     shared formal AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addConstructorQuickFix;
     shared formal ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeDeclarationQuickFix;
+    shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixAliasQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -163,7 +164,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addPunctuationQuickFix.addImportWildcardProposal(data, file);
         }
         case (1050) {
-            // TODO
+            fixAliasQuickFix.addFixAliasProposal(data, file);
         }
         case (1200|1201) {
             removeAnnotations.addRemoveAnnotationDecProposal("shared", project, node, data);
