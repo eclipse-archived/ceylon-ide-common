@@ -35,6 +35,9 @@ import java.util.zip {
 import com.redhat.ceylon.model.typechecker.context {
     TypeCache
 }
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 
 shared abstract class BaseCeylonProjects() {
     
@@ -86,7 +89,13 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             interrupted() => {};
         };
 
-
+    shared {NativeProject*} nativeProjects
+            => withLocking {
+        write=false;
+        do() => projectMap.keys.sequence();
+        interrupted() => {};
+    };
+    
     shared CeylonProjectAlias? getProject(NativeProject? nativeProject)
         => withLocking {
             write=false;
@@ -128,6 +137,9 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             }
         };
 
+    shared {PhasedUnit*} parsedUnits
+        => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
+            
     shared abstract default class VirtualFileSystem() extends VFS()
             satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
 

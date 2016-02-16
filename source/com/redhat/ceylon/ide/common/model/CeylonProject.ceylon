@@ -11,7 +11,8 @@ import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnits
+    PhasedUnits,
+    PhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     Path,
@@ -21,7 +22,9 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    BaseFolderVirtualFile
+    BaseFolderVirtualFile,
+    BaseFileVirtualFile,
+    FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules,
@@ -52,6 +55,31 @@ import java.util.concurrent.locks {
 import org.xml.sax {
     SAXParseException
 }
+import ceylon.collection {
+    ArrayList,
+    MutableList
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+
+shared final class ProjectState
+        of missing | parsing | parsed | typechecking | typechecked | compiled
+        satisfies Comparable<ProjectState> {
+    Integer ordinal;
+    shared new missing {ordinal=0;}
+    shared new parsing {ordinal=1;}
+    shared new parsed {ordinal=2;}
+    shared new typechecking {ordinal=3;}
+    shared new typechecked {ordinal=4;}
+    shared new compiled {ordinal=5;}
+    compare(ProjectState other) => 
+            ordinal <=> other.ordinal;
+    equals(Object that) =>
+            if (is ProjectState that)
+    then ordinal==that.ordinal
+    else false;
+}
 
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
@@ -60,6 +88,16 @@ shared abstract class BaseCeylonProject() {
     shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     Lock repositoryManagerLock = ReentrantLock();
     variable RepositoryManager? _repositoryManager = null;
+    
+    "TODO: should not be shared. Will be made unshared when the
+     using methods will have been implemented in Ceylon"
+    shared variable ProjectState state = ProjectState.missing;
+    
+    shared Boolean parsing => state == ProjectState.parsing;
+    shared Boolean parsed => state >= ProjectState.parsed;
+    shared Boolean typechecking => state == ProjectState.typechecking;
+    shared Boolean typechecked => state >= ProjectState.typechecked;
+    shared Boolean compiled => state >= ProjectState.compiled;
     
     shared formal BaseCeylonProjects model;
     shared formal String name;
@@ -167,8 +205,11 @@ shared abstract class BaseCeylonProject() {
                 [[PhasedUnits]]")
     shared formal TypeChecker? typechecker;
     
-    deprecated("Should be hidden in the future, when implemented directy here in Ceylon")
-    shared default PhasedUnits? phasedUnits=>typechecker?.phasedUnits;
+    shared {PhasedUnit*} parsedUnits =>
+            if (parsed,
+                exists units=typechecker?.phasedUnits?.phasedUnits)
+            then CeylonIterable(units)
+            else {};
     
     shared CeylonProjectConfig configuration {
         if (exists config = ceylonConfig) {
@@ -242,14 +283,25 @@ shared abstract class BaseCeylonProject() {
         shared formal {BaseIdeModule*} fromProject;
         shared formal {BaseIdeModule*} external;
         
-        shared formal BaseIdeModuleManager manager;
-        shared formal BaseIdeModuleSourceMapper sourceMapper;
+        shared default BaseIdeModuleManager manager {
+            assert(exists units=typechecker?.phasedUnits,
+                is BaseIdeModuleManager mm=units.moduleManager);
+            return mm; 
+        }
+        
+        shared default BaseIdeModuleSourceMapper sourceMapper {
+            assert(exists units=typechecker?.phasedUnits,
+                is BaseIdeModuleSourceMapper msm=units.moduleSourceMapper);
+            return msm; 
+        }
     }
 
     shared formal Modules? modules;
     
     shared formal {BaseFolderVirtualFile*} sourceFolders;
     shared formal {BaseFolderVirtualFile*} resourceFolders;
+    shared formal {BaseFolderVirtualFile*} rootFolders;
+    shared formal {BaseFileVirtualFile*} projectFiles;
     
     "
      Allows synchronizing operations that involve the source-related
@@ -309,6 +361,8 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
+    shared MutableList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFileList = 
+            ArrayList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
     
@@ -349,21 +403,15 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual {IdeModuleAlias*} external
                 => filter((m) => ! m.isProjectModule);
         
-        shared actual IdeModuleManagerAlias manager {
-            assert(exists units=phasedUnits,
-                    is IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> mm=units.moduleManager);
-            return mm; 
-        }
+        shared actual IdeModuleManagerAlias manager 
+                => unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.manager); 
         
-        shared actual IdeModuleSourceMapperAlias sourceMapper {
-            assert(exists units=phasedUnits,
-                    is IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> msm=units.moduleSourceMapper);
-            return msm;
-        }
+        shared actual IdeModuleSourceMapperAlias sourceMapper
+                => unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.sourceMapper); 
     }
     
     shared actual Modules? modules =>
-            if (exists tcMods = phasedUnits?.moduleManager?.modules)
+            if (exists tcMods = typechecker?.phasedUnits?.moduleManager?.modules)
             then 
                 object extends Modules() {
                     typecheckerModules = tcMods;
@@ -374,15 +422,22 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     "Virtual folders of existing source folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} sourceFolders =>
             sourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
+    
     "Virtual folders of existing resource folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
             resourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
 
+    shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders => 
+            sourceFolders.chain(resourceFolders);
+
+    shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFileList;
+    
     "Existing source folders as read form the IDE native project"
     shared formal {NativeFolder*} sourceNativeFolders;
     "Existing resource folders as read form the IDE native project"
     shared formal {NativeFolder*} resourceNativeFolders;
 
+    
     shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
     shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);
     
