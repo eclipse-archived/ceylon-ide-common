@@ -41,6 +41,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addConstructorQuickFix;
     shared formal ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeDeclarationQuickFix;
     shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixAliasQuickFix;
+    shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> appendMemberReferenceQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -215,6 +216,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (1950|1951) {
             removeAnnotations.addRemoveAnnotationDecProposal("annotation", project, node, data);
+        }
+        case (2000) {
+            createParameterQuickFix.addCreateParameterProposals(data);
+        }
+        case (2100) {
+            appendMemberReferenceQuickFix.addAppendMemberReferenceProposals(data, file);
+            // TODO
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);
