@@ -12,7 +12,7 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared variable Tree.InvocationExpression? result = null;
     variable Tree.InvocationExpression? current = null;
-    variable TypedDeclaration? parameter = null;
+    shared variable TypedDeclaration? parameter = null;
     
     shared actual void visit(Tree.ListedArgument that) {
         Tree.Expression? e = that.expression;
