@@ -46,6 +46,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addSatisfiesQuickFix;
     shared formal AddSpreadToVariadicParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addSpreadToVariadicParameterQuickFix;
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addTypeParameterQuickFix;
+    shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> shadowReferenceQuickFix; 
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -238,6 +239,15 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (2500) {
             addTypeParameterQuickFix.addTypeParameterProposal(data, file);
+        }
+        case (3000) {
+            // TODO
+        }
+        case (3100) {
+            shadowReferenceQuickFix.addShadowReferenceProposal(data, file);
+        }
+        case (3101|3102) {
+            shadowReferenceQuickFix.addShadowSwitchReferenceProposal(data, file);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);
