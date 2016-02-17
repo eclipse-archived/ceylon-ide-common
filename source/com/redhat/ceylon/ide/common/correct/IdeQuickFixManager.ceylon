@@ -48,6 +48,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addTypeParameterQuickFix;
     shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> shadowReferenceQuickFix; 
     shared formal ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeInitialCaseQuickFix;
+    shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -252,6 +253,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (5001|5002) {
             changeInitialCaseQuickFix.addChangeIdentifierCaseProposal(data, file);
+        }
+        case (6000) {
+            fixMultilineStringIndentationQuickFix.addFixMultilineStringIndentation(data, file);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);

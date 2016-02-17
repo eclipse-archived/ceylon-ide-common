@@ -20,7 +20,7 @@ shared interface AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
     
-    shared formal void newProposal(Data data, String name, TextChange change,
+    shared formal void newProposal(Data data, String desc, TextChange change,
         DefaultRegion region);
     
     shared void addConstructorProposal(Data data, IFile file) {
