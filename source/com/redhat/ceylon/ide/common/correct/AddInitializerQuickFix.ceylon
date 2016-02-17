@@ -20,7 +20,8 @@ shared interface AddInitializerQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
         
         if (is Tree.AttributeDeclaration node) {
             value attDecNode = node;
-            value sie = attDecNode.specifierOrInitializerExpression;
+            Tree.SpecifierOrInitializerExpression? sie = attDecNode.specifierOrInitializerExpression;
+            
             if (!(sie is Tree.LazySpecifierExpression)) {
                 addInitializerProposal(data, file, attDecNode);
             }

@@ -240,7 +240,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.AttributeDeclaration that) {
         Type? ort = requiredType;
-        requiredType = that.type.typeModel;
+        requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
