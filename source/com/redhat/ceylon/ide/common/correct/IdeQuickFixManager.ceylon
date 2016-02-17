@@ -6,6 +6,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
+import com.redhat.ceylon.ide.common.model {
+    BaseCeylonProject
+}
+
 import java.util {
     ArrayList,
     Collection
@@ -17,6 +21,7 @@ shared interface QuickFixData<Project> {
     shared formal Node node;
     shared formal Tree.CompilationUnit rootNode;
     shared formal Project project;
+    shared formal BaseCeylonProject ceylonProject;
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,Project,IFile,ICompletionProposal,Data,LinkedMode>()
@@ -49,6 +54,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> shadowReferenceQuickFix; 
     shared formal ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeInitialCaseQuickFix;
     shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
+    shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -256,6 +262,11 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (6000) {
             fixMultilineStringIndentationQuickFix.addFixMultilineStringIndentation(data, file);
+        }
+        case (7000) {
+            if (exists tc) {
+                addModuleImportQuickFix.addModuleImportProposals(data, tc);
+            }
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);
