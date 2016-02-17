@@ -10,6 +10,9 @@ import com.redhat.ceylon.ide.common.completion {
 import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
+import com.redhat.ceylon.ide.common.model {
+    IResourceAware
+}
 
 shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
         Region,Project,Data,ICompletionResult=Anything>
@@ -30,4 +33,6 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     shared formal IdeCompletionManager<out Anything,out ICompletionResult,IDocument> completionManager;
     
     shared formal PhasedUnit? getPhasedUnit(Unit? u, Data data);
+    
+    shared formal IFile? getFile<NativeFile>(IResourceAware<out Anything, out Anything, NativeFile> pu, Data data);
 }

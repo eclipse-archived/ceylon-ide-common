@@ -47,6 +47,7 @@ import com.redhat.ceylon.ide.common.search {
      }
 
  "
+// TODO automatically import satisfied type if needed
 shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
         satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
@@ -95,7 +96,7 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             value decRootNode = phasedUnit.compilationUnit;
             value declaration = determineContainer(decRootNode, typeDec);
             if (exists declaration,
-                is IFile file = phasedUnit.resourceFile) {
+                is IFile file = getFile(phasedUnit, data)) {
                 
                 createProposals(data, typeDec, isTypeParam, changeText, 
                     file, declaration, node.unit.equals(unit));
