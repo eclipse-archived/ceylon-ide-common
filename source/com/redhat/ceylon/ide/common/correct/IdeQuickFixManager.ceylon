@@ -57,6 +57,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
     shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> renameDescriptorQuickFix;
+    shared formal ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeRefiningTypeQuickType;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -272,6 +273,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (8000) {
             renameDescriptorQuickFix.addRenameDescriptorProposal(data, file);
+            // TODO addMoveDirProposal
+        }
+        case (9000) {
+            changeRefiningTypeQuickType.addChangeRefiningTypeProposal(data, file);
+        }
+        case (9100|9200) {
+            changeRefiningTypeQuickType.addChangeRefiningParametersProposal(data, file);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);

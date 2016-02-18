@@ -760,7 +760,7 @@ void appendParameters<Document>(Declaration d, Reference? pr,
     }
 }
 
-void appendParameter(StringBuilder result, Reference? pr, Parameter p,
+shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
     Unit unit, Boolean descriptionOnly) {
     
     if (!exists mod = p.model) {
