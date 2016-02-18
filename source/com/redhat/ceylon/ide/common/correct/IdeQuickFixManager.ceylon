@@ -58,6 +58,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
     shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> renameDescriptorQuickFix;
     shared formal ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeRefiningTypeQuickType;
+    shared formal SwitchQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> switchQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -280,6 +281,10 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (9100|9200) {
             changeRefiningTypeQuickType.addChangeRefiningParametersProposal(data, file);
+        }
+        case (10000) {
+            switchQuickFix.addElseProposal(data, file);
+            switchQuickFix.addCasesProposal(data, file);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);
