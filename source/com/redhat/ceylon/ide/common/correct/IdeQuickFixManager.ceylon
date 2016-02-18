@@ -18,6 +18,7 @@ import java.util {
 shared interface QuickFixData<Project> {
     shared formal Integer errorCode;
     shared formal Integer problemOffset;
+    shared formal Integer problemLength;
     shared formal Node node;
     shared formal Tree.CompilationUnit rootNode;
     shared formal Project project;
@@ -55,6 +56,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeInitialCaseQuickFix;
     shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
+    shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> renameDescriptorQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -267,6 +269,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             if (exists tc) {
                 addModuleImportQuickFix.addModuleImportProposals(data, tc);
             }
+        }
+        case (8000) {
+            renameDescriptorQuickFix.addRenameDescriptorProposal(data, file);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(project, node, file, data);
