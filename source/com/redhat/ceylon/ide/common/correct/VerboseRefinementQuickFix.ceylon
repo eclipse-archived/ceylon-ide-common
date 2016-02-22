@@ -41,13 +41,13 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
         }
     }
 
-    shared void addNonVerboseRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addShortcutRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.AttributeDeclaration attr = statement,
             is Tree.SpecifierExpression spec = attr.specifierOrInitializerExpression,
             exists model = attr.declarationModel,
             model.actual) {
             
-            value change = newTextChange("Convert to non-verbose Refinement", file);
+            value change = newTextChange("Convert to Shortcut Refinement", file);
             initMultiEditChange(change);
             
             if (exists e = spec.expression,
@@ -57,7 +57,7 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                 value length = attr.identifier.startIndex.intValue() - start;
                 addEditToChange(change, newDeleteEdit(start, length));
                 
-                newProposal(data, "Convert to non-verbose refinement", change);
+                newProposal(data, "Convert to shortcut refinement", change);
             }
         }
     }
