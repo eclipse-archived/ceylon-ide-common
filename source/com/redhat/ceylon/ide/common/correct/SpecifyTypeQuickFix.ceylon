@@ -28,6 +28,8 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     shared formal void newSpecifyTypeProposal(String desc,
         Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);
 
+    shared formal SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,
+        TextChange,Region,Project,Data,CompletionResult> specifyTypeArgumentsQuickFix;
     //shared formal void applyChange(TextChange change);
     
     shared Region? specifyType(IDocument document, Tree.Type typeNode,
@@ -135,4 +137,21 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         return itv.result;
     }
 
+    shared void addTypingProposals(Data data, IFile file, Tree.Declaration? decNode) {
+        if (is Tree.TypedDeclaration decNode, 
+            !(decNode is Tree.ObjectDefinition),
+            !(decNode is Tree.Variable)) {
+            
+            value type = (decNode).type;
+            if (type is Tree.LocalModifier || type is Tree.StaticType) {
+                addSpecifyTypeProposal(type, data);
+            }
+        } else if (is Tree.LocalModifier|Tree.StaticType node = data.node) {
+            addSpecifyTypeProposal(node, data);
+        }
+        
+        if (is Tree.MemberOrTypeExpression node = data.node) {
+            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data, file);
+        }
+    }
 }
