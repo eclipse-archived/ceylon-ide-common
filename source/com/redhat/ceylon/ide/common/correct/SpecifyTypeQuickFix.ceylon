@@ -72,7 +72,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         newProposal("Declare explicit type", type, data.rootNode, type.typeModel, data);
     }
 
-    shared void createProposals(Tree.Type type, Data data) {
+    void createProposals(Tree.Type type, Data data) {
         value cu = data.rootNode;
         value result = inferType(cu, type);
         value declaredType = type.typeModel;
@@ -141,7 +141,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
             !(decNode is Tree.ObjectDefinition),
             !(decNode is Tree.Variable)) {
             
-            value type = (decNode).type;
+            value type = decNode.type;
             if (type is Tree.LocalModifier || type is Tree.StaticType) {
                 addSpecifyTypeProposal(type, data);
             }
