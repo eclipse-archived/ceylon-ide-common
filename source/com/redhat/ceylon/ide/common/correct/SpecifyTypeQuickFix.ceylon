@@ -69,8 +69,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     }
 
     shared void createProposal(Tree.Type type, Data data) {
-        newSpecifyTypeProposal("Declare explicit type", type,
-            data.rootNode, type.typeModel, data);
+        newProposal("Declare explicit type", type, data.rootNode, type.typeModel, data);
     }
 
     shared void createProposals(Tree.Type type, Data data) {
@@ -86,27 +85,27 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                         || !gt.isSubtypeOf(result.inferredType),
                     !gt.isSubtypeOf(declaredType)) {
 
-                    newSpecifyTypeProposal("Widen type to", type, cu, gt, data);
+                    newProposal("Widen type to", type, cu, gt, data);
                 }
             }
             
             if (!isTypeUnknown(result.inferredType)) {
                 assert(exists it = result.inferredType);
                 if (!it.isSubtypeOf(declaredType)) {
-                    newSpecifyTypeProposal("Change type to", type, cu, it, data);
+                    newProposal("Change type to", type, cu, it, data);
                 } else if (!declaredType.isSubtypeOf(result.inferredType)) {
-                    newSpecifyTypeProposal("Narrow type to", type, cu, it, data);
+                    newProposal("Narrow type to", type, cu, it, data);
                 }
             }
             
             if (is Tree.LocalModifier type) {
-                newSpecifyTypeProposal("Declare explicit type", type, cu,
+                newProposal("Declare explicit type", type, cu,
                     declaredType, data);
             }
         } else {
             if (!isTypeUnknown(result.inferredType)) {
                 assert(exists it = result.inferredType);
-                newSpecifyTypeProposal("Declare type", type, cu, it, data);
+                newProposal("Declare type", type, cu, it, data);
             }
             
             if (!isTypeUnknown(result.generalizedType)) {
@@ -115,7 +114,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                 if (isTypeUnknown(result.inferredType)
                     || !gt.isSubtypeOf(result.inferredType)) {
                     
-                    newSpecifyTypeProposal("Declare type", type, cu, gt, data);                    
+                    newProposal("Declare type", type, cu, gt, data);                    
                 }
             
             }
@@ -153,5 +152,12 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         if (is Tree.MemberOrTypeExpression node = data.node) {
             specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data, file);
         }
+    }
+    
+    void newProposal(String desc,
+        Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data) {
+        
+        newSpecifyTypeProposal("``desc`` '``infType.asString(data.rootNode.unit)``'",
+            type, cu, infType, data);
     }
 }
