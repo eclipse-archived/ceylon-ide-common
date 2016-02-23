@@ -66,19 +66,18 @@ shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,Tex
             action = getTerm(doc, statement.baseMemberExpression) + " = ";
             operation = statement.specifierExpression.expression;
         } else if (is CustomTree.AttributeDeclaration statement) {
-            value attrDecl = statement;
-            if (!attrDecl.identifier exists) {
+            if (!statement.identifier exists) {
                 return;
             }
             
-            value identifier = getTerm(doc, attrDecl.identifier);
+            value identifier = getTerm(doc, statement.identifier);
             variable value annotations = "";
-            if (!attrDecl.annotationList.annotations.empty) {
-                annotations = getTerm(doc, attrDecl.annotationList) + " ";
+            if (!statement.annotationList.annotations.empty) {
+                annotations = getTerm(doc, statement.annotationList) + " ";
             }
             
             String type;
-            if (is Tree.ValueModifier valueModifier = attrDecl.type) {
+            if (is Tree.ValueModifier valueModifier = statement.type) {
                 Type? typeModel = valueModifier.typeModel;
                 if (!exists typeModel) {
                     return;
@@ -86,12 +85,12 @@ shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,Tex
                 
                 type = typeModel.asString();
             } else {
-                type = getTerm(doc, attrDecl.type);
+                type = getTerm(doc, statement.type);
             }
             
             declaration = annotations + type + " " + identifier + ";";
             Tree.SpecifierOrInitializerExpression? sie = 
-                    attrDecl.specifierOrInitializerExpression;
+                    statement.specifierOrInitializerExpression;
             
             if (!exists sie) {
                 return;
