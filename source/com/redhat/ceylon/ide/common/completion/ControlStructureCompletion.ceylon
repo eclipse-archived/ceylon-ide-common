@@ -190,7 +190,7 @@ shared abstract class ControlStructureProposal<IdeComponent,
         if (exists loc = text.firstInclusion(" val =")) {
             value lm = newLinkedMode();
             
-            value names = nodes.nameProposals(node).array.map(
+            value names = nodes.nameProposals(node, false, cpc.parsedRootNode).array.map(
                 (_) => newNameCompletion(_?.string)
             ).sequence();
             

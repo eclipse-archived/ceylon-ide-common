@@ -22,7 +22,7 @@ shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
             value statement = nodes.findStatement(data.rootNode, node);
             
             if (is Tree.SwitchStatement statement) {
-                value name = nodes.nameProposals(node).get(0).string;
+                value name = nodes.nameProposals(node, false, data.rootNode).get(0).string;
                 value change = newTextChange("Shadow Reference", file);
                 initMultiEditChange(change);
 //                Integer offset = statement.getStartIndex();
@@ -67,7 +67,7 @@ shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
         if (is Tree.Variable var = data.node) {
             value offset = var.identifier.startIndex.intValue();
             value term = var.specifierExpression.expression.term;
-            value name = nodes.nameProposals(term).get(0).string;
+            value name = nodes.nameProposals(term, false, data.rootNode).get(0).string;
             value change = newTextChange("Shadow Reference", file);
             initMultiEditChange(change);
             addEditToChange(change, newInsertEdit(offset, name + " = "));

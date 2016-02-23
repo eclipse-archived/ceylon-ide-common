@@ -32,7 +32,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Declaration,
     Scope,
-    FunctionOrValue
+    FunctionOrValue,
+    Function,
+    Parameter,
+    Class,
+    ParameterList
 }
 
 import java.lang {
@@ -63,6 +67,7 @@ shared object nodes {
         "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while",
         "try", "catch", "finally", "this", "outer", "super", "is", "exists", "nonempty", "then",
         "dynamic", "new", "let"];
+    value wordPattern = Pattern.compile("\\p{Alpha}+");
 
     shared Tree.Declaration? findDeclaration(Tree.CompilationUnit cu, Node node) {
         value visitor = FindDeclarationVisitor(node);
@@ -86,6 +91,12 @@ shared object nodes {
         value visitor = FindArgumentVisitor(node);
         cu.visit(visitor);
         return visitor.declaration;
+    }
+    
+    [Tree.InvocationExpression?, Tree.SequencedArgument?, Tree.NamedArgument|Tree.PositionalArgument?]? findArgumentContext(Tree.CompilationUnit cu, Node node) {
+        value visitor = FindArgumentContextVisitor(node);
+        cu.visit(visitor);
+        return visitor.context;
     }
 
     shared Tree.OperatorExpression? findOperator(Tree.CompilationUnit cu, Node node) {
@@ -594,7 +605,10 @@ shared object nodes {
     shared Integer getTokenLength(CommonToken token) 
             => token.stopIndex - token.startIndex + 1;
 
-    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false) {
+    "Generates proposed names for provided node.
+     
+     Returned names are quoted to be valid text representing a variable name."
+    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false, Tree.CompilationUnit? compilationUnit = null) {
         value names = HashSet<String>();
 
         if (is Tree.Term node) {
@@ -609,6 +623,9 @@ shared object nodes {
                 if (is Tree.InvocationExpression inv = typedTerm)
                 then TreeUtil.unwrapExpressionUntilTerm(inv.primary)
                 else typedTerm;
+            if(exists compilationUnit) {
+                addArgumentNameProposals(names, compilationUnit, baseTerm);
+            }
 
             /*if (is Tree.FunctionType ft = baseTerm,
                     is Tree.SimpleType returnType = ft.returnType) {
@@ -648,8 +665,9 @@ shared object nodes {
                 names.add ("range");
             } case (is Tree.EntryOp) {
                 names.add ("entry");
-            }
-            else {}
+            } case (is Tree.StringLiteral) {
+                addStringLiteralNameProposals(names, baseTerm);
+            } else {}
 
             if (!ModelUtil.isTypeUnknown(type)) {
                 assert (exists type);
@@ -677,6 +695,85 @@ shared object nodes {
         }
 
         return createJavaStringArray(names);
+    }
+    
+    "String literal name proposals:
+     
+     Name proposal from string value is constructed only if string value is not
+     empty and contains only letters. 
+     
+     Name proposal is lowercase version of string literal value.
+     
+     Appended names are quoted to be valid text representing a variable name."
+    void addStringLiteralNameProposals(HashSet<String> names, Tree.StringLiteral node) {
+        String text = node.text;
+        value matcher = wordPattern.matcher(javaString(text));
+        if(matcher.matches()) {
+            String unformatted = matcher.group();
+            names.add(escaping.escape(unformatted.lowercased));
+        }
+    }
+    
+    "Invocation argument value name proposals:
+     
+     For all cases with few exception proposed name is exact value of parameter
+     name.
+     
+     For variadic parameters if more than one value is provided to it number 
+     of parameter is appended to it.
+     
+     For anonymous arguments always number of parameter is appended to it.
+     
+     Proposals for indirect invocations are not supported.
+     
+     Proposals for arguments in not-first arguments lists of functions are not supported.
+     
+     Appended names are quoted to be valid text representing a variable name."
+    void addArgumentNameProposals(HashSet<String> names, Tree.CompilationUnit compilationUnit, Tree.Term node) {
+        [Tree.InvocationExpression?, Tree.SequencedArgument?, Tree.NamedArgument|Tree.PositionalArgument?]? argumentContext = findArgumentContext(compilationUnit, node);
+        if(exists argumentContext) {
+            value [invocationExpression, sequencedArgument, argument] = argumentContext;
+            if(exists invocationExpression) {
+                switch(argument)
+                case (is Tree.NamedArgument) {
+                    names.add(escaping.escapeInitialLowercase(argument.identifier.text));
+                } case (is Tree.PositionalArgument) {
+                    Parameter? parameter = argument.parameter;
+                    if(exists parameter) {
+                        variable value name = parameter.name;
+                        if(exists sequencedArgument) {
+                            value index = sequencedArgument.positionalArguments.indexOf(argument);
+                            if(index >= 0) {
+                                name = name + (index + 1).string;
+                            }
+                        } else if (parameter.sequenced) {
+                            Tree.PositionalArgumentList? positionalArgumentList = invocationExpression.positionalArgumentList;
+                            if (exists positionalArgumentList) {
+                                Tree.Primary? maybeParameterizedFunction = invocationExpression.primary;
+                                Tree.Primary? \ifunction;
+                                if(is Tree.ParameterizedExpression maybeParameterizedFunction) {
+                                    \ifunction = maybeParameterizedFunction.primary;
+                                } else {
+                                    \ifunction = maybeParameterizedFunction;
+                                }
+                                if(is Tree.StaticMemberOrTypeExpression \ifunction) {
+                                    Declaration? declaration = \ifunction.declaration;
+                                    if(is Function|Class declaration) {
+                                    JList<ParameterList> parameterLists = declaration.parameterLists;
+                                        JList<Parameter> parameters = parameterLists.get(0).parameters;
+                                        Integer position = positionalArgumentList.positionalArguments.indexOf(argument);
+                                        if(parameters.contains(parameter) && parameters.size() < positionalArgumentList.positionalArguments.size()) {
+                                            name += (position - parameters.size() + 2).string;
+                                        }
+                                    } 
+                                }
+                            }
+                        }
+                        names.add(escaping.escapeInitialLowercase(name));
+                    }
+                } case (is Null) {}
+            }
+        }
     }
 
     shared void addNameProposals(
