@@ -52,14 +52,14 @@ shared class SourceCode(contents, path) {
     shared String path;
 }
 
-shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollection) {
+shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollection, Boolean jdkIncluded = false) {
     value repositoryManager = repoManager()
                 .offline(true)
 //                .cwd(cwd)
 //                .systemRepo(systemRepo)
 //                .extraUserRepos(getReferencedProjectsOutputRepositories(project))
 //                .logger(new EclipseLogger())
-//                .isJDKIncluded(true)
+                .isJDKIncluded(jdkIncluded)
                 .buildManager();
 
     value context = Context(repositoryManager, VFS());

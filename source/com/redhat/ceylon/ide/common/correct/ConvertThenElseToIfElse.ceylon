@@ -123,7 +123,7 @@ shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,Tex
                     thenTerm = leftTermStr;
                     test = "exists " + leftTermStr;
                 } else {
-                    value id = nodes.nameProposals(leftTerm).get(0);
+                    value id = nodes.nameProposals(leftTerm, false, data.rootNode).get(0);
                     test = "exists " + id.string + " = " + leftTermStr;
                     thenTerm = id.string;
                 }

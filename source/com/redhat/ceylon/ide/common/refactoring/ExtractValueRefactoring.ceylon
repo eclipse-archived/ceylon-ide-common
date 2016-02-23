@@ -57,7 +57,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
     shared actual String initialNewName()
             => if (exists node = editorData?.node)
-                then nodes.nameProposals(node).get(0).string
+                then nodes.nameProposals(node, false, editorData?.rootNode).get(0).string
                 else "";
 
     shared actual default Boolean editable
@@ -247,7 +247,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     else false;
 
     shared actual ObjectArray<JString> nameProposals
-        => nodes.nameProposals(editorData?.node);
+        => nodes.nameProposals(editorData?.node, false, editorData?.rootNode);
 
     shared actual String name
         => "Extract Value";
