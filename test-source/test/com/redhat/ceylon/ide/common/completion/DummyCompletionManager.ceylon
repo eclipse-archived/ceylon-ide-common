@@ -16,8 +16,10 @@ import com.redhat.ceylon.ide.common.completion {
     IdeCompletionManager
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
     BaseCeylonProject
+}
+import com.redhat.ceylon.ide.common.settings {
+    CompletionOptions
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -44,9 +46,6 @@ import java.util.regex {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.settings {
-    CompletionOptions
 }
 
 class Result(shared String kind, shared String insertedText, shared String description = insertedText) {

@@ -13,9 +13,6 @@ import java.io {
 import java.lang {
     System
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonProjects
-}
 
 shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
         satisfies FileVirtualFile<NativeProject, NativeResource,NativeFolder,NativeFile> 
