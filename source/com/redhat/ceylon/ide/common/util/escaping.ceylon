@@ -32,6 +32,23 @@ shared object escaping {
                 then "\\i``name``"
                 else name;
     
+    "Escapes inital lowercase identifier.
+     
+     Provided argument must be legal unescaped identifier. 
+     Otherwise result of this method is unspecified."
+    shared String escapeInitialLowercase(String name) {
+        value first = name.first;
+        if (exists first) {
+            if (name in keywords || !first.lowercase) {
+                return "\\i``name``";
+            } else {
+                return name;
+            }
+        } else {
+            return "\\i";
+        }
+    }
+    
     shared String escapePackageName(Package p) {
         value path = p.name;
         value sb = StringBuilder();

@@ -605,6 +605,9 @@ shared object nodes {
     shared Integer getTokenLength(CommonToken token) 
             => token.stopIndex - token.startIndex + 1;
 
+    "Generates proposed names for provided node.
+     
+     Returned names are quoted to be valid text representing a variable name."
     shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false, Tree.CompilationUnit? compilationUnit = null) {
         value names = HashSet<String>();
 
@@ -699,13 +702,15 @@ shared object nodes {
      Name proposal from string value is constructed only if string value is not
      empty and contains only letters. 
      
-     Name proposal is lowercase version of string literal value."
+     Name proposal is lowercase version of string literal value.
+     
+     Appended names are quoted to be valid text representing a variable name."
     void addStringLiteralNameProposals(HashSet<String> names, Tree.StringLiteral node) {
         String text = node.text;
         value matcher = wordPattern.matcher(javaString(text));
         if(matcher.matches()) {
             String unformatted = matcher.group();
-            names.add(unformatted.lowercased);
+            names.add(escaping.escape(unformatted.lowercased));
         }
     }
     
@@ -721,7 +726,9 @@ shared object nodes {
      
      Proposals for indirect invocations are not supported.
      
-     Proposals for arguments in not-first arguments lists of functions are not supported."
+     Proposals for arguments in not-first arguments lists of functions are not supported.
+     
+     Appended names are quoted to be valid text representing a variable name."
     void addArgumentNameProposals(HashSet<String> names, Tree.CompilationUnit compilationUnit, Tree.Term node) {
         [Tree.InvocationExpression?, Tree.SequencedArgument?, Tree.NamedArgument|Tree.PositionalArgument?]? argumentContext = findArgumentContext(compilationUnit, node);
         if(exists argumentContext) {
@@ -729,7 +736,7 @@ shared object nodes {
             if(exists invocationExpression) {
                 switch(argument)
                 case (is Tree.NamedArgument) {
-                    names.add(argument.identifier.text);
+                    names.add(escaping.escapeInitialLowercase(argument.identifier.text));
                 } case (is Tree.PositionalArgument) {
                     Parameter? parameter = argument.parameter;
                     if(exists parameter) {
@@ -762,7 +769,7 @@ shared object nodes {
                                 }
                             }
                         }
-                        names.add(name);
+                        names.add(escaping.escapeInitialLowercase(name));
                     }
                 } case (is Null) {}
             }

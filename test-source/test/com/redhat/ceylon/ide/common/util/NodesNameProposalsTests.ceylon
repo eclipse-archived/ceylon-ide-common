@@ -61,9 +61,9 @@ shared class NodesNameProposalsTests() {
 		condition.check(nameProposals(stringLiteralValue));
 	}
 	
-	test shared void emptyString() => test("", NotProposed(""));
-	test shared void notOnlyLeters() => test("a1", NotProposed("a1", "a", ""));
-	test shared void onlyNonLetters() => test("11", NotProposed("11", ""));
+	test shared void emptyString() => test("", NotProposed("", "\\i"));
+	test shared void notOnlyLeters() => test("a1", NotProposed("a1", "a", "", "\\i"));
+	test shared void onlyNonLetters() => test("11", NotProposed("11", "", "\\i"));
 	test shared void onlyLetters() => test("AA", Proposed("aa"));
 	
 	test shared void namedArgument() => test("namedArgument", Proposed("argument"));
@@ -88,20 +88,20 @@ shared class NodesNameProposalsTests() {
 		 test("variadic2", Proposed("secondArgument2"));
 	}
 	
-	test shared void noArgumentShouldBeHere() => test("shouldntBeHere", NotProposed(""));
+	test shared void noArgumentShouldBeHere() => test("shouldntBeHere", NotProposed("", "\\i"));
 	
 	test shared void classWithVariadic() {
 		test("firstArgumentToClass", Proposed("argument1"));
 		test("secondArgumentToClass", Proposed("argument2"));
 	}
 	
-	test shared void indirectInvocation() => test("indirect", NotProposed("", "argument", "argument1"));
+	test shared void indirectInvocation() => test("indirect", NotProposed("", "\\i", "argument", "argument1"));
 	
-	test shared void java() => test("java", NotProposed("", "a"));
+	test shared void java() => test("java", NotProposed("", "\\i", "a"));
 	
-	test shared void withKeyword() => test("keyword", Proposed("void"));
+	test shared void withKeyword() => test("keyword", Proposed("\\ivoid"));
 	
-	test shared void withUpperCase() => test("uppercase", Proposed("Argument"));
+	test shared void withUpperCase() => test("uppercase", Proposed("\\iArgument"));
 	
 	interface Condition {
 		shared formal void check(Array<String?> proposedNames);
