@@ -135,10 +135,9 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     }
     
     shared void addParenthesesProposals(Data data, IFile file, Tree.OperatorExpression? oe) {
-        variable Node? node = data.node;
-        
-        if (is Tree.ArgumentList argList = node) {
-            class FindInvocationVisitor() extends Visitor() {
+        Node? node;
+        if (is Tree.ArgumentList argList = data.node) {
+            object findInvocationVisitor extends Visitor() {
                 variable Tree.InvocationExpression? current = null;
                 shared variable Tree.InvocationExpression? result = null;
                 
@@ -158,9 +157,11 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
                 }
             }
             
-            value fiv = FindInvocationVisitor();
-            fiv.visit(data.rootNode);
-            node = fiv.result;
+            findInvocationVisitor.visit(data.rootNode);
+            node = findInvocationVisitor.result;
+        }
+        else {
+            node = data.node;
         }
         
         if (is Tree.Expression n = node) {
