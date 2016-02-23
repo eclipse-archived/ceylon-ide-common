@@ -60,9 +60,11 @@ shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,Tex
             action = getTerm(doc, assignOp.leftTerm) + " = ";
             operation = assignOp.rightTerm;
         } else if (is Tree.SpecifierStatement statement) {
-            value specifierStmt = statement;
-            action = getTerm(doc, specifierStmt.baseMemberExpression) + " = ";
-            operation = specifierStmt.specifierExpression.expression;
+            if (statement.refinement) {
+                return;
+            }
+            action = getTerm(doc, statement.baseMemberExpression) + " = ";
+            operation = statement.specifierExpression.expression;
         } else if (is CustomTree.AttributeDeclaration statement) {
             value attrDecl = statement;
             if (!attrDecl.identifier exists) {
