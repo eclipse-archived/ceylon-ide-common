@@ -5,6 +5,7 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     Declaration
 }
+
 import java.util {
     HashSet
 }
@@ -19,46 +20,48 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
     
     shared void addVerboseRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.SpecifierStatement ss = statement,
-            ss.refinement) {
-
+            ss.refinement, 
+            exists e = ss.specifierExpression.expression,
+            !ModelUtil.isTypeUnknown(e.typeModel)) {
+            
             value change = newTextChange("Convert to Verbose Refinement", file);
             initMultiEditChange(change);
-
-            if (exists e = ss.specifierExpression.expression,
-                !ModelUtil.isTypeUnknown(e.typeModel)) {
-                
-                value unit = ss.unit;
-                value t = unit.denotableType(e.typeModel);
-                value decs = HashSet<Declaration>();
-                importProposals.importType(decs, t, data.rootNode);
-                importProposals.applyImports(change, decs, data.rootNode, getDocumentForChange(change));
-                value type = t.asSourceCodeString(unit);
-                
-                addEditToChange(change, newInsertEdit(ss.startIndex.intValue(), "shared actual " + type + " "));
-                
-                newProposal(data, "Convert to verbose refinement", change);
-            }
+            
+            value unit = ss.unit;
+            value t = unit.denotableType(e.typeModel);
+            value decs = HashSet<Declaration>();
+            importProposals.importType(decs, t, data.rootNode);
+            importProposals.applyImports(change, decs, data.rootNode, getDocumentForChange(change));
+            value type = t.asSourceCodeString(unit);
+            
+            addEditToChange(change, newInsertEdit(ss.startIndex.intValue(), "shared actual " + type + " "));
+            
+            newProposal(data, "Convert to verbose refinement", change);
         }
     }
 
     shared void addShortcutRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
-        if (is Tree.AttributeDeclaration attr = statement,
-            is Tree.SpecifierExpression spec = attr.specifierOrInitializerExpression,
-            exists model = attr.declarationModel,
-            model.actual) {
+        if (is Tree.TypedDeclaration statement,
+            is Tree.SpecifierExpression spec = 
+                    switch (statement) 
+                    case (is Tree.AttributeDeclaration) 
+                        statement.specifierOrInitializerExpression
+                    case (is Tree.MethodDeclaration) 
+                        statement.specifierExpression
+                    else null,
+            exists model = statement.declarationModel,
+            model.actual, 
+            exists e = spec.expression,
+            !ModelUtil.isTypeUnknown(e.typeModel)) {
             
             value change = newTextChange("Convert to Shortcut Refinement", file);
             initMultiEditChange(change);
             
-            if (exists e = spec.expression,
-                !ModelUtil.isTypeUnknown(e.typeModel)) {
-                
-                value start = attr.startIndex.intValue();
-                value length = attr.identifier.startIndex.intValue() - start;
-                addEditToChange(change, newDeleteEdit(start, length));
-                
-                newProposal(data, "Convert to shortcut refinement", change);
-            }
+            value start = statement.startIndex.intValue();
+            value length = statement.identifier.startIndex.intValue() - start;
+            addEditToChange(change, newDeleteEdit(start, length));
+            
+            newProposal(data, "Convert to shortcut refinement", change);
         }
     }
 }
