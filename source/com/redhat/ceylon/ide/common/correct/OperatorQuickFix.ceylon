@@ -156,12 +156,29 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
                     }
                 }
             }
-            
             findInvocationVisitor.visit(data.rootNode);
             node = findInvocationVisitor.result;
         }
         else {
-            node = data.node;
+            object ignoreLeftSideVisitor extends Visitor() {
+                variable shared Node? result = null;
+                shared actual void visit(Tree.SpecifierStatement specifierStatement) {
+                    //ignore LHSs of assignments
+                    if (exists rhs = specifierStatement.specifierExpression) {
+                        rhs.visit(this);
+                    }
+                }
+                shared actual void visitAny(Node node) {
+                    if (node==data.node) {
+                        result = node;
+                    }
+                    else {
+                        super.visitAny(node);
+                    }
+                }
+            }
+            ignoreLeftSideVisitor.visit(data.rootNode);
+            node = ignoreLeftSideVisitor.result;
         }
         
         if (is Tree.Expression n = node) {
