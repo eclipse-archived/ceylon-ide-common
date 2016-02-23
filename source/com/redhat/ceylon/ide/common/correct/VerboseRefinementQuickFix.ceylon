@@ -42,15 +42,15 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
 
     shared void addShortcutRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.TypedDeclaration statement,
-            is Tree.SpecifierExpression spec = 
+            exists model = statement.declarationModel,
+            model.actual, 
+            exists spec = 
                     switch (statement) 
                     case (is Tree.AttributeDeclaration) 
                         statement.specifierOrInitializerExpression
                     case (is Tree.MethodDeclaration) 
                         statement.specifierExpression
                     else null,
-            exists model = statement.declarationModel,
-            model.actual, 
             exists e = spec.expression,
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             
