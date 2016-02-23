@@ -204,7 +204,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
     shared actual void visit(Tree.Return that) {
         super.visit(that);
-        Tree.Term? bme = that.expression.term;
+        Tree.Term? bme = that.expression?.term;
         if (is Tree.BaseMemberExpression bme) {
             value ibme = bme;
             if (exists bmed = ibme.declaration, exists dec= declaration,
