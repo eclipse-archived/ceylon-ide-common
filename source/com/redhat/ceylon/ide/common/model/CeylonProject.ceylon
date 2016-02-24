@@ -88,6 +88,7 @@ shared abstract class BaseCeylonProject() {
     shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     Lock repositoryManagerLock = ReentrantLock();
     variable RepositoryManager? _repositoryManager = null;
+    shared ModuleDependencies moduleDependencies = ModuleDependencies();
     
     "TODO: should not be shared. Will be made unshared when the
      using methods will have been implemented in Ceylon"
@@ -274,8 +275,6 @@ shared abstract class BaseCeylonProject() {
                 .append(configuration.outputRepoProjectRelativePath)
                 .platformDependentString);
     
-    shared formal ModuleDependencies moduleDependencies;
-
     shared default abstract class Modules() satisfies {BaseIdeModule*} {
         shared formal BaseIdeModule default;
         shared formal BaseIdeModule language;
@@ -297,6 +296,8 @@ shared abstract class BaseCeylonProject() {
     }
 
     shared formal Modules? modules;
+
+    shared default BaseIdeModelLoader? modelLoader => modules?.manager?.modelLoader;
     
     shared formal {BaseFolderVirtualFile*} sourceFolders;
     shared formal {BaseFolderVirtualFile*} resourceFolders;
@@ -432,10 +433,38 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
 
     shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFileList;
     
+    shared {NativeFile*} projectNativeFiles => 
+            projectFileList.map((virtualFile) => virtualFile.nativeResource);
+
+    shared void addFile(NativeFile file) {
+        projectFileList.removeAll(projectFileList.select((vf) => vf.nativeResource == file));
+        projectFileList.add(model.vfs.createVirtualFile(file, ideArtifact));
+        // TODO : add the delta element
+    }
+    
+    shared void removeFile(NativeFile file) {
+        projectFileList.removeAll(projectFileList.select((vf) => vf.nativeResource == file));
+        // TODO : add the delta element
+    }
+    
+    shared void addFolder(NativeFolder folder, NativeFolder parent, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> root) {
+        value parentPkg = model.vfs.createVirtualFolder(parent, ideArtifact).ceylonPackage;
+        if (exists parentPkg, exists loader = modelLoader) {
+            Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, "``parentPkg.nameAsString``.``model.vfs.getShortName(folder)``");
+            setPackageForNativeFolder(folder, WeakReference(pkg));
+            setRootForNativeFolder(folder, WeakReference(root));
+        }
+
+        // TODO : add the delta element
+    }
+
     "Existing source folders as read form the IDE native project"
     shared formal {NativeFolder*} sourceNativeFolders;
     "Existing resource folders as read form the IDE native project"
     shared formal {NativeFolder*} resourceNativeFolders;
+
+    shared {NativeFolder*} rootNativeFolders =>
+            sourceNativeFolders.chain(resourceNativeFolders);
 
     
     shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
