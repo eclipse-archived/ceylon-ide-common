@@ -349,7 +349,9 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder resul
         if (params.empty) {
             result.append(" {}");
         } else {
-            value paramTypes = descriptionOnly && addParameterTypesInCompletions;
+            value paramTypes = 
+                    descriptionOnly && 
+                    addParameterTypesInCompletions;
             result.append(" { ");
             for (p in params) {
                 value name = if (descriptionOnly)
@@ -506,11 +508,13 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
             builder.append("alias");
         }
         case (is TypedDeclaration) {
-            value sequenced = if (is FunctionOrValue fov = decl,
-                decl.parameter, fov.initializerParameter.sequenced)
+            value sequenced 
+                    = if (is FunctionOrValue decl,
+                        decl.parameter && decl.initializerParameter.sequenced)
             then true else false;
             
-            variable Type? type = if (exists pr) then pr.type else decl.type;
+            variable Type? type 
+                    = if (exists pr) then pr.type else decl.type;
             
             if (sequenced, exists t = type) {
 //                type = unit.getIteratedType(type);
@@ -632,19 +636,53 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
     }
 }
 
+Boolean hasUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
+    value nt = unit.nullValueDeclaration.type;
+    for (m in ci.members) {
+        if (is Value m, 
+            !isObjectField(m) && !ModelUtil.isConstructor(m),
+            !m.isTransient() && !nt.isSubtypeOf(m.type)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Value getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
+    value nt = unit.nullValueDeclaration.type;
+    for (m in ci.members) {
+        if (is Value m, 
+            !isObjectField(m) && !ModelUtil.isConstructor(m),
+            !m.isTransient() && !nt.isSubtypeOf(m.type)) {
+            return v;
+        }
+    }
+    return null;
+}
+
 void appendHashImpl(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, Indents<out Anything> indents) {
     
-    result.append(" {")
-            .append(indent)
-            .append(indents.defaultIndent)
-            .append("variable value hash = 1;")
-            .append(indent)
-            .append(indents.defaultIndent);
-    
-    value ind = indent + indents.defaultIndent;
-    appendMembersToHash(unit, ind, result, ci);
-    result.append("return hash;").append(indent).append("}");
+    if (hasUniqueMemberForHash(unit, ci)) {
+        value v = getUniqueMemberForHash(unit, ci);
+        result.append(" => ").append(v.name);
+        if (!v.type.integer) {
+            result.append(".hash");
+        }
+        result.append(";");
+    }
+    else {
+        result.append(" {")
+                .append(indent)
+                .append(indents.defaultIndent)
+                .append("variable value hash = 1;")
+                .append(indent)
+                .append(indents.defaultIndent);
+        
+        value ind = indent + indents.defaultIndent;
+        appendMembersToHash(unit, ind, result, ci);
+        result.append("return hash;").append(indent).append("}");
+    }
 }
 
 void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
@@ -684,18 +722,15 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     variable value found = false;
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
-        if (m is Value, !isObjectField(m), !ModelUtil.isConstructor(m)) {
-            assert (is Value \ivalue = m);
-            if (!\ivalue.transient) {
-                if (!nt.isSubtypeOf(\ivalue.type)) {
-                    if (found) {
-                        result.append(" && ").append(indent);
-                    }
-                    result.append(\ivalue.name).append("==")
-                            .append(p.name).append(".").append(\ivalue.name);
-                    found = true;
-                }
+        if (is Value m, 
+            !isObjectField(m), !ModelUtil.isConstructor(m), 
+            !m.transient, !nt.isSubtypeOf(m.type)) {
+            if (found) {
+                result.append(" && ").append(indent);
             }
+            result.append(m.name).append("==")
+                    .append(p.name).append(".").append(m.name);
+            found = true;
         }
     }
     if (found) {
@@ -710,28 +745,24 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
-        if (is Value val = m, !isObjectField(m), !ModelUtil.isConstructor(m)) {
-            if (!val.transient) {
-                if (!nt.isSubtypeOf(val.type)) {
-                    result.append("hash = 31*hash + ")
-                            .append(val.name)
-                            .append(".hash;")
-                            .append(indent);
-                }
+        if (is Value m, 
+            !isObjectField(m), !ModelUtil.isConstructor(m),
+            !m.transient, !nt.isSubtypeOf(m.type)) {
+            result.append("hash = 31*hash + ").append(m.name);
+            if (!m.type.integer) {
+                result.append(".hash");
             }
+            result.append(";").append(indent);
         }
     }
 }
 
 String extraIndent(String indent, Boolean containsNewline,
-    Indents<out Anything> indents) {
-    
-    return if (containsNewline) then indent + indents.defaultIndent else indent;
-}
+    Indents<out Anything> indents) 
+        => if (containsNewline) then indent + indents.defaultIndent else indent;
 
 shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result) {
-    
     appendParameters(d, pr, unit, result, null, false);
 }
 
