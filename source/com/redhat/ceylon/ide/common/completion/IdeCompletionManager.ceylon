@@ -604,11 +604,14 @@ shared abstract class IdeCompletionManager<IdeComponent, CompletionComponent, Do
     }
 
     Boolean isRefinementProposable(Declaration dec, OccurrenceLocation? ol, Scope scope) {
-        return ol is Null &&
+        return (ol is Null || isAnonymousClass(scope)) &&
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
                 (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
     }
+    
+    Boolean isAnonymousClass(Scope scope)
+            => if (is Class scope) then scope.anonymous else false;
 
     shared formal CompletionComponent newAnonFunctionProposal(Integer offset, Type? requiredType,
         Unit unit, String text, String header, Boolean isVoid);
