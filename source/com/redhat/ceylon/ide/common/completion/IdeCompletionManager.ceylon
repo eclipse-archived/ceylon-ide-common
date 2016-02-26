@@ -1014,11 +1014,14 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
     Boolean isRefinementProposable(Declaration dec, OccurrenceLocation? ol, Scope scope) {
-        return ol is Null &&
+        return (ol is Null || isAnonymousClass(scope)) &&
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
                 (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
     }
+    
+    Boolean isAnonymousClass(Scope scope)
+            => if (is Class scope) then scope.anonymous else false;
 
     Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d) {
         return if (exists nal = d.namedArgumentList, scope == nal) then true else false;
