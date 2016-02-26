@@ -636,25 +636,13 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
     }
 }
 
-Boolean hasUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
+Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
             !isObjectField(m) && !ModelUtil.isConstructor(m),
-            !m.isTransient() && !nt.isSubtypeOf(m.type)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-Value getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
-    value nt = unit.nullValueDeclaration.type;
-    for (m in ci.members) {
-        if (is Value m, 
-            !isObjectField(m) && !ModelUtil.isConstructor(m),
-            !m.isTransient() && !nt.isSubtypeOf(m.type)) {
-            return v;
+            !m.transient && !nt.isSubtypeOf(m.type)) {
+            return m;
         }
     }
     return null;
@@ -663,8 +651,7 @@ Value getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
 void appendHashImpl(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, Indents<out Anything> indents) {
     
-    if (hasUniqueMemberForHash(unit, ci)) {
-        value v = getUniqueMemberForHash(unit, ci);
+    if (exists v = getUniqueMemberForHash(unit, ci)) {
         result.append(" => ").append(v.name);
         if (!v.type.integer) {
             result.append(".hash");
