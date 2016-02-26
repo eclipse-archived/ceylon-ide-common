@@ -34,7 +34,8 @@ import com.redhat.ceylon.ide.common.util {
     synchronize,
     equalsWithNulls,
     platformUtils,
-    Status
+    Status,
+    toJavaString
 }
 import com.redhat.ceylon.model.loader {
     TypeParser,
@@ -590,13 +591,14 @@ shared abstract class BaseIdeModelLoader(
        if (exists u=unit) {
            return u;
        } else {
-           unit = unitsByPackage.get(pkg);
+           JString key = javaString(getPackageCacheKey(pkg));
+           unit = unitsByPackage.get(key);
            if (exists u=unit) {
                return u;
            } else {
                value newUnit = newPackageTypeFactory(pkg);
                newUnit.\ipackage = pkg;
-               unitsByPackage.put(pkg, newUnit);
+               unitsByPackage.put(key, newUnit);
                return newUnit;
            }
        }
