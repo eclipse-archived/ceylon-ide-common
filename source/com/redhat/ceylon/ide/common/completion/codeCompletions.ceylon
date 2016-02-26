@@ -637,15 +637,22 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
 }
 
 Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
+    variable Value? result = null;
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
             !isObjectField(m) && !ModelUtil.isConstructor(m),
             !m.transient && !nt.isSubtypeOf(m.type)) {
-            return m;
+            if (result exists) {
+                //not unique!
+                return null;
+            }
+            else {
+                result = m;
+            }
         }
     }
-    return null;
+    return result;
 }
 
 void appendHashImpl(Unit unit, String indent, StringBuilder result,
