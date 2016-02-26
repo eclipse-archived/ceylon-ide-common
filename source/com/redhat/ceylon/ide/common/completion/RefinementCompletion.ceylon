@@ -86,7 +86,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
     }
     
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
-        IdeComponent cmp, Document doc, variable MutableList<CompletionResult> result, Indents<Document> indents) {
+        IdeComponent cmp, Document doc, MutableList<CompletionResult> result, Indents<Document> indents) {
         
         //TODO: type argument substitution using the
         //      Reference of the primary node

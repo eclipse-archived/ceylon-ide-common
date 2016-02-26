@@ -728,14 +728,12 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             }
         } else if (prefix.empty, !isLocation(ol, OccurrenceLocation.\iIS),
                 isMemberNameProposable(offset, node, memberOp),
-                node is Tree.Type || node is Tree.BaseTypeExpression || node is Tree.QualifiedTypeExpression) {
+                is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
             
             //member names we can refine
             Type? t = switch (node)
                 case (is Tree.Type) node.typeModel
-                case (is Tree.BaseTypeExpression) node.target?.type
-                case (is Tree.QualifiedTypeExpression) node.target?.type
-                else null;
+                else node.target?.type;
 
             if (exists t) {
                 addRefinementProposals(offset,
