@@ -1,4 +1,8 @@
 
+import ceylon.collection {
+    ArrayList
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree {
@@ -11,6 +15,9 @@ import com.redhat.ceylon.ide.common.model {
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
+}
+import com.redhat.ceylon.ide.common.search {
+    FindContainerVisitor
 }
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor
@@ -25,12 +32,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    ArrayList,
-    HashMap,
-    List
-}
-import com.redhat.ceylon.ide.common.search {
-    FindContainerVisitor
+    HashMap
 }
 
 "Add generic type constraints proposal for following code:
@@ -70,32 +72,23 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         }
         
         value isTypeParam = typeDec is TypeParameter;
-        value missingSatisfiedTypes = determineMissingSatisfiedTypes(
-            data.rootNode, node, typeDec);
+        value missingSatisfiedTypes
+            = let (types = determineMissingSatisfiedTypes(data.rootNode, node, typeDec))
+                if (isTypeParam) then types else types.filter(Type.\iinterface);
         
-        if (!isTypeParam) {
-            value it = missingSatisfiedTypes.iterator();
-            while (it.hasNext()) {
-                if (!it.next().\iinterface) {
-                    it.remove();
-                }
-                //TODO: add extends clause if the type is a 
-                //      Class which extends Basic or Object
-            }
-        }
+        //TODO: add extends clause if the type is a class 
+        //      which extends Basic
         
         if (missingSatisfiedTypes.empty) {
             return;
         }
         
         value changeText = correctionUtil.asIntersectionTypeString(missingSatisfiedTypes);
-        value unit = typeDec.unit;
-        if (is ModifiableSourceFile<out Anything,out Anything,out Anything,out Anything> unit) {
-            value msf = unit;
-            assert(exists phasedUnit = msf.phasedUnit);
-            value decRootNode = phasedUnit.compilationUnit;
-            value declaration = determineContainer(decRootNode, typeDec);
-            if (exists declaration,
+        if (is ModifiableSourceFile<out Anything,out Anything,out Anything,out Anything> unit 
+                = typeDec.unit) {
+            assert(exists phasedUnit = unit.phasedUnit);
+            if (exists declaration 
+                    = determineContainer(phasedUnit.compilationUnit, typeDec),
                 is IFile file = getFile(phasedUnit, data)) {
                 
                 createProposals(data, typeDec, isTypeParam, changeText, 
@@ -338,7 +331,7 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
     List<TypeParameter> determineSatisfiedTypesTypeParams(Tree.CompilationUnit rootNode, Node typeParamNode, TypeDeclaration typeDec) {
         value stTypeParams = ArrayList<TypeParameter>();
         object extends Visitor() {
-            void determineSatisfiedTypesTypeParams(TypeDeclaration typeParam, Declaration stDecl, Tree.TypeArguments args, List<TypeParameter> stTypeParams, Node typeParamNode) {
+            void determineSatisfiedTypesTypeParams(TypeDeclaration typeParam, Declaration? stDecl, Tree.TypeArguments? args, Node typeParamNode) {
                 if (is Tree.TypeArgumentList args) {
                     value tal = args;
                     value stTypeArguments = tal.types;
@@ -368,16 +361,15 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                determineSatisfiedTypesTypeParams(typeDec, that.declarationModel, that.typeArgumentList, stTypeParams, typeParamNode);
+                determineSatisfiedTypesTypeParams(typeDec, that.declarationModel, that.typeArgumentList, typeParamNode);
             }
             
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
-                determineSatisfiedTypesTypeParams(typeDec, that.declaration, that.typeArguments, stTypeParams, typeParamNode);
+                determineSatisfiedTypesTypeParams(typeDec, that.declaration, that.typeArguments, typeParamNode);
             }
-        }
-        
-            .visit(rootNode);
+            
+        }.visit(rootNode);
         return stTypeParams;
     }
 

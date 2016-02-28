@@ -1,3 +1,7 @@
+import ceylon.collection {
+    ArrayList
+}
+
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -12,11 +16,6 @@ import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration,
     Unit,
     ModelUtil
-}
-
-import java.util {
-    ArrayList,
-    List
 }
 
 object correctionUtil {
@@ -97,7 +96,7 @@ object correctionUtil {
         return unit.compilationUnit;
     }
     
-    shared String asIntersectionTypeString(List<Type> types) {
+    shared String asIntersectionTypeString({Type*} types) {
         value missingSatisfiedTypesText = StringBuilder();
         for (missingSatisfiedType in types) {
             if (missingSatisfiedTypesText.size != 0) {
@@ -240,19 +239,17 @@ object correctionUtil {
                         }
                     }
                 } else if (is Tree.MethodDeclaration st) {
-                    value md = st;
-                    if (!exists sp = md.specifierExpression) {
-                        value m = md.declarationModel;
+                    if (!exists sp = st.specifierExpression) {
+                        value m = st.declarationModel;
                         if (!m.formal) {
                             uninitialized.add(m);
                         }
                     }
                 } else if (is Tree.SpecifierStatement st) {
-                    value ss = st;
-                    value term = ss.baseMemberExpression;
-                    if (is Tree.BaseMemberExpression term) {
-                        value bme = term;
-                        uninitialized.remove(bme.declaration);
+                    value term = st.baseMemberExpression;
+                    if (is Tree.BaseMemberExpression term, 
+                        is TypedDeclaration d = term.declaration) {
+                        uninitialized.remove(d);
                     }
                 }
             }
