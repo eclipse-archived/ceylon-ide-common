@@ -29,8 +29,8 @@ object correctionUtil {
         if (m == 0) {
             return n;
         }
-        variable value p = Array<Integer>.ofSize(n + 1, 0); //'previous' cost array, horizontally
-        variable value d = Array<Integer>.ofSize(n + 1, 0); // cost array, horizontally
+        variable value p = Array.ofSize(n + 1, 0); //'previous' cost array, horizontally
+        variable value d = Array.ofSize(n + 1, 0); // cost array, horizontally
         variable Array<Integer> _d;  //placeholder to assist in swapping p and d
         
         variable Character t_j; // jth character of t
