@@ -1298,12 +1298,6 @@ shared interface DocGenerator<Document> {
                     addSeeText(dec, sb);
                 }
             }
-            
-            if (sb.size > 0) {
-                sb.prepend("see ");
-                sb.append(".");
-                addIconAndText(documentation, Icons.see, sb.string);
-            }
         } else if (exists annotatedMirror=toAnnotatedMirror(annotated)){
             if (exists annotationMirror = 
                 annotatedMirror.getAnnotation(LanguageAnnotation.\iSEE.annotationType),
