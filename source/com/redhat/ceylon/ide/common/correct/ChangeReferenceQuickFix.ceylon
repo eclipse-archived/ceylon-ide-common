@@ -1,6 +1,9 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.compiler.typechecker.util {
+    NormalizedLevenshtein
+}
 import com.redhat.ceylon.ide.common.completion {
     isLocation
 }
@@ -25,7 +28,7 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
    
     shared formal void newChangeReferenceProposal(Data data, String desc, TextChange change, Region selection);
 
-    void addChangeReferenceProposal(Data data, IFile file, String brokenName, Declaration dec, Integer dist) {
+    void addChangeReferenceProposal(Data data, IFile file, String brokenName, Declaration dec) {
         value change = newTextChange("Change Reference", file);
         initMultiEditChange(change);
         value doc = getDocumentForChange(change);
@@ -102,11 +105,11 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
             value nuc = name.first?.uppercase else false;
             value bnuc = brokenName.first?.uppercase else false;
             if (nuc == bnuc) {
-                value distance = correctionUtil.levenshteinDistance(brokenName, name); //+dwp.getProximity()/3;
-                //TODO: would it be better to just sort by dist, and
-                //      then select the 3 closest possibilities?
-                if (distance <= brokenName.size / 3 + 1) {
-                    addChangeReferenceProposal(data, file, brokenName, declaration, distance);
+                value similarity = distance.similarity(brokenName, name);
+                //TODO: would it be better to just sort by distance, 
+                //      and then select the 3 closest possibilities?
+                if (similarity > 0.6) {
+                    addChangeReferenceProposal(data, file, brokenName, declaration);
                 }
             }
         }
@@ -114,3 +117,5 @@ shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextE
 
 
 }
+
+NormalizedLevenshtein distance = NormalizedLevenshtein();

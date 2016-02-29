@@ -20,6 +20,7 @@ import com.redhat.ceylon.model.typechecker.model {
 
 object correctionUtil {
     
+    deprecated ("use [[com.redhat.ceylon.compiler.typechecker.util::NormalizedLevenshtein]]")
     shared Integer levenshteinDistance(String x, String y) {
         value n = x.size; // length of s
         value m = y.size; // length of t
