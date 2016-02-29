@@ -330,9 +330,10 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
                 assert(exists startIndex=imtl.startIndex);
                 return startIndex.intValue() + 1;
             }
-            else {
-                assert(exists endIndex=imts.get(imts.size() - 1).endIndex);
+            else if (exists endIndex=imts.get(imts.size() - 1).endIndex) {
                 return endIndex.intValue();
+            } else {
+                return imtl.endIndex.intValue();
             }
         }
     }
