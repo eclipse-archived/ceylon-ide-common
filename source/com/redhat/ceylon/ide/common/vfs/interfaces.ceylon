@@ -75,7 +75,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared actual default Boolean \iexists() => vfs.existsOnDisk(nativeResource);
     
     shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
-    shared formal Boolean isSource;
+    shared formal Boolean? isSource;
     shared formal Package? ceylonPackage;
 }
 
@@ -126,17 +126,13 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
         given NativeFile satisfies NativeResource {
     shared actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children => Collections.emptyList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
     shared actual formal NativeFile nativeResource;
-    shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> parent {
-        assert(exists existingParent = super.parent);
-        return existingParent;
-    }
     
     shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder =>
-            parent.rootFolder;
+            parent?.rootFolder;
     
-    shared actual Boolean isSource =>
-            parent.isSource;
+    shared actual Boolean? isSource =>
+            parent?.isSource;
 
     shared actual Package? ceylonPackage =>
-            parent.ceylonPackage;
+            parent?.ceylonPackage;
 }
