@@ -447,10 +447,15 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         // TODO : add the delta element
     }
     
-    shared void addFolder(NativeFolder folder, NativeFolder parent, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> root) {
-        value parentPkg = model.vfs.createVirtualFolder(parent, ideArtifact).ceylonPackage;
-        if (exists parentPkg, exists loader = modelLoader) {
-            Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, "``parentPkg.nameAsString``.``model.vfs.getShortName(folder)``");
+    shared void addFolder(NativeFolder folder, NativeFolder parent) {
+        value parentVirtualFile = model.vfs.createVirtualFolder(parent, ideArtifact);
+        if (exists parentPkg = parentVirtualFile.ceylonPackage, 
+            exists root=parentVirtualFile.rootFolder,
+            exists loader = modelLoader) {
+            Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, 
+                if (parentPkg.nameAsString.empty) 
+                then model.vfs.getShortName(folder) 
+                else ".".join {parentPkg.nameAsString, model.vfs.getShortName(folder)});
             setPackageForNativeFolder(folder, WeakReference(pkg));
             setRootForNativeFolder(folder, WeakReference(root));
         }
