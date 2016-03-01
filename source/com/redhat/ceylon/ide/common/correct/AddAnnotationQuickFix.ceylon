@@ -11,7 +11,8 @@ import com.redhat.ceylon.ide.common.imports {
 }
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor,
-    types
+    types,
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -566,6 +567,58 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         if (is Tree.Declaration node) {
             value dn = node;
             addAddAnnotationProposal(node, "shared", "Make Shared", dn.declarationModel, project, data);
+        }
+    }
+    
+    shared void addContextualAnnotationProposals(Data data, Tree.Declaration? decNode, 
+        IDocument doc, Integer offset,
+        Integer getLineOfOffset(IDocument doc, Integer offset)) {
+        
+        if (exists decNode) {
+            value idNode = nodes.getIdentifyingNode(decNode);
+            if (!exists idNode) {
+                return;
+            }
+            if (getLineOfOffset(doc, idNode.startIndex.intValue())
+                != getLineOfOffset(doc, offset)) {
+                
+                return;
+            }
+            
+            if (exists d = decNode.declarationModel) {
+                if (is Tree.AttributeDeclaration decNode) {
+                    addMakeVariableDeclarationProposal(
+                        data.project, data, decNode);
+                }
+                
+                if ((d.classOrInterfaceMember || d.toplevel), !d.shared) {
+                    addMakeSharedDecProposal(data.project, decNode, data);
+                }
+                
+                if (d.classOrInterfaceMember, !d.default, !d.formal) {
+                    if (is Tree.AnyClass decNode) {
+                        addMakeDefaultDecProposal(data.project, decNode, data);
+                    } else if (is Tree.AnyAttribute decNode) {
+                        addMakeDefaultDecProposal(data.project, decNode, data);
+                    } else if (is Tree.AnyMethod decNode) {
+                        addMakeDefaultDecProposal(data.project, decNode, data);
+                    }
+                    
+                    if (is Tree.ClassDefinition decNode) {
+                        addMakeFormalDecProposal(data.project, decNode, data);
+                    } else if (is Tree.AttributeDeclaration decNode) {
+                        value ad = decNode;
+                        if (!ad.specifierOrInitializerExpression exists) {
+                            addMakeFormalDecProposal(data.project, decNode, data);
+                        }
+                    } else if (is Tree.MethodDeclaration decNode) {
+                        value md = decNode;
+                        if (!md.specifierExpression exists) {
+                            addMakeFormalDecProposal(data.project, decNode, data);
+                        }
+                    }
+                }
+            }
         }
     }
 }
