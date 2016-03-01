@@ -122,23 +122,25 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     
     shared void addMakeVariableProposal(Project project, Node node, Data data) {
         Tree.Term term;
-        if (is Tree.AssignmentOp node) {
+        switch (node)
+        case (is Tree.AssignmentOp) {
             term = node.leftTerm;
-        } else if (is Tree.UnaryOperatorExpression node) {
+        } case (is Tree.UnaryOperatorExpression) {
             term = node.term;
-        } else if (is Tree.MemberOrTypeExpression node) {
+        } case (is Tree.MemberOrTypeExpression) {
             term = node;
-        } else if (is Tree.SpecifierStatement node) {
+        } case (is Tree.SpecifierStatement) {
             term = node.baseMemberExpression;
         } else {
             return;
         }
         
-        if (is Tree.MemberOrTypeExpression term) {
-            if (is Value dec = term.declaration) {
-                if (!exists od = dec.originalDeclaration) {
-                    addAddAnnotationProposal(node, "variable", "Make Variable", dec, project, data);
-                }
+        if (is Tree.MemberOrTypeExpression term, 
+            is Value dec = term.declaration, 
+            !dec.originalDeclaration exists && !dec.transient) {
+            addAddAnnotationProposal(node, "variable", "Make Variable", dec, project, data);
+            if (dec.classMember) {
+                addAddAnnotationProposal(node, "late", "Make Late", dec, project, data);
             }
         }
     }
