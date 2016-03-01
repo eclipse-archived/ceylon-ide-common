@@ -422,15 +422,10 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     }
     
     shared String? getAnnotationIdentifier(Tree.Annotation? annotation) {
-        variable String? annotationName = null;
-        if (exists annotation) {
-            value primary = annotation.primary;
-            if (is Tree.BaseMemberExpression primary) {
-                value bme = primary;
-                annotationName = bme.identifier.text;
-            }
-        }
-        return annotationName;
+        return if (exists annotation,
+                   is Tree.BaseMemberExpression primary = annotation.primary)
+               then primary.identifier.text
+               else null;
     }
     
     String getAnnotationWithoutParam(String annotation) {
