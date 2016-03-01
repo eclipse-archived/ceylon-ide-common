@@ -142,6 +142,19 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             }
         }
     }
+
+    shared void addMakeVariableDeclarationProposal(Project project, Data data,
+        Tree.Declaration node) {
+        
+        if (is Value dec = node.declarationModel,
+            is Tree.AttributeDeclaration node,
+            !dec.variable,
+            !dec.transient) {
+
+            addAddAnnotationProposal(node, "variable", "Make Variable",
+                    dec, project, data);
+        }
+    }
     
     shared void addMakeVariableDecProposal(Project project, Data data) {
         assert (is Tree.SpecifierOrInitializerExpression sie = data.node);
@@ -160,8 +173,6 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         (v of Visitor).visit(data.rootNode);
         addAddAnnotationProposal(data.node, "variable", "Make Variable", v.dec, project, data);
     }
-
-
     
     Declaration annotatedNode(Node node) {
         Declaration dec;
