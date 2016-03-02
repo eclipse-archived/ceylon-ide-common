@@ -52,7 +52,11 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
             let(do = () {
                 if (immutableMap.size != newKeys.size
                     || !immutableMap.keys.containsEvery(newKeys)) {
-                    immutableMap = newMap(newKeys.map((key) => key->toItem(key)));
+                    immutableMap = newMap(newKeys.map((key) => 
+                        key -> (
+                            if (exists item=immutableMap[key]) 
+                            then item 
+                            else toItem(key))));
                 }
                 return this;
             }) synchronize(this, do);
