@@ -45,7 +45,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
             CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
             FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir,
             BaseProgressMonitor monitor)
-        extends RootDirectoryVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(
+        extends RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
                 ceylonProject,
                 srcDir,
                 monitor
@@ -84,7 +84,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
     };
     
     shared actual Boolean visitNativeResource(NativeResource resource) {
-        monitor.workRemaining = 10000;
+        monitor.updateRemainingWork(10000);
         monitor.worked(1);
         if (is NativeFolder resource,
             resource == nativeRootDir) {

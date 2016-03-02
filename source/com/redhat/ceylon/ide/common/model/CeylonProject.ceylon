@@ -18,7 +18,10 @@ import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
     platformUtils,
-    toJavaStringList
+    toJavaStringList,
+    BaseProgressMonitor,
+    synchronize,
+    ImmutableMapWrapper
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -28,7 +31,8 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules,
-    Package
+    Package,
+    Module
 }
 
 import java.io {
@@ -37,7 +41,8 @@ import java.io {
 import java.lang {
     InterruptedException,
     RuntimeException,
-    IllegalStateException
+    IllegalStateException,
+    ObjectArray
 }
 import java.lang.ref {
     WeakReference
@@ -57,10 +62,19 @@ import org.xml.sax {
 }
 import ceylon.collection {
     ArrayList,
-    MutableList
+    MutableList,
+    MutableMap
 }
 import ceylon.interop.java {
     CeylonIterable
+}
+import com.redhat.ceylon.ide.common.model.parsing {
+    RootFolderScanner,
+    ModulesScanner,
+    ProjectFilesScanner
+}
+import ceylon.language {
+    newMap=map
 }
 
 shared final class ProjectState
@@ -355,6 +369,8 @@ shared abstract class BaseCeylonProject() {
     }
 }
 
+
+
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -364,35 +380,30 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         given NativeFile satisfies NativeResource {
     shared MutableList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFileList = 
             ArrayList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+
+    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
+    
+    shared CeylonProjects<NativeProject,NativeResource,NativeFolder,NativeFile>.VirtualFileSystem vfs => model.vfs; 
     
     shared actual abstract class Modules() 
             extends super.Modules() 
             satisfies {IdeModuleAlias*} {
         shared formal TypecheckerModules typecheckerModules;
         
-        shared actual Iterator<IdeModuleAlias> iterator() => object satisfies Iterator<IdeModuleAlias> {
-            value it = typecheckerModules.listOfModules.iterator();
-            shared actual IdeModuleAlias|Finished next() {
-                if (it.hasNext()) {
-                    assert(is BaseIdeModule m=it.next());
-                    return unsafeCast<IdeModuleAlias>(m);
-                } else {
-                    return finished;
-                }
-            }
-        };
+        shared actual Iterator<IdeModuleAlias> iterator() => 
+                typecheckerModules.listOfModules
+                .toArray(ObjectArray<Module>(typecheckerModules.listOfModules.size()))
+                .array.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
         
-        shared actual IdeModuleAlias default {
-            assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=typecheckerModules.defaultModule);
-            return m;
-        }
+        shared actual IdeModuleAlias default =>
+                unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.defaultModule);
         
-        shared actual IdeModuleAlias language {
-            assert(is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> m=typecheckerModules.languageModule);
-            return m; 
-        }
+        shared actual IdeModuleAlias language =>
+                unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.languageModule);
         
         shared actual Package? javaLangPackage =>
                 find((m) => m.nameAsString == "java.base")
@@ -404,7 +415,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual {IdeModuleAlias*} external
                 => filter((m) => ! m.isProjectModule);
         
-        shared actual IdeModuleManagerAlias manager 
+        shared actual IdeModuleManagerAlias manager
                 => unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.manager); 
         
         shared actual IdeModuleSourceMapperAlias sourceMapper
@@ -422,15 +433,24 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     
     "Virtual folders of existing source folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} sourceFolders =>
-            sourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
+            sourceFoldersMap.resetKeys(
+                sourceNativeFolders, 
+                (nativeFolder) => 
+                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
     
     "Virtual folders of existing resource folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
-            resourceNativeFolders.map((nativeFolder) => model.vfs.createVirtualFolder(nativeFolder, ideArtifact));
+            resourceFoldersMap.resetKeys(
+                resourceNativeFolders, 
+                (nativeFolder) => 
+                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
 
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders => 
             sourceFolders.chain(resourceFolders);
 
+    shared FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolderFromNative(NativeFolder folder) => 
+            sourceFoldersMap[folder] else resourceFoldersMap[folder];
+    
     shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFileList;
     
     shared {NativeFile*} projectNativeFiles => 
@@ -438,7 +458,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
 
     shared void addFile(NativeFile file) {
         projectFileList.removeAll(projectFileList.select((vf) => vf.nativeResource == file));
-        projectFileList.add(model.vfs.createVirtualFile(file, ideArtifact));
+        projectFileList.add(vfs.createVirtualFile(file, ideArtifact));
         // TODO : add the delta element
     }
     
@@ -448,14 +468,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     }
     
     shared void addFolder(NativeFolder folder, NativeFolder parent) {
-        value parentVirtualFile = model.vfs.createVirtualFolder(parent, ideArtifact);
+        value parentVirtualFile = vfs.createVirtualFolder(parent, ideArtifact);
         if (exists parentPkg = parentVirtualFile.ceylonPackage, 
             exists root=parentVirtualFile.rootFolder,
             exists loader = modelLoader) {
             Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, 
                 if (parentPkg.nameAsString.empty) 
-                then model.vfs.getShortName(folder) 
-                else ".".join {parentPkg.nameAsString, model.vfs.getShortName(folder)});
+                then vfs.getShortName(folder) 
+                else ".".join {parentPkg.nameAsString, vfs.getShortName(folder)});
             setPackageForNativeFolder(folder, WeakReference(pkg));
             setRootForNativeFolder(folder, WeakReference(root));
         }
@@ -488,6 +508,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared formal void setPackageForNativeFolder(NativeFolder folder, WeakReference<Package> p);
     shared formal void setRootForNativeFolder(NativeFolder folder, WeakReference<FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> root);
     shared formal void setRootIsForSource(NativeFolder rootFolder, Boolean isSource);
+    shared formal void scanRootFolder(RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner);
     
     shared Boolean isCompilable(NativeFile file) {
         if (isCeylon(file)) {
@@ -503,13 +524,42 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     }
     
     shared default Boolean isCeylon(NativeFile file) => 
-            model.vfs.getShortName(file).endsWith(".ceylon");
+            vfs.getShortName(file).endsWith(".ceylon");
     
     shared default Boolean isJava(NativeFile file) =>
-            isJavaLikeFileName(model.vfs.getShortName(file));
+            isJavaLikeFileName(vfs.getShortName(file));
     
     shared default Boolean isJavascript(NativeFile file) =>
-            model.vfs.getShortName(file).endsWith(".js");
+            vfs.getShortName(file).endsWith(".js");
     
+    "TODO: make it unshared as soon as the calling method is also in CeylonProject"
+    shared void scanFiles(BaseProgressMonitor mon) {
+        value monitor = mon.convert(10000);
+        
+        void scan(
+            {FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>*} roots,
+            RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner(FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> root)
+        ) {
+            for (root in roots) {
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException("");
+                }
+                scanRootFolder(scanner(root));
+            }
+        }
+        
+        // First scan all non-default source modules and attach the contained packages 
+        scan (sourceFolders, (root) => 
+            ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, monitor));
+        
+        // Then scan all source files
+        scan (sourceFolders, (root) => 
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFileList, monitor));
+        
+        // Finally scan all resource files
+        scan (resourceFolders, (root) => 
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFileList, monitor));
+    }
+
 }
 
