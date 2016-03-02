@@ -23,7 +23,7 @@ shared interface IdePlatformUtils {
     "Creates a [[RuntimeException|java.lang::RuntimeException]]
      with the exception type typically used in an IDE platform in case of 
      operation cancellation."
-    shared formal RuntimeException newOperationCanceledException(String message);
+    shared formal RuntimeException newOperationCanceledException(String message="");
     
     shared default Logger cmrLogger => object satisfies Logger {
         shared actual void error(String str) {
