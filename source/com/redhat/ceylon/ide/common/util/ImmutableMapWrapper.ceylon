@@ -39,72 +39,63 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
         }
     };
     
-    shared void reset({<Key->Item>*} newEntries) => synchronize {
-        on = this;
-        void do() {
-            if (immutableMap.size != newEntries.size
-                || !immutableMap.keys.containsEvery(newEntries.map((entry) => entry.key))) {
-                immutableMap = newMap(newEntries);
-            }
-        }
-    };
+    shared ImmutableMapWrapper<Key, Item> reset({<Key->Item>*} newEntries) => 
+            let(do = () {
+                if (immutableMap.size != newEntries.size
+                    || !immutableMap.keys.containsEvery(newEntries.map((entry) => entry.key))) {
+                    immutableMap = newMap(newEntries);
+                }
+                return this;
+            }) synchronize(this, do);
     
-    shared void resetKeys({Key*} newKeys, Item toItem(Key key)) => synchronize {
-        on = this;
-        void do() {
-            if (immutableMap.size != newKeys.size
-                || !immutableMap.keys.containsEvery(newKeys)) {
-                immutableMap = newMap(newKeys.map((key) => key->toItem(key)));
-            }
-        }
-    };
+    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key)) => 
+            let(do = () {
+                if (immutableMap.size != newKeys.size
+                    || !immutableMap.keys.containsEvery(newKeys)) {
+                    immutableMap = newMap(newKeys.map((key) => key->toItem(key)));
+                }
+                return this;
+            }) synchronize(this, do);
 
-    shared actual Item? put(Key key, Item item) => synchronize { 
-        on = this;
-        function do() {
-            Item? result = immutableMap.get(key);
-            immutableMap = newMap { key->item,
-                *immutableMap.filterKeys((keyToKeep) => keyToKeep != key) };
-            return result;
-        }
-    };
-    
-    shared actual void putAll({<Key->Item>*} entries) => synchronize { 
-        on = this;
-        void do() {
-            value keysToPut = set(entries.map((entry) => entry.key));
-            immutableMap = newMap(immutableMap
-                                    .filterKeys((keyToKeep) => ! keyToKeep in keysToPut)
-                                    .chain(entries));
-            }
-        };
-        
-    shared void putAllKeys({Key*} keys, Item toItem(Key key)) => synchronize { 
-        on = this;
-        void do() {
-            immutableMap = newMap(immutableMap
-                .filterKeys((keyToKeep) => ! keyToKeep in keys)
-                    .chain(keys.map((key) => key->toItem(key))));
-        }
-    };
+    shared actual Item? put(Key key, Item item) => 
+            let(do = () {
+                Item? result = immutableMap.get(key);
+                immutableMap = newMap { key->item,
+                    *immutableMap.filterKeys((keyToKeep) => keyToKeep != key) };
+                return result;
+            }) synchronize(this, do);
+            
+    shared actual ImmutableMapWrapper<Key, Item> putAll({<Key->Item>*} entries) => 
+            let(do = () {
+                value keysToPut = set(entries.map((entry) => entry.key));
+                immutableMap = newMap(immutableMap
+                    .filterKeys((keyToKeep) => ! keyToKeep in keysToPut)
+                        .chain(entries));
+                return this;
+            }) synchronize(this, do);
+                    
+    shared ImmutableMapWrapper<Key, Item> putAllKeys({Key*} keys, Item toItem(Key key)) => 
+            let(do = () {
+                immutableMap = newMap(immutableMap
+                    .filterKeys((keyToKeep) => ! keyToKeep in keys)
+                        .chain(keys.map((key) => key->toItem(key))));
+                return this;
+            }) synchronize(this, do);
 
-    shared actual Item? remove(Key key)  => synchronize { 
-        on = this;
-        function do() {
-            Item? result = immutableMap.get(key);
-            immutableMap = newMap(
-                immutableMap.filterKeys((keyToKeep) => keyToKeep != key));
-            return result;
-        }
-    };
+    shared actual Item? remove(Key key)  => 
+            let(do = () {
+                Item? result = immutableMap.get(key);
+                immutableMap = newMap(
+                    immutableMap.filterKeys((keyToKeep) => keyToKeep != key));
+                return result;
+            }) synchronize(this, do);
     
-    shared actual void removeAll({Key*} keys)  => synchronize { 
-        on = this;
-        void do() {
-            immutableMap = newMap(
-                immutableMap.filterKeys((keyToKeep) => ! keyToKeep in keys));
-        }
-    };
+    shared actual ImmutableMapWrapper<Key, Item> removeAll({Key*} keys)  => 
+            let(do = () {
+                immutableMap = newMap(
+                    immutableMap.filterKeys((keyToKeep) => ! keyToKeep in keys));
+                return this;
+            }) synchronize(this, do);
     
     shared actual String string => immutableMap.string;
 }
