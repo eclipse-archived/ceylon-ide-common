@@ -18,6 +18,9 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
     
     shared formal ConvertToGetterQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     TextChange,Region,Project,Data,CompletionResult> convertToGetterQuickFix;
+    
+    shared formal FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
+    TextChange,Region,Project,Data,CompletionResult> fillInQuickFix;
 
     shared void addAnonymousFunctionProposals(Data data, IFile file) {
         variable value currentOffset = data.node.startIndex.intValue();
@@ -103,6 +106,41 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
             }
         }
         else {
+        }
+    }
+    
+    shared void addArgumentProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
+        addArgumentBlockProposals(data, file, node);
+        addArgumentFillInProposals(data, file, node);
+    }
+
+    shared void addArgumentBlockProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
+        if (is Tree.MethodArgument node) {
+            value se = node.specifierExpression;
+            if (is Tree.LazySpecifierExpression se) {
+                convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
+            }
+            
+            if (exists b = node.block) {
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+            }
+        }
+        
+        if (is Tree.AttributeArgument node) {
+            value se = node.specifierExpression;
+            if (is Tree.LazySpecifierExpression se) {
+                convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
+            }
+            
+            if (exists b = node.block) {
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+            }
+        }
+    }
+    
+    shared void addArgumentFillInProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
+        if (is Tree.SpecifiedArgument node) {
+            fillInQuickFix.addFillInArgumentNameProposal(data, file, node);
         }
     }
 }
