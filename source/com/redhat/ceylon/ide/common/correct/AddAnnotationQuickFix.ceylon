@@ -566,8 +566,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     }
     
     shared void addContextualAnnotationProposals(Data data, Tree.Declaration? decNode, 
-        IDocument doc, Integer offset,
-        Integer getLineOfOffset(IDocument doc, Integer offset)) {
+        IDocument doc, Integer offset) {
         
         if (exists decNode) {
             value idNode = nodes.getIdentifyingNode(decNode);

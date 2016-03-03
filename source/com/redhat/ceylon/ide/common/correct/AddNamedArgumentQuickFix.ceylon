@@ -14,8 +14,6 @@ shared interface AddNamedArgumentQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     shared formal void newProposal(Data data, String desc, TextChange change,
         DefaultRegion region);
     
-    shared formal Integer getLineOfOffset(IDocument doc, Integer offset);
-    
     shared void addNamedArgumentsProposal(Data data, IFile file) {
         if (is Tree.NamedArgumentList node = data.node) {
             value tfc = newTextChange("Add Named Arguments", file);

@@ -44,6 +44,15 @@ shared interface CommonDocumentChanges
     shared actual String getDocContent(Ref<String> doc, Integer start, Integer length) {
         return doc.val.span(start, start + length);
     }
+    
+    shared actual Integer getLineOfOffset(Ref<String> doc, Integer offset)
+            => nothing;
+    
+    shared actual Integer getLineStartOffset(Ref<String> doc, Integer line)
+            => nothing;
+    
+    shared actual String getLineContent(Ref<String> doc, Integer line)
+            => nothing;
 }
 
 shared class TextChange(shared Ref<String> document) {

@@ -35,8 +35,6 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
 
     shared formal CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> createParameterQuickFix;
 
-    shared formal Integer getLineOfOffset(Document doc, Integer offset);
-    
     shared formal void newCreateQuickFix(Data data, String desc,
         Scope scope, Unit unit, Type? returnType, Icons image,
         TextChange change, Integer exitPos, Region selection);

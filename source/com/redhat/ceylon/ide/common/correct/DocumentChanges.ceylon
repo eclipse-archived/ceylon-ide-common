@@ -19,4 +19,10 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
     
     "Returns a subset of the `doc` from offset `start` to `start + length`"
     shared formal String getDocContent(IDocument doc, Integer start, Integer length);
+    
+    shared formal Integer getLineOfOffset(IDocument doc, Integer offset);
+
+    shared formal Integer getLineStartOffset(IDocument doc, Integer line);
+
+    shared formal String getLineContent(IDocument doc, Integer line);
 }
