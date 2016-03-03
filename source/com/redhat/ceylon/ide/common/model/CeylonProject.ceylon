@@ -378,8 +378,8 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared MutableList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFileList = 
-            ArrayList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    shared MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFilesMap = 
+            ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
 
     value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
     value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
@@ -451,19 +451,22 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolderFromNative(NativeFolder folder) => 
             sourceFoldersMap[folder] else resourceFoldersMap[folder];
     
-    shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFileList;
+    shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFilesMap.items;
+
+    shared FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? projectFileFromNative(NativeFile file) => 
+            projectFilesMap[file];
     
     shared {NativeFile*} projectNativeFiles => 
-            projectFileList.map((virtualFile) => virtualFile.nativeResource);
+            projectFilesMap.keys;
 
     shared void addFile(NativeFile file) {
-        projectFileList.removeAll(projectFileList.select((vf) => vf.nativeResource == file));
-        projectFileList.add(vfs.createVirtualFile(file, ideArtifact));
+        projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
+        projectFilesMap.put(file, vfs.createVirtualFile(file, ideArtifact));
         // TODO : add the delta element
     }
     
     shared void removeFile(NativeFile file) {
-        projectFileList.removeAll(projectFileList.select((vf) => vf.nativeResource == file));
+        projectFilesMap.remove(file);
         // TODO : add the delta element
     }
     
@@ -554,11 +557,11 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         
         // Then scan all source files
         scan (sourceFolders, (root) => 
-            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFileList, monitor));
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFilesMap, monitor));
         
         // Finally scan all resource files
         scan (resourceFolders, (root) => 
-            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFileList, monitor));
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, monitor));
     }
 
 }

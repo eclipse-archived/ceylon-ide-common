@@ -1,5 +1,6 @@
 import ceylon.collection {
-    MutableList
+    MutableList,
+    MutableMap
 }
 
 import com.redhat.ceylon.ide.common.model {
@@ -31,7 +32,7 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
     CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
     FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> rootDir,
     Boolean rootDirIsForSource,
-    MutableList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> scannedFiles,
+    MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> scannedFiles,
     BaseProgressMonitor monitor)
         extends RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
         ceylonProject,
@@ -106,7 +107,7 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
                 if (ceylonProject.isCompilable(file) || 
                     ! rootDirIsForSource) {
                     FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> virtualFile = vfs.createVirtualFile(file, ceylonProject.ideArtifact);
-                    scannedFiles.add(virtualFile);
+                    scannedFiles.put(file, virtualFile);
                     
                     if (rootDirIsForSource && 
                         ceylonProject.isCeylon(file)) {
