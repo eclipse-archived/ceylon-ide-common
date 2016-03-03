@@ -245,11 +245,12 @@ shared interface DocGenerator<Document> {
         value simplified = printer.print(unit.denotableType(type), unit);
         addIconAndText(builder, Icons.types, 
             description + "&nbsp;<tt>" + printer.print(type, unit) + "</tt> ");
-        if (!abbreviated.equals(unabbreviated)) {
+        if (abbreviated!=unabbreviated) {
             builder.append("<p>Abbreviation&nbsp;of&nbsp;").append(unabbreviated).append("</p>");
         }
         
-        if (!simplified.equals(unabbreviated)) {
+        if (simplified!=unabbreviated &&
+            simplified!=abbreviated) {
             builder.append("<p>Simplifies&nbsp;to&nbsp;").append(simplified).append("</p>");
         }
     }
