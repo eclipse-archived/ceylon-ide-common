@@ -12,12 +12,9 @@ import org.antlr.runtime {
 }
 
 shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
-    
-    shared formal void newProposal(Data data, String desc, TextChange change);
  
     shared void addSwapBinaryOperandsProposal(Data data, IFile file, Tree.BinaryOperatorExpression? boe) {
         if (exists boe,

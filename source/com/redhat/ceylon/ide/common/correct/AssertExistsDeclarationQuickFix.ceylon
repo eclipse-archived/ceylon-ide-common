@@ -11,13 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface AssertExistsDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
-    
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
 
     void addSplitDeclarationProposal(Data data, IFile file, Tree.AttributeDeclaration decNode) {
         Declaration? dec = decNode.declarationModel;

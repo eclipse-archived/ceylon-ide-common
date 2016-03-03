@@ -6,14 +6,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 shared interface ConvertToGetterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
- 
     shared void addConvertToGetterProposal(Data data, IFile file, Tree.AttributeDeclaration? decNode) {
         if (exists decNode,
             exists dec = decNode.declarationModel, 

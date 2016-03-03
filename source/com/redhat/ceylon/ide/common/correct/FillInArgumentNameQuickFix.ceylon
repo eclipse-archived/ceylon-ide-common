@@ -3,13 +3,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 shared interface FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData<Project> {
-    
-    shared formal void newProposal(Data data, String desc, TextChange change);
-    
+
     shared void addFillInArgumentNameProposal(Data data, IFile file, Tree.SpecifiedArgument sa) {
         value id = sa.identifier;
         if (!id.token exists) {
