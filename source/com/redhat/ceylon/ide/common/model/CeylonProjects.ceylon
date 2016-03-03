@@ -1,10 +1,14 @@
 import ceylon.collection {
-    HashMap
+    HashMap,
+    HashSet,
+    unlinked
 }
 
 import com.redhat.ceylon.ide.common.util {
     Path,
-    unsafeCast
+    unsafeCast,
+    platformUtils,
+    Status
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
@@ -54,18 +58,39 @@ shared T withCeylonModelCaching<T>(T() do) {
 
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    
+    alias ListenerAlias => ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>;
+    value modelListeners = HashSet<ListenerAlias>(unlinked);
     value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
     value lock = ReentrantReadWriteLock(true);
 
     TypeCache.setEnabledByDefault(false);
     
+    shared void addModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
+            modelListeners.add(listener);
+    
+    shared void removeModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
+            modelListeners.remove(listener);
+
+    void runListenerFunction(void fun(ListenerAlias listener)) {
+        modelListeners.each((listener) {
+            try {
+                fun(listener);
+            } catch(Exception e) {
+                platformUtils.log(Status._ERROR, "A Ceylon Model listener (``listener``) has triggered the following exception:", e);
+            }
+        });
+    }
+    
+    shared actual void modelParsed(CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> project) =>
+            runListenerFunction((listener)=>listener.modelParsed(project));
+            
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
         try {

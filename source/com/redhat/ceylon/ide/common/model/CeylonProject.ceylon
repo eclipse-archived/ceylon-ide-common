@@ -1,6 +1,8 @@
 import com.redhat.ceylon.cmr.api {
     RepositoryManager,
-    Overrides
+    Overrides,
+    ArtifactContext,
+    ArtifactCallback
 }
 import com.redhat.ceylon.cmr.ceylon {
     CeylonUtils {
@@ -8,11 +10,13 @@ import com.redhat.ceylon.cmr.ceylon {
     }
 }
 import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
+    TypeChecker,
+    TypeCheckerBuilder
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
-    PhasedUnit
+    PhasedUnit,
+    Context
 }
 import com.redhat.ceylon.ide.common.util {
     Path,
@@ -21,7 +25,8 @@ import com.redhat.ceylon.ide.common.util {
     toJavaStringList,
     BaseProgressMonitor,
     synchronize,
-    ImmutableMapWrapper
+    ImmutableMapWrapper,
+    ProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -32,7 +37,8 @@ import com.redhat.ceylon.ide.common.vfs {
 import com.redhat.ceylon.model.typechecker.model {
     TypecheckerModules=Modules,
     Package,
-    Module
+    Module,
+    ModelUtil
 }
 
 import java.io {
@@ -42,7 +48,8 @@ import java.lang {
     InterruptedException,
     RuntimeException,
     IllegalStateException,
-    ObjectArray
+    ObjectArray,
+    ByteArray
 }
 import java.lang.ref {
     WeakReference
@@ -75,6 +82,22 @@ import com.redhat.ceylon.ide.common.model.parsing {
 }
 import ceylon.language {
     newMap=map
+}
+import com.redhat.ceylon.common {
+    Platform,
+    Backend
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    ModuleValidator
+}
+import com.redhat.ceylon.model.cmr {
+    ArtifactResult
+}
+import com.redhat.ceylon.compiler.typechecker.util {
+    ModuleManagerFactory
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
 }
 
 shared final class ProjectState
@@ -124,6 +147,15 @@ shared abstract class BaseCeylonProject() {
         File absoluteFile, 
         Integer overridesLine, 
         Integer overridesColumn);
+    deprecated("Only here for compatibility with legacy code
+                This should be removed, since the real entry point is the [[PhasedUnits]] object
+                
+                The only interesting data contained in the [[TypeChecker]] is the
+                [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
+                should be managed in a modular way in each [[IdeModule]] object accessible from the
+                [[PhasedUnits]]")
+    shared variable TypeChecker? typechecker=null;
+    
     shared formal void removeOverridesProblemMarker();
 
     function createRepositoryManager() {
@@ -211,15 +243,6 @@ shared abstract class BaseCeylonProject() {
         
     }
 
-    deprecated("Only here for compatibility with legacy code
-                This should be removed, since the real entry point is the [[PhasedUnits]] object
-                
-                The only interesting data contained in the [[TypeChecker]] is the
-                [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
-                should be managed in a modular way in each [[IdeModule]] object accessible from the
-                [[PhasedUnits]]")
-    shared formal TypeChecker? typechecker;
-    
     shared {PhasedUnit*} parsedUnits =>
             if (parsed,
                 exists units=typechecker?.phasedUnits?.phasedUnits)
@@ -564,5 +587,217 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, monitor));
     }
 
+    shared formal ModuleManagerFactory moduleManagerFactory;
+        
+    shared default void parseCeylonModel(BaseProgressMonitor mon) => withSourceModel {
+        readonly = false;
+        waitForModelInSeconds = 20;
+        do() => withCeylonModelCaching(() {
+            value monitor = mon.convert(113, "Setting up typechecker for project ``name``");
+            try {
+                state = ProjectState.parsing;
+                typechecker = null;
+                resetRepositoryManager();
+                projectFilesMap.clear();
+                moduleDependencies.reset();
+                
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException("");
+                }
+                
+                value newTypechecker = TypeCheckerBuilder(vfs)
+                        .verbose(false)
+                        .moduleManagerFactory(moduleManagerFactory)
+                        .setRepositoryManager(repositoryManager).typeChecker;
+                typechecker = newTypechecker;
+                PhasedUnits phasedUnits = newTypechecker.phasedUnits;
+                
+                value moduleManager = unsafeCast<IdeModuleManagerAlias>(phasedUnits.moduleManager);
+                value moduleSourceMapper = unsafeCast<IdeModuleSourceMapperAlias>(phasedUnits.moduleSourceMapper);
+                moduleManager.typeChecker = newTypechecker;
+                moduleSourceMapper.typeChecker = newTypechecker;
+                Context context = newTypechecker.context;
+                BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
+                Module defaultModule = context.modules.defaultModule;
+                
+                monitor.worked(1);
+                
+                monitor.subTask("parsing source files for project `` name ``");
+                
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException();
+                }
+                
+                phasedUnits.moduleManager.prepareForTypeChecking();
+                
+                scanFiles(monitor.newChild(10));
+                
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException("");
+                }
+                modelLoader.setupSourceFileObjects(newTypechecker.phasedUnits.phasedUnits);
+                
+                monitor.worked(1);
+                
+                // Parsing of ALL units in the source folder should have been done
+                
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException("");
+                }
+                
+                monitor.subTask("determining module dependencies for `` name ``");
+                
+                phasedUnits.visitModules();
+                
+                //By now the language module version should be known (as local)
+                //or we should use the default one.
+                Module languageModule = context.modules.languageModule;
+                if (! languageModule.version exists) {
+                    languageModule.version = TypeChecker.\iLANGUAGE_MODULE_VERSION;
+                }
+                
+                if (monitor.cancelled) {
+                    throw platformUtils.newOperationCanceledException("");
+                }
+                
+                ModuleValidator moduleValidator = object extends ModuleValidator(context, phasedUnits) {
+                    shared actual void executeExternalModulePhases() {}
+                    
+                    shared actual Exception catchIfPossible(Exception e) {
+                        if (platformUtils.isOperationCanceledException(e)) {
+                            throw e;
+                        }
+                        return e;
+                    }
+                };
+                
+                Integer maxModuleValidatorWork = 100000;
+                value validatorProgress = monitor.newChild(100).convert(maxModuleValidatorWork);
+                moduleValidator.setListener(object satisfies ModuleValidator.ProgressListener {
+                    shared actual void retrievingModuleArtifact(Module _module, ArtifactContext artifactContext) {
+                        Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
+                        Integer totalNumberOfModules = numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched();
+                        Integer oneModuleWork = maxModuleValidatorWork / totalNumberOfModules;
+                        Integer workRemaining = numberOfModulesNotAlreadySearched * oneModuleWork;
+                        if(validatorProgress.cancelled) {
+                            throw platformUtils.newOperationCanceledException("Interrupted the retrieving of module : " + _module.signature);
+                        }
+                        validatorProgress.updateRemainingWork(workRemaining);
+                        artifactContext.callback = object satisfies ArtifactCallback {
+                            late BaseProgressMonitor artifactProgress;
+                            late Integer size;
+                            variable Integer alreadyDownloaded = 0;
+                            value messageBuilder = StringBuilder()
+                                    .append("- downloading module ")
+                                    .append(_module.signature)
+                                    .appendCharacter(' ');
+                            shared actual void start(String nodeFullPath, Integer size, String contentStore) {
+                                this.size = size;
+                                Integer ticks = if (size > 0) then size else 100000;
+                                artifactProgress = validatorProgress.newChild(oneModuleWork).convert(ticks);
+                                if (! contentStore.empty) {
+                                    messageBuilder.append("from ").append(contentStore);
+                                }
+                                artifactProgress.subTask(messageBuilder.string);
+                                if (artifactProgress.cancelled) {
+                                    throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
+                                }
+                            }
+                            shared actual void read(ByteArray bytes, Integer length) {
+                                if (artifactProgress.cancelled) {
+                                    throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
+                                }
+                                if (size < 0) {
+                                    artifactProgress.updateRemainingWork(length*100);
+                                } else {
+                                    artifactProgress.subTask("``messageBuilder.string`` (`` alreadyDownloaded * 100 / size ``% )");
+                                }
+                                alreadyDownloaded += length;
+                                artifactProgress.worked(length);
+                            }
+                            shared actual void error(File localFile, Throwable t) {
+                                localFile.delete();
+                                artifactProgress.updateRemainingWork(0);
+                                if (is Exception t,
+                                    platformUtils.isOperationCanceledException(t)) {
+                                    throw t;
+                                }
+                            }
+                            shared actual void done(File file) =>
+                                    artifactProgress.updateRemainingWork(0);
+                        };
+                    }
+                    
+                    shared actual void resolvingModuleArtifact(Module _module,
+                        ArtifactResult artifactResult) {
+                        if (validatorProgress.cancelled) {
+                            throw platformUtils.newOperationCanceledException("Interrupted the resolving of module : " + _module.signature);
+                        }
+                        Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
+                        validatorProgress.updateRemainingWork(numberOfModulesNotAlreadySearched * 100
+                            / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
+                        validatorProgress.subTask("resolving module ``_module.signature``");
+                    }
+                    
+                    retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
+                    retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
+                });
+                
+                moduleValidator.verifyModuleDependencyTree();
+                
+                validatorProgress.updateRemainingWork(0);
+                
+                newTypechecker.phasedUnitsOfDependencies = moduleValidator.phasedUnitsOfDependencies;
+                
+                for (dependencyPhasedUnits in newTypechecker.phasedUnitsOfDependencies) {
+                    modelLoader.addSourceArchivePhasedUnits(dependencyPhasedUnits.phasedUnits);
+                }
+                
+                modelLoader.setModuleAndPackageUnits();
+                
+                if (compileToJs) {
+                    for (_module in newTypechecker.context.modules.listOfModules) {
+                        if (is BaseIdeModule _module) {
+                            if (_module.isCeylonArchive
+                                && ModelUtil.isForBackend(_module.nativeBackends, Backend.\iJavaScript.asSet())) {
+                                value importedModuleImports = 
+                                        CeylonIterable(moduleSourceMapper.retrieveModuleImports(_module))
+                                        .filter((moduleImport) => 
+                                    ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.\iJavaScript.asSet()))
+                                        .sequence();
+                                if (nonempty importedModuleImports) {
+                                    File? artifact = repositoryManager.getArtifact(
+                                        ArtifactContext(
+                                            _module.nameAsString, 
+                                            _module.version, 
+                                            ArtifactContext.\iJS));
+                                    if (artifact is Null) {
+                                        for (importInError in importedModuleImports) {
+                                            moduleSourceMapper.attachErrorToModuleImport(importInError, 
+                                                "module not available for JavaScript platform: '``_module.nameAsString``' \"``_module.version``\"");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                moduleDependencies.addModulesWithDependencies(newTypechecker.context.modules.listOfModules);
+                
+                monitor.worked(1);
+                
+                state = ProjectState.parsed;
+                
+                completeCeylonModelParsing(monitor);
+                
+                model.modelParsed(this);
+            } finally {
+                monitor.done();
+            }
+        });
+    };
+    
+    shared formal void completeCeylonModelParsing(BaseProgressMonitor monitor);
 }
 
