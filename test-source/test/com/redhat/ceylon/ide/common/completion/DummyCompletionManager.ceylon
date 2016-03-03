@@ -65,6 +65,7 @@ class Result(shared String kind, shared String insertedText, shared String descr
 }
 
 class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<String> {
+    suppressWarnings("expressionTypeNothing")
     shared actual BaseCeylonProject? ceylonProject => nothing;
     
     shared actual String document => code;
@@ -88,8 +89,9 @@ object dummyMonitor satisfies BaseProgressMonitor {
     shared actual void worked(Integer amount) {}
     shared actual Boolean cancelled => false;
     shared actual BaseProgressMonitor convert(Integer work, String taskName) => this;
-    shared actual BaseProgressMonitor newChild(Integer work) => this;
+    shared actual BaseProgressMonitor newChild(Integer work, Boolean prependMainLabelToSubtask) => this;
     shared actual void updateRemainingWork(Integer remainingWork) {}
+    shared actual void done() {}
 }
 
 object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result,String>() {
