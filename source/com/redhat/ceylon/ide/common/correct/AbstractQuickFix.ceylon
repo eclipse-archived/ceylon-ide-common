@@ -13,6 +13,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import com.redhat.ceylon.ide.common.model {
     IResourceAware
 }
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
         Region,Project,Data,ICompletionResult=Anything>
@@ -35,4 +38,14 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     shared formal PhasedUnit? getPhasedUnit(Unit? u, Data data);
     
     shared formal IFile? getFile<NativeFile>(IResourceAware<out Anything, out Anything, NativeFile> pu, Data data);
+}
+
+shared interface GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
+        given InsertEdit satisfies TextEdit 
+        given Data satisfies QuickFixData<Project> {
+
+    shared formal void newProposal(Data data, String desc, TextChange change,
+        DefaultRegion? region = null);
 }
