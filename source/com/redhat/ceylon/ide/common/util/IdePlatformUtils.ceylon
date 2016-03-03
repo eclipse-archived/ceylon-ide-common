@@ -25,6 +25,10 @@ shared interface IdePlatformUtils {
      operation cancellation."
     shared formal RuntimeException newOperationCanceledException(String message="");
     
+    "returns [[true]] if [[exception]] is of the exception type typically used
+     in an IDE platform in case of operation cancellation."
+    shared formal Boolean isOperationCanceledException(Exception exception);
+
     shared default Logger cmrLogger => object satisfies Logger {
         shared actual void error(String str) {
             process.writeErrorLine("Error: ``str``");
@@ -57,8 +61,14 @@ shared class DefaultPlatformUtils() satisfies IdePlatformUtils {
         printFunction("``status``: ``message``");
     }
     
+    class OperationCancelledException(String? description=null, Throwable? cause=null) 
+            extends RuntimeException(description, cause) {}
+    
     shared actual RuntimeException newOperationCanceledException(String message) => 
-            RuntimeException("Operation Cancelled : ``message``");
+            OperationCancelledException("Operation Cancelled : ``message``");
+    
+    shared actual Boolean isOperationCanceledException(Exception exception) =>
+            exception is OperationCancelledException;
 }
 
 variable IdePlatformUtils _platformUtils = DefaultPlatformUtils();
