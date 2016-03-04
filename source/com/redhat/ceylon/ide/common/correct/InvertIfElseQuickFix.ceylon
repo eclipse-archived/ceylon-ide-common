@@ -129,6 +129,9 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         Tree.IfStatement ifStmt;
 
         if (is Tree.IfStatement statement) {
+            if (!exists eb = statement.elseClause) {
+                return;
+            }
             ifStmt = statement;
         } else {
             variable Tree.IfStatement? result = null;
