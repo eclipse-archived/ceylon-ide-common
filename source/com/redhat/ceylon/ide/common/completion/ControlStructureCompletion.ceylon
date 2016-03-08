@@ -10,7 +10,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     Indents,
-    nodes
+    nodes,
+    singularize
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -34,11 +35,16 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
                     d.unit.isJavaIterableType(t) ||
                     d.unit.isJavaArrayType(t)) {
                 value name = d.name;
-                value elemName = if (name.size == 1)
-                then "element"
-                else if (name.endsWith("s"))
-                    then name.spanTo(name.size - 2)
-                    else name.spanTo(0);
+                value elemName = 
+                        switch (name.size)
+                        case (1) "element"
+                        case (2) if (name.endsWith("s"))
+                            then name.spanTo(0) 
+                            else "element"
+                        else let (singular = singularize(name))
+                            if (singular==name)
+                            then "element"
+                            else singular;
                 
                 value unit = cpc.lastCompilationUnit.unit;
                 value desc = "for (" + elemName + " in " + getDescriptionFor(d, unit) + ")";

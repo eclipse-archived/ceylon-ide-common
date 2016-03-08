@@ -612,7 +612,6 @@ shared object nodes {
                 if (is Tree.FunctionArgument term)
                 then (TreeUtil.unwrapExpressionUntilTerm(term.expression) else term)
                 else term;
-            Type? type = typedTerm.typeModel;
             value baseTerm =
                 if (is Tree.InvocationExpression inv = typedTerm)
                 then TreeUtil.unwrapExpressionUntilTerm(inv.primary)
@@ -636,8 +635,9 @@ shared object nodes {
             case (is Tree.BaseMemberOrTypeExpression) {
                 if (unplural) {
                     value name = baseTerm.declaration.name;
-                    if (name.endsWith("s") && name.size>1) {
-                        addNameProposals(names, false, name[... name.size-1]);
+                    value result = singularize(name);
+                    if (name!=result) {
+                        addNameProposals(names, false, result);
                     }
                 }
             }
@@ -676,8 +676,8 @@ shared object nodes {
             }
             else {}
             
-            if (!ModelUtil.isTypeUnknown(type)) {
-                assert (exists type);
+            if (exists type = typedTerm.typeModel,
+                !ModelUtil.isTypeUnknown(type)) {
                 if (!unplural, type.classOrInterface || type.typeParameter) {
                     addNameProposals(names, false, type.declaration.name);
                 }
@@ -793,14 +793,17 @@ shared object nodes {
         Boolean plural, String name) {
         value matcher = idPattern.matcher(javaString(name));
         while (matcher.find()) {
-            value subname =
-                matcher.group(1).lowercased +
-                        name[matcher.start(2) ...] +
-                        (plural then "s" else "");
+            value subname 
+                    = matcher.group(1).lowercased 
+                    + name[matcher.start(2) ...];
+            value pluralized 
+                    = plural 
+                    then pluralize(subname) 
+                    else subname; 
             value escaped =
-                subname in escaping.keywords
-                        then "\\i" + subname
-                        else subname;
+                    pluralized in escaping.keywords
+                        then "\\i" + pluralized
+                        else pluralized;
             if (is MutableSet<String> names) {
                 names.add(escaped);
             } else {
