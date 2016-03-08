@@ -29,7 +29,10 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         
         if (is Value d) {
             value td = d;
-            if (exists t = td.type, d.unit.isIterableType(td.type)) {
+            if (exists t = td.type, 
+                    d.unit.isIterableType(t) ||
+                    d.unit.isJavaIterableType(t) ||
+                    d.unit.isJavaArrayType(t)) {
                 value name = d.name;
                 value elemName = if (name.size == 1)
                 then "element"

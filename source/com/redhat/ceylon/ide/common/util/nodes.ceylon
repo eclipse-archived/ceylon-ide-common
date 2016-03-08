@@ -694,6 +694,16 @@ shared object nodes {
                         iter.classOrInterface || iter.typeParameter) {
                         addNameProposals(names, !unplural, iter.declaration.name);
                     }
+                    if (unit.isJavaIterableType(type),
+                        exists iter = unit.getJavaIteratedType(type),
+                        iter.classOrInterface || iter.typeParameter) {
+                        addNameProposals(names, !unplural, iter.declaration.name);
+                    }
+                    if (unit.isJavaArrayType(type),
+                        exists iter = unit.getJavaArrayElementType(type),
+                        iter.classOrInterface || iter.typeParameter) {
+                        addNameProposals(names, !unplural, iter.declaration.name);
+                    }
                 }
             }
         }

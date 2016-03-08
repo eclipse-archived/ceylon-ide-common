@@ -231,9 +231,7 @@ shared interface MemberNameCompletion<IdeComponent,CompletionResult,Document>
         nodes.addNameProposals(proposals, false, identifier.text);
         
         if (!ModelUtil.isTypeUnknown(type)) {
-            if (identifier.unit.isIterableType(type)) {
-                addPluralProposals(proposals, identifier, type);
-            }
+            addPluralProposals(proposals, identifier, type);
             if (type.isString()) {
                 proposals.add("text");
                 proposals.add("name");
@@ -249,7 +247,20 @@ shared interface MemberNameCompletion<IdeComponent,CompletionResult,Document>
     void addPluralProposals(MutableSet<String> proposals, Tree.Identifier identifier, Type type) {
         if (!ModelUtil.isTypeUnknown(type) && !type.nothing) {
             value unit = identifier.unit;
-            nodes.addNameProposals(proposals, true, unit.getIteratedType(type).declaration.getName(unit));
+            Type it;
+            if (unit.isIterableType(type)) {
+                it = unit.getIteratedType(type);
+            }
+            else if (unit.isJavaIterableType(type)) {
+                it = unit.getJavaIteratedType(type);
+            }
+            else if (unit.isJavaArrayType(type)) {
+                it = unit.getJavaArrayElementType(type);
+            }
+            else {
+                return;
+            }
+            nodes.addNameProposals(proposals, true, it.declaration.getName(unit));
         }
     }
 }
