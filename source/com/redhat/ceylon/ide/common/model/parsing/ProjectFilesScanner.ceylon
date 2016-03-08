@@ -1,5 +1,4 @@
 import ceylon.collection {
-    MutableList,
     MutableMap
 }
 
@@ -33,11 +32,11 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
     FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> rootDir,
     Boolean rootDirIsForSource,
     MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> scannedFiles,
-    BaseProgressMonitor monitor)
+    BaseProgressMonitor.Progress progress)
         extends RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
         ceylonProject,
         rootDir,
-        monitor
+        progress
     )
         satisfies ModelAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
             & TypecheckerAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
@@ -50,8 +49,8 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
     late variable Package currentPackage;
 
     shared actual Boolean visitNativeResource(NativeResource resource) {
-        monitor.updateRemainingWork(10000);
-        monitor.worked(1);
+        progress.updateRemainingWork(10000);
+        progress.worked(1);
         
         if (resource == nativeRootDir) {
             assert(is NativeFolder resource);

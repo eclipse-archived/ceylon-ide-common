@@ -44,11 +44,11 @@ import org.antlr.runtime {
 shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
             CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
             FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir,
-            BaseProgressMonitor monitor)
+            BaseProgressMonitor.Progress progress)
         extends RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
                 ceylonProject,
                 srcDir,
-                monitor
+                progress
             )
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -84,8 +84,8 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
     };
     
     shared actual Boolean visitNativeResource(NativeResource resource) {
-        monitor.updateRemainingWork(10000);
-        monitor.worked(1);
+        progress.updateRemainingWork(10000);
+        progress.worked(1);
         if (is NativeFolder resource,
             resource == nativeRootDir) {
             value moduleFile = vfs.findFile(resource, ModuleManager.\iMODULE_FILE);

@@ -65,44 +65,44 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
         Integer len, String pfp, IdeComponent cpc, Boolean withBody, BaseProgressMonitor monitor) {
-        
-        if (pfp.startsWith("java.")) {
-            for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
-                if (name.startsWith(pfp), !moduleAlreadyImported(cpc, name)) {
-                    result.add(newJDKModuleProposal(offset, prefix, len, getModuleString(withBody, name, JDKUtils.jdk.version), name));
+        try(progress = monitor.Progress(1, null)) {
+            if (pfp.startsWith("java.")) {
+                for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
+                    if (name.startsWith(pfp), !moduleAlreadyImported(cpc, name)) {
+                        result.add(newJDKModuleProposal(offset, prefix, len, getModuleString(withBody, name, JDKUtils.jdk.version), name));
+                    }
                 }
-            }
-        } else {
-            TypeChecker? typeChecker = cpc.typeChecker;
-            if (exists typeChecker) {
-                value project = cpc.ceylonProject;
-                value modul = cpc.lastPhasedUnit.\ipackage.\imodule;
-                monitor.subTask("querying module repositories...");
-                value query = moduleQueries.getModuleQuery(pfp, modul, project);
-                query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-                query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-                query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-                query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
-                ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
-                monitor.subTask(null);
-                //                final ModuleSearchResult results = 
-                //                        getModuleSearchResults(pfp, typeChecker,project);
-                if (!exists results) {
-                    return;
-                }
-                
-                value supportsLinkedModeInArguments = cpc.options.linkedModeArguments;
-                
-                for (mod in results.results) {
-                    value name = mod.name;
-                    if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
-                        if (supportsLinkedModeInArguments) {
-                            result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, mod.lastVersion.version),
-                                mod, withBody, mod.lastVersion, name, node, cpc));
-                        } else {
-                            for (version in mod.versions.descendingSet()) {
-                                result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, version.version),
-                                    mod, withBody, version, name, node, cpc));
+            } else {
+                TypeChecker? typeChecker = cpc.typeChecker;
+                if (exists typeChecker) {
+                    value project = cpc.ceylonProject;
+                    value modul = cpc.lastPhasedUnit.\ipackage.\imodule;
+                    progress.subTask("querying module repositories...");
+                    value query = moduleQueries.getModuleQuery(pfp, modul, project);
+                    query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                    query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
+                    query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
+                    query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
+                    ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
+                    //                final ModuleSearchResult results = 
+                    //                        getModuleSearchResults(pfp, typeChecker,project);
+                    if (!exists results) {
+                        return;
+                    }
+                    
+                    value supportsLinkedModeInArguments = cpc.options.linkedModeArguments;
+                    
+                    for (mod in results.results) {
+                        value name = mod.name;
+                        if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
+                            if (supportsLinkedModeInArguments) {
+                                result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, mod.lastVersion.version),
+                                    mod, withBody, mod.lastVersion, name, node, cpc));
+                            } else {
+                                for (version in mod.versions.descendingSet()) {
+                                    result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, version.version),
+                                        mod, withBody, version, name, node, cpc));
+                                }
                             }
                         }
                     }

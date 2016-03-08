@@ -559,32 +559,31 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             vfs.getShortName(file).endsWith(".js");
     
     "TODO: make it unshared as soon as the calling method is also in CeylonProject"
-    shared void scanFiles(BaseProgressMonitor mon) {
-        value monitor = mon.convert(10000);
-        
-        void scan(
-            {FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>*} roots,
-            RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner(FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> root)
-        ) {
-            for (root in roots) {
-                if (monitor.cancelled) {
-                    throw platformUtils.newOperationCanceledException("");
+    shared void scanFiles(BaseProgressMonitor monitor) {
+        try (progress = monitor.Progress(10000, null)) {
+            void scan(
+                {FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>*} roots,
+                RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner(FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> root)) {
+                for (root in roots) {
+                    if (progress.cancelled) {
+                        throw platformUtils.newOperationCanceledException("");
+                    }
+                    scanRootFolder(scanner(root));
                 }
-                scanRootFolder(scanner(root));
             }
+            
+            // First scan all non-default source modules and attach the contained packages 
+            scan (sourceFolders, (root) => 
+                ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, progress));
+            
+            // Then scan all source files
+            scan (sourceFolders, (root) => 
+                ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFilesMap, progress));
+            
+            // Finally scan all resource files
+            scan (resourceFolders, (root) => 
+                ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, progress));
         }
-        
-        // First scan all non-default source modules and attach the contained packages 
-        scan (sourceFolders, (root) => 
-            ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, monitor));
-        
-        // Then scan all source files
-        scan (sourceFolders, (root) => 
-            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFilesMap, monitor));
-        
-        // Finally scan all resource files
-        scan (resourceFolders, (root) => 
-            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, monitor));
     }
 
     shared formal ModuleManagerFactory moduleManagerFactory;
@@ -593,15 +592,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         readonly = false;
         waitForModelInSeconds = 20;
         do() => withCeylonModelCaching(() {
-            value monitor = mon.convert(113, "Setting up typechecker for project ``name``");
-            try {
+            try (progress = mon.Progress(113, "Setting up typechecker for project ``name``")) {
                 state = ProjectState.parsing;
                 typechecker = null;
                 resetRepositoryManager();
                 projectFilesMap.clear();
                 moduleDependencies.reset();
                 
-                if (monitor.cancelled) {
+                if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
                 
@@ -620,32 +618,32 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
                 Module defaultModule = context.modules.defaultModule;
                 
-                monitor.worked(1);
+                progress.worked(1);
                 
-                monitor.subTask("parsing source files for project `` name ``");
+                progress.subTask("parsing source files for project `` name ``");
                 
-                if (monitor.cancelled) {
+                if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException();
                 }
                 
                 phasedUnits.moduleManager.prepareForTypeChecking();
                 
-                scanFiles(monitor.newChild(10));
+                scanFiles(progress.newChild(10));
                 
-                if (monitor.cancelled) {
+                if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
                 modelLoader.setupSourceFileObjects(newTypechecker.phasedUnits.phasedUnits);
                 
-                monitor.worked(1);
+                progress.worked(1);
                 
                 // Parsing of ALL units in the source folder should have been done
                 
-                if (monitor.cancelled) {
+                if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
                 
-                monitor.subTask("determining module dependencies for `` name ``");
+                progress.subTask("determining module dependencies for `` name ``");
                 
                 phasedUnits.visitModules();
                 
@@ -656,7 +654,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     languageModule.version = TypeChecker.\iLANGUAGE_MODULE_VERSION;
                 }
                 
-                if (monitor.cancelled) {
+                if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
                 
@@ -672,80 +670,79 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 };
                 
                 Integer maxModuleValidatorWork = 100000;
-                value validatorProgress = monitor.newChild(100).convert(maxModuleValidatorWork);
-                moduleValidator.setListener(object satisfies ModuleValidator.ProgressListener {
-                    shared actual void retrievingModuleArtifact(Module _module, ArtifactContext artifactContext) {
-                        Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
-                        Integer totalNumberOfModules = numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched();
-                        Integer oneModuleWork = maxModuleValidatorWork / totalNumberOfModules;
-                        Integer workRemaining = numberOfModulesNotAlreadySearched * oneModuleWork;
-                        if(validatorProgress.cancelled) {
-                            throw platformUtils.newOperationCanceledException("Interrupted the retrieving of module : " + _module.signature);
+                try(validatorProgress = progress.newChild(100).Progress(maxModuleValidatorWork, null)) {
+                    moduleValidator.setListener(object satisfies ModuleValidator.ProgressListener {
+                        shared actual void retrievingModuleArtifact(Module _module, ArtifactContext artifactContext) {
+                            Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
+                            Integer totalNumberOfModules = numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched();
+                            Integer oneModuleWork = maxModuleValidatorWork / totalNumberOfModules;
+                            Integer workRemaining = numberOfModulesNotAlreadySearched * oneModuleWork;
+                            if(validatorProgress.cancelled) {
+                                throw platformUtils.newOperationCanceledException("Interrupted the retrieving of module : " + _module.signature);
+                            }
+                            validatorProgress.updateRemainingWork(workRemaining);
+                            artifactContext.callback = object satisfies ArtifactCallback {
+                                late BaseProgressMonitor.Progress artifactProgress;
+                                late Integer size;
+                                variable Integer alreadyDownloaded = 0;
+                                value messageBuilder = StringBuilder()
+                                        .append("- downloading module ")
+                                        .append(_module.signature)
+                                        .appendCharacter(' ');
+                                shared actual void start(String nodeFullPath, Integer size, String contentStore) {
+                                    this.size = size;
+                                    Integer ticks = if (size > 0) then size else 100000;
+                                    artifactProgress = validatorProgress.newChild(oneModuleWork).Progress(ticks, null);
+                                    if (! contentStore.empty) {
+                                        messageBuilder.append("from ").append(contentStore);
+                                    }
+                                    artifactProgress.subTask(messageBuilder.string);
+                                    if (artifactProgress.cancelled) {
+                                        throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
+                                    }
+                                }
+                                shared actual void read(ByteArray bytes, Integer length) {
+                                    if (artifactProgress.cancelled) {
+                                        throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
+                                    }
+                                    if (size < 0) {
+                                        artifactProgress.updateRemainingWork(length*100);
+                                    } else {
+                                        artifactProgress.subTask("``messageBuilder.string`` (`` alreadyDownloaded * 100 / size ``% )");
+                                    }
+                                    alreadyDownloaded += length;
+                                    artifactProgress.worked(length);
+                                }
+                                shared actual void error(File localFile, Throwable t) {
+                                    localFile.delete();
+                                    artifactProgress.destroy(null);
+                                    if (is Exception t,
+                                        platformUtils.isOperationCanceledException(t)) {
+                                        throw t;
+                                    }
+                                }
+                                shared actual void done(File file) =>
+                                        artifactProgress.destroy(null);
+                            };
                         }
-                        validatorProgress.updateRemainingWork(workRemaining);
-                        artifactContext.callback = object satisfies ArtifactCallback {
-                            late BaseProgressMonitor artifactProgress;
-                            late Integer size;
-                            variable Integer alreadyDownloaded = 0;
-                            value messageBuilder = StringBuilder()
-                                    .append("- downloading module ")
-                                    .append(_module.signature)
-                                    .appendCharacter(' ');
-                            shared actual void start(String nodeFullPath, Integer size, String contentStore) {
-                                this.size = size;
-                                Integer ticks = if (size > 0) then size else 100000;
-                                artifactProgress = validatorProgress.newChild(oneModuleWork).convert(ticks);
-                                if (! contentStore.empty) {
-                                    messageBuilder.append("from ").append(contentStore);
-                                }
-                                artifactProgress.subTask(messageBuilder.string);
-                                if (artifactProgress.cancelled) {
-                                    throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
-                                }
+                        
+                        shared actual void resolvingModuleArtifact(Module _module,
+                            ArtifactResult artifactResult) {
+                            if (validatorProgress.cancelled) {
+                                throw platformUtils.newOperationCanceledException("Interrupted the resolving of module : " + _module.signature);
                             }
-                            shared actual void read(ByteArray bytes, Integer length) {
-                                if (artifactProgress.cancelled) {
-                                    throw platformUtils.newOperationCanceledException("Interrupted the download of module : " + _module.signature);
-                                }
-                                if (size < 0) {
-                                    artifactProgress.updateRemainingWork(length*100);
-                                } else {
-                                    artifactProgress.subTask("``messageBuilder.string`` (`` alreadyDownloaded * 100 / size ``% )");
-                                }
-                                alreadyDownloaded += length;
-                                artifactProgress.worked(length);
-                            }
-                            shared actual void error(File localFile, Throwable t) {
-                                localFile.delete();
-                                artifactProgress.updateRemainingWork(0);
-                                if (is Exception t,
-                                    platformUtils.isOperationCanceledException(t)) {
-                                    throw t;
-                                }
-                            }
-                            shared actual void done(File file) =>
-                                    artifactProgress.updateRemainingWork(0);
-                        };
-                    }
-                    
-                    shared actual void resolvingModuleArtifact(Module _module,
-                        ArtifactResult artifactResult) {
-                        if (validatorProgress.cancelled) {
-                            throw platformUtils.newOperationCanceledException("Interrupted the resolving of module : " + _module.signature);
+                            Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
+                            validatorProgress.updateRemainingWork(numberOfModulesNotAlreadySearched * 100
+                                / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
+                            validatorProgress.subTask("resolving module ``_module.signature``");
                         }
-                        Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
-                        validatorProgress.updateRemainingWork(numberOfModulesNotAlreadySearched * 100
-                            / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
-                        validatorProgress.subTask("resolving module ``_module.signature``");
-                    }
+                        
+                        retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
+                        retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
+                    });
                     
-                    retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
-                    retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
-                });
-                
-                moduleValidator.verifyModuleDependencyTree();
-                
-                validatorProgress.updateRemainingWork(0);
+                    moduleValidator.verifyModuleDependencyTree();
+                }
                 
                 newTypechecker.phasedUnitsOfDependencies = moduleValidator.phasedUnitsOfDependencies;
                 
@@ -785,15 +782,13 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 
                 moduleDependencies.addModulesWithDependencies(newTypechecker.context.modules.listOfModules);
                 
-                monitor.worked(1);
+                progress.worked(1);
                 
                 state = ProjectState.parsed;
                 
-                completeCeylonModelParsing(monitor);
+                completeCeylonModelParsing(progress.newChild(10));
                 
                 model.modelParsed(this);
-            } finally {
-                monitor.done();
             }
         });
     };

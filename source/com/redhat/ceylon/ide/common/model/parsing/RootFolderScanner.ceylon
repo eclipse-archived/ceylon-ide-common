@@ -23,7 +23,7 @@ import com.redhat.ceylon.ide.common.vfs {
 shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
             ceylonProject,
             rootDir,
-            monitor) 
+            progress) 
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile> 
@@ -40,7 +40,7 @@ shared abstract class RootFolderScanner<NativeProject, NativeResource, NativeFol
     shared FolderVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> rootDir;
     shared TypeChecker typeChecker = moduleManager.typeChecker;
     shared late variable BaseIdeModule currentModule;
-    shared BaseProgressMonitor monitor;
+    shared BaseProgressMonitor.Progress progress;
     shared NativeFolder nativeRootDir = rootDir.nativeResource;
     shared CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>.VirtualFileSystem vfs => ceylonProject.model.vfs;
     

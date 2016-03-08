@@ -53,55 +53,57 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
             IdeComponent controller, MutableList<CompletionResult> result, BaseProgressMonitor monitor) {
-        if (exists unit) { //a null unit can occur if we have not finished parsing the file
-            variable Boolean found = false;
-            Module mod = unit.\ipackage.\imodule;
-            String fullPrefix = fullPath + prefix;
-            
-            for (candidate in mod.allVisiblePackages) {
-                //if (!packages.contains(p)) {
+        try (progress = monitor.Progress(1, null)) {
+            if (exists unit) { //a null unit can occur if we have not finished parsing the file
+                variable Boolean found = false;
+                Module mod = unit.\ipackage.\imodule;
+                String fullPrefix = fullPath + prefix;
+                
+                for (candidate in mod.allVisiblePackages) {
+                    //if (!packages.contains(p)) {
                     //packages.add(p);
-                //if ( p.getModule().equals(module) || p.isShared() ) {
-                String packageName = escaping.escapePackageName(candidate);
-                if (!packageName.empty, packageName.startsWith(fullPrefix)) {
-                    variable Boolean already = false; 
-                    if (!fullPrefix.equals(packageName)) {
-                        //don't add already imported packages, unless
-                        //it is an exact match to the typed path
-                        for (il in unit.importLists) {
-                            if (exists scope = il.importedScope, scope == candidate) {
-                                already = true;
+                    //if ( p.getModule().equals(module) || p.isShared() ) {
+                    String packageName = escaping.escapePackageName(candidate);
+                    if (!packageName.empty, packageName.startsWith(fullPrefix)) {
+                        variable Boolean already = false; 
+                        if (!fullPrefix.equals(packageName)) {
+                            //don't add already imported packages, unless
+                            //it is an exact match to the typed path
+                            for (il in unit.importLists) {
+                                if (exists scope = il.importedScope, scope == candidate) {
+                                    already = true;
+                                }
                             }
                         }
+                        //TODO: completion filtering
+                        if (!already) {
+                            result.add(newImportedModulePackageProposal(offset, prefix, 
+                                packageName.spanFrom(fullPath.size), withBody, packageName, controller, candidate));
+                            found = true;
+                        }
                     }
-                    //TODO: completion filtering
-                    if (!already) {
-                        result.add(newImportedModulePackageProposal(offset, prefix, 
-                            packageName.spanFrom(fullPath.size), withBody, packageName, controller, candidate));
-                        found = true;
-                    }
+                    //}
                 }
-                //}
-            }
-            if (!found, !unit.\ipackage.nameAsString.empty) {
-                monitor.subTask("querying module repositories...");
-                value query = moduleQueries.getModuleQuery("", mod, controller.ceylonProject);
-                query.memberName = fullPrefix;
-                query.memberSearchPackageOnly = true;
-                query.memberSearchExact = false;
-                query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-                query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-                query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-                query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
-                ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
-                for (md in msr.results) {
-                    value version = md.lastVersion;
-                    if (!alreadyImported(version, controller.typeChecker.context.modules)) {
-                        for (packageName in version.members) {
-                            if (packageName.startsWith(fullPrefix)) {
-                                result.add(newQueriedModulePackageProposal(offset, prefix, 
-                                    packageName.substring(fullPath.size), withBody, packageName.string,
-                                    controller, version, unit, md));
+                if (!found, !unit.\ipackage.nameAsString.empty) {
+                    progress.subTask("querying module repositories...");
+                    value query = moduleQueries.getModuleQuery("", mod, controller.ceylonProject);
+                    query.memberName = fullPrefix;
+                    query.memberSearchPackageOnly = true;
+                    query.memberSearchExact = false;
+                    query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
+                    query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
+                    query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
+                    query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
+                    ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
+                    for (md in msr.results) {
+                        value version = md.lastVersion;
+                        if (!alreadyImported(version, controller.typeChecker.context.modules)) {
+                            for (packageName in version.members) {
+                                if (packageName.startsWith(fullPrefix)) {
+                                    result.add(newQueriedModulePackageProposal(offset, prefix, 
+                                        packageName.substring(fullPath.size), withBody, packageName.string,
+                                        controller, version, unit, md));
+                                }
                             }
                         }
                     }

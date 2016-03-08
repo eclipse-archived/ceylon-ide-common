@@ -85,13 +85,18 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
 }
 
 object dummyMonitor satisfies BaseProgressMonitor {
-    shared actual void subTask(String? desc) {}
-    shared actual void worked(Integer amount) {}
     shared actual Boolean cancelled => false;
-    shared actual BaseProgressMonitor convert(Integer work, String taskName) => this;
-    shared actual BaseProgressMonitor newChild(Integer work, Boolean prependMainLabelToSubtask) => this;
-    shared actual void updateRemainingWork(Integer remainingWork) {}
-    shared actual void done() {}
+    shared actual class Progress(Integer estimatedWork, String? taskName)
+             extends super.Progress(estimatedWork, taskName) {
+        shared actual Boolean cancelled => outer.cancelled;
+        shared actual void changeTaskName(String taskDescription) {}
+        shared actual void destroy(Throwable? error) {}
+        shared actual BaseProgressMonitor newChild(Integer allocatedWork) => outer;
+        shared actual void subTask(String subTaskDescription) {}
+        shared actual void updateRemainingWork(Integer remainingWork) {}
+        shared actual void worked(Integer amount) {}
+    }
+    
 }
 
 object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result,String>() {

@@ -1,18 +1,86 @@
 import com.redhat.ceylon.model.typechecker.model {
     Cancellable
 }
+
 shared interface BaseProgressMonitor satisfies Cancellable {
-    shared formal void updateRemainingWork(Integer remainingWork);
-    shared formal void worked(Integer amount);
-    shared formal void subTask(String? desc=null);
-    shared formal BaseProgressMonitor convert(Integer work=0, String taskName="");
-    shared formal BaseProgressMonitor newChild(Integer work, Boolean prependMainLabelToSubtask = false);
-    shared formal void done();
+    shared formal class Progress(Integer estimatedWork, String? taskName)
+            satisfies Destroyable & Cancellable {
+        shared formal void changeTaskName(String taskDescription);
+        shared formal void updateRemainingWork(Integer remainingWork);
+        shared formal void subTask(String subTaskDescription);
+        shared formal void worked(Integer amount);
+        shared formal BaseProgressMonitor newChild(Integer allocatedWork);
+    }
 }
 
-shared abstract class ProgressMonitor<out NativeMonitor>()
-    satisfies BaseProgressMonitor {
+shared interface ProgressMonitor<NativeMonitor>
+        satisfies BaseProgressMonitor {
     formal shared NativeMonitor wrapped;
-    shared formal actual ProgressMonitor<NativeMonitor> convert(Integer work, String taskName);
-    shared formal actual ProgressMonitor<NativeMonitor> newChild(Integer work, Boolean prependMainLabelToSubtask);
+    shared formal actual class Progress(Integer estimatedWork, String? taskName) 
+            extends super.Progress(estimatedWork, taskName)  {
+        shared actual formal ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork);
+        shared default NativeMonitor wrapped => outer.wrapped;
+    }
+    
+}
+
+shared abstract class ProgressMonitorImpl<NativeMonitor> 
+         satisfies ProgressMonitor<NativeMonitor> {
+    late String? parentTaskName;
+    variable String? taskName_=null;
+    
+    shared default String? taskName => taskName_;
+    assign taskName {
+        taskName_ = taskName;
+    }
+
+    shared new child(ProgressMonitorImpl<NativeMonitor> parent, Integer allocatedWork) {
+        parentTaskName = parent.taskName;
+        taskName_ = parentTaskName;
+    }
+    
+    shared new wrap(NativeMonitor? monitor) {
+        parentTaskName = null;
+    }
+    
+    shared default void initialze(Integer estimatedWork, String? taskName) {
+        updateRemainingWork(estimatedWork);
+        if (exists taskName) {
+            this.taskName = taskName; 
+        }
+    }
+    shared formal void updateRemainingWork(Integer remainingWork);
+    shared formal void subTask(String subTaskDescription);
+    shared formal void worked(Integer amount);
+    shared formal ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork);
+    shared default void done() {
+        if (exists parentTaskName,
+            exists currentTaskName=taskName,
+            parentTaskName != currentTaskName) {
+            taskName = parentTaskName;
+        }
+    }
+    
+    shared default actual class Progress(Integer estimatedWork, String? taskName)
+            extends super.Progress(estimatedWork, taskName) {
+        outer.initialze(estimatedWork, taskName);
+        
+        shared actual void changeTaskName(String taskDescription) =>
+                outer.taskName = taskDescription;
+        shared actual void updateRemainingWork(Integer remainingWork) => 
+                outer.updateRemainingWork(remainingWork);
+        shared actual void subTask(String subTaskDescription) =>
+                outer.subTask(subTaskDescription);
+        shared actual void worked(Integer amount) =>
+                outer.worked(amount);
+        shared default actual ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork) =>
+                outer.newChild(allocatedWork);
+        shared actual void destroy(Throwable? error) {
+            outer.done();
+            if (exists error) {
+                throw error;
+            }
+        }
+        shared actual Boolean cancelled => outer.cancelled;
+    }
 }
