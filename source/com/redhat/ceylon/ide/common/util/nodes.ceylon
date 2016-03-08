@@ -34,9 +34,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     FunctionOrValue,
     Function,
-    Parameter,
-    Class,
-    ParameterList
+    Class
 }
 
 import java.lang {
@@ -756,8 +754,7 @@ shared object nodes {
                     names.add(escaping.escapeInitialLowercase(argument.identifier.text));
                 }
                 case (is Tree.PositionalArgument) {
-                    Parameter? parameter = argument.parameter;
-                    if (exists parameter) {
+                    if (exists parameter = argument.parameter) {
                         variable value name = parameter.name;
                         if (exists sequencedArgument) {
                             value index = sequencedArgument.positionalArguments.indexOf(argument);
@@ -765,24 +762,20 @@ shared object nodes {
                                 name = name + (index + 1).string;
                             }
                         } else if (parameter.sequenced) {
-                            Tree.PositionalArgumentList? positionalArgumentList = invocationExpression.positionalArgumentList;
-                            if (exists positionalArgumentList) {
+                            if (exists positionalArgumentList = invocationExpression.positionalArgumentList) {
                                 Tree.Primary? maybeParameterizedFunction = invocationExpression.primary;
-                                Tree.Primary? func;
-                                if (is Tree.ParameterizedExpression maybeParameterizedFunction) {
-                                    func = maybeParameterizedFunction.primary;
-                                } else {
-                                    func = maybeParameterizedFunction;
-                                }
-                                if (is Tree.StaticMemberOrTypeExpression func) {
-                                    Declaration? declaration = func.declaration;
-                                    if (is Function|Class declaration) {
-                                        JList<ParameterList> parameterLists = declaration.parameterLists;
-                                        JList<Parameter> parameters = parameterLists.get(0).parameters;
-                                        Integer position = positionalArgumentList.positionalArguments.indexOf(argument);
-                                        if (parameters.contains(parameter) && parameters.size() < positionalArgumentList.positionalArguments.size()) {
-                                            name += (position - parameters.size() + 2).string;
-                                        }
+                                Tree.Primary? func 
+                                        = if (is Tree.ParameterizedExpression maybeParameterizedFunction) 
+                                        then maybeParameterizedFunction.primary 
+                                        else maybeParameterizedFunction;
+                                if (is Tree.StaticMemberOrTypeExpression func, 
+                                    is Function|Class declaration = func.declaration) {
+                                    value parameterLists = declaration.parameterLists;
+                                    value parameters = parameterLists.get(0).parameters;
+                                    Integer position = positionalArgumentList.positionalArguments.indexOf(argument);
+                                    if (parameters.contains(parameter) && 
+                                        parameters.size() < positionalArgumentList.positionalArguments.size()) {
+                                        name += (position - parameters.size() + 2).string;
                                     }
                                 }
                             }
