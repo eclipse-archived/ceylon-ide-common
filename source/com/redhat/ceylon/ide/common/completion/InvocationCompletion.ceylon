@@ -174,8 +174,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         
         if (exists mt = ptr.type) {
             value cond = if (exists requiredType)
-            then mt.isSubtypeOf(requiredType)
-                    || withinBounds(requiredType, mt)
+            then withinBounds(requiredType, mt)
                     || dec is Class && dec==requiredType.declaration
             else true;
             
@@ -619,7 +618,7 @@ shared abstract class InvocationCompletionProposal
         if (is Value dec, 
             !(isInLanguageModule && isIgnoredLanguageModuleValue(dec)), 
             exists vt = dec.type, !vt.nothing) {
-            if (vt.isSubtypeOf(type) || withinBounds(type, vt)) {
+            if (withinBounds(type, vt)) {
                 value isIterArg 
                         = namedInvocation && last
                         && unit.isIterableParameterType(type);
@@ -644,7 +643,7 @@ shared abstract class InvocationCompletionProposal
             !dec.annotation, 
             !(isInLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
             exists mt = dec.type, !mt.nothing, 
-            mt.isSubtypeOf(type) || withinBounds(type, mt)) {
+            withinBounds(type, mt)) {
             value isIterArg 
                     = namedInvocation && last
                     && unit.isIterableParameterType(type);
@@ -658,7 +657,7 @@ shared abstract class InvocationCompletionProposal
             !dec.abstract && !dec.annotation, 
             !(isInLanguageModule && isIgnoredLanguageModuleClass(dec)), 
             exists ct = dec.type, 
-            withinBounds(type, ct) || dec==type.declaration || ct.isSubtypeOf(type)) {
+            withinBounds(type, ct) || dec==type.declaration) {
             value isIterArg 
                     = namedInvocation && last
                     && unit.isIterableParameterType(type);
@@ -704,26 +703,5 @@ shared abstract class InvocationCompletionProposal
         }
     }
     
-}
-
-Boolean withinBounds(Type t, Type vt) {
-    value td = t.declaration;
-    value unit = td.unit;
-    if (is TypeParameter td) {
-        return isInBounds(td.satisfiedTypes, vt);
-    }
-    else if (td==unit.iterableDeclaration && unit.isIterableType(vt)) {
-        return withinBounds(unit.getIteratedType(t), unit.getIteratedType(vt)) && 
-                (!unit.isNonemptyIterableType(t) || unit.isNonemptyIterableType(vt));
-    }
-    else if (td==unit.sequenceDeclaration && unit.isSequenceType(vt)) {
-        return withinBounds(unit.getSequentialElementType(t), unit.getSequentialElementType(vt));
-    }
-    else if (td==unit.sequentialDeclaration && unit.isSequentialType(vt)) {
-        return withinBounds(unit.getSequentialElementType(t), unit.getSequentialElementType(vt));
-    }
-    else {
-        return false;
-    }
 }
 

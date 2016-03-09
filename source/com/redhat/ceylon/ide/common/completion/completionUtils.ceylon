@@ -33,7 +33,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     Interface,
     ModelUtil,
-    Constructor
+    Constructor,
+    TypeParameter
 }
 
 import java.lang {
@@ -266,16 +267,46 @@ String? getPackageName(Tree.CompilationUnit cu)
             then pack.qualifiedNameString 
             else null;
 
-shared Boolean isInBounds(List<Type> upperBounds, Type t) {
+shared Boolean isInBounds(List<Type> upperBounds, Type type) {
     for (ub in upperBounds) {
-        if (!t.isSubtypeOf(ub) &&
+        if (!type.isSubtypeOf(ub) &&
             !(ub.involvesTypeParameters() && 
-              t.declaration.inherits(ub.declaration))) {
+              type.declaration.inherits(ub.declaration))) {
             return false;
         }
     }
     else {
         return true;
+    }
+}
+
+Boolean withinBounds(Type requiredType, Type type) {
+    value td = requiredType.resolveAliases().declaration;
+    if (type.isSubtypeOf(requiredType)) {
+        return true;
+    }
+    else if (is TypeParameter td) {
+        return isInBounds(td.satisfiedTypes, type);
+    }
+    else if (type.declaration.inherits(td)) {
+        value supertype = type.getSupertype(td);
+        for (tp in td.typeParameters) {
+            if (exists ta = supertype.typeArguments[tp],
+                exists rta = requiredType.typeArguments[tp]) {
+                if (!withinBounds(rta, ta)) {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return true;
+        }
+    }
+    else {
+        return false;
     }
 }
 

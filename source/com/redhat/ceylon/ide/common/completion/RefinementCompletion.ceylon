@@ -243,7 +243,8 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
     }
     
     void addValueProposals(MutableList<CompletionResult> props, 
-        Integer loc, String prefix, Type t, DeclarationWithProximity dwp) {
+        Integer loc, String prefix, Type type, 
+        DeclarationWithProximity dwp) {
         if (dwp.unimported) {
             //don't propose unimported stuff b/c adding
             //imports drops us out of linked mode and
@@ -267,7 +268,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             dec!=declaration,
             !(inLanguageModule && isIgnoredLanguageModuleValue(dec)), 
             exists vt = dec.type, !vt.nothing, 
-            withinBounds(t, vt) || vt.isSubtypeOf(type)) {
+            withinBounds(type, vt)) {
             
             props.add(newNestedCompletionProposal(dec, loc));
         }
@@ -276,7 +277,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             dec!=declaration, !dec.annotation,
             !(inLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
             exists mt = dec.type, !mt.nothing,
-            withinBounds(t, mt) || mt.isSubtypeOf(type)) {
+            withinBounds(type, mt)) {
             
             props.add(newNestedCompletionProposal(dec, loc));
         }
@@ -285,9 +286,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             !dec.abstract, !dec.annotation,
             !(inLanguageModule && isIgnoredLanguageModuleClass(dec)), 
             exists ct = dec.type, !ct.nothing,
-            withinBounds(t, ct)
-                    || ct.declaration==t.declaration
-                    || ct.isSubtypeOf(type)) {
+            withinBounds(type, ct) || ct.declaration==type.declaration) {
             
             if (dec.parameterList exists) {
                 props.add(newNestedCompletionProposal(dec, loc));
