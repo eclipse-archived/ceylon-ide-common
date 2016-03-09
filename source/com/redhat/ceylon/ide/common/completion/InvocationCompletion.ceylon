@@ -706,8 +706,8 @@ Boolean withinBounds(Type t, Type vt) {
         return isInBounds(td.satisfiedTypes, vt);
     }
     else if (td==unit.iterableDeclaration && unit.isIterableType(vt)) {
-         return withinBounds(unit.getIteratedType(t), unit.getIteratedType(vt)) && 
-                 (!unit.isNonemptyIterableType(t) || unit.isNonemptyIterableType(vt));
+        return withinBounds(unit.getIteratedType(t), unit.getIteratedType(vt)) && 
+                (!unit.isNonemptyIterableType(t) || unit.isNonemptyIterableType(vt));
     }
     else if (td==unit.sequenceDeclaration && unit.isSequenceType(vt)) {
         return withinBounds(unit.getSequentialElementType(t), unit.getSequentialElementType(vt));
