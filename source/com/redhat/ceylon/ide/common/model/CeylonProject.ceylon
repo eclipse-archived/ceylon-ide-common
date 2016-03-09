@@ -26,7 +26,8 @@ import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor,
     synchronize,
     ImmutableMapWrapper,
-    ProgressMonitor
+    ProgressMonitor,
+    BaseProgressMonitorChild
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -633,7 +634,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
-                modelLoader.setupSourceFileObjects(newTypechecker.phasedUnits.phasedUnits);
+                modelLoader.setupSourceFileObjects(phasedUnits.phasedUnits);
                 
                 progress.worked(1);
                 
@@ -793,6 +794,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         });
     };
     
-    shared formal void completeCeylonModelParsing(BaseProgressMonitor monitor);
+    shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
 }
 

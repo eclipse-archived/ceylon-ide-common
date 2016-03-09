@@ -9,23 +9,35 @@ shared interface BaseProgressMonitor satisfies Cancellable {
         shared formal void updateRemainingWork(Integer remainingWork);
         shared formal void subTask(String subTaskDescription);
         shared formal void worked(Integer amount);
-        shared formal BaseProgressMonitor newChild(Integer allocatedWork);
+        shared formal BaseProgressMonitorChild newChild(Integer allocatedWork);
     }
+}
+
+shared interface BaseProgressMonitorChild 
+        satisfies BaseProgressMonitor {
+}
+
+shared sealed interface Wrapper<out Wrapped> {
+    shared formal Wrapped wrapped;
 }
 
 shared interface ProgressMonitor<NativeMonitor>
         satisfies BaseProgressMonitor {
-    formal shared NativeMonitor wrapped;
     shared formal actual class Progress(Integer estimatedWork, String? taskName) 
-            extends super.Progress(estimatedWork, taskName)  {
-        shared actual formal ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork);
-        shared default NativeMonitor wrapped => outer.wrapped;
+            extends super.Progress(estimatedWork, taskName)
+            satisfies Wrapper<NativeMonitor> {
+        shared formal actual ProgressMonitorChild<NativeMonitor> newChild(Integer allocatedWork);
     }
-    
+}
+
+shared interface ProgressMonitorChild<NativeMonitor>
+        satisfies ProgressMonitor<NativeMonitor> 
+        & Wrapper<NativeMonitor>
+        & BaseProgressMonitorChild {
 }
 
 shared abstract class ProgressMonitorImpl<NativeMonitor> 
-         satisfies ProgressMonitor<NativeMonitor> {
+         satisfies ProgressMonitorChild<NativeMonitor> {
     late String? parentTaskName;
     variable String? taskName_=null;
     
@@ -52,7 +64,7 @@ shared abstract class ProgressMonitorImpl<NativeMonitor>
     shared formal void updateRemainingWork(Integer remainingWork);
     shared formal void subTask(String subTaskDescription);
     shared formal void worked(Integer amount);
-    shared formal ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork);
+    shared formal ProgressMonitorChild<NativeMonitor> newChild(Integer allocatedWork);
     shared default void done() {
         if (exists parentTaskName,
             exists currentTaskName=taskName,
@@ -73,7 +85,7 @@ shared abstract class ProgressMonitorImpl<NativeMonitor>
                 outer.subTask(subTaskDescription);
         shared actual void worked(Integer amount) =>
                 outer.worked(amount);
-        shared default actual ProgressMonitor<NativeMonitor> newChild(Integer allocatedWork) =>
+        shared default actual ProgressMonitorChild<NativeMonitor> newChild(Integer allocatedWork) =>
                 outer.newChild(allocatedWork);
         shared actual void destroy(Throwable? error) {
             outer.done();
@@ -82,5 +94,6 @@ shared abstract class ProgressMonitorImpl<NativeMonitor>
             }
         }
         shared actual Boolean cancelled => outer.cancelled;
+        shared default actual NativeMonitor wrapped => outer.wrapped;
     }
 }

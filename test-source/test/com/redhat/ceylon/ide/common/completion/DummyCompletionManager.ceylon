@@ -26,7 +26,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor,
-    Indents
+    Indents,
+    BaseProgressMonitorChild
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -84,14 +85,14 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
     shared actual CompletionOptions options = CompletionOptions();
 }
 
-object dummyMonitor satisfies BaseProgressMonitor {
+object dummyMonitor satisfies BaseProgressMonitorChild {
     shared actual Boolean cancelled => false;
     shared actual class Progress(Integer estimatedWork, String? taskName)
              extends super.Progress(estimatedWork, taskName) {
         shared actual Boolean cancelled => outer.cancelled;
         shared actual void changeTaskName(String taskDescription) {}
         shared actual void destroy(Throwable? error) {}
-        shared actual BaseProgressMonitor newChild(Integer allocatedWork) => outer;
+        shared actual BaseProgressMonitorChild newChild(Integer allocatedWork) => outer;
         shared actual void subTask(String subTaskDescription) {}
         shared actual void updateRemainingWork(Integer remainingWork) {}
         shared actual void worked(Integer amount) {}
