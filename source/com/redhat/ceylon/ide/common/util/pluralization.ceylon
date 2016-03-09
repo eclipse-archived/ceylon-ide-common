@@ -23,75 +23,63 @@ import ceylon.interop.java {
 }
 
 import java.util.regex {
-    Pattern,
-    Matcher
-}
-
-class Builder(Pattern pattern) {
-    shared Replacer with(String replacement) 
-            => Replacer(pattern, replacement);
-}
-
-class Replacer(Pattern pattern, String replacement) {
-    late variable Matcher m;
-    shared Boolean matches(String word) {
-        m = pattern.matcher(javaString(word));
-        return m.matches();
+    Pattern {
+        compile,
+        i=CASE_INSENSITIVE
     }
-    shared String replace() => m.replaceFirst(replacement);
 }
 
-Builder replace(String pattern) 
-        => Builder(Pattern.compile(pattern, Pattern.\iCASE_INSENSITIVE));
+Pattern pattern(String text) => compile(text,i);
 
-List<Replacer> singularizations = ArrayList {
-    replace("(equipment|information|species|series|sheep|deer|swine|stuff)").with("$1"),
-    replace("(.*p)eople$").with("$1erson"),
-    //replace("(.*o)xen$").with("$1x"), 
-    replace("(.*c)hildren$").with("$1hild"), 
-    replace("(.*f)eet$").with("$1oot"), 
-    replace("(.*t)eeth$").with("$1ooth"), 
-    replace("(.*g)eese$").with("$1oose"), 
-    replace("(.*)ives?$").with("$1ife"), 
-    replace("(.*)ves?$").with("$1f"), 
-    replace("(.*m)en$").with("$1an"), 
-    replace("(.+[aeiou])ys$").with("$1y"), 
-    replace("(.+[^aeiou])ies$").with("$1y"), 
-    replace("(.+)zes$").with("$1"), 
-    replace("(.*[m|l])ice$").with("$1ouse"), 
-    replace("(.*)matrices$").with("$1matrix"), 
-    replace("(.*)indices$").with("$1index"), 
-    replace("(.+[^aeiou])ices$").with("$1ice"), 
-    replace("(.*)ices$").with("$1ex"), 
-    replace("(.*(octop|vir|hippopotum))i$").with("$1us"), 
-    replace("(.+(s|x|sh|ch))es$").with("$1"), 
-    replace("(.+)s$").with("$1")
+List<[Pattern,String]> singularizations = ArrayList {
+    [pattern("(.*(equipment|information|species|series|sheep|deer|swine|stuff))"), "$1"], 
+    [pattern("(.*p)eople$"), "$1erson"], 
+    //[pattern("(.*o)xen$"), "$1x"],  
+    [pattern("(.*c)hildren$"), "$1hild"],  
+    [pattern("(.*f)eet$"), "$1oot"],  
+    [pattern("(.*t)eeth$"), "$1ooth"],  
+    [pattern("(.*g)eese$"), "$1oose"],  
+    [pattern("(.*)ives?$"), "$1ife"],  
+    [pattern("(.*)ves?$"), "$1f"],  
+    [pattern("(.*m)en$"), "$1an"],  
+    [pattern("(.+[aeiou])ys$"), "$1y"],  
+    [pattern("(.+[^aeiou])ies$"), "$1y"],  
+    [pattern("(.+)zes$"), "$1"],  
+    [pattern("(.*[m|l])ice$"), "$1ouse"],  
+    [pattern("(.*)matrices$"), "$1matrix"],  
+    [pattern("(.*)indices$"), "$1index"],  
+    [pattern("(.+[^aeiou])ices$"), "$1ice"],  
+    [pattern("(.*)ices$"), "$1ex"],  
+    [pattern("(.*(octop|vir|hippopotum))i$"), "$1us"],  
+    [pattern("(.+(s|x|sh|ch))es$"), "$1"],  
+    [pattern("(.+)s$"), "$1"]
 };
 
-List<Replacer> pluralizations = ArrayList {
-    replace("(equipment|information|species|series|sheep|deer|swine|stuff)").with("$1"),
-    replace("(.*p)erson$").with("$1eople"), 
-    //replace("(.*o)x$").with("$1xen"), 
-    replace("(.*c)hild$").with("$1hildren"), 
-    replace("(.*f)oot$").with("$1eet"), 
-    replace("(.*t)ooth$").with("$1eeth"), 
-    replace("(.*g)oose$").with("$1eese"), 
-    replace("(.*)fe?$").with("$1ves"), 
-    replace("(.*m)an$").with("$1en"), 
-    replace("(.+[aeiou]y)$").with("$1s"), 
-    replace("(.+[^aeiou])y$").with("$1ies"), 
-    replace("(.+z)$").with("$1zes"), 
-    replace("(.*[m|l])ouse$").with("$1ice"), 
-    replace("(.+)(e|i)x$").with("$1ices"), 
-    replace("(.*(octop|vir|hippopotum))us$").with("$1i"), 
-    replace("(.+(s|x|sh|ch))$").with("$1es"), 
-    replace("(.+)").with("$1s")
+List<[Pattern,String]> pluralizations = ArrayList {
+    [pattern("(.*(equipment|information|species|series|sheep|deer|swine|stuff))"), "$1"], 
+    [pattern("(.*p)erson$"), "$1eople"],  
+    //[pattern("(.*o)x$"), "$1xen"],  
+    [pattern("(.*c)hild$"), "$1hildren"],  
+    [pattern("(.*f)oot$"), "$1eet"],  
+    [pattern("(.*t)ooth$"), "$1eeth"],  
+    [pattern("(.*g)oose$"), "$1eese"],  
+    [pattern("(.*)fe?$"), "$1ves"],  
+    [pattern("(.*m)an$"), "$1en"],  
+    [pattern("(.+[aeiou]y)$"), "$1s"],  
+    [pattern("(.+[^aeiou])y$"), "$1ies"],  
+    [pattern("(.+z)$"), "$1zes"],  
+    [pattern("(.*[m|l])ouse$"), "$1ice"],  
+    [pattern("(.+)(e|i)x$"), "$1ices"],  
+    [pattern("(.*(octop|vir|hippopotum))us$"), "$1i"],  
+    [pattern("(.+(s|x|sh|ch))$"), "$1es"],  
+    [pattern("(.+)"), "$1s"]
 };
 
-shared String singularize(String word) {
-    for (singularization in singularizations) {
-        if (singularization.matches(word)) {
-            return singularization.replace();
+String applyPatterns(List<[Pattern, String]> list, String word) {
+    for ([pattern,replacement] in list) {
+        value matcher = pattern.matcher(javaString(word));
+        if (matcher.matches()) {
+            return matcher.replaceFirst(replacement);
         }
     }
     else {
@@ -99,14 +87,9 @@ shared String singularize(String word) {
     }
 }
 
-shared String pluralize(String word) {
-    for (pluralization in pluralizations) {
-        if (pluralization.matches(word)) {
-            return pluralization.replace();
-        }
-    }
-    else { 
-        return word;
-    }
-}
+shared String singularize(String word) 
+        => applyPatterns(singularizations, word);
+
+shared String pluralize(String word) 
+        => applyPatterns(pluralizations, word);
 
