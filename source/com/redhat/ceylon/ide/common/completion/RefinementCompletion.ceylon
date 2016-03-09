@@ -250,44 +250,50 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             //because it results in a pause
             return;
         }
-        value d = dwp.declaration;
-        if (is NothingType d) {
+        value dec = dwp.declaration;
+        if (is NothingType dec) {
             return;
         }
         
         value split = javaString(prefix).split("\\s+");
-        if (split.size > 0, d.name==split.get(split.size - 1)) {
+        if (split.size > 0, dec.name==split.get(split.size - 1)) {
             return;
         }
-        value pname = d.unit.\ipackage.nameAsString;
+        value pname = dec.unit.\ipackage.nameAsString;
         value inLanguageModule 
                 = pname == Module.\iLANGUAGE_MODULE_NAME;
-        if (is Value val = d, d!=declaration,
-            !(inLanguageModule && isIgnoredLanguageModuleValue(val)), 
-            exists vt = val.type, !vt.nothing, 
+        
+        if (is Value dec, 
+            dec!=declaration,
+            !(inLanguageModule && isIgnoredLanguageModuleValue(dec)), 
+            exists vt = dec.type, !vt.nothing, 
             withinBounds(t, vt) || vt.isSubtypeOf(type)) {
             
-            props.add(newNestedCompletionProposal(d, loc));
+            props.add(newNestedCompletionProposal(dec, loc));
         }
-        if (is Function method = d, d!=declaration, !d.annotation,
-            !(inLanguageModule && isIgnoredLanguageModuleMethod(method)), 
-            exists mt = method.type, !mt.nothing,
+        
+        if (is Function dec, 
+            dec!=declaration, !dec.annotation,
+            !(inLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
+            exists mt = dec.type, !mt.nothing,
             withinBounds(t, mt) || mt.isSubtypeOf(type)) {
             
-            props.add(newNestedCompletionProposal(d, loc));
+            props.add(newNestedCompletionProposal(dec, loc));
         }
-        if (is Class clazz = d, !clazz.abstract, !d.annotation,
-            !(inLanguageModule && isIgnoredLanguageModuleClass(clazz)), 
-            exists ct = clazz.type, !ct.nothing,
+        
+        if (is Class dec, 
+            !dec.abstract, !dec.annotation,
+            !(inLanguageModule && isIgnoredLanguageModuleClass(dec)), 
+            exists ct = dec.type, !ct.nothing,
             withinBounds(t, ct)
                     || ct.declaration==t.declaration
                     || ct.isSubtypeOf(type)) {
             
-            if (clazz.parameterList exists) {
-                props.add(newNestedCompletionProposal(d, loc));
+            if (dec.parameterList exists) {
+                props.add(newNestedCompletionProposal(dec, loc));
             }
             
-            for (m in clazz.members) {
+            for (m in dec.members) {
                 if (is Constructor m, m.shared, m.name exists) {
                     props.add(newNestedCompletionProposal(m, loc));
                 }

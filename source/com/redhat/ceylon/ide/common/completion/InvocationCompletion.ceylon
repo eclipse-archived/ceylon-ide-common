@@ -334,12 +334,14 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
     }
 }
 
-shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class InvocationCompletionProposal
+        <IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
     (variable Integer _offset, String prefix, String desc, String text,
     Declaration declaration, Reference? producedReference, Scope scope,
     Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
     Boolean namedInvocation, Boolean inheritance, Boolean qualified,
-    Declaration? qualifyingValue, InvocationCompletion<IdeComponent,CompletionResult,Document> completionManager)
+    Declaration? qualifyingValue, 
+    InvocationCompletion<IdeComponent,CompletionResult,Document> completionManager)
         extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
         (_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
@@ -468,8 +470,9 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         return comma;
     }
     
-    shared void enterLinkedMode(Document document, JList<Parameter>? params,
-        JList<TypeParameter>? typeParams, IdeComponent cpc) {
+    shared void enterLinkedMode(Document document, 
+        JList<Parameter>? params, JList<TypeParameter>? typeParams, 
+        IdeComponent cpc) {
         
         value proposeTypeArguments = !(params exists);
         value paramCount 
@@ -505,12 +508,12 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                     value props = ArrayList<CompletionResult>();
                     if (proposeTypeArguments) {
                         assert(exists typeParams);
-                        addTypeArgumentProposals(typeParams.get(seq), loc,
-                            first, props, seq);
+                        addTypeArgumentProposals(props, typeParams.get(seq), 
+                            loc, first, seq);
                     } else if (!voidParam) {
                         assert(exists params);
-                        addValueArgumentProposals(params.get(param), loc, first,
-                            props, seq, param == params.size() - 1, cpc);
+                        addValueArgumentProposals(props, params.get(param), 
+                            loc, first, seq, param == params.size() - 1, cpc);
                     }
                     value middle = getCompletionPosition(first, next);
                     variable value start = loc + first + middle;
@@ -535,8 +538,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         }
     }
     
-    void addValueArgumentProposals(Parameter param, Integer loc, Integer first,
-        MutableList<CompletionResult> props, Integer index, Boolean last,
+    void addValueArgumentProposals(MutableList<CompletionResult> props, 
+        Parameter param, Integer loc, Integer first, Integer index, Boolean last, 
         IdeComponent cpc) {
         
         if (param.model.dynamicallyTyped) {
@@ -566,7 +569,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         //stuff with fuzzily-matching name:
         for (dwp in proposals) {
             if (dwp.proximity <= 1) {
-                addValueArgumentProposal(props, param, loc, index, last, type, unit, dwp, null, cpc);
+                addValueArgumentProposal(props, param, loc, index, last, 
+                    type, unit, dwp, null, cpc);
             }
         }
         
@@ -586,13 +590,15 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         //stuff with lower proximity:
         for (dwp in proposals) {
             if (dwp.proximity > 1) {
-                addValueArgumentProposal(props, param, loc, index, last, type, unit, dwp, null, cpc);
+                addValueArgumentProposal(props, param, loc, index, last, 
+                    type, unit, dwp, null, cpc);
             }
         }
     }
     
     void addValueArgumentProposal(MutableList<CompletionResult> props, 
-        Parameter p, Integer loc, Integer index, Boolean last, Type type, Unit unit, 
+        Parameter p, Integer loc, Integer index, Boolean last, 
+        Type type, Unit unit, 
         DeclarationWithProximity dwp, DeclarationWithProximity? qualifier, 
         IdeComponent cpc) {
         
@@ -619,8 +625,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                         && unit.isIterableParameterType(type);
                 value isVarArg = p.sequenced && positionalInvocation;
                 value op = isIterArg || isVarArg then "*" else "";
-                props.add(newNestedCompletionProposal(dec, qdec, loc,
-                    index, false, op));
+                props.add(newNestedCompletionProposal(dec, qdec, 
+                    loc, index, false, op));
             }
             if (!qualifier exists, cpc.options.chainLinkedModeArguments) {
                 value members = 
@@ -628,7 +634,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                            .getMatchingMemberDeclarations(unit, scope, "", 0)
                            .values();
                 for (mwp in members) {
-                    addValueArgumentProposal(props, p, loc, index, last, type, unit, mwp, dwp, cpc);
+                    addValueArgumentProposal(props, p, loc, index, last, 
+                        type, unit, mwp, dwp, cpc);
                 }
             }
         }
@@ -643,8 +650,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                     && unit.isIterableParameterType(type);
             value isVarArg = p.sequenced && positionalInvocation;
             value op = isIterArg || isVarArg then "*" else "";
-            props.add(newNestedCompletionProposal(dec, qdec, loc, index,
-                false, op));
+            props.add(newNestedCompletionProposal(dec, qdec, 
+                loc, index, false, op));
         }
         
         if (is Class dec, 
@@ -658,22 +665,22 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
             value isVarArg = p.sequenced && positionalInvocation;
             if (dec.parameterList exists) {
                 value op = isIterArg || isVarArg then "*" else "";
-                props.add(newNestedCompletionProposal(dec,
-                    qdec, loc, index, false, op));
+                props.add(newNestedCompletionProposal(dec, qdec, 
+                    loc, index, false, op));
             }
             for (m in dec.members) {
                 if (m is FunctionOrValue && ModelUtil.isConstructor(m) 
                     && m.shared && m.name exists) {
                     value op = isIterArg || isVarArg then "*" else "";
-                    props.add(newNestedCompletionProposal(m,
-                        dec, loc, index, false, op));
+                    props.add(newNestedCompletionProposal(m, dec, 
+                        loc, index, false, op));
                 }
             }
         }
     }
     
-    void addTypeArgumentProposals(TypeParameter tp, Integer loc, Integer first,
-        MutableList<CompletionResult> props, Integer index) {
+    void addTypeArgumentProposals(MutableList<CompletionResult> props, 
+        TypeParameter tp, Integer loc, Integer first, Integer index) {
         
         value ed = cu.unit.exceptionDeclaration;
         
@@ -691,8 +698,8 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 inheritance && tp.isSelfType() 
                     then scope == dec
                     else isInBounds(tp.satisfiedTypes, dec.type)) {
-                props.add(newNestedCompletionProposal(dec, null, loc,
-                    index, true, ""));
+                props.add(newNestedCompletionProposal(dec, null, 
+                    loc, index, true, ""));
             }
         }
     }
