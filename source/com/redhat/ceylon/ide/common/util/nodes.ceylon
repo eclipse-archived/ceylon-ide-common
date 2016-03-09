@@ -29,7 +29,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
     Unit,
     ModelUtil,
-    Type,
     Declaration,
     Scope,
     FunctionOrValue,
