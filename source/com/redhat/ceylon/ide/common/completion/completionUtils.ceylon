@@ -267,16 +267,16 @@ String? getPackageName(Tree.CompilationUnit cu)
             else null;
 
 shared Boolean isInBounds(List<Type> upperBounds, Type t) {
-    variable value ok = true;
     for (ub in upperBounds) {
-        if (!t.isSubtypeOf(ub), 
+        if (!t.isSubtypeOf(ub) &&
             !(ub.involvesTypeParameters() && 
               t.declaration.inherits(ub.declaration))) {
-            ok = false;
-            break;
+            return false;
         }
     }
-    return ok;
+    else {
+        return true;
+    }
 }
 
 

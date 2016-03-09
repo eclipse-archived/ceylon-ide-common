@@ -149,7 +149,8 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                 value members = type.declaration.members;
                 
                 for (m in members) {
-                    if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
+                    if (m is FunctionOrValue && ModelUtil.isConstructor(m) 
+                        && m.shared && m.name exists) {
                         addSecondLevelProposalInternal(offset, prefix, controller,
                             result, dec, scope, requiredType, ol, unit, type, null, m);
                     }
@@ -174,8 +175,8 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         if (exists mt = ptr.type) {
             value cond = if (exists requiredType)
             then mt.isSubtypeOf(requiredType)
-                    || withinBounds(requiredType.declaration, mt)
-                    || dec is Class && dec.equals(requiredType.declaration)
+                    || withinBounds(requiredType, mt)
+                    || dec is Class && dec==requiredType.declaration
             else true;
             
             if (cond) {
@@ -219,13 +220,14 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
             if (!pls.empty) {
                 value parameterList = pls.get(0);
                 value ps = parameterList.parameters;
-                value exact = prefixWithoutTypeArgs(prefix, typeArgs)
-                        .equals(dec.getName(unit));
+                value exact = 
+                        prefixWithoutTypeArgs(prefix, typeArgs) 
+                            == dec.getName(unit);
                 value inexactMatches = cmp.options.inexactMatches;
                 value positional = exact
-                        || "both".equals(inexactMatches)
-                        || "positional".equals(inexactMatches);
-                value named = exact || "both".equals(inexactMatches);
+                        || "both"==inexactMatches
+                        || "positional"==inexactMatches;
+                value named = exact || "both"==inexactMatches;
                 value addParameterTypesInCompletions = cmp.options.parameterTypesInCompletion;
                 
                 Boolean inheritance = isLocation(ol, OccurrenceLocation.\iUPPER_BOUND) 
@@ -385,7 +387,6 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
     
     shared void activeLinkedMode(Document document, IdeComponent cpc) {
         if (is Generic declaration) {
-            value generic = declaration;
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
                 (positionalInvocation || namedInvocation)) {
@@ -402,7 +403,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                     return; //NOTE: early exit!
                 }
             }
-            value typeParams = generic.typeParameters;
+            value typeParams = declaration.typeParameters;
             if (!typeParams.empty) {
                 enterLinkedMode(document, null, typeParams, cpc);
             }
@@ -423,7 +424,7 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         value middle = getCompletionPosition(first, next);
         variable value start = offset - prefix.size + first + middle;
         variable value len = next - middle;
-        if (getDocSpan(document, start, len).trimmed.equals("{}")) {
+        if (getDocSpan(document, start, len).trimmed=="{}") {
             start++;
             len = 0;
         }
@@ -431,19 +432,16 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         return newRegion(start, len);
     }
     
-    Integer getCompletionPosition(Integer first, Integer next) {
-        return (text.span(first, first + next - 2).lastOccurrence(' ') else -1) + 1;
-    }
+    Integer getCompletionPosition(Integer first, Integer next) 
+            => (text.span(first, first + next - 2).lastOccurrence(' ') else -1) + 1;
     
     shared Integer getFirstPosition() {
-        Integer? index;
-        if (namedInvocation) {
-            index = text.firstOccurrence('{');
-        } else if (positionalInvocation) {
-            index = text.firstOccurrence('(');
-        } else {
-            index = text.firstOccurrence('<');
-        }
+        value index 
+                = if (namedInvocation)
+                then text.firstOccurrence('{')
+                else if (positionalInvocation)
+                then text.firstOccurrence('(')
+                else text.firstOccurrence('<');
         return (index else -1) + 1;
     }
     
@@ -459,14 +457,12 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
                 - start;
         
         if (comma < 0) {
-            Integer? index;
-            if (namedInvocation) {
-                index = text.lastOccurrence('}');
-            } else if (positionalInvocation) {
-                index = text.lastOccurrence(')');
-            } else {
-                index = text.lastOccurrence('>');
-            }
+            value index 
+                    = if (namedInvocation)
+                    then text.lastOccurrence('}')
+                    else if (positionalInvocation)
+                    then text.lastOccurrence(')')
+                    else text.lastOccurrence('>');
             return (index else -1) - lastOffset;
         }
         return comma;
@@ -476,9 +472,10 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         JList<TypeParameter>? typeParams, IdeComponent cpc) {
         
         value proposeTypeArguments = !(params exists);
-        value paramCount = if (proposeTypeArguments)
-                           then (typeParams?.size() else 0)
-                           else (params?.size() else 0);
+        value paramCount 
+                = if (proposeTypeArguments)
+                then (typeParams?.size() else 0)
+                else (params?.size() else 0);
         if (paramCount == 0) {
             return;
         }
@@ -545,15 +542,16 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         if (param.model.dynamicallyTyped) {
             return;
         }
-        assert(exists producedReference);
+        if (!exists producedReference) {
+            return;
+        }
         Type? type = producedReference.getTypedParameter(param).type;
         if (!exists type) {
             return;
         }
 
         value unit = cu.unit;
-        value exactName = param.name;
-        value proposals = getSortedProposedValues(scope, unit, exactName);
+        value proposals = getSortedProposedValues(scope, unit, param.name);
         
         //very special case for print()
         value dname = declaration.qualifiedNameString;
@@ -565,113 +563,110 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         }
         
         //stuff defined in the same block, along with
-        //stuff with fuzzily-matching name 
+        //stuff with fuzzily-matching name:
         for (dwp in proposals) {
             if (dwp.proximity <= 1) {
-                addValueArgumentProposal(param, loc, props, index, last,
-                    type, unit, dwp, null, cpc);
+                addValueArgumentProposal(props, param, loc, index, last, type, unit, dwp, null, cpc);
             }
         }
+        
+        //this:
         if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
             ci.type.isSubtypeOf(type)) {
-             props.add(newNestedLiteralCompletionProposal("this", loc, index));
+            props.add(newNestedLiteralCompletionProposal("this", loc, index));
         }
-        //literals
+        
+        //literals:
         if (!print) {
             for (val in getAssignableLiterals(type, unit)) {
                 props.add(newNestedLiteralCompletionProposal(val, loc, index));
             }
         }
         
-        //stuff with lower proximity
+        //stuff with lower proximity:
         for (dwp in proposals) {
             if (dwp.proximity > 1) {
-                addValueArgumentProposal(param, loc, props, index, last, type,
-                    unit, dwp, null, cpc);
+                addValueArgumentProposal(props, param, loc, index, last, type, unit, dwp, null, cpc);
             }
         }
     }
     
-    void addValueArgumentProposal(Parameter p, Integer loc,
-        MutableList<CompletionResult> props, Integer index, Boolean last,
-        Type type, Unit unit, DeclarationWithProximity dwp,
-        DeclarationWithProximity? qualifier, IdeComponent cpc) {
+    void addValueArgumentProposal(MutableList<CompletionResult> props, 
+        Parameter p, Integer loc, Integer index, Boolean last, Type type, Unit unit, 
+        DeclarationWithProximity dwp, DeclarationWithProximity? qualifier, 
+        IdeComponent cpc) {
         
-        if (!exists qualifier, dwp.unimported) {
+        if (!qualifier exists && dwp.unimported) {
             return;
         }
-        value td = type.declaration;
-        value d = dwp.declaration;
-        if (is NothingType d) {
+        value dec = dwp.declaration;
+        if (is NothingType dec) {
             return;
         }
-        value pname = d.unit.\ipackage.nameAsString;
-        value isInLanguageModule = !(qualifier exists)
-                && pname.equals(Module.\iLANGUAGE_MODULE_NAME);
+        
+        value pname = dec.unit.\ipackage.nameAsString;
+        value isInLanguageModule 
+                = !qualifier exists
+                && pname == Module.\iLANGUAGE_MODULE_NAME;
         value qdec = qualifier?.declaration;
-        if (is Value d) {
-            if (isInLanguageModule, isIgnoredLanguageModuleValue(d)) {
-                return;
-            }
-            if (exists vt = d.type, !vt.nothing) {
-                if (vt.isSubtypeOf(type) || withinBounds(td, vt)) {
-                    value isIterArg = namedInvocation && last
-                            && unit.isIterableParameterType(type);
-                    value isVarArg = p.sequenced && positionalInvocation;
-                    value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(newNestedCompletionProposal(d, qdec, loc,
-                        index, false, op));
-                }
-                if (!exists qualifier, cpc.options.chainLinkedModeArguments) {
-                    value members = d.typeDeclaration
-                            .getMatchingMemberDeclarations(unit, scope, "", 0)
-                            .values();
-                    for (mwp in members) {
-                        addValueArgumentProposal(p, loc, props, index, last,
-                            type, unit, mwp, dwp, cpc);
-                    }
-                }
-            }
-        }
-        if (is Function d, !d.annotation) {
-            if (isInLanguageModule, isIgnoredLanguageModuleMethod(d)) {
-                return;
-            }
-            if (exists mt = d.type, !mt.nothing) {
-                if (mt.isSubtypeOf(type) || withinBounds(td, mt)) {
-                    value isIterArg = namedInvocation && last
-                            && unit.isIterableParameterType(type);
-                    value isVarArg = p.sequenced && positionalInvocation;
-                    value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(newNestedCompletionProposal(d, qdec, loc, index,
-                        false, op));
-                }
-            }
-        }
-        if (is Class d, !d.abstract, !d.annotation) {
-            if (isInLanguageModule, isIgnoredLanguageModuleClass(d)) {
-                return;
-            }
-            if (exists ct = d.type, (withinBounds(td, ct)
-                || d.equals(type.declaration)
-                || ct.isSubtypeOf(type))) {
-                
-                value isIterArg = namedInvocation && last
+        
+        if (is Value dec, 
+            !(isInLanguageModule && isIgnoredLanguageModuleValue(dec)), 
+            exists vt = dec.type, !vt.nothing) {
+            if (vt.isSubtypeOf(type) || withinBounds(type, vt)) {
+                value isIterArg 
+                        = namedInvocation && last
                         && unit.isIterableParameterType(type);
                 value isVarArg = p.sequenced && positionalInvocation;
-                
-                if (d.parameterList exists) {
-                    value op = if (isIterArg || isVarArg) then "*" else "";
-                    props.add(newNestedCompletionProposal(d,
-                        qdec, loc, index, false, op));
+                value op = isIterArg || isVarArg then "*" else "";
+                props.add(newNestedCompletionProposal(dec, qdec, loc,
+                    index, false, op));
+            }
+            if (!qualifier exists, cpc.options.chainLinkedModeArguments) {
+                value members = 
+                        dec.typeDeclaration
+                           .getMatchingMemberDeclarations(unit, scope, "", 0)
+                           .values();
+                for (mwp in members) {
+                    addValueArgumentProposal(props, p, loc, index, last, type, unit, mwp, dwp, cpc);
                 }
-
-                for (m in d.members) {
-                    if (m is FunctionOrValue, ModelUtil.isConstructor(m), m.shared, m.name exists) {
-                        value op = if (isIterArg || isVarArg) then "*" else "";
-                        props.add(newNestedCompletionProposal(m,
-                            d, loc, index, false, op));
-                    }
+            }
+        }
+        
+        if (is Function dec, 
+            !dec.annotation, 
+            !(isInLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
+            exists mt = dec.type, !mt.nothing, 
+            mt.isSubtypeOf(type) || withinBounds(type, mt)) {
+            value isIterArg 
+                    = namedInvocation && last
+                    && unit.isIterableParameterType(type);
+            value isVarArg = p.sequenced && positionalInvocation;
+            value op = isIterArg || isVarArg then "*" else "";
+            props.add(newNestedCompletionProposal(dec, qdec, loc, index,
+                false, op));
+        }
+        
+        if (is Class dec, 
+            !dec.abstract && !dec.annotation, 
+            !(isInLanguageModule && isIgnoredLanguageModuleClass(dec)), 
+            exists ct = dec.type, 
+            withinBounds(type, ct) || dec==type.declaration || ct.isSubtypeOf(type)) {
+            value isIterArg 
+                    = namedInvocation && last
+                    && unit.isIterableParameterType(type);
+            value isVarArg = p.sequenced && positionalInvocation;
+            if (dec.parameterList exists) {
+                value op = isIterArg || isVarArg then "*" else "";
+                props.add(newNestedCompletionProposal(dec,
+                    qdec, loc, index, false, op));
+            }
+            for (m in dec.members) {
+                if (m is FunctionOrValue && ModelUtil.isConstructor(m) 
+                    && m.shared && m.name exists) {
+                    value op = isIterArg || isVarArg then "*" else "";
+                    props.add(newNestedCompletionProposal(m,
+                        dec, loc, index, false, op));
                 }
             }
         }
@@ -684,38 +679,43 @@ shared abstract class InvocationCompletionProposal<IdeComponent,CompletionResult
         
         for (dwp in getSortedProposedValues(scope, cu.unit)) {
             value dec = dwp.declaration;
-            if (is TypeDeclaration dec, !dwp.unimported) {
-                value td = dec;
-                value t = td.type;
-                
-                if (!t.nothing, 
-                    td.typeParameters.empty, 
-                    !td.annotation, 
-                    !td.inherits(ed)) {
-                    
-                    value pname = td.unit.\ipackage.nameAsString;
-                    if (pname.equals(Module.\iLANGUAGE_MODULE_NAME)) {
-                        if (isIgnoredLanguageModuleType(td)) {
-                            continue;
-                        }
-                    }
-                    if (inheritance && tp.isSelfType() then scope == td
-                        else isInBounds(tp.satisfiedTypes, t)) {
-                        props.add(newNestedCompletionProposal(dec, null, loc,
-                            index, true, ""));
-                    }
-                }
+            value pname = dec.unit.\ipackage.nameAsString;
+            value isInLanguageModule 
+                    = pname == Module.\iLANGUAGE_MODULE_NAME;
+            
+            if (is TypeDeclaration dec, 
+                !dwp.unimported, 
+                !dec.type.nothing && dec.typeParameters.empty && 
+                !dec.annotation && !dec.inherits(ed), 
+                !(isInLanguageModule && isIgnoredLanguageModuleType(dec)), 
+                inheritance && tp.isSelfType() 
+                    then scope == dec
+                    else isInBounds(tp.satisfiedTypes, dec.type)) {
+                props.add(newNestedCompletionProposal(dec, null, loc,
+                    index, true, ""));
             }
         }
     }
     
 }
 
-Boolean withinBounds(TypeDeclaration td, Type vt) {
+Boolean withinBounds(Type t, Type vt) {
+    value td = t.declaration;
+    value unit = td.unit;
     if (is TypeParameter td) {
-        value tp = td;
-        return isInBounds(tp.satisfiedTypes, vt);
-    } else {
+        return isInBounds(td.satisfiedTypes, vt);
+    }
+    else if (td==unit.iterableDeclaration && unit.isIterableType(vt)) {
+         return withinBounds(unit.getIteratedType(t), unit.getIteratedType(vt)) && 
+                 (!unit.isNonemptyIterableType(t) || unit.isNonemptyIterableType(vt));
+    }
+    else if (td==unit.sequenceDeclaration && unit.isSequenceType(vt)) {
+        return withinBounds(unit.getSequentialElementType(t), unit.getSequentialElementType(vt));
+    }
+    else if (td==unit.sequentialDeclaration && unit.isSequentialType(vt)) {
+        return withinBounds(unit.getSequentialElementType(t), unit.getSequentialElementType(vt));
+    }
+    else {
         return false;
     }
 }

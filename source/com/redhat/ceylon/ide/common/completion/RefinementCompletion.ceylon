@@ -29,16 +29,14 @@ import com.redhat.ceylon.model.typechecker.model {
     Function,
     Class,
     Constructor,
-    TypeDeclaration,
-    TypeParameter,
     Unit,
     Functional,
     ModelUtil,
-    NothingType
+    NothingType,
+    DeclarationWithProximity
 }
 
 import java.util {
-    List,
     JArrayList=ArrayList,
     HashSet
 }
@@ -130,7 +128,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
     // see refinedProducedReference(Type outerType, Declaration d)
     Reference refinedProducedReference(Type outerType, 
         Declaration d) {
-        List<Type> params = JArrayList<Type>();
+        value params = JArrayList<Type>();
         if (is Generic d) {
             for (tp in d.typeParameters) {
                 params.add(tp.type);
@@ -216,8 +214,8 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
     }
 
     void addProposals(Integer loc, String prefix, MutableList<CompletionResult> props) {
-        value _type = type;
-        if (!exists _type) {
+        value t = type;
+        if (!exists t) {
             return;
         }
         
@@ -225,7 +223,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         
         // nothing:
         props.add(newNestedCompletionProposal(
-                unit.getLanguageModuleDeclaration("nothing"), loc));
+            unit.getLanguageModuleDeclaration("nothing"), loc));
         
         // this:
         if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
@@ -234,92 +232,67 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         }
         
         // literals:
-        for (val in getAssignableLiterals(_type, unit)) {
+        for (val in getAssignableLiterals(t, unit)) {
             props.add(newNestedLiteralCompletionProposal(val, loc));
         }
         
         // declarations:
-        value td = _type.declaration;
         for (dwp in getSortedProposedValues(scope, unit)) {
-            if (dwp.unimported) {
-                //don't propose unimported stuff b/c adding
-                //imports drops us out of linked mode and
-                //because it results in a pause
-                continue;
+            addValueProposals(props, loc, prefix, t, dwp);
+        }
+    }
+    
+    void addValueProposals(MutableList<CompletionResult> props, 
+        Integer loc, String prefix, Type t, DeclarationWithProximity dwp) {
+        if (dwp.unimported) {
+            //don't propose unimported stuff b/c adding
+            //imports drops us out of linked mode and
+            //because it results in a pause
+            return;
+        }
+        value d = dwp.declaration;
+        if (is NothingType d) {
+            return;
+        }
+        
+        value split = javaString(prefix).split("\\s+");
+        if (split.size > 0, d.name==split.get(split.size - 1)) {
+            return;
+        }
+        value pname = d.unit.\ipackage.nameAsString;
+        value inLanguageModule 
+                = pname == Module.\iLANGUAGE_MODULE_NAME;
+        if (is Value val = d, d!=declaration,
+            !(inLanguageModule && isIgnoredLanguageModuleValue(val)), 
+            exists vt = val.type, !vt.nothing, 
+            withinBounds(t, vt) || vt.isSubtypeOf(type)) {
+            
+            props.add(newNestedCompletionProposal(d, loc));
+        }
+        if (is Function method = d, d!=declaration, !d.annotation,
+            !(inLanguageModule && isIgnoredLanguageModuleMethod(method)), 
+            exists mt = method.type, !mt.nothing,
+            withinBounds(t, mt) || mt.isSubtypeOf(type)) {
+            
+            props.add(newNestedCompletionProposal(d, loc));
+        }
+        if (is Class clazz = d, !clazz.abstract, !d.annotation,
+            !(inLanguageModule && isIgnoredLanguageModuleClass(clazz)), 
+            exists ct = clazz.type, !ct.nothing,
+            withinBounds(t, ct)
+                    || ct.declaration==t.declaration
+                    || ct.isSubtypeOf(type)) {
+            
+            if (clazz.parameterList exists) {
+                props.add(newNestedCompletionProposal(d, loc));
             }
             
-            value d = dwp.declaration;
-            if (is NothingType d) {
-                return;
-            }
-            value name = d.name;
-            value split = javaString(prefix).split("\\s+");
-            if (split.size > 0, name.equals(split.get(split.size - 1))) {
-                continue;
-            }
-            
-            value pname = d.unit.\ipackage.nameAsString;
-            value inLanguageModule = pname.equals(Module.\iLANGUAGE_MODULE_NAME);
-            if (is Value val = d, !d.equals(declaration)) {
-                if (inLanguageModule) {
-                    if (isIgnoredLanguageModuleValue(val)) {
-                        continue;
-                    }
-                }
-                
-                Type? vt = val.type;
-                if (exists vt, !vt.nothing, 
-                    isTypeParamInBounds(td, vt) || vt.isSubtypeOf(type)) {
-                    
-                    props.add(newNestedCompletionProposal(d, loc));
-                }
-            }
-            
-            if (is Function method = d, !d.equals(declaration), !d.annotation) {
-                if (inLanguageModule, isIgnoredLanguageModuleMethod(method)) {
-                    continue;
-                }
-                
-                if (exists mt = method.type, !mt.nothing,
-                    isTypeParamInBounds(td, mt) || mt.isSubtypeOf(type)) {
-                    
-                    props.add(newNestedCompletionProposal(d, loc));
-                }
-            }
-            
-            if (is Class clazz = d) {
-                if (!clazz.abstract, !d.annotation) {
-                    if (inLanguageModule, isIgnoredLanguageModuleClass(clazz)) {
-                        continue;
-                    }
-                    
-                    if (exists ct = clazz.type, !ct.nothing,
-                        isTypeParamInBounds(td, ct)
-                                || ct.declaration.equals(_type.declaration)
-                                || ct.isSubtypeOf(type)) {
-                        
-                        if (clazz.parameterList exists) {
-                            props.add(newNestedCompletionProposal(d, loc));
-                        }
-                        
-                        for (m in clazz.members) {
-                            if (is Constructor m, m.shared, m.name exists) {
-                                props.add(newNestedCompletionProposal(m, loc));
-                            }
-                        }
-                    }
+            for (m in clazz.members) {
+                if (is Constructor m, m.shared, m.name exists) {
+                    props.add(newNestedCompletionProposal(m, loc));
                 }
             }
         }
     }
     
-    Boolean isTypeParamInBounds(TypeDeclaration td, Type t) {
-        if (is TypeParameter td) {
-            value tp = td;
-            return isInBounds(tp.satisfiedTypes, t);
-        } else {
-            return false;
-        }
-    }
-
 }
