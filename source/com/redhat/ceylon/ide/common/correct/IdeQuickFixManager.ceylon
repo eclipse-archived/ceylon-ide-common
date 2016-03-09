@@ -61,6 +61,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal SwitchQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> switchQuickFix;
     shared formal ChangeToQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> changeToQuickFix;
     shared formal AddNamedArgumentQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addNamedArgumentQuickFix;
+    shared formal AssignToLocalQuickFix<IFile,Project,Data> assignToLocalQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
     
@@ -255,6 +256,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addTypeParameterQuickFix.addTypeParameterProposal(data, file);
         }
         case (3000) {
+            assignToLocalQuickFix.addProposal(data, file);
             // TODO
         }
         case (3100) {
