@@ -9,4 +9,5 @@ module com.redhat.ceylon.ide.common "1.2.2" {
     shared import com.redhat.ceylon.compiler.java "1.2.2";
     shared import com.redhat.ceylon.common "1.2.2";
     shared import org.jgrapht.core "0.9.1";
+    import ceylon.bootstrap "1.2.2";
 }

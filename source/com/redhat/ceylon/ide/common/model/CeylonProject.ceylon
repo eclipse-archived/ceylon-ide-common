@@ -1,11 +1,24 @@
 import java.io {
-    File
+    File,
+    IOException
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits
+}
+import com.redhat.ceylon.tools.bootstrap {
+    CeylonBootstrapTool,
+    CeylonBootstrapMessages
+}
+import com.redhat.ceylon.common {
+    Constants,
+    FileUtil,
+    Versions
+}
+import com.redhat.ceylon.launcher {
+    Bootstrap
 }
 
 shared abstract class CeylonProject<IdeArtifact>()
@@ -49,6 +62,44 @@ shared abstract class CeylonProject<IdeArtifact>()
             ideConfig = newConfig;
             return newConfig;
         }
+    }
+
+    "Returns:
+     - [[true]] if no error occured while creating the ceylon bootstrap files,
+     - [[false]] if the boostrap files already exist and [[force]] is [[false]],
+     - An error message if an [[IOException]] occured during creation of the bootstrap files."
+    shared Boolean|String createBootstrapFiles(File embeddedDistributionFolder, Boolean force=false) {
+        value bootstrapGrandParent = File(File(File(embeddedDistributionFolder, "repo"), "ceylon"), "bootstrap");
+        value versionDir = bootstrapGrandParent.listFiles().array[0];
+        if(! exists versionDir) {
+            return "The embedded repository is not accessible";
+        }
+        value bootstrapJar = File(versionDir, "ceylon.bootstrap-``versionDir.name``.jar");
+        if(! bootstrapJar.\iexists()) {
+            return "The 'ceylon.bootstrap' archive is not accessible in the embedded repository";
+        }
+
+        value binDirectory = File(embeddedDistributionFolder, "bin");
+        if(! bootstrapJar.\iexists()) {
+            return "The 'bin' folder is not accessible in the embedded repository";
+        }
+
+        if (!force) {
+            value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
+            value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
+            value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.\iCEYLON_CONFIG_DIR)), "bootstrap");
+            value propsFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_PROPERTIES);
+            value jarFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_JAR);
+            if (scriptFile.\iexists() || batFile.\iexists() || propsFile.\iexists() || jarFile.\iexists()) {
+                return false;
+            }
+        }
+        try {
+            CeylonBootstrapTool.setupBootstrap(rootDirectory, bootstrapJar, binDirectory, null, null, null);
+        } catch(IOException ioe) {
+            return ioe.message;
+        }
+        return true;
     }
 
     shared String defaultCharset
