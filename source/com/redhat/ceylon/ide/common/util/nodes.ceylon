@@ -30,7 +30,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     ModelUtil,
     Declaration,
-    Scope,
     FunctionOrValue,
     Function,
     Class
@@ -124,17 +123,21 @@ shared object nodes {
                else d;
     
     shared Tree.Declaration? getContainer(Tree.CompilationUnit cu, Declaration dec) {
-        variable Tree.Declaration? result = null;
-        cu.visit(object extends Visitor() {
-                Scope container = dec.container;
-                shared actual void visit(Tree.Declaration that) {
-                    super.visit(that);
-                    if (that.declarationModel.equals(container)) {
-                        result = that;
+        if (exists container = ModelUtil.getContainingDeclaration(dec)) {
+            variable Tree.Declaration? result = null;
+            cu.visit(object extends Visitor() {
+                    shared actual void visit(Tree.Declaration that) {
+                        super.visit(that);
+                        if (that.declarationModel==container) {
+                            result = that;
+                        }
                     }
-                }
-            });
-        return result;
+                });
+            return result;
+        }
+        else {
+            return null;
+        }
     }
     
     shared Tree.ImportMemberOrType? findImport(Tree.CompilationUnit cu, Node node) {
