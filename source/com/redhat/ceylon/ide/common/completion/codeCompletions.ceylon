@@ -682,10 +682,33 @@ void appendHashImpl(Unit unit, String indent, StringBuilder result,
 void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, List<Parameter> ps, Indents<out Anything> indents) {
     
+    StringBuilder targs = StringBuilder();
+    if (!ci.typeParameters.empty) {
+        targs.append("<");
+        for (TypeParameter tp in ci.typeParameters) {
+            if (targs.longerThan(1)) {
+                targs.append(",");
+            }
+            String bounds = 
+                    unit.denotableType(ModelUtil.intersectionOfSupertypes(tp))
+                        .asSourceCodeString(unit);
+            if (tp.covariant) {
+                targs.append(bounds);
+            }
+            else if (tp.contravariant) {
+                targs.append("Nothing");
+            }
+            else {
+                targs.append("out ").append(bounds);
+            }
+        }
+        targs.append(">");
+    }
+    
     value p = ps.get(0);
     result.append(" {")
             .append(indent).append(indents.defaultIndent)
-            .append("if (is ").append(ci.name).append(" ").append(p.name).append(") {")
+            .append("if (is ").append(ci.name).append(targs.string).append(" ").append(p.name).append(") {")
             .append(indent).append(indents.defaultIndent).append(indents.defaultIndent)
             .append("return ");
     
