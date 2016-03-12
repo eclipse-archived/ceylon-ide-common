@@ -11,6 +11,9 @@ import com.redhat.ceylon.ide.common.util {
     Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
+    ModelUtil {
+        ...
+    },
     ...
 }
 
@@ -283,7 +286,7 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
                     }
                 } else {
                     if (paramTypes, exists pt = typedParameter.type,
-                        !ModelUtil.isTypeUnknown(pt)) {
+                        !isTypeUnknown(pt)) {
                         value newPt = if (p.sequenced)
                                       then unit.getSequentialElementType(pt)
                                       else pt;
@@ -361,7 +364,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder resul
                     if (p.declaredVoid) {
                         result.append("void ");
                     } else {
-                        if (paramTypes, !ModelUtil.isTypeUnknown(p.type)) {
+                        if (paramTypes, !isTypeUnknown(p.type)) {
                             value ptn = p.type.asString(unit);
                             result.append(ptn).append(" ");
                         } else {
@@ -380,11 +383,11 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder resul
                     }
                 } else {
                     if (p == params.get(params.size() - 1),
-                        !ModelUtil.isTypeUnknown(p.type),
+                        !isTypeUnknown(p.type),
                         unit.isIterableParameterType(p.type)) {
                         // nothing
                     } else {
-                        if (paramTypes, !ModelUtil.isTypeUnknown(p.type)) {
+                        if (paramTypes, !isTypeUnknown(p.type)) {
                             value ptn = p.type.asString(unit);
                             result.append(ptn).append(" ");
                         }
@@ -494,7 +497,7 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
         return;
     }
     
-    if (ModelUtil.isConstructor(decl)) {
+    if (isConstructor(decl)) {
         builder.append("new");
     } else {
         switch (decl)
@@ -641,7 +644,7 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
-            !isObjectField(m) && !ModelUtil.isConstructor(m),
+            !isObjectField(m) && !isConstructor(m),
             !m.transient && !nt.isSubtypeOf(m.type)) {
             if (result exists) {
                 //not unique!
@@ -682,15 +685,15 @@ void appendHashImpl(Unit unit, String indent, StringBuilder result,
 void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, List<Parameter> ps, Indents<out Anything> indents) {
     
-    StringBuilder targs = StringBuilder();
+    value targs = StringBuilder();
     if (!ci.typeParameters.empty) {
         targs.append("<");
-        for (TypeParameter tp in ci.typeParameters) {
+        for (tp in ci.typeParameters) {
             if (targs.longerThan(1)) {
                 targs.append(",");
             }
             String bounds = 
-                    unit.denotableType(ModelUtil.intersectionOfSupertypes(tp))
+                    unit.denotableType(intersectionOfSupertypes(tp))
                         .asSourceCodeString(unit);
             if (tp.covariant) {
                 targs.append(bounds);
@@ -740,7 +743,7 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
-            !isObjectField(m), !ModelUtil.isConstructor(m), 
+            !isObjectField(m), !isConstructor(m), 
             !m.transient, !nt.isSubtypeOf(m.type)) {
             if (found) {
                 result.append(" && ").append(indent);
@@ -763,7 +766,7 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
-            !isObjectField(m), !ModelUtil.isConstructor(m),
+            !isObjectField(m), !isConstructor(m),
             !m.transient, !nt.isSubtypeOf(m.type)) {
             result.append("hash = 31*hash + ").append(m.name);
             if (!m.type.integer) {
