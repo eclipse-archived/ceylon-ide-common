@@ -174,7 +174,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         
         if (exists mt = ptr.type) {
             value cond = if (exists requiredType)
-            then withinBounds(requiredType, mt)
+            then withinBounds(requiredType, mt, scope)
                     || dec is Class && dec==requiredType.declaration
             else true;
             
@@ -618,7 +618,7 @@ shared abstract class InvocationCompletionProposal
         if (is Value dec, 
             !(isInLanguageModule && isIgnoredLanguageModuleValue(dec)), 
             exists vt = dec.type, !vt.nothing) {
-            if (withinBounds(type, vt)) {
+            if (withinBounds(type, vt, scope)) {
                 value isIterArg 
                         = namedInvocation && last
                         && unit.isIterableParameterType(type);
@@ -643,7 +643,7 @@ shared abstract class InvocationCompletionProposal
             !dec.annotation, 
             !(isInLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
             exists mt = dec.type, !mt.nothing, 
-            withinBounds(type, mt)) {
+            withinBounds(type, mt, scope)) {
             value isIterArg 
                     = namedInvocation && last
                     && unit.isIterableParameterType(type);
@@ -657,7 +657,7 @@ shared abstract class InvocationCompletionProposal
             !dec.abstract && !dec.annotation, 
             !(isInLanguageModule && isIgnoredLanguageModuleClass(dec)), 
             exists ct = dec.type, 
-            withinBounds(type, ct) || dec==type.declaration) {
+            withinBounds(type, ct, scope) || dec==type.declaration) {
             value isIterArg 
                     = namedInvocation && last
                     && unit.isIterableParameterType(type);

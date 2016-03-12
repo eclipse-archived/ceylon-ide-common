@@ -193,17 +193,12 @@ Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken t
     return -1;
 }
 
-String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Document>? cpc) {
-    if (p.defaulted) {
-        if (is Functional m = p.model) {
-            return " => ...";
-        } else {
-            return getInitialValueDescription(p.model, cpc);
-        }
-    } else {
-        return "";
-    }
-}
+String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Document>? cpc) 
+        => if (p.defaulted) 
+            then if (is Functional m = p.model) 
+                then " => ..." 
+                else getInitialValueDescription(p.model, cpc) 
+            else "";
 
 shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysisResult<Document>? cpc) {
     if (exists cpc) {
@@ -211,13 +206,11 @@ shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysi
         variable String arrow = "";
         switch (refnode = nodes.getReferencedNode(dec))
         case (is Tree.AttributeDeclaration) {
-            value ad = refnode;
-            sie = ad.specifierOrInitializerExpression;
+            sie = refnode.specifierOrInitializerExpression;
             arrow = " = ";
         }
         case (is Tree.MethodDeclaration) {
-            value md = refnode;
-            sie = md.specifierExpression;
+            sie = refnode.specifierExpression;
             arrow = " => ";
         }
         else {}
@@ -280,20 +273,21 @@ shared Boolean isInBounds(List<Type> upperBounds, Type type) {
     }
 }
 
-Boolean withinBounds(Type requiredType, Type type) {
+Boolean withinBounds(Type requiredType, Type type, Scope scope) {
     value td = requiredType.resolveAliases().declaration;
     if (type.isSubtypeOf(requiredType)) {
         return true;
     }
     else if (is TypeParameter td) {
-        return isInBounds(td.satisfiedTypes, type);
+        return !td.isDefinedInScope(scope) && 
+                isInBounds(td.satisfiedTypes, type);
     }
     else if (type.declaration.inherits(td)) {
         value supertype = type.getSupertype(td);
         for (tp in td.typeParameters) {
             if (exists ta = supertype.typeArguments[tp],
                 exists rta = requiredType.typeArguments[tp]) {
-                if (!withinBounds(rta, ta)) {
+                if (!withinBounds(rta, ta, scope)) {
                     return false;
                 }
             }

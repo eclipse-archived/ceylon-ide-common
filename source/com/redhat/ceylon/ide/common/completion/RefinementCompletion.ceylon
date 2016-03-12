@@ -268,7 +268,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             dec!=declaration,
             !(inLanguageModule && isIgnoredLanguageModuleValue(dec)), 
             exists vt = dec.type, !vt.nothing, 
-            withinBounds(type, vt)) {
+            withinBounds(type, vt, scope)) {
             
             props.add(newNestedCompletionProposal(dec, loc));
         }
@@ -277,7 +277,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             dec!=declaration, !dec.annotation,
             !(inLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
             exists mt = dec.type, !mt.nothing,
-            withinBounds(type, mt)) {
+            withinBounds(type, mt, scope)) {
             
             props.add(newNestedCompletionProposal(dec, loc));
         }
@@ -286,7 +286,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             !dec.abstract, !dec.annotation,
             !(inLanguageModule && isIgnoredLanguageModuleClass(dec)), 
             exists ct = dec.type, !ct.nothing,
-            withinBounds(type, ct) || ct.declaration==type.declaration) {
+            withinBounds(type, ct, scope) || ct.declaration==type.declaration) {
             
             if (dec.parameterList exists) {
                 props.add(newNestedCompletionProposal(dec, loc));
