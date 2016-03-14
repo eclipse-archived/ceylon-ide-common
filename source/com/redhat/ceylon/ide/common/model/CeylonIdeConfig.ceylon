@@ -25,8 +25,6 @@ import java.util.regex {
 
 shared interface JavaToCeylonConverterConfig {
     shared formal Boolean transformGetters;
-    shared formal Boolean useVariableInParameters;
-    shared formal Boolean useVariableInLocals;
     shared formal Boolean useValues;
 }
 
@@ -89,8 +87,6 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     shared JavaToCeylonConverterConfig converterConfig => object satisfies JavaToCeylonConverterConfig {
         shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
         shared actual Boolean useValues => ideConfig.getBoolOption("converter.use-values", false);
-        shared actual Boolean useVariableInLocals => ideConfig.getBoolOption("converter.use-variable-in-locals", true);
-        shared actual Boolean useVariableInParameters => ideConfig.getBoolOption("converter.use-variable-in-parameters", true);
     };
 
     shared String? getSourceAttachment(String moduleName, String moduleVersion) {
