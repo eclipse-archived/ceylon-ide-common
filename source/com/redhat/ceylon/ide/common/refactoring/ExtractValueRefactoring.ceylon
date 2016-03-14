@@ -3,6 +3,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node
 }
+import com.redhat.ceylon.ide.common.correct {
+    ImportProposals,
+    DocumentChanges
+}
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
@@ -11,17 +15,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
+import java.lang {
+    StringBuilder
+}
 import java.util {
     HashSet
-}
-import java.lang {
-    StringBuilder,
-    ObjectArray,
-    JString=String
-}
-import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    DocumentChanges
 }
 
 
@@ -55,13 +53,12 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
     value indents => importProposals.indents;
 
-    shared actual String initialNewName()
+    initialNewName()
             => if (exists node = editorData?.node)
-                then nodes.nameProposals(node, false, editorData?.rootNode).get(0).string
-                else "";
+               then nodes.nameProposals(node, false, editorData?.rootNode).get(0).string
+               else "";
 
-    shared actual default Boolean editable
-            => true;
+    editable => true;
             /*
              TODO : This should be uncommented and implemented here when EditedSourceFile
              will be made available.
@@ -70,22 +67,21 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
              rootNode?.unit is ProjectSourceFile<Nothing, Nothing, Nothing, Nothing>;
              */
 
-    shared actual Boolean enabled
-            => if (exists data=editorData,
-                    exists sourceFile=data.sourceVirtualFile,
-                    editable &&
-                    sourceFile.name != "module.ceylon" &&
-                    sourceFile.name != "package.ceylon" &&
-                    data.node is Tree.Term)
-                then true
-                else false;
+    enabled => if (exists data=editorData,
+                   exists sourceFile=data.sourceVirtualFile,
+                   editable &&
+                   sourceFile.name != "module.ceylon" &&
+                   sourceFile.name != "package.ceylon" &&
+                   data.node is Tree.Term)
+               then true
+               else false;
 
     shared actual void build(TextChange tfc) {
         "This method will only be called when the [[editorData]]is not [[null]]"
-        assert(exists data=editorData,
-            exists sourceFile=data.sourceVirtualFile,
-            exists rootNode=data.rootNode,
-            is Tree.Term node=data.node);
+        assert (exists data=editorData,
+                exists sourceFile=data.sourceVirtualFile,
+                exists rootNode=data.rootNode,
+                is Tree.Term node=data.node);
 
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
@@ -93,22 +89,18 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         value unit = node.unit;
         value statement = nodes.findStatement(rootNode, node);
 
-        Tree.FunctionArgument? anon;
-        assert(exists statement);
+        assert (exists statement);
         variable value start = statement.startIndex.intValue();
         variable Integer il = 0;
         variable String newLineOrReturn = 
                 indents.getDefaultLineDelimiter(doc) + 
                 indents.getIndent(statement, doc);
-        value visitor = 
-                FindAnonFunctionVisitor(statement, node);
+        value visitor = FindAnonFunctionVisitor(statement, node);
         visitor.visit(statement);
-        anon = visitor.result;
 
         Boolean toplevel;
-        if (exists anon, !anon.block exists) {
-            Tree.Expression? ex = anon.expression;
-            if (exists ex) {
+        if (exists anon = visitor.result, !anon.block exists) {
+            if (exists ex = anon.expression) {
                 value pls = anon.parameterLists;
                 variable Node pl = pls.get(pls.size()-1);
                 if (exists tcl = anon.typeConstraintList) {
@@ -135,10 +127,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         }
         else if (is Tree.Declaration dec=statement) {
             if (is Tree.MethodDeclaration md=dec) {
-                Tree.SpecifierExpression? se = md.specifierExpression;
-                if (exists se) {
-                    Tree.Expression? ex = se.expression;
-                    if (exists ex) {
+                if (exists se = md.specifierExpression) {
+                    if (exists ex = se.expression) {
                         value pls = md.parameterLists;
                         variable Node pl = pls.get(pls.size()-1);
                         if (exists tcl=md.typeConstraintList) {
@@ -174,45 +164,48 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         type = unit.denotableType(node.typeModel);
         value unparened = unparenthesize(node);
 
+        value anonFunction =
+                if (is Tree.FunctionArgument unparened)
+                then unparened
+                else null;
+
         String mod;
         String exp;
-
-        Tree.FunctionArgument? anonFunction =
-                if (is Tree.FunctionArgument unparened)
-        then unparened
-        else null;
-
         if (exists fa = anonFunction) {
             type = unit.getCallableReturnType(type);
-            StringBuilder sb = StringBuilder();
+            value sb = StringBuilder();
 
-            mod = if (is Tree.VoidModifier t = fa.type) then "void " else "function";
+            mod = fa.type is Tree.VoidModifier then "void " else "function";
             nodes.appendParameters(sb, fa, unit, this);
 
             if (exists block = fa.block) {
                 sb.append(" ").append(toString(block));
-            } else if (exists expr = fa.expression) {
+            }
+            else if (exists expr = fa.expression) {
                 sb.append(" => ").append(toString(expr)).append(";");
-            } else {
+            }
+            else {
                 sb.append(" => ");
             }
             exp = sb.string;
-        } else {
+        }
+        else {
             mod = "value";
             exp = toString(unparened) + ";";
         }
 
-        variable String typeDec;
-
+        String typeDec;
         if (type?.unknown else true) {
             typeDec = "dynamic";
             il = 0;
-        } else if (exists t = type, explicitType || toplevel) {
+        }
+        else if (exists t = type, explicitType || toplevel) {
             typeDec = t.asSourceCodeString(unit);
             value declarations = HashSet<Declaration>();
             importProposals.importType(declarations, type, rootNode);
             il += importProposals.applyImports(tfc, declarations, rootNode, doc);
-        } else {
+        }
+        else {
             canBeInferred = true;
             typeDec = mod;
         }
@@ -239,16 +232,15 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     shared Boolean isFunction
         => editorData?.node is Tree.FunctionArgument;
 
-    shared actual Boolean forceWizardMode()
-        => if (exists data = editorData,
-        exists node = data.node,
-        exists scope = node.scope)
-    then scope.getMemberOrParameter(node.unit, newName, null, false) exists
-    else false;
+    forceWizardMode()
+            => if (exists data = editorData,
+                   exists node = data.node,
+                   exists scope = node.scope)
+               then scope.getMemberOrParameter(node.unit, newName, null, false) exists
+               else false;
 
-    shared actual ObjectArray<JString> nameProposals
-        => nodes.nameProposals(editorData?.node, false, editorData?.rootNode);
+    nameProposals
+            => nodes.nameProposals(editorData?.node, false, editorData?.rootNode);
 
-    shared actual String name
-        => "Extract Value";
+    name => "Extract Value";
 }
