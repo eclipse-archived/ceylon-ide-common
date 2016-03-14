@@ -683,8 +683,8 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                             }
                             validatorProgress.updateRemainingWork(workRemaining);
                             artifactContext.callback = object satisfies ArtifactCallback {
-                                late BaseProgressMonitor.Progress artifactProgress;
-                                late Integer size;
+                                late variable BaseProgressMonitor.Progress artifactProgress;
+                                late variable Integer size;
                                 variable Integer alreadyDownloaded = 0;
                                 value messageBuilder = StringBuilder()
                                         .append("- downloading module ")
