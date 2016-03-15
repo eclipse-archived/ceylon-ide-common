@@ -1,6 +1,27 @@
+import com.redhat.ceylon.launcher {
+	Bootstrap
+}
+import com.redhat.ceylon.tools.bootstrap {
+	CeylonBootstrapTool
+}
+import java.util.regex {
+	Pattern
+}
+import java.net {
+	URI
+}
+import ceylon.interop.java {
+    javaClass,
+    javaString
+}
+import com.redhat.ceylon.common {
+    Constants,
+    FileUtil,
+    Versions
+}
 import java.io {
-    File,
-    IOException
+	File,
+	IOException
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
@@ -8,18 +29,22 @@ import com.redhat.ceylon.compiler.typechecker {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits
 }
-import com.redhat.ceylon.tools.bootstrap {
-    CeylonBootstrapTool,
-    CeylonBootstrapMessages
-}
-import com.redhat.ceylon.common {
-    Constants,
-    FileUtil,
-    Versions
-}
-import com.redhat.ceylon.launcher {
-    Bootstrap
-}
+
+shared [String*] versionsAvailableForBoostrap = 
+        let (regexp = Pattern.compile("V(\\d_\\d(_\\d)?)(_JVM)?_BINARY_MAJOR_VERSION"))
+javaClass<Versions>().fields.array.coalesced
+        .map((field) =>
+    regexp.matcher(javaString(field.name)))
+        .filter((matcher) => 
+    matcher.matches())
+        .map((matcher) => 
+    matcher.group(1))
+        .map((version) => 
+    version.replace("_", "."))
+        .map((version) => 
+    if (version.count('.'.equals) < 2) then version + ".0" else version)
+        .sequence()
+        .reversed;
 
 shared abstract class CeylonProject<IdeArtifact>()
         given IdeArtifact satisfies Object {
@@ -63,25 +88,22 @@ shared abstract class CeylonProject<IdeArtifact>()
             return newConfig;
         }
     }
+    
+    
 
     "Returns:
      - [[true]] if no error occured while creating the ceylon bootstrap files,
      - [[false]] if the boostrap files already exist and [[force]] is [[false]],
      - An error message if an [[IOException]] occured during creation of the bootstrap files."
-    shared Boolean|String createBootstrapFiles(File embeddedDistributionFolder, Boolean force=false) {
-        value bootstrapGrandParent = File(File(File(embeddedDistributionFolder, "repo"), "ceylon"), "bootstrap");
-        value versionDir = bootstrapGrandParent.listFiles().array[0];
-        if(! exists versionDir) {
-            return "The embedded repository is not accessible";
-        }
-        value bootstrapJar = File(versionDir, "ceylon.bootstrap-``versionDir.name``.jar");
+    shared Boolean|String createBootstrapFiles(File embeddedDistributionFolder, String ceylonVersion, Boolean force=false) {
+        value bootstrapJar = File(File(embeddedDistributionFolder, "lib"), "ceylon-bootstrap.jar");
         if(! bootstrapJar.\iexists()) {
-            return "The 'ceylon.bootstrap' archive is not accessible in the embedded repository";
+            return "The 'ceylon-bootstrap.jar' archive is not accessible in the 'lib' directory of the embedded Ceylon distribution";
         }
 
         value binDirectory = File(embeddedDistributionFolder, "bin");
-        if(! bootstrapJar.\iexists()) {
-            return "The 'bin' folder is not accessible in the embedded repository";
+        if(! binDirectory.\iexists()) {
+            return "The 'bin' folder is not accessible in the embedded Ceylon distribution";
         }
 
         if (!force) {
@@ -95,7 +117,7 @@ shared abstract class CeylonProject<IdeArtifact>()
             }
         }
         try {
-            CeylonBootstrapTool.setupBootstrap(rootDirectory, bootstrapJar, binDirectory, null, null, null);
+            CeylonBootstrapTool.setupBootstrap(rootDirectory, bootstrapJar, binDirectory, URI(ceylonVersion), null, null);
         } catch(IOException ioe) {
             return ioe.message;
         }
