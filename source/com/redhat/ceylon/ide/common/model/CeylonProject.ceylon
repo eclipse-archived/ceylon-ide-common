@@ -44,6 +44,7 @@ javaClass<Versions>().fields.array.coalesced
         .map((version) => 
     if (version.count('.'.equals) < 2) then version + ".0" else version)
         .sequence()
+		.append(["1.2.2"]) // this is added because 1.2.2 Versions was missing the compatibility field for 1.2.2
         .reversed;
 
 shared abstract class CeylonProject<IdeArtifact>()
