@@ -192,7 +192,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     
     shared actual void visitedModule(Module theModule, Boolean forCompiledModule) {
         if (forCompiledModule, 
-            AbstractModelLoader.isJDKModule(theModule.nameAsString)) {
+            modelLoader.jdkProvider.isJDKModule(theModule.nameAsString)) {
             modelLoader.addJDKModuleToClassPath(theModule);
         }
     }

@@ -7,6 +7,7 @@ import com.redhat.ceylon.model.loader.impl.reflect.mirror {
 }
 import com.redhat.ceylon.model.loader.mirror {
     TypeMirror,
+    TypeKind,
     TypeParameterMirror,
     ClassMirror
 }
@@ -23,10 +24,6 @@ import java.util {
     List,
     Collections,
     ArrayList
-}
-
-import javax.lang.model.type {
-    TypeKind
 }
 
 TypeMirror longMirror = PrimitiveMirror(TypeKind.\iLONG, "long");
