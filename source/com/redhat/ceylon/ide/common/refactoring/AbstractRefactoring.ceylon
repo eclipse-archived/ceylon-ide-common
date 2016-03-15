@@ -20,10 +20,12 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared interface AbstractRefactoring<RefactoringData> satisfies Refactoring & NodePrinter {
+shared interface AbstractRefactoring<RefactoringData> 
+        satisfies Refactoring & NodePrinter {
+    
     shared interface EditorData {
-        shared formal List<CommonToken>? tokens;
-        shared formal Tree.CompilationUnit? rootNode;
+        shared formal List<CommonToken> tokens;
+        shared formal Tree.CompilationUnit rootNode;
         shared formal Node? node;
         shared formal VirtualFile? sourceVirtualFile;
     }

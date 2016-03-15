@@ -3,6 +3,9 @@ import ceylon.collection {
     MutableList
 }
 
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
@@ -26,15 +29,15 @@ import com.redhat.ceylon.model.typechecker.model {
     Value,
     UnionType
 }
+
 import java.util {
-    HashSet, JArrayList=ArrayList
+    HashSet,
+    JArrayList=ArrayList
 }
+
 import org.antlr.runtime {
     CommonToken,
     Token
-}
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
 }
 
 
@@ -56,49 +59,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared formal Tree.Declaration? target;
     shared formal List<Tree.Return> returns;
     shared formal actual variable Boolean canBeInferred;
-        
-    class FindOuterReferencesVisitor(Declaration declaration) 
-            extends Visitor() {
-        variable shared Integer refs = 0;
-        
-        shared actual void visit(Tree.MemberOrTypeExpression that) {
-            super.visit(that);
-            if (exists dec = that.declaration, 
-                declaration==dec) {
-                refs++;
-            }
-        }
-        
-        shared actual void visit(Tree.Declaration that) {
-            super.visit(that);
-            if (exists dec = that.declarationModel, 
-                declaration==dec) {
-                refs++;
-            }
-        }
-        
-        shared actual void visit(Tree.Type that) {
-            super.visit(that);
-            if (exists type = that.typeModel, 
-                type.classOrInterface) {
-                if (exists td = type.declaration, 
-                    declaration==td) {
-                    refs++;
-                }
-            }
-        }
-    }
-
-    class CheckExpressionVisitor() extends Visitor() {
-        variable shared String? problem = null;
-        shared actual void visit(Tree.Body that) {}
-        shared actual void visit(Tree.AssignmentOp that) {
-            super.visit(that);
-            problem = "an assignment";
-        }
-    }
-
-    class CheckStatementsVisitor(Tree.Body scope, 
+    
+    shared class CheckStatementsVisitor(Tree.Body scope, 
         Collection<Tree.Statement> statements) 
             extends Visitor() {
         
@@ -111,11 +73,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         function notResult(Node that) 
                 => if (exists node = result) 
-                   then that!=node else true;
+        then that!=node else true;
         
         function notResultRef(Declaration d) 
                 => if (exists rd = resultDeclaration) 
-                   then rd!=d else true;
+        then rd!=d else true;
         
         shared actual void visit(Tree.Declaration that) {
             super.visit(that);
@@ -134,7 +96,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             super.visit(that);
             if (notResult(that)) {
                 if (is Tree.MemberOrTypeExpression term 
-                        = that.baseMemberExpression) {
+                    = that.baseMemberExpression) {
                     if (exists d = term.declaration, 
                         notResultRef(d), 
                         hasOuterRefs(d, scope, statements)) {
@@ -163,123 +125,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
 
-    Boolean hasOuterRefs(Declaration d, Tree.Body? scope, 
-            Collection<Tree.Statement> statements) {
-        if (!exists scope) {
-            return false;
-        }
-        
-        value v = FindOuterReferencesVisitor(d);
-        for (s in scope.statements) {
-            if (!statements.contains(s)) {
-                s.visit(v);
-            }
-        }
-        
-        return v.refs > 0;
-    }
-    
-    class FindResultVisitor(Tree.Body scope, 
-        Collection<Tree.Statement> statements) 
-            extends Visitor() {
-        variable Node? result = null;
-        variable TypedDeclaration? resultDeclaration = null;
-        
-        shared actual void visit(Tree.Body that) {
-            if (is Tree.Block that) {
-                super.visit(that);
-            }
-        }
-        
-        shared actual void visit(Tree.AttributeDeclaration that) {
-            super.visit(that);
-            value dec = that.declarationModel;
-            if (hasOuterRefs(dec, scope, statements)) {
-                result = that;
-                resultDeclaration = dec;
-            }
-        }
-        
-        shared actual void visit(Tree.AssignmentOp that) {
-            super.visit(that);
-            if (is Tree.StaticMemberOrTypeExpression leftTerm 
-                    = that.leftTerm) {
-                if (is TypedDeclaration dec = leftTerm.declaration,
-                    hasOuterRefs(dec, scope, statements), 
-                    isDefinedLocally(dec)) {
-                    result = that;
-                    resultDeclaration = dec;
-                }
-            }
-        }
-        
-        shared actual void visit(Tree.SpecifierStatement that) {
-            super.visit(that);
-            if (is Tree.StaticMemberOrTypeExpression term 
-                    = that.baseMemberExpression) {
-                if (is TypedDeclaration dec = term.declaration,
-                    hasOuterRefs(dec, scope, statements), 
-                    isDefinedLocally(dec)) {
-                    result = that;
-                    resultDeclaration = dec;
-                }
-            }
-        }
-        
-        Boolean isDefinedLocally(Declaration dec) 
-                => !ModelUtil.contains(dec.scope, scope.scope.container);
-    }
-
-    class FindReturnsVisitor(MutableList<Tree.Return> returns) 
-            extends Visitor() {
-        shared actual void visit(Tree.Declaration that) {}
-        shared actual void visit(Tree.Return that) {
-            super.visit(that);
-            if (that.expression exists) {
-                returns.add(that);
-            }
-        }
-    }
-
-    class FindLocalReferencesVisitor(Scope scope, Scope targetScope) 
-            extends Visitor() {
-        shared MutableList<Tree.BaseMemberExpression> localReferences 
-                = ArrayList<Tree.BaseMemberExpression>();
-        
-        shared actual void visit(Tree.BaseMemberExpression that) {
-            super.visit(that);
-            value currentDec = that.declaration;
-            for (bme in localReferences) {
-                if (exists dec = bme.declaration) {
-                    if (dec==currentDec) {
-                        return;
-                    }
-                    if (is TypedDeclaration currentDec, 
-                        exists od = currentDec.originalDeclaration, 
-                        od==dec) {
-                        return;
-                    }
-                }
-            }
-            
-            if (currentDec.isDefinedInScope(scope), 
-                !currentDec.isDefinedInScope(targetScope)) {
-                localReferences.add(that);
-            }
-        }
-    }
-    
-    class FindBodyVisitor(Node node) extends Visitor() {
-        shared variable Tree.Body? body = null;
-        shared actual void visit(Tree.Body that) {
-            super.visit(that);
-            if (that.statements.contains(node)) {
-                body = that;
-            }
-        }
-    }
-
-
     Boolean containsConstructor(Collection<Tree.Statement> statements) {
         for (statement in statements) {
             if (is Tree.Constructor statement) {
@@ -291,7 +136,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    shared void extractInFile(TextChange tfc) {
+    shared actual void build(TextChange tfc) {
         if (exists data = editorData) {
             value node = data.node;
             if (is Tree.Term node) {
@@ -799,9 +644,15 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 }
             }
             else if (is Tree.Term node) {
-                value v = CheckExpressionVisitor();
-                node.visit(v);
-                if (v.problem exists) {
+                variable value problem = false;
+                node.visit(object extends Visitor() {
+                    shared actual void visit(Tree.Body that) {}
+                    shared actual void visit(Tree.AssignmentOp that) {
+                        problem = true;
+                        super.visit(that);
+                    }
+                });
+                if (problem) {
                     return true;
                 }
             }
@@ -811,6 +662,21 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             return false;
         }
     }
+    
+    shared actual String initialNewName() { 
+        if (exists rdec = resultDeclaration) {
+            return rdec.name;
+        }
+        else if (exists node = editorData?.node) {
+            return let (newName = nodes.nameProposals(node, false, editorData?.rootNode).get(0).string)
+                if ("it" == newName) then "do" else newName;
+        }
+        else {
+            return "";
+        }
+    }
+    
+    editable => true;
     
     enabled => if (exists data=editorData,
                    exists sourceFile=data.sourceVirtualFile,
@@ -829,3 +695,153 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     name => "Extract Function";
 }
+
+shared class FindBodyVisitor(Node node) extends Visitor() {
+    shared variable Tree.Body? body = null;
+    shared actual void visit(Tree.Body that) {
+        super.visit(that);
+        if (that.statements.contains(node)) {
+            body = that;
+        }
+    }
+}
+
+shared class FindResultVisitor(Tree.Body scope, 
+    Collection<Tree.Statement> statements) 
+        extends Visitor() {
+    variable shared Node? result = null;
+    variable shared TypedDeclaration? resultDeclaration = null;
+    
+    shared actual void visit(Tree.Body that) {
+        if (is Tree.Block that) {
+            super.visit(that);
+        }
+    }
+    
+    shared actual void visit(Tree.AttributeDeclaration that) {
+        super.visit(that);
+        value dec = that.declarationModel;
+        if (hasOuterRefs(dec, scope, statements)) {
+            result = that;
+            resultDeclaration = dec;
+        }
+    }
+    
+    shared actual void visit(Tree.AssignmentOp that) {
+        super.visit(that);
+        if (is Tree.StaticMemberOrTypeExpression leftTerm 
+            = that.leftTerm) {
+            if (is TypedDeclaration dec = leftTerm.declaration,
+                hasOuterRefs(dec, scope, statements), 
+                isDefinedLocally(dec)) {
+                result = that;
+                resultDeclaration = dec;
+            }
+        }
+    }
+    
+    shared actual void visit(Tree.SpecifierStatement that) {
+        super.visit(that);
+        if (is Tree.StaticMemberOrTypeExpression term 
+            = that.baseMemberExpression) {
+            if (is TypedDeclaration dec = term.declaration,
+                hasOuterRefs(dec, scope, statements), 
+                isDefinedLocally(dec)) {
+                result = that;
+                resultDeclaration = dec;
+            }
+        }
+    }
+    
+    Boolean isDefinedLocally(Declaration dec) 
+            => !ModelUtil.contains(dec.scope, scope.scope.container);
+}
+
+Boolean hasOuterRefs(Declaration d, Tree.Body? scope, 
+    Collection<Tree.Statement> statements) {
+    if (!exists scope) {
+        return false;
+    }
+    
+    value v = FindOuterReferencesVisitor(d);
+    for (s in scope.statements) {
+        if (!statements.contains(s)) {
+            s.visit(v);
+        }
+    }
+    
+    return v.refs > 0;
+}
+
+shared class FindReturnsVisitor(MutableList<Tree.Return> returns) 
+        extends Visitor() {
+    shared actual void visit(Tree.Declaration that) {}
+    shared actual void visit(Tree.Return that) {
+        super.visit(that);
+        if (that.expression exists) {
+            returns.add(that);
+        }
+    }
+}
+
+class FindOuterReferencesVisitor(Declaration declaration) 
+        extends Visitor() {
+    variable shared Integer refs = 0;
+    
+    shared actual void visit(Tree.MemberOrTypeExpression that) {
+        super.visit(that);
+        if (exists dec = that.declaration, 
+            declaration==dec) {
+            refs++;
+        }
+    }
+    
+    shared actual void visit(Tree.Declaration that) {
+        super.visit(that);
+        if (exists dec = that.declarationModel, 
+            declaration==dec) {
+            refs++;
+        }
+    }
+    
+    shared actual void visit(Tree.Type that) {
+        super.visit(that);
+        if (exists type = that.typeModel, 
+            type.classOrInterface) {
+            if (exists td = type.declaration, 
+                declaration==td) {
+                refs++;
+            }
+        }
+    }
+}
+
+class FindLocalReferencesVisitor(Scope scope, Scope targetScope) 
+        extends Visitor() {
+    shared MutableList<Tree.BaseMemberExpression> localReferences 
+            = ArrayList<Tree.BaseMemberExpression>();
+    
+    shared actual void visit(Tree.BaseMemberExpression that) {
+        super.visit(that);
+        value currentDec = that.declaration;
+        for (bme in localReferences) {
+            if (exists dec = bme.declaration) {
+                if (dec==currentDec) {
+                    return;
+                }
+                if (is TypedDeclaration currentDec, 
+                    exists od = currentDec.originalDeclaration, 
+                    od==dec) {
+                    return;
+                }
+            }
+        }
+        
+        if (currentDec.isDefinedInScope(scope), 
+            !currentDec.isDefinedInScope(targetScope)) {
+            localReferences.add(that);
+        }
+    }
+}
+
+

@@ -80,21 +80,20 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         "This method will only be called when the [[editorData]]is not [[null]]"
         assert (exists data=editorData,
                 exists sourceFile=data.sourceVirtualFile,
-                exists rootNode=data.rootNode,
                 is Tree.Term node=data.node);
 
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
-
+        value rootNode = data.rootNode;
         value unit = node.unit;
-        value statement = nodes.findStatement(rootNode, node);
-
-        assert (exists statement);
+        assert (exists statement = nodes.findStatement(rootNode, node));
+        
         variable value start = statement.startIndex.intValue();
         variable Integer il = 0;
         variable String newLineOrReturn = 
                 indents.getDefaultLineDelimiter(doc) + 
                 indents.getIndent(statement, doc);
+        
         value visitor = FindAnonFunctionVisitor(statement, node);
         visitor.visit(statement);
 
@@ -125,7 +124,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 return;
             }
         }
-        else if (is Tree.Declaration dec=statement) {
+        else if (is Tree.Declaration dec = statement) {
             if (is Tree.MethodDeclaration md=dec) {
                 if (exists se = md.specifierExpression) {
                     if (exists ex = se.expression) {
@@ -174,7 +173,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         if (exists fa = anonFunction) {
             type = unit.getCallableReturnType(type);
             value sb = StringBuilder();
-
+            
             mod = fa.type is Tree.VoidModifier then "void " else "function";
             nodes.appendParameters(sb, fa, unit, this);
 
