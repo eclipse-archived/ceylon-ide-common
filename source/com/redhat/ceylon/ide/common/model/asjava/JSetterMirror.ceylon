@@ -32,7 +32,8 @@ shared class JSetterMirror(Value decl) extends AbstractMethodMirror(decl) {
     
     shared actual Boolean variadic => false;
     
-    String capitalize(String str) {
-        return (str.first?.uppercased?.string else "") + str.rest;
-    }
+    shared actual Boolean defaultMethod => false;
+    
+    String capitalize(String str) 
+            => (str.first?.uppercased?.string else "") + str.rest;
 }

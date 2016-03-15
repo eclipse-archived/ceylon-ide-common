@@ -35,4 +35,7 @@ shared class JGetterMirror(Value decl) extends AbstractMethodMirror(decl) {
     String capitalize(String str) {
         return (str.first?.uppercased?.string else "") + str.rest;
     }
+    
+    shared actual Boolean defaultMethod => false;
+    
 }

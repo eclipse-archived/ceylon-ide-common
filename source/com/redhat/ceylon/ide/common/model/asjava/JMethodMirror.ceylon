@@ -41,4 +41,6 @@ shared class JMethodMirror(Function decl) extends AbstractMethodMirror(decl) {
             => Collections.emptyList<TypeParameterMirror>();
     
     shared actual Boolean variadic => decl.variable;
+    
+    shared actual Boolean defaultMethod => false;
 }

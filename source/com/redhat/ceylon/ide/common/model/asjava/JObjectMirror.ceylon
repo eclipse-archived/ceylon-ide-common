@@ -78,6 +78,8 @@ class GetMethod(JObjectMirror obj) satisfies MethodMirror {
             => Collections.emptyList<TypeParameterMirror>();
     
     shared actual Boolean variadic => false;
+    
+    shared actual Boolean defaultMethod => false;
 }
 
 shared String getJavaQualifiedName(Declaration decl) {
