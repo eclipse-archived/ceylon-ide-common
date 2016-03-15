@@ -2,7 +2,9 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    CeylonIterable
+    CeylonIterable,
+    javaClass,
+    javaString
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -19,7 +21,8 @@ import com.redhat.ceylon.cmr.ceylon {
 import com.redhat.ceylon.common {
     Constants,
     FileUtil,
-    Backend
+    Backend,
+    Versions
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker,
@@ -99,6 +102,12 @@ import java.util.concurrent.locks {
 import org.xml.sax {
     SAXParseException
 }
+import java.util.regex {
+    Pattern
+}
+import java.net {
+    URI
+}
 
 shared final class ProjectState
         of missing | parsing | parsed | typechecking | typechecked | compiled
@@ -118,6 +127,22 @@ shared final class ProjectState
     else false;
 }
 
+shared [String*] versionsAvailableForBoostrap = 
+        let (regexp = Pattern.compile("V(\\d_\\d(_\\d)?)(_JVM)?_BINARY_MAJOR_VERSION"))
+javaClass<Versions>().fields.array.coalesced
+        .map((field) =>
+    regexp.matcher(javaString(field.name)))
+        .filter((matcher) => 
+    matcher.matches())
+        .map((matcher) => 
+    matcher.group(1))
+        .map((version) => 
+    version.replace("_", "."))
+        .map((version) => 
+    if (version.count('.'.equals) < 2) then version + ".0" else version)
+        .sequence()
+        .reversed;
+
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
     variable CeylonProjectConfig? ceylonConfig = null;
@@ -125,6 +150,7 @@ shared abstract class BaseCeylonProject() {
     shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     Lock repositoryManagerLock = ReentrantLock();
     variable RepositoryManager? _repositoryManager = null;
+    
     shared ModuleDependencies moduleDependencies = ModuleDependencies();
     
     "TODO: should not be shared. Will be made unshared when the
@@ -268,25 +294,22 @@ shared abstract class BaseCeylonProject() {
             return newConfig;
         }
     }
+    
+    
 
     "Returns:
      - [[true]] if no error occured while creating the ceylon bootstrap files,
      - [[false]] if the boostrap files already exist and [[force]] is [[false]],
      - An error message if an [[IOException]] occured during creation of the bootstrap files."
-    shared Boolean|String createBootstrapFiles(File embeddedDistributionFolder, Boolean force=false) {
-        value bootstrapGrandParent = File(File(File(embeddedDistributionFolder, "repo"), "ceylon"), "bootstrap");
-        value versionDir = bootstrapGrandParent.listFiles().array[0];
-        if(! exists versionDir) {
-            return "The embedded repository is not accessible";
-        }
-        value bootstrapJar = File(versionDir, "ceylon.bootstrap-``versionDir.name``.jar");
+    shared Boolean|String createBootstrapFiles(File embeddedDistributionFolder, String ceylonVersion, Boolean force=false) {
+        value bootstrapJar = File(File(embeddedDistributionFolder, "lib"), "ceylon-bootstrap.jar");
         if(! bootstrapJar.\iexists()) {
-            return "The 'ceylon.bootstrap' archive is not accessible in the embedded repository";
+            return "The 'ceylon-bootstrap.jar' archive is not accessible in the 'lib' directory of the embedded Ceylon distribution";
         }
 
         value binDirectory = File(embeddedDistributionFolder, "bin");
-        if(! bootstrapJar.\iexists()) {
-            return "The 'bin' folder is not accessible in the embedded repository";
+        if(! binDirectory.\iexists()) {
+            return "The 'bin' folder is not accessible in the embedded Ceylon distribution";
         }
 
         if (!force) {
@@ -300,7 +323,7 @@ shared abstract class BaseCeylonProject() {
             }
         }
         try {
-            CeylonBootstrapTool.setupBootstrap(rootDirectory, bootstrapJar, binDirectory, null, null, null);
+            CeylonBootstrapTool.setupBootstrap(rootDirectory, bootstrapJar, binDirectory, URI(ceylonVersion), null, null);
         } catch(IOException ioe) {
             return ioe.message;
         }
