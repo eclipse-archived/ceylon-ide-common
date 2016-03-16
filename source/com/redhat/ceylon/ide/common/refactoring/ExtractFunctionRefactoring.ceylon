@@ -575,6 +575,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         content.append(indent).append("}").append(indent).append(indent);
         String ctx;
         if (exists rdec = resultDeclaration) {
+            //we're assigning the result of the extracted function to something
             String modifs;
             if (result is Tree.AttributeDeclaration) {
                 if (rdec.shared, exists type = returnType) {
@@ -590,9 +591,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             ctx = modifs + rdec.name + "=";
         } 
         else if (!returns.empty) {
+            //we're returning the result of the extracted function
             ctx = "return ";
         }
         else {
+            //we're just calling the extracted function
             ctx = "";
         }
         String invocation = ctx + newName + "(" + args.string + ");";
