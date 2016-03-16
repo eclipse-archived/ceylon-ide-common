@@ -207,26 +207,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         value params = StringBuilder();
         value args = StringBuilder();
-        if (!localRefs.empty) {
-            for (bme in localRefs) {
-                if (!params.empty) {
-                    params.append(", ");
-                    args.append(", ");
-                }
-                
-                if (is TypedDeclaration pdec = bme.declaration, 
-                    pdec.dynamicallyTyped) {
-                    params.append("dynamic");
-                }
-                else {
-                    value t = unit.denotableType(bme.typeModel);
-                    params.append(t.asSourceCodeString(unit));
-                }
-                
-                value name = bme.identifier.text;
-                params.append(" ").append(name);
-                args.append(name);
+        for (bme in localRefs) {
+            if (!params.empty) {
+                params.append(", ");
+                args.append(", ");
             }
+            
+            if (is TypedDeclaration pdec = bme.declaration, 
+                pdec.dynamicallyTyped) {
+                params.append("dynamic");
+            }
+            else {
+                value t = unit.denotableType(bme.typeModel);
+                params.append(t.asSourceCodeString(unit));
+            }
+            
+            value name = bme.identifier.text;
+            params.append(" ").append(name);
+            args.append(name);
         }
         
         value indent = 
@@ -237,15 +235,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value constraints = StringBuilder();
         if (!localTypes.empty) {
             typeParams.append("<");
-            variable Boolean first = true;
             for (t in localTypes) {
-                if (first) {
-                    first = false;
-                }
-                else {
+                if (typeParams.size>1) {
                     typeParams.append(", ");
                 }
-                
                 typeParams.append(t.name);
                 if (!t.satisfiedTypes.empty) {
                     constraints.append(extraIndent)
@@ -265,7 +258,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     }
                 }
             }
-            
             typeParams.append(">");
         }
         
@@ -851,7 +843,7 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
             }
         }
         
-        if (currentDec.isDefinedInScope(scope), 
+        if (currentDec.isDefinedInScope(scope) &&
             !currentDec.isDefinedInScope(targetScope)) {
             results.add(that);
         }
