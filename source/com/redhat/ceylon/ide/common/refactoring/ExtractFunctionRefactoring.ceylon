@@ -590,7 +590,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             ctx = modifs + rdec.name + "=";
         } 
         else if (!returns.empty) {
-            ctx = "return " + newName + "(" + args.string + ");";
+            ctx = "return ";
         }
         else {
             ctx = "";
