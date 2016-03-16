@@ -2,9 +2,7 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    CeylonIterable,
-    javaClass,
-    javaString
+    CeylonIterable
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -21,8 +19,7 @@ import com.redhat.ceylon.cmr.ceylon {
 import com.redhat.ceylon.common {
     Constants,
     FileUtil,
-    Backend,
-    Versions
+    Backend
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker,
@@ -102,9 +99,6 @@ import java.util.concurrent.locks {
 import org.xml.sax {
     SAXParseException
 }
-import java.util.regex {
-    Pattern
-}
 import java.net {
     URI
 }
@@ -126,22 +120,6 @@ shared final class ProjectState
     then ordinal==that.ordinal
     else false;
 }
-
-shared [String*] versionsAvailableForBoostrap = 
-        let (regexp = Pattern.compile("V(\\d_\\d(_\\d)?)(_JVM)?_BINARY_MAJOR_VERSION"))
-javaClass<Versions>().fields.array.coalesced
-        .map((field) =>
-    regexp.matcher(javaString(field.name)))
-        .filter((matcher) => 
-    matcher.matches())
-        .map((matcher) => 
-    matcher.group(1))
-        .map((version) => 
-    version.replace("_", "."))
-        .map((version) => 
-    if (version.count('.'.equals) < 2) then version + ".0" else version)
-        .sequence()
-        .reversed;
 
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
