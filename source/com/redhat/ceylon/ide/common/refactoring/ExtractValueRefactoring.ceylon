@@ -1,7 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    Visitor,
-    Node
+    Visitor
 }
 import com.redhat.ceylon.ide.common.correct {
     ImportProposals,
@@ -30,21 +29,6 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         & ExtractLinkedModeEnabled<IRegion>
         given InsertEdit satisfies TextEdit {
 
-    class FindAnonFunctionVisitor(statement, Node node) extends Visitor() {
-        Tree.Statement statement;
-        shared variable Tree.FunctionArgument? result = null;
-        
-        shared actual void visit(Tree.FunctionArgument that) {
-            if (that != node &&
-                that.startIndex.intValue() <= node.startIndex.intValue() &&
-                    that.endIndex.intValue()>=node.endIndex.intValue() &&
-                    that.startIndex.intValue()>statement.startIndex.intValue()) {
-                result = that;
-            }
-            super.visit(that);
-        }
-    }
-
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
 
     shared formal actual variable Boolean canBeInferred;
@@ -67,20 +51,25 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
              rootNode?.unit is ProjectSourceFile<Nothing, Nothing, Nothing, Nothing>;
              */
 
-    enabled => if (exists data=editorData,
-                   exists sourceFile=data.sourceVirtualFile,
+    enabled => if (exists node = editorData?.node,
+                   exists sourceFile = editorData?.sourceVirtualFile,
                    editable &&
                    sourceFile.name != "module.ceylon" &&
                    sourceFile.name != "package.ceylon" &&
-                   data.node is Tree.Term)
+                   node is Tree.Term)
                then true
                else false;
-
+    
+    shared Boolean extractsFunction
+            => if (is Tree.Term term = editorData?.node) 
+            then unparenthesize(term) is Tree.FunctionArgument 
+            else false;
+    
     shared actual void build(TextChange tfc) {
         "This method will only be called when the [[editorData]]is not [[null]]"
-        assert (exists data=editorData,
-                exists sourceFile=data.sourceVirtualFile,
-                is Tree.Term node=data.node);
+        assert (exists data = editorData,
+                exists sourceFile = data.sourceVirtualFile,
+                is Tree.Term node = data.node);
 
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
@@ -94,30 +83,37 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 indents.getDefaultLineDelimiter(doc) + 
                 indents.getIndent(statement, doc);
         
-        value visitor = FindAnonFunctionVisitor(statement, node);
-        visitor.visit(statement);
+        variable Tree.FunctionArgument? result = null;
+        object extends Visitor() {
+            shared actual void visit(Tree.FunctionArgument that) {
+                if (that != node &&
+                    that.startIndex.intValue() <= node.startIndex.intValue() &&
+                    that.endIndex.intValue() >= node.endIndex.intValue() &&
+                    that.startIndex.intValue() > statement.startIndex.intValue()) {
+                    result = that;
+                }
+                super.visit(that);
+            }
+        }.visit(statement);
 
         Boolean toplevel;
-        if (exists anon = visitor.result, !anon.block exists) {
+        if (exists anon = result, !anon.block exists) {
             if (exists ex = anon.expression) {
                 value pls = anon.parameterLists;
-                variable Node pl = pls.get(pls.size()-1);
-                if (exists tcl = anon.typeConstraintList) {
-                    pl = tcl;
-                }
+                value pl 
+                        = if (exists tcl 
+                                = anon.typeConstraintList)
+                        then tcl else pls.get(pls.size()-1);
                 start = ex.startIndex.intValue();
                 value loc = pl.endIndex.intValue();
                 value len = ex.startIndex.intValue() - loc;
                 value end = ex.endIndex.intValue();
                 addEditToChange(tfc, newReplaceEdit(loc, len, " { "));
                 addEditToChange(tfc, newInsertEdit(end, "; }"));
-                il -=len-3;
-                if (anon.declarationModel.declaredVoid) {
-                    newLineOrReturn = " ";
-                }
-                else {
-                    newLineOrReturn = " return ";
-                }
+                il -= len-3;
+                newLineOrReturn = 
+                        if (anon.declarationModel.declaredVoid) 
+                        then " " else " return ";
                 toplevel = false;
             }
             else {
@@ -125,30 +121,30 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             }
         }
         else if (is Tree.Declaration dec = statement) {
-            if (is Tree.MethodDeclaration md=dec) {
-                if (exists se = md.specifierExpression) {
-                    if (exists ex = se.expression) {
-                        value pls = md.parameterLists;
-                        variable Node pl = pls.get(pls.size()-1);
-                        if (exists tcl=md.typeConstraintList) {
-                            pl = tcl;
-                        }
-                        start = ex.startIndex.intValue();
-                        value loc = pl.endIndex.intValue();
-                        value len = ex.startIndex.intValue() - loc;
-                        value end = ex.endIndex.intValue();
-                        value semi = dec.endIndex.intValue()-1;
-                        String indent = indents.defaultIndent;
-                        String starting = " {" + newLineOrReturn + indent;
-                        String ending = ";" + newLineOrReturn + "}";
-                        addEditToChange(tfc, newReplaceEdit(loc, len, starting));
-                        addEditToChange(tfc, newInsertEdit(end, ending));
-                        addEditToChange(tfc, newDeleteEdit(semi, 1));
-                        il-=len-starting.size;
-                        newLineOrReturn = newLineOrReturn + indent;
-                        if (!md.declarationModel.declaredVoid) {
-                            newLineOrReturn += "return ";
-                        }
+            if (is Tree.MethodDeclaration dec) {
+                if (exists ex = dec.specifierExpression?.expression) {
+                    //we need to convert the fat arrow to a 
+                    //block with a return statement
+                    value pls = dec.parameterLists;
+                    value pl 
+                            = if (exists tcl 
+                                    = dec.typeConstraintList)
+                            then tcl else pls.get(pls.size()-1);
+                    start = ex.startIndex.intValue();
+                    value loc = pl.endIndex.intValue();
+                    value len = ex.startIndex.intValue() - loc;
+                    value end = ex.endIndex.intValue();
+                    value semi = dec.endIndex.intValue()-1;
+                    String indent = indents.defaultIndent;
+                    String starting = " {" + newLineOrReturn + indent;
+                    String ending = ";" + newLineOrReturn + "}";
+                    addEditToChange(tfc, newReplaceEdit(loc, len, starting));
+                    addEditToChange(tfc, newInsertEdit(end, ending));
+                    addEditToChange(tfc, newDeleteEdit(semi, 1));
+                    il -= len-starting.size;
+                    newLineOrReturn = newLineOrReturn + indent;
+                    if (!dec.declarationModel.declaredVoid) {
+                        newLineOrReturn += "return ";
                     }
                 }
                 toplevel = false;
@@ -160,61 +156,58 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         else {
             toplevel = false;
         }
+        
         type = unit.denotableType(node.typeModel);
-        value unparened = unparenthesize(node);
-
-        value anonFunction =
-                if (is Tree.FunctionArgument unparened)
-                then unparened
-                else null;
-
+        value core = unparenthesize(node);
         String mod;
         String exp;
-        if (exists fa = anonFunction) {
+        if (is Tree.FunctionArgument core) {
             type = unit.getCallableReturnType(type);
-            value sb = StringBuilder();
+            value body = StringBuilder();
             
-            mod = fa.type is Tree.VoidModifier then "void " else "function";
-            nodes.appendParameters(sb, fa, unit, this);
+            mod = core.type is Tree.VoidModifier then "void" else "function";
+            nodes.appendParameters(body, core, unit, this);
 
-            if (exists block = fa.block) {
-                sb.append(" ").append(toString(block));
+            if (exists block = core.block) {
+                body.append(" ").append(toString(block));
             }
-            else if (exists expr = fa.expression) {
-                sb.append(" => ").append(toString(expr)).append(";");
+            else if (exists expr = core.expression) {
+                body.append(" => ").append(toString(expr)).append(";");
             }
             else {
-                sb.append(" => ");
+                body.append(" => ");
             }
-            exp = sb.string;
+            exp = body.string;
         }
         else {
             mod = "value";
-            exp = toString(unparened) + ";";
+            exp = toString(core) + ";";
         }
 
         String typeDec;
-        if (type?.unknown else true) {
+        if (exists type = this.type, !type.unknown) {
+            if (explicitType || toplevel) {
+                typeDec = type.asSourceCodeString(unit);
+                value declarations = HashSet<Declaration>();
+                importProposals.importType(declarations, type, rootNode);
+                il += importProposals.applyImports(tfc, declarations, rootNode, doc);
+            }
+            else {
+                canBeInferred = true;
+                typeDec = mod;
+            }
+        }
+        else {
             typeDec = "dynamic";
             il = 0;
         }
-        else if (exists t = type, explicitType || toplevel) {
-            typeDec = t.asSourceCodeString(unit);
-            value declarations = HashSet<Declaration>();
-            importProposals.importType(declarations, type, rootNode);
-            il += importProposals.applyImports(tfc, declarations, rootNode, doc);
-        }
-        else {
-            canBeInferred = true;
-            typeDec = mod;
-        }
 
         value myDeclaration =
-            "``typeDec`` ``newName````
-                if (anonFunction exists)
-                then ""
-                else if (getter) then " => " else " = "
-                ````exp``";
+                typeDec + " " + newName + 
+                (if (is Tree.FunctionArgument core) 
+                 then "" 
+                 else (getter then " => " else " = ")) + 
+                exp;
 
         value text = myDeclaration + newLineOrReturn;
         value tlength = typeDec.size;
@@ -227,10 +220,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         decRegion = newRegion(start+il+tlength+1, len);
         refRegion = newRegion(nstart+il+text.size, len);
     }
-
-    shared Boolean isFunction
-        => editorData?.node is Tree.FunctionArgument;
-
+    
     forceWizardMode()
             => if (exists data = editorData,
                    exists node = data.node,

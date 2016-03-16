@@ -125,17 +125,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             problem = "a directive statement";
         }
     }
-
-    Boolean containsConstructor(Collection<Tree.Statement> statements) {
-        for (statement in statements) {
-            if (is Tree.Constructor statement) {
-                return true;
-            }
-        }
-        else {
-            return false;
-        }
-    }
     
     shared actual void build(TextChange tfc) {
         if (exists data = editorData) {
@@ -156,18 +145,18 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
         
-        value start = term.startIndex.longValue();
-        value length = term.distance.longValue();
-        value unparened = unparenthesize(term);
-        variable String body;
+        value start = term.startIndex.intValue();
+        value length = term.distance.intValue();
+        value core = unparenthesize(term);
         
-        if (is Tree.FunctionArgument unparened) {
-            value fa = unparened;
-            returnType = fa.type.typeModel;
-            if (exists block = fa.block) {
+        String body;
+        if (is Tree.FunctionArgument core) {
+            //special case for anonymous functions!
+            returnType = core.type.typeModel;
+            if (exists block = core.block) {
                 body = nodes.text(block, tokens);
             }
-            else if (exists expression = fa.expression) {
+            else if (exists expression = core.expression) {
                 body = "=> " + nodes.text(expression, tokens) + ";";
             }
             else {
@@ -177,7 +166,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         else {
             value t = term.typeModel;
             returnType = unit.denotableType(t);
-            body = "=> " + nodes.text(unparened, tokens) + ";";
+            body = "=> " + nodes.text(core, tokens) + ";";
         }
         
         Tree.Declaration decNode;
@@ -219,12 +208,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value params = StringBuilder();
         value args = StringBuilder();
         if (!localRefs.empty) {
-            variable Boolean first = true;
             for (bme in localRefs) {
-                if (first) {
-                    first = false;
-                }
-                else {
+                if (!params.empty) {
                     params.append(", ");
                     args.append(", ");
                 }
@@ -244,7 +229,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         
-        value indent = indents.getDefaultLineDelimiter(doc) + indents.getIndent(decNode, doc);
+        value indent = 
+                indents.getDefaultLineDelimiter(doc) + 
+                indents.getIndent(decNode, doc);
         value extraIndent = indent + indents.defaultIndent;
         value typeParams = StringBuilder();
         value constraints = StringBuilder();
@@ -270,10 +257,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     for (pt in t.satisfiedTypes) {
                         if (firstConstraint) {
                             firstConstraint = false;
-                        } else {
+                        }
+                        else {
                             constraints.append("&");
                         }
-                        
                         constraints.append(pt.asSourceCodeString(unit));
                     }
                 }
@@ -282,8 +269,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             typeParams.append(">");
         }
         
-        variable Integer il;
-        variable String type;
+        Integer il;
+        String type;
         value rt = this.returnType;
         if (!exists rt) {
             type = "dynamic";
@@ -321,8 +308,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 indent + indent;
         variable String invocation;
         variable Integer refStart;
-        if (is Tree.FunctionArgument unparened) {
-            value fa = unparened;
+        if (is Tree.FunctionArgument core) {
+            value fa = core;
             value cpl = fa.parameterLists.get(0);
             if (cpl.parameters.size() == localRefs.size) {
                 invocation = newName;
@@ -339,7 +326,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             refStart = start;
         }
         
-        value decStart = decNode.startIndex.longValue();
+        value decStart = decNode.startIndex.intValue();
         addEditToChange(tfc, newInsertEdit(decStart, text));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
         typeRegion = newRegion(decStart + il, type.size);
@@ -358,8 +345,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value rootNode = editorData.rootNode;        
         
         assert (nonempty ss = statements.sequence());
-        value start = ss.first.startIndex.longValue();
-        variable value length = ss.last.endIndex.longValue() - start;
+        value start = ss.first.startIndex.intValue();
+        variable value length = ss.last.endIndex.intValue() - start;
         variable Tree.Declaration decNode;
         if (exists target = this.target) {
             decNode = target;
@@ -407,64 +394,77 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         
-        variable String params = "";
-        variable String args = "";
+        value params = StringBuilder();
+        value args = StringBuilder();
         value done = HashSet<Declaration>(movingDecs);
-        variable Boolean notEmpty = false;
         for (bme in localReferences) {
             value bmed = bme.declaration;
-            if (if (exists rdec = resultDeclaration) then bmed!=rdec || rdec.variable else true) {
+            if (if (exists rdec = resultDeclaration) then bmed!=rdec 
+                    || rdec.variable else true) {
                 if (done.add(bmed)) {
+                    if (!params.empty) {
+                        params.append(", ");
+                        args.append(", ");
+                    }
+                    
                     if (is Value bmed, bmed.variable) {
-                        params += "variable ";
+                        params.append("variable ");
                     }
                     
                     value bmet = bme.typeModel;
                     if (is TypedDeclaration bmed) {
                         value td = bmed;
                         if (td.dynamicallyTyped) {
-                            params += "dynamic";
+                            params.append("dynamic");
                         }
                         else {
                             value t = unit.denotableType(bmet);
-                            params += t.asSourceCodeString(unit);
+                            params.append(t.asSourceCodeString(unit));
                         }
                     }
                     else {
                         value t = unit.denotableType(bmet);
-                        params += t.asSourceCodeString(unit);
+                        params.append(t.asSourceCodeString(unit));
                     }
                     
                     value id = bme.identifier;
-                    params += " "+id.text+", ";
-                    args += id.text+", ";
-                    notEmpty = true;
+                    params.append(" ").append(id.text);
+                    args.append(id.text);
                 }
             }
         }
         
-        if (notEmpty) {
-            params = params.initial(params.size-2);
-            args = args.initial(args.size-2);
-        }
-        
-        value indent = indents.getDefaultLineDelimiter(doc) + indents.getIndent(decNode, doc);
+        value indent = 
+                indents.getDefaultLineDelimiter(doc) + 
+                indents.getIndent(decNode, doc);
         value extraIndent = indent + indents.defaultIndent;
-        variable String typeParams = "";
-        variable String constraints = "";
+        value typeParams = StringBuilder();
+        value constraints = StringBuilder();
         if (!localTypes.empty) {
             for (t in localTypes) {
-                typeParams += t.name + ", ";
+                typeParams
+                        .append(t.name)
+                        .append(", ");
                 value sts = t.satisfiedTypes;
                 if (!sts.empty) {
-                    constraints += extraIndent+indents.defaultIndent+"given "+t.name+" satisfies ";
+                    constraints
+                            .append(extraIndent)
+                            .append(indents.defaultIndent) 
+                            .append("given ") 
+                            .append(t.name)
+                            .append(" satisfies ");
                     for (pt in sts) {
-                        constraints += pt.asSourceCodeString(unit) + "&";
+                        constraints
+                                .append(pt.asSourceCodeString(unit))
+                                .appendCharacter('&');
                     }
-                    constraints = constraints.initial(constraints.size-1);
+                    constraints.deleteTerminal(1);
                 }
             }
-            typeParams = "<" + typeParams.initial(typeParams.size-2) + ">";
+            typeParams
+                    .deleteTerminal(2)
+                    .prependCharacter('<')
+                    .appendCharacter('>');
         }
         
         if (exists rdec = resultDeclaration) {
@@ -515,30 +515,48 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             il = 0;
         }
         
-        variable String content =
-                typeOrKeyword + " " + newName + typeParams + 
-                "(" + params + ")" + 
-                constraints + " {";
-        if (exists rdec = resultDeclaration, !result is Tree.Declaration, !rdec.variable) {
-            content += extraIndent + rdec.type.asSourceCodeString(unit) + " " + rdec.name + ";";
+        value content = StringBuilder();
+        content
+                .append(typeOrKeyword)
+                .append(" ")
+                .append(newName)
+                .append(typeParams.string)
+                .append("(").append(params.string).append(")")
+                .append(constraints.string)
+                .append(" {");
+        if (exists rdec = resultDeclaration, 
+            !result is Tree.Declaration, 
+            !rdec.variable) {
+            content
+                    .append(extraIndent)
+                    .append(rdec.type.asSourceCodeString(unit))
+                    .append(" ")
+                    .append(rdec.name)
+                    .append(";");
         }
         
         value last = ss.last;
         for (s in statements) {
-            content += extraIndent + nodes.text(s, tokens);
+            content
+                    .append(extraIndent)
+                    .append(nodes.text(s, tokens));
             variable Integer i = s.endToken.tokenIndex;
             variable CommonToken tok;
             while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
                 value text = tok.text;
                 if (tok.type == CeylonLexer.\iLINE_COMMENT) {
-                    content += " " + text.initial(text.size-1);
+                    content
+                            .append(" ")
+                            .append(text.initial(text.size-1));
                     if (s == last) {
                         length += text.size;
                     }
                 }
                 
                 if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
-                    content += " " + text;
+                    content
+                            .append(" ")
+                            .append(text);
                     if (s == last) {
                         length += text.size + 1;
                     }
@@ -547,10 +565,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         if (exists rdec = resultDeclaration) {
-            content += extraIndent + "return " + rdec.name + ";";
+            content
+                    .append(extraIndent)
+                    .append("return ")
+                    .append(rdec.name)
+                    .append(";");
         }
         
-        content += indent + "}" + indent + indent;
+        content.append(indent).append("}").append(indent).append(indent);
         String ctx;
         if (exists rdec = resultDeclaration) {
             String modifs;
@@ -568,17 +590,20 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             ctx = modifs + rdec.name + "=";
         } 
         else if (!returns.empty) {
-            ctx = "return " + newName + "(" + args + ");";
+            ctx = "return " + newName + "(" + args.string + ");";
         }
         else {
             ctx = "";
         }
-        String invocation = ctx + newName + "(" + args + ");";
+        String invocation = ctx + newName + "(" + args.string + ");";
         
-        value space = content.firstOccurrence(' ') else -1;
-        value eq = invocation.firstOccurrence('=') else -1;
-        value decStart = decNode.startIndex.longValue();
-        addEditToChange(tfc, newInsertEdit(decStart, content));
+        value space 
+                = content.string.firstOccurrence(' ') else -1;
+        value eq 
+                = invocation.startsWith("return ") 
+                then 6 else (invocation.firstOccurrence('=') else -1);
+        value decStart = decNode.startIndex.intValue();
+        addEditToChange(tfc, newInsertEdit(decStart, content.string));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
         typeRegion = newRegion(decStart + il, space);
         decRegion = newRegion(decStart + il + space + 1, newName.size);
@@ -618,7 +643,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             addLocalType(dec, pt, localTypes, visited);
         }
     }
-
     
     shared actual Boolean forceWizardMode() {
         if (exists data = editorData,
@@ -668,15 +692,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     editable => true;
     
-    enabled => if (exists data = editorData,
-                   exists sourceFile = data.sourceVirtualFile,
+    enabled => if (exists node = editorData?.node,
+                   exists sourceFile = editorData?.sourceVirtualFile,
                    editable &&
                    sourceFile.name != "module.ceylon" &&
                    sourceFile.name != "package.ceylon" &&
-                   (data.node is Tree.Term || 
-                    data.node is Tree.Body|Tree.Statement &&
+                   (node is Tree.Term || 
+                    node is Tree.Body|Tree.Statement &&
                         !statements.empty &&
-                        !containsConstructor(statements)))
+                        !statements.any((statement) 
+                            => statement is Tree.Constructor)))
                then true
                else false;
     

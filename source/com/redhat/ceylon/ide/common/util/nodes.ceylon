@@ -603,7 +603,7 @@ shared object nodes {
      
      Returned names are quoted to be valid text representing a variable name."
     shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false,
-        Tree.CompilationUnit? compilationUnit = null) {
+        Tree.CompilationUnit? rootNode = null) {
         
         value names = HashSet<String>();
         
@@ -618,8 +618,8 @@ shared object nodes {
                 if (is Tree.InvocationExpression inv = typedTerm)
                 then TreeUtil.unwrapExpressionUntilTerm(inv.primary)
                 else typedTerm;
-            if (exists compilationUnit) {
-                addArgumentNameProposals(names, compilationUnit, baseTerm);
+            if (exists rootNode) {
+                addArgumentNameProposals(names, rootNode, baseTerm);
             }
             
             /*if (is Tree.FunctionType ft = baseTerm,
@@ -747,9 +747,9 @@ shared object nodes {
      Proposals for arguments in not-first arguments lists of functions are not supported.
      
      Appended names are quoted to be valid text representing a variable name."
-    void addArgumentNameProposals(HashSet<String> names, Tree.CompilationUnit compilationUnit, Tree.Term node) {
-        if (exists argumentContext = findArgumentContext(compilationUnit, node)) {
-            value [invocationExpression, sequencedArgument, argument] = argumentContext;
+    void addArgumentNameProposals(MutableSet<String> names, Tree.CompilationUnit rootNode, Tree.Term node) {
+        if (exists [invocationExpression, sequencedArgument, argument] 
+                = findArgumentContext(rootNode, node)) {
             if (exists invocationExpression) {
                 switch (argument)
                 case (is Tree.NamedArgument) {
@@ -785,7 +785,7 @@ shared object nodes {
                         names.add(escaping.escapeInitialLowercase(name));
                     }
                 }
-                case (is Null) {}
+                case (null) {}
             }
         }
     }
