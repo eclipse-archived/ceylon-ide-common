@@ -58,6 +58,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared formal variable Type? returnType;
     shared formal Tree.Declaration? target;
     shared formal List<Tree.Return> returns;
+    shared formal Tree.Body? body;
     shared formal actual variable Boolean canBeInferred;
     
     shared class CheckStatementsVisitor(Tree.Body scope, 
@@ -73,11 +74,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         function notResult(Node that) 
                 => if (exists node = result) 
-        then that!=node else true;
+                then that!=node else true;
         
         function notResultRef(Declaration d) 
                 => if (exists rd = resultDeclaration) 
-        then rd!=d else true;
+                then rd!=d else true;
         
         shared actual void visit(Tree.Declaration that) {
             super.visit(that);
@@ -141,7 +142,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             value node = data.node;
             if (is Tree.Term node) {
                 extractExpressionInFile(tfc, node);
-            } else if (is Tree.Body node) {
+            } else if (is Tree.Body|Tree.Statement node) {
                 extractStatementsInFile(tfc, node);
             }
         }
@@ -151,14 +152,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = term.unit;
-        value tokens = editorData?.tokens;
-        if (!exists tokens) {
-            return;
-        }
-        value rootNode = editorData?.rootNode;
-        if (!exists rootNode) {
-            return;
-        }
+        assert (exists editorData = this.editorData);
+        value tokens = editorData.tokens;
+        value rootNode = editorData.rootNode;
         
         value start = term.startIndex.longValue();
         value length = term.distance.longValue();
@@ -352,23 +348,18 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         refRegion = newRegion(refStart + il + text.size, nl);
     }
     
-    void extractStatementsInFile(TextChange tfc, Tree.Body body) {
+    void extractStatementsInFile(TextChange tfc, Tree.Body|Tree.Statement node) {
+        assert (exists body = this.body);
+        assert (exists editorData = this.editorData);
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = body.unit;
-        value tokens = editorData?.tokens;
-        if (!exists tokens) {
-            return;
-        }
-        value rootNode = editorData?.rootNode;
-        if (!exists rootNode) {
-            return;
-        }
-        
+        value tokens = editorData.tokens;
+        value rootNode = editorData.rootNode;        
         
         assert (nonempty ss = statements.sequence());
         value start = ss.first.startIndex.longValue();
-        value length = ss.last.endIndex.longValue() - start;
+        variable value length = ss.last.endIndex.longValue() - start;
         variable Tree.Declaration decNode;
         if (exists target = this.target) {
             decNode = target;
@@ -533,7 +524,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         value last = ss.last;
-        variable value len = length;
         for (s in statements) {
             content += extraIndent + nodes.text(s, tokens);
             variable Integer i = s.endToken.tokenIndex;
@@ -543,14 +533,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 if (tok.type == CeylonLexer.\iLINE_COMMENT) {
                     content += " " + text.initial(text.size-1);
                     if (s == last) {
-                        len += text.size;
+                        length += text.size;
                     }
                 }
                 
                 if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
                     content += " " + text;
                     if (s == last) {
-                        len += text.size + 1;
+                        length += text.size + 1;
                     }
                 }
             }
@@ -678,13 +668,13 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     editable => true;
     
-    enabled => if (exists data=editorData,
-                   exists sourceFile=data.sourceVirtualFile,
+    enabled => if (exists data = editorData,
+                   exists sourceFile = data.sourceVirtualFile,
                    editable &&
                    sourceFile.name != "module.ceylon" &&
                    sourceFile.name != "package.ceylon" &&
                    (data.node is Tree.Term || 
-                    data.node is Tree.Body &&
+                    data.node is Tree.Body|Tree.Statement &&
                         !statements.empty &&
                         !containsConstructor(statements)))
                then true
@@ -709,11 +699,15 @@ shared class FindBodyVisitor(Node node) extends Visitor() {
 shared class FindResultVisitor(Tree.Body scope, 
     Collection<Tree.Statement> statements) 
         extends Visitor() {
+    
     variable shared Node? result = null;
     variable shared TypedDeclaration? resultDeclaration = null;
     
+    function isDefinedLocally(Declaration dec) 
+            => !ModelUtil.contains(dec.scope, scope.scope.container);
+    
     shared actual void visit(Tree.Body that) {
-        if (is Tree.Block that) {
+        if (that is Tree.Block) {
             super.visit(that);
         }
     }
@@ -730,7 +724,7 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression leftTerm 
-            = that.leftTerm) {
+                = that.leftTerm) {
             if (is TypedDeclaration dec = leftTerm.declaration,
                 hasOuterRefs(dec, scope, statements), 
                 isDefinedLocally(dec)) {
@@ -743,7 +737,7 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression term 
-            = that.baseMemberExpression) {
+                = that.baseMemberExpression) {
             if (is TypedDeclaration dec = term.declaration,
                 hasOuterRefs(dec, scope, statements), 
                 isDefinedLocally(dec)) {
@@ -753,8 +747,6 @@ shared class FindResultVisitor(Tree.Body scope,
         }
     }
     
-    Boolean isDefinedLocally(Declaration dec) 
-            => !ModelUtil.contains(dec.scope, scope.scope.container);
 }
 
 Boolean hasOuterRefs(Declaration d, Tree.Body? scope, 
@@ -763,14 +755,38 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
         return false;
     }
     
-    value v = FindOuterReferencesVisitor(d);
+    variable Integer refs = 0;
     for (s in scope.statements) {
         if (!statements.contains(s)) {
-            s.visit(v);
+            s.visit(object extends Visitor() {
+                shared actual void visit(Tree.MemberOrTypeExpression that) {
+                    super.visit(that);
+                    if (exists dec = that.declaration, 
+                        d==dec) {
+                        refs++;
+                    }
+                }
+                shared actual void visit(Tree.Declaration that) {
+                    super.visit(that);
+                    if (exists dec = that.declarationModel, 
+                        d==dec) {
+                        refs++;
+                    }
+                }
+                shared actual void visit(Tree.Type that) {
+                    super.visit(that);
+                    if (exists type = that.typeModel, 
+                        type.classOrInterface) {
+                        if (exists td = type.declaration, 
+                            d==td) {
+                            refs++;
+                        }
+                    }
+                }
+            });
         }
     }
-    
-    return v.refs > 0;
+    return refs > 0;
 }
 
 shared class FindReturnsVisitor(MutableList<Tree.Return> returns) 
@@ -784,47 +800,17 @@ shared class FindReturnsVisitor(MutableList<Tree.Return> returns)
     }
 }
 
-class FindOuterReferencesVisitor(Declaration declaration) 
-        extends Visitor() {
-    variable shared Integer refs = 0;
-    
-    shared actual void visit(Tree.MemberOrTypeExpression that) {
-        super.visit(that);
-        if (exists dec = that.declaration, 
-            declaration==dec) {
-            refs++;
-        }
-    }
-    
-    shared actual void visit(Tree.Declaration that) {
-        super.visit(that);
-        if (exists dec = that.declarationModel, 
-            declaration==dec) {
-            refs++;
-        }
-    }
-    
-    shared actual void visit(Tree.Type that) {
-        super.visit(that);
-        if (exists type = that.typeModel, 
-            type.classOrInterface) {
-            if (exists td = type.declaration, 
-                declaration==td) {
-                refs++;
-            }
-        }
-    }
-}
-
 class FindLocalReferencesVisitor(Scope scope, Scope targetScope) 
         extends Visitor() {
-    shared MutableList<Tree.BaseMemberExpression> localReferences 
-            = ArrayList<Tree.BaseMemberExpression>();
+    
+    value results = ArrayList<Tree.BaseMemberExpression>();
+    
+    shared List<Tree.BaseMemberExpression> localReferences => results;
     
     shared actual void visit(Tree.BaseMemberExpression that) {
         super.visit(that);
         value currentDec = that.declaration;
-        for (bme in localReferences) {
+        for (bme in results) {
             if (exists dec = bme.declaration) {
                 if (dec==currentDec) {
                     return;
@@ -839,9 +825,7 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
         
         if (currentDec.isDefinedInScope(scope), 
             !currentDec.isDefinedInScope(targetScope)) {
-            localReferences.add(that);
+            results.add(that);
         }
     }
 }
-
-
