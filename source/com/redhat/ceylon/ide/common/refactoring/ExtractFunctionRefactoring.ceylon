@@ -615,8 +615,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             visited.add(type);
         }
         
-        value td = type.declaration;
-        if (td.container == dec) {
+        if (exists td = type.declaration,
+            exists container = td.container,
+            container == dec) {
             variable Boolean found = false;
             for (typeDeclaration in localTypes) {
                 if (typeDeclaration == td) {
