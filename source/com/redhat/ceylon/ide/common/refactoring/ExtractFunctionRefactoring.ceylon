@@ -1,6 +1,8 @@
 import ceylon.collection {
     ArrayList,
-    MutableList
+    MutableList,
+    HashMap,
+    HashSet
 }
 
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -37,7 +39,7 @@ import java.lang {
 }
 import java.util {
     JList=List,
-    HashSet,
+    JHashSet=HashSet,
     JArrayList=ArrayList
 }
 
@@ -143,7 +145,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     function applyImports(Tree.CompilationUnit rootNode, TextChange tfc, IDocument doc) {
-        value decs = HashSet<Declaration>();
+        value decs = JHashSet<Declaration>();
         importProposals.importType(decs, type, rootNode);
         return importProposals.applyImports(tfc, decs, rootNode, doc);
     }
@@ -472,7 +474,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         value params = StringBuilder();
         value args = StringBuilder();
-        value done = HashSet<Declaration>(movingDecs);
+        value done = HashSet<Declaration>();
+        done.addAll(movingDecs);
         for (bme in localReferences) {
             value bmed = bme.declaration;
             value variable = 
@@ -803,9 +806,14 @@ shared class FindBodyVisitor(Node node) extends Visitor() {
 }
 
 shared class FindResultVisitor(Tree.Body scope, 
-    Collection<Tree.Statement> statements,
-    MutableList<Node->TypedDeclaration> results) 
+    Collection<Tree.Statement> statements) 
         extends Visitor() {
+    
+    value resultsList = ArrayList<Node->TypedDeclaration>();
+    shared List<Node->TypedDeclaration> results => resultsList;
+    
+    value possibles = HashMap<TypedDeclaration,Node>();
+    value all = HashSet<TypedDeclaration>();
     
     function isDefinedLocally(Declaration dec) 
             => !ModelUtil.contains(dec.scope, scope.scope.container);
@@ -819,9 +827,13 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         value dec = that.declarationModel;
-        if (hasOuterRefs(dec, scope, statements)) {
-            results.add(that->dec);
+        if (that.specifierOrInitializerExpression exists) {
+            if (hasOuterRefs(dec, scope, statements)) {
+                resultsList.add(that->dec);
+                all.add(dec);
+            }
         }
+        possibles.put(dec, that);
     }
     
     //TODO: Tree.AnyMethod!!!!
@@ -829,24 +841,25 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression leftTerm 
-                = that.leftTerm) {
-            if (is TypedDeclaration dec = leftTerm.declaration,
-                hasOuterRefs(dec, scope, statements), 
-                isDefinedLocally(dec)) {
-                results.add(that->dec);
-            }
+                = that.leftTerm, 
+            is TypedDeclaration dec = leftTerm.declaration,
+            hasOuterRefs(dec, scope, statements) 
+                    && isDefinedLocally(dec)) {
+            resultsList.add(possibles.getOrDefault(dec, that) -> dec);
+            all.add(dec);
         }
     }
     
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression term 
-                = that.baseMemberExpression) {
-            if (is TypedDeclaration dec = term.declaration,
-                hasOuterRefs(dec, scope, statements), 
-                isDefinedLocally(dec)) {
-                results.add(that->dec);
-            }
+                = that.baseMemberExpression, 
+            is TypedDeclaration dec = term.declaration,
+            hasOuterRefs(dec, scope, statements) 
+                    && isDefinedLocally(dec) &&
+                    !dec in all) {
+            resultsList.add(possibles.getOrDefault(dec, that) -> dec);
+            all.add(dec);
         }
     }
     
@@ -892,13 +905,15 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
     return refs > 0;
 }
 
-shared class FindReturnsVisitor(MutableList<Tree.Return> returns) 
+shared class FindReturnsVisitor() 
         extends Visitor() {
+    value returnsList = ArrayList<Tree.Return>();
+    shared List<Tree.Return> returns => returnsList;
     shared actual void visit(Tree.Declaration that) {}
     shared actual void visit(Tree.Return that) {
         super.visit(that);
         if (that.expression exists) {
-            returns.add(that);
+            returnsList.add(that);
         }
     }
 }
