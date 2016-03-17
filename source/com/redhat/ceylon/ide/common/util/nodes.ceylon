@@ -530,7 +530,9 @@ shared object nodes {
         return null;
     }
     
-    shared void appendParameters(StringBuilder result, Tree.FunctionArgument fa, Unit unit, NodePrinter printer) {
+    shared void appendParameters(StringBuilder result, 
+        Tree.FunctionArgument fa, 
+        Unit unit, JList<CommonToken> tokens) {
         for (pl in fa.parameterLists) {
             result.append("(");
             variable Boolean first = true;
@@ -542,11 +544,13 @@ shared object nodes {
                 }
                 
                 if (is Tree.InitializerParameter p) {
-                    if (!ModelUtil.isTypeUnknown(p.parameterModel.type)) {
-                        result.append(p.parameterModel.type.asSourceCodeString(unit)).append(" ");
+                    value type = p.parameterModel.type;
+                    if (!ModelUtil.isTypeUnknown(type)) {
+                        result.append(type.asSourceCodeString(unit))
+                              .append(" ");
                     }
                 }
-                result.append(printer.toString(p));
+                result.append(text(p, tokens));
             }
             result.append(")");
         }
@@ -829,8 +833,4 @@ shared object nodes {
             }
         }*/
     }
-}
-
-shared interface NodePrinter {
-    shared formal String toString(Node node);
 }

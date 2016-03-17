@@ -56,10 +56,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared formal Node? result;
     shared formal TypedDeclaration? resultDeclaration;
     shared formal List<Tree.Statement> statements;
-    shared formal variable Type? returnType;
     shared formal Tree.Declaration? target;
     shared formal List<Tree.Return> returns;
     shared formal Tree.Body? body;
+    shared formal variable actual Type? type;
     shared formal actual variable Boolean canBeInferred;
     
     shared class CheckStatementsVisitor(Tree.Body scope, 
@@ -131,17 +131,17 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         if (exists data = editorData) {
             value node = data.node;
             if (is Tree.Term node) {
-                extractExpressionInFile(tfc, node);
+                extractExpression(tfc, node);
             }
             else if (is Tree.Body|Tree.Statement node) {
-                extractStatementsInFile(tfc, node);
+                extractStatements(tfc, node);
             }
         }
     }
     
     function applyImports(Tree.CompilationUnit rootNode, TextChange tfc, IDocument doc) {
         value decs = HashSet<Declaration>();
-        importProposals.importType(decs, returnType, rootNode);
+        importProposals.importType(decs, type, rootNode);
         return importProposals.applyImports(tfc, decs, rootNode, doc);
     }
     
@@ -178,7 +178,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         return [typeParams, constraints];
     }
     
-    void extractExpressionInFile(TextChange tfc, Tree.Term term) {
+    void extractExpression(TextChange tfc, Tree.Term term) {
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = term.unit;
@@ -271,7 +271,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         String body;
         if (is Tree.FunctionArgument core) {
             //special case for anonymous functions!
-            returnType = core.type.typeModel;
+            type = unit.denotableType(core.type.typeModel);
             if (exists block = core.block) {
                 body = nodes.text(block, tokens);
             }
@@ -283,17 +283,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         else {
-            value t = term.typeModel;
-            returnType = unit.denotableType(t);
+            type = unit.denotableType(core.typeModel);
             body = specifier + nodes.text(core, tokens) + ";";
         }
         
         Integer shift;
         String typeOrKeyword;
-        if (exists returnType = this.returnType, 
+        if (exists returnType = this.type, 
             !returnType.unknown) {
-            value isVoid = returnType.anything;
-            if (isVoid) {
+            value voidModifier = returnType.anything;
+            if (voidModifier) {
                 typeOrKeyword = "void";
                 shift = 0;
             }
@@ -349,7 +348,18 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         refRegion = newRegion(refStart + shift + definition.size, nl);
     }
     
-    void extractStatementsInFile(TextChange tfc, Tree.Body|Tree.Statement node) {
+    function targetDeclaration(Tree.Body body, Tree.CompilationUnit rootNode) {
+        if (exists target = this.target) {
+            return target;
+        }
+        else {
+            value fsv = FindContainerVisitor(body);
+            rootNode.visit(fsv);
+            return fsv.declaration;
+        }
+    }
+    
+    void extractStatements(TextChange tfc, Tree.Body|Tree.Statement node) {
         assert (exists body = this.body);
         assert (exists editorData = this.editorData);
         initMultiEditChange(tfc);
@@ -358,23 +368,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;        
         
+        assert (exists decNode = targetDeclaration(body, rootNode));
+        
         assert (nonempty ss = statements.sequence());
         value start = ss.first.startIndex.intValue();
-        variable value length = ss.last.endIndex.intValue() - start;
-        variable Tree.Declaration decNode;
-        if (exists target = this.target) {
-            decNode = target;
-        }
-        else {
-            value fsv = FindContainerVisitor(body);
-            rootNode.visit(fsv);
-            if (exists fsvd = fsv.declaration) {
-                decNode = fsvd;
-            }
-            else {
-                return;
-            }
-        }
+        value end = ss.last.endIndex.intValue();
         
         value dec = decNode.declarationModel;
         value flrv = FindLocalReferencesVisitor {
@@ -439,19 +437,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         params.append("variable ");
                     }
                     
-                    value bmet = bme.typeModel;
-                    if (is TypedDeclaration bmed) {
-                        value td = bmed;
-                        if (td.dynamicallyTyped) {
-                            params.append("dynamic");
-                        }
-                        else {
-                            value t = unit.denotableType(bmet);
-                            params.append(t.asSourceCodeString(unit));
-                        }
+                    if (is TypedDeclaration bmed, bmed.dynamicallyTyped) {
+                        params.append("dynamic");
                     }
                     else {
-                        value t = unit.denotableType(bmet);
+                        //TODO: do I need to add imports here?!
+                        value t = unit.denotableType(bme.typeModel);
                         params.append(t.asSourceCodeString(unit));
                     }
                     
@@ -473,7 +464,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 = typeParameters(localTypes, extraIndent, unit);
         
         if (exists rdec = resultDeclaration) {
-            returnType = unit.denotableType(rdec.type);
+            type = unit.denotableType(rdec.type);
         }
         else if (!returns.empty) {
             value ut = UnionType(unit);
@@ -485,10 +476,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
             
             ut.caseTypes = list;
-            returnType = ut.type;
+            type = ut.type;
         }
         else {
-            returnType = null;
+            type = null;
         }
         
         String typeOrKeyword;
@@ -499,7 +490,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             typeOrKeyword = "void";
             shift = 0;
         }
-        else if (exists returnType = this.returnType,
+        else if (exists returnType = this.type,
                 !returnType.unknown) {
             //we need to return a value
             if (explicitType || dec.toplevel) {
@@ -537,7 +528,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     .append(rdec.name)
                     .append(";");
         }
-        
+                
+        variable value length = end - start;
         for (s in statements) {
             definition
                     .append(bodyIndent)
@@ -586,7 +578,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             //we're assigning the result of the extracted function to something
             String modifiers;
             if (result is Tree.AttributeDeclaration) {
-                if (rdec.shared, exists type = returnType) {
+                if (rdec.shared, exists type = type) {
                     modifiers = "shared " + type.asSourceCodeString(unit) + " ";
                 }
                 else {
@@ -657,8 +649,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     shared actual Boolean forceWizardMode() {
-        if (exists data = editorData,
-            exists node = data.node,
+        if (exists node = editorData?.node,
             exists scope = node.scope) {
             if (is Tree.Body node) {
                 for (s in statements) {
@@ -682,7 +673,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     return true;
                 }
             }
-            return node.scope.getMemberOrParameter(node.unit, newName, null, false) exists;
+            return scope.getMemberOrParameter(node.unit, newName, null, false) exists;
         }
         else {
             return false;
@@ -701,8 +692,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             return "";
         }
     }
-    
-    editable => true;
     
     enabled => if (exists node = editorData?.node,
                    exists sourceFile = editorData?.sourceVirtualFile,
