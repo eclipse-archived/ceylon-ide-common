@@ -357,9 +357,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         addEditToChange(tfc, newInsertEdit(decStart, definition));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
         typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
-        value nl = newName.size;
-        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, nl);
-        refRegion = newRegion(refStart + shift + definition.size, nl);
+        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
+        refRegion = newRegion(refStart + shift + definition.size, newName.size);
     }
     
     function targetDeclaration(Tree.Body body, 
