@@ -211,7 +211,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value localTypes = ArrayList<TypeDeclaration>();
         for (bme in localRefs) {
             addLocalType {
-                dec = dec;
+                scope = ModelUtil.getRealScope(term.scope);
+                targetScope = dec.container;
                 type = unit.denotableType(bme.typeModel);
                 localTypes = localTypes;
                 visited = ArrayList<Type>();
@@ -375,7 +376,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value visited = ArrayList<Type>();
         for (bme in localReferences) {
             addLocalType {
-                dec = dec;
+                scope = body.scope;
+                targetScope = dec.container;
                 type = unit.denotableType(bme.typeModel);
                 localTypes = localTypes;
                 visited = visited;
@@ -387,7 +389,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 shared actual void visit(Tree.TypeArgumentList that) {
                     for (pt in that.typeModels) {
                         addLocalType {
-                            dec = dec;
+                            scope = body.scope;
+                            targetScope = dec.container;
                             type = unit.denotableType(pt);
                             localTypes = localTypes;
                             visited = visited;
@@ -621,38 +624,39 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         refRegion = newRegion(start + definition.size + shift + eq + 1, newName.size);
     }
     
-    void addLocalType(Declaration dec, Type type, 
+    void addLocalType(Scope scope, Scope targetScope, Type type, 
         MutableList<TypeDeclaration> localTypes, 
         MutableList<Type> visited) {
-        if (visited.contains(type)) {
-            return;
-        }
-        else {
+        if (!type in visited) {
             visited.add(type);
-        }
-        
-        if (exists td = type.declaration,
-            exists container = td.container,
-            container == dec) {
-            variable Boolean found = false;
-            for (typeDeclaration in localTypes) {
-                if (typeDeclaration == td) {
-                    found = true;
-                    break;
-                }
+            
+            if (!type.unknown,
+                exists typeDec = type.declaration,
+                typeDec.isDefinedInScope(scope) &&
+                !typeDec.isDefinedInScope(targetScope) &&
+                !typeDec in localTypes) {
+                localTypes.add(typeDec);
             }
             
-            if (!found) {
-                localTypes.add(td);
+            for (st in type.satisfiedTypes) {
+                addLocalType {
+                    scope = scope;
+                    targetScope = targetScope;
+                    type = st;
+                    localTypes = localTypes;
+                    visited = visited;
+                };
             }
-        }
-        
-        for (pt in type.satisfiedTypes) {
-            addLocalType(dec, pt, localTypes, visited);
-        }
-        
-        for (pt in type.typeArgumentList) {
-            addLocalType(dec, pt, localTypes, visited);
+            
+            for (ta in type.typeArgumentList) {
+                addLocalType {
+                    scope = scope;
+                    targetScope = targetScope;
+                    type = ta;
+                    localTypes = localTypes;
+                    visited = visited;
+                };
+            }
         }
     }
     
