@@ -31,6 +31,10 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 
+import java.lang {
+    JString=String,
+    ObjectArray
+}
 import java.util {
     JList=List,
     HashSet,
@@ -51,8 +55,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         given InsertEdit satisfies TextEdit {
 
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-    
     value indents => importProposals.indents;
+    
+    initialNewName => nameProposals[0]?.string else "it";
     
     shared formal List<Tree.Statement> statements;
     shared formal Tree.Declaration? target;
@@ -603,14 +608,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         else if (!results.empty) {
             definition
                     .append(bodyIndent)
-                    .append("return [");
-            for ( _ -> rdec in results) {
-                definition
-                        .append(rdec.name)
-                        .append(", ");
-            }
-            definition
-                    .deleteTerminal(2)
+                    .append("return [")
+                    .append(", ".join { for (_ -> rdec in results) rdec.name })
                     .append("];");
         }
         
@@ -635,25 +634,31 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         else if (!results.empty) {
             //we're assigning the result tuple of the extracted 
             //function to various things
-            //TODO remove indirection if all are instances of
-            //     AttributeDeclaration and none are shared
-            //     and use destructuring instead!
-            invocation
-                    .append("value tuple = ")
-                    .append(call);
-            value ind =
-                    indents.getDefaultLineDelimiter(doc) + 
-                    indents.getIndent(ss.last, doc);
-            variable value i = 0;
-            for (result -> rdec in results) {
+            if (results.every((e)=>e.key is Tree.AttributeDeclaration && !e.item.shared)) {
                 invocation
-                        .append(ind)
-                        .append(resultModifiers(result, rdec, unit))
-                        .append(rdec.name)
-                        .append(" = tuple[")
-                        .append(i.string)
-                        .append("];"); //TODO: indent!
-                i++;
+                        .append("value [")
+                        .append(", ".join { for (_ -> rdec in results) rdec.name })
+                        .append("] = ")
+                        .append(call);
+            }
+            else {
+                invocation
+                        .append("value tuple = ")
+                        .append(call);
+                value ind =
+                        indents.getDefaultLineDelimiter(doc) + 
+                        indents.getIndent(ss.last, doc);
+                variable value i = 0;
+                for (result -> rdec in results) {
+                    invocation
+                            .append(ind)
+                            .append(resultModifiers(result, rdec, unit))
+                            .append(rdec.name)
+                            .append(" = tuple[")
+                            .append(i.string)
+                            .append("];"); //TODO: indent!
+                    i++;
+                }
             }
         } 
         else if (!returns.empty) {
@@ -710,7 +715,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    shared actual Boolean forceWizardMode() {
+    shared actual Boolean forceWizardMode {
         if (exists node = editorData?.node,
             exists scope = node.scope) {
             if (is Tree.Body node) {
@@ -742,34 +747,47 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    shared actual String initialNewName() { 
-        if (exists _ -> rdec = results.first) {
-            return rdec.name;
-        }
-        else if (exists node = editorData?.node) {
-            return let (newName = nodes.nameProposals(node, false, editorData?.rootNode).get(0).string)
-                if ("it" == newName) then "do" else newName;
-        }
-        else {
-            return "";
-        }
-    }
-    
     enabled => if (exists node = editorData?.node,
-                   exists sourceFile = editorData?.sourceVirtualFile,
-                   editable &&
-                   sourceFile.name != "module.ceylon" &&
-                   sourceFile.name != "package.ceylon" &&
-                   (node is Tree.Term || 
+                   exists sourceFile = editorData?.sourceVirtualFile)
+               then editable(rootNode?.unit) &&
+                   !descriptor(sourceFile) &&
+                   (node is Tree.Term ||
                     node is Tree.Body|Tree.Statement &&
                         !statements.empty &&
                         !statements.any((statement) 
-                            => statement is Tree.Constructor)))
-               then true
+                            => statement is Tree.Constructor))
                else false;
     
-    nameProposals
-            => nodes.nameProposals(editorData?.node, false, editorData?.rootNode);
+    shared actual ObjectArray<JString> nameProposals {
+        value proposals
+                = nodes.nameProposals {
+            node = editorData?.node;
+            unplural = false;
+            rootNode = editorData?.rootNode;
+        };
+        for (i in 0:proposals.size) {
+            if (proposals.get(i)=="it") {
+                proposals.set(i, "do");
+            }
+        }
+        if (!results.empty) {
+            value name =
+                    "get" + 
+                    "And".join { 
+                        for (_ -> rdec in results) 
+                        rdec.name[0..0].uppercased + 
+                                rdec.name[1...] };
+            value result 
+                    = ObjectArray<JString>
+                        (proposals.size+1);
+            result.set(0, JString(name));
+            proposals.copyTo(result, 0, 1);
+            return result;
+        }
+        else {
+            return proposals;
+        }
+    }
     
     name => "Extract Function";
 }
