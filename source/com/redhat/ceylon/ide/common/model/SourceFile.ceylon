@@ -8,7 +8,8 @@ import com.redhat.ceylon.ide.common.typechecker {
     IdePhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
-    SingleSourceUnitPackage
+    SingleSourceUnitPackage,
+    unsafeCast
 }
 import java.lang.ref {
     WeakReference
@@ -16,7 +17,7 @@ import java.lang.ref {
 
 shared abstract class SourceFile(
     IdePhasedUnit phasedUnit) 
-        extends CeylonUnit() {
+        extends CeylonUnit(phasedUnit.moduleSourceMapper) {
     
     shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef = 
             WeakReference<IdePhasedUnit>(phasedUnit);
@@ -36,6 +37,9 @@ shared abstract class SourceFile(
         }
     }
 
+    shared actual default BaseIdeModuleSourceMapper moduleSourceMapper =>
+            unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
+    
     shared actual IdePhasedUnit? setPhasedUnitIfNecessary() =>
             phasedUnitRef?.get();
     

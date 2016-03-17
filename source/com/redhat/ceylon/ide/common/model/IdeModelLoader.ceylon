@@ -33,8 +33,6 @@ import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     synchronize,
     equalsWithNulls,
-    platformUtils,
-    Status,
     toJavaString
 }
 import com.redhat.ceylon.model.loader {
@@ -92,6 +90,10 @@ import com.redhat.ceylon.compiler.java.util {
 }
 import com.redhat.ceylon.compiler.java.codegen {
     Naming
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
 }
 
 shared abstract class BaseIdeModelLoader(

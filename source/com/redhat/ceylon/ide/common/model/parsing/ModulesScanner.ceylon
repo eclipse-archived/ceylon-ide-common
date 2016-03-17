@@ -75,7 +75,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 cu,
                 pkg,
                 moduleManager,
-                moduleSourceMapper,
+                moduleManager.moduleSourceMapper,
                 moduleManager.typeChecker,
                 theTokens) {
             

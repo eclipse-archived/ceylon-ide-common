@@ -40,6 +40,9 @@ import org.antlr.runtime {
 import com.redhat.ceylon.ide.common.util {
     unsafeCast
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
 
 
 
@@ -82,9 +85,8 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
         //}
     }
     
-    shared actual TypecheckerUnit newUnit() {
-        return EditedSourceFile(this);
-    }
+    shared actual TypecheckerUnit newUnit() => 
+            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newEditedSourceFile(this);
     
     shared actual EditedSourceFileAlias? unit =>
             unsafeCast<EditedSourceFileAlias?>(super.unit);

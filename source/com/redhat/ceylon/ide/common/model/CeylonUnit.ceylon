@@ -15,9 +15,9 @@ shared abstract class CeylonUnit extends IdeUnit {
     
     shared variable default WeakReference<out IdePhasedUnit>? phasedUnitRef = null;
 
-    shared new() 
-            extends IdeUnit() {}
-    
+    shared new(BaseIdeModuleSourceMapper moduleSourceMapper) 
+            extends IdeUnit(moduleSourceMapper) {}
+
     shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
             extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {}
     

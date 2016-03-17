@@ -8,9 +8,9 @@ import com.redhat.ceylon.model.typechecker.model {
 shared abstract class IdeUnit 
         extends TypecheckerUnitWithConstructor 
         satisfies IUnit & SourceAware  {
-    shared new() 
-            extends TypecheckerUnitWithConstructor() {}
-    
+    shared new(BaseIdeModuleSourceMapper moduleSourceMapper) 
+            extends TypecheckerUnitWithConstructor(moduleSourceMapper) {}
+
     shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
             extends TypecheckerUnitWithConstructor(theFilename, theRelativePath, theFullPath, thePackage) {}
     
@@ -23,6 +23,9 @@ shared abstract class IdeUnit
     shared actual Package? javaLangPackage => 
             ceylonModule.ceylonProject?.modules?.javaLangPackage 
                 else super.javaLangPackage;
+    
+    shared actual default BaseIdeModuleSourceMapper? moduleSourceMapper =>
+            unsafeCast<BaseIdeModuleSourceMapper?>(super.moduleSourceMapper);
     
     shared actual formal String? sourceFileName;
     shared actual formal String? sourceRelativePath;

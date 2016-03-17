@@ -9,6 +9,7 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
         extends SourceFile 
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
@@ -20,4 +21,7 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
     
     shared actual default ModifiablePhasedUnitAlias? phasedUnit =>
             unsafeCast<ModifiablePhasedUnitAlias?> (super.phasedUnit);
+
+    shared actual default IdeModuleSourceMapperAlias moduleSourceMapper =>
+            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
 }

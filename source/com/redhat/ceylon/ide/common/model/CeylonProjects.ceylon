@@ -6,9 +6,7 @@ import ceylon.collection {
 
 import com.redhat.ceylon.ide.common.util {
     Path,
-    unsafeCast,
-    platformUtils,
-    Status
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
@@ -42,6 +40,15 @@ import com.redhat.ceylon.model.typechecker.context {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit,
+    CrossProjectPhasedUnit,
+    EditedPhasedUnit
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
+}
 
 shared abstract class BaseCeylonProjects() {
     
@@ -55,6 +62,9 @@ shared T withCeylonModelCaching<T>(T() do) {
         TypeCache.setEnabled(was);
     }
 }
+
+
+
 
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()

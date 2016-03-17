@@ -14,10 +14,6 @@ shared class Status of _OK | _INFO | _WARNING | _ERROR {
 }
 
 shared interface IdePlatformUtils {
-    shared void register() {
-        _platformUtils = this;
-    }
-    
     shared formal void log(Status status, String message, Exception? e=null);
     
     "Creates a [[RuntimeException|java.lang::RuntimeException]]
@@ -70,7 +66,3 @@ shared class DefaultPlatformUtils() satisfies IdePlatformUtils {
     shared actual Boolean isOperationCanceledException(Exception exception) =>
             exception is OperationCancelledException;
 }
-
-variable IdePlatformUtils _platformUtils = DefaultPlatformUtils();
-
-shared IdePlatformUtils platformUtils => _platformUtils;

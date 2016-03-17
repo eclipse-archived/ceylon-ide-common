@@ -23,7 +23,9 @@ import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
 import com.redhat.ceylon.ide.common.model {
-    IResourceAware
+    IResourceAware,
+    BaseIdeModuleSourceMapper,
+    ModelAliases
 }
 import com.redhat.ceylon.ide.common.vfs {
     FileVirtualFile,
@@ -38,6 +40,7 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
         extends IdePhasedUnit
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
@@ -65,6 +68,9 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
     shared new clone(PhasedUnit other) 
             extends IdePhasedUnit.clone(other) {
     }
+    
+    shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
+            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
     
     shared actual FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> unitFile =>
             unsafeCast<FileVirtualFileAlias>(super.unitFile);

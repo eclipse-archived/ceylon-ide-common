@@ -46,8 +46,6 @@ import com.redhat.ceylon.ide.common.util {
     toCeylonStringIterable,
     toJavaStringList,
     SingleSourceUnitPackage,
-    platformUtils,
-    Status,
     toJavaList,
     unsafeCast
 }
@@ -103,6 +101,10 @@ import org.antlr.runtime {
 }
 import com.redhat.ceylon.common {
     Constants
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
 }
 
 shared class ModuleType of 
@@ -890,13 +892,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             SingleSourceUnitPackage proxyPackage = SingleSourceUnitPackage(pkg, ceylonSourceUnitFullPath);
                             
                             if (exists op = _originalProject?.get()) {
-                                phasedUnit = object extends CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, moduleManager.typeChecker, theTokens, op) {
+                                phasedUnit = object extends CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, outer.moduleSourceMapper, moduleManager.typeChecker, theTokens, op) {
                                     isAllowedToChangeModel(Declaration declaration) =>
                                             !isCentralModelDeclaration(declaration);
                                 };
                             }
                             else {
-                                phasedUnit = object extends ExternalPhasedUnit(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, moduleSourceMapper, moduleManager.typeChecker, theTokens) {
+                                phasedUnit = object extends ExternalPhasedUnit(archiveEntry, existingSourceArchive, cu, proxyPackage, moduleManager, outer.moduleSourceMapper, moduleManager.typeChecker, theTokens) {
                                     isAllowedToChangeModel(Declaration declaration) =>
                                             !isCentralModelDeclaration(declaration);
                                 };

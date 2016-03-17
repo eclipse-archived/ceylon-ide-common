@@ -1,6 +1,10 @@
 package com.redhat.ceylon.ide.common.model;
 
+import java.util.Collections;
+
+import com.redhat.ceylon.compiler.typechecker.analyzer.ModuleSourceMapper;
 import com.redhat.ceylon.compiler.typechecker.context.TypecheckerUnit;
+import com.redhat.ceylon.model.typechecker.model.Module;
 import com.redhat.ceylon.model.typechecker.model.Package;
 
 public class TypecheckerUnitWithConstructor extends TypecheckerUnit {
@@ -15,10 +19,11 @@ public class TypecheckerUnitWithConstructor extends TypecheckerUnit {
         setFullPath(theFullPath);
         setPackage(thePackage);
     }
-    public TypecheckerUnitWithConstructor() {
-        super();
+
+    public TypecheckerUnitWithConstructor(ModuleSourceMapper moduleSourceMapper) {
+        super(Collections.<Module>emptyList(), moduleSourceMapper);
     }
-    
+
     @Override
     public Package getJavaLangPackage() {
         return super.getJavaLangPackage();

@@ -34,6 +34,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import com.redhat.ceylon.ide.common.util {
     unsafeCast
 }
+import com.redhat.ceylon.ide.common.model {
+    BaseIdeModuleSourceMapper
+}
 
 shared abstract class IdePhasedUnit
         extends PhasedUnit {
@@ -58,6 +61,9 @@ shared abstract class IdePhasedUnit
         }
     }
 
+    shared actual default BaseIdeModuleSourceMapper moduleSourceMapper => 
+            unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
+    
     shared actual default BaseFileVirtualFile unitFile =>
             unsafeCast<BaseFileVirtualFile>(super.unitFile);
 

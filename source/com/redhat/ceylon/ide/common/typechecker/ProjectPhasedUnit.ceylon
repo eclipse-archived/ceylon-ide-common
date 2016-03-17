@@ -12,7 +12,8 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
-    TypecheckerUnit
+    TypecheckerUnit,
+    PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -22,7 +23,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     ProjectSourceFile,
     BaseIdeModule,
-    ModelAliases
+    ModelAliases,
+    BaseIdeModuleSourceMapper
 }
 import com.redhat.ceylon.ide.common.util {
     synchronize,
@@ -48,6 +50,9 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 
 shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -85,7 +90,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
             ceylonProjectRef.get();
 
     shared actual TypecheckerUnit newUnit() => 
-            ProjectSourceFile(this);
+            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newProjectSourceFile(this);
 
     shared actual NativeFile resourceFile => 
             unitFile.nativeResource;

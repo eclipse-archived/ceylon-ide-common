@@ -44,7 +44,6 @@ import com.redhat.ceylon.ide.common.model.parsing {
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
-    platformUtils,
     toJavaStringList,
     BaseProgressMonitor,
     ImmutableMapWrapper,
@@ -101,6 +100,9 @@ import org.xml.sax {
 }
 import java.net {
     URI
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils
 }
 
 shared final class ProjectState
