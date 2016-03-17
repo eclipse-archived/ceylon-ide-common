@@ -282,7 +282,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         String body;
         if (is Tree.FunctionArgument core) {
             //special case for anonymous functions!
-            type = unit.denotableType(core.type.typeModel);
+            if (!type exists) {
+                type = unit.denotableType(core.type.typeModel);
+            }
             if (exists block = core.block) {
                 body = nodes.text(block, tokens);
             }
@@ -294,7 +296,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         else {
-            type = unit.denotableType(core.typeModel);
+            if (!type exists) {
+                type = unit.denotableType(core.typeModel);
+            }
             body = specifier + nodes.text(core, tokens) + ";";
         }
         
@@ -545,14 +549,18 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         if (results.size==1) {
             assert (exists _ -> rdec = results.first);
-            type = unit.denotableType(rdec.type);
+            if (!type exists) {
+                type = unit.denotableType(rdec.type);
+            }
         }
         else if (!results.empty) {
             value types = JArrayList<Type>();
             for (_ -> rdec in results) {
                 types.add(rdec.type);
             }
-            type = unit.getTupleType(types, null, -1);
+            if (!type exists) {
+                type = unit.getTupleType(types, null, -1);
+            }
         }
         else if (!returns.empty) {
             value ut = UnionType(unit);
@@ -563,7 +571,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 }
             }
             ut.caseTypes = list;
-            type = ut.type;
+            if (!type exists) {
+                type = ut.type;
+            }
         }
         else {
             type = null;
@@ -757,9 +767,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared actual Boolean forceWizardMode {
         if (exists node = editorData?.node,
             exists scope = node.scope) {
-            if (is Tree.Body node) {
+            if (is Tree.Body|Tree.Statement node, 
+                exists body = this.body) {
                 for (s in statements) {
-                    value v = CheckStatementsVisitor(node, statements);
+                    value v = CheckStatementsVisitor(body, statements);
                     s.visit(v);
                     if (v.problem exists) {
                         return true;

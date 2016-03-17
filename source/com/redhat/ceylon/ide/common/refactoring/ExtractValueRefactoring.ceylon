@@ -156,7 +156,9 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             //we're extracting an anonymous function, so
             //actually we're going to create a function
             //instead of a value
-            type = unit.denotableType(core.type.typeModel);
+            if (!type exists) {
+                type = unit.denotableType(core.type.typeModel);
+            }
             
             value voidModifier = core.type is Tree.VoidModifier;
             modifiers = voidModifier then "void" else "function";
@@ -176,7 +178,9 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         }
         //TODO: add a special case for object expressions
         else {
-            type = unit.denotableType(core.typeModel);
+            if (!type exists) {
+                type = unit.denotableType(core.typeModel);
+            }
             modifiers = "value";
             value specifier = getter then " => " else " = ";
             body = specifier + nodes.text(core, tokens) + ";";
