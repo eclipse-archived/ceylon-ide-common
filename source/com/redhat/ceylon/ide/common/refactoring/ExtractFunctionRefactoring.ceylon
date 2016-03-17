@@ -298,7 +298,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 shift = 0;
             }
             else if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
                 shift = applyImports(rootNode, tfc, doc);
             }
             else {
@@ -477,10 +478,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         else if (!returns.empty) {
             value ut = UnionType(unit);
             value list = JArrayList<Type>();
-            for (r in returns) {
-                if (exists e = r.expression) {
-                    value t = e.typeModel;
-                    ModelUtil.addToUnion(list, t);
+            for (ret in returns) {
+                if (exists e = ret.expression) {
+                    ModelUtil.addToUnion(list, e.typeModel);
                 }
             }
             
@@ -503,7 +503,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 !returnType.unknown) {
             //we need to return a value
             if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
                 shift = applyImports(rootNode, tfc, doc);
             }
             else {
