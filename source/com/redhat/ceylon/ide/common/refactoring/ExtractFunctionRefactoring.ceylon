@@ -32,6 +32,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
+    JList=List,
     HashSet,
     JArrayList=ArrayList
 }
@@ -53,10 +54,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     value indents => importProposals.indents;
     
-    shared formal Node? result;
-    shared formal TypedDeclaration? resultDeclaration;
     shared formal List<Tree.Statement> statements;
     shared formal Tree.Declaration? target;
+    shared formal List<Node->TypedDeclaration> results;
     shared formal List<Tree.Return> returns;
     shared formal Tree.Body? body;
     shared formal variable actual Type? type;
@@ -74,12 +74,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         function notResult(Node that) 
-                => if (exists node = result) 
-                then that!=node else true;
+                => !that in results.map(Entry.key);
         
         function notResultRef(Declaration d) 
-                => if (exists rd = resultDeclaration) 
-                then rd!=d else true;
+                => !d in results.map(Entry.item);
         
         shared actual void visit(Tree.Declaration that) {
             super.visit(that);
@@ -359,6 +357,56 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
+    function resultModifiers(Node result, TypedDeclaration rdec, Unit unit) {
+        if (result is Tree.AttributeDeclaration) {
+            if (rdec.shared, exists type = type) {
+                return "shared " + type.asSourceCodeString(unit) + " ";
+            }
+            else {
+                return "value ";
+            }
+        }
+        else {
+            return "";
+        }
+    }
+    
+    function appendComments([Tree.Statement+] ss, 
+        StringBuilder definition, 
+        String bodyIndent, 
+        JList<CommonToken> tokens) {
+        value end = ss.last.endIndex.intValue();
+        variable value endOfComments = end;
+        for (s in statements) {
+            definition
+                    .append(bodyIndent)
+                    .append(nodes.text(s, tokens));
+            variable Integer i = s.endToken.tokenIndex;
+            variable CommonToken tok;
+            while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
+                value text = tok.text;
+                if (tok.type == CeylonLexer.\iLINE_COMMENT) {
+                    definition
+                            .append(" ")
+                            .append(text.trimmed);
+                    if (s == ss.last) {
+                        endOfComments = tok.stopIndex + 1;
+                    }
+                }
+                
+                if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
+                    definition
+                            .append(" ")
+                            .append(text);
+                    if (s == ss.last) {
+                        endOfComments = tok.stopIndex + 1;
+                    }
+                }
+            }
+        }
+        return endOfComments;
+    }
+    
     void extractStatements(TextChange tfc, Tree.Body|Tree.Statement node) {
         assert (exists body = this.body);
         assert (exists editorData = this.editorData);
@@ -369,10 +417,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value rootNode = editorData.rootNode;        
         
         assert (exists decNode = targetDeclaration(body, rootNode));
-        
         assert (nonempty ss = statements.sequence());
-        value start = ss.first.startIndex.intValue();
-        value end = ss.last.endIndex.intValue();
         
         value dec = decNode.declarationModel;
         value flrv = FindLocalReferencesVisitor {
@@ -425,8 +470,13 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value done = HashSet<Declaration>(movingDecs);
         for (bme in localReferences) {
             value bmed = bme.declaration;
-            if (if (exists rdec = resultDeclaration) then bmed!=rdec 
-                    || rdec.variable else true) {
+            value variable = 
+                    if (is Value bmed) 
+                    then bmed.variable else false;
+            value result = bmed in results.map(Entry.item);
+            //ignore it if it is a result of the function 
+            //and is not a variable
+            if (variable || !result) {
                 if (done.add(bmed)) {
                     if (!params.empty) {
                         params.append(", ");
@@ -437,7 +487,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         params.append("variable ");
                     }
                     
-                    if (is TypedDeclaration bmed, bmed.dynamicallyTyped) {
+                    if (is TypedDeclaration bmed, 
+                        bmed.dynamicallyTyped) {
                         params.append("dynamic");
                     }
                     else {
@@ -463,8 +514,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value [typeParams, constraints]
                 = typeParameters(localTypes, extraIndent, unit);
         
-        if (exists rdec = resultDeclaration) {
+        if (results.size==1) {
+            assert (exists _ -> rdec = results.first);
             type = unit.denotableType(rdec.type);
+        }
+        else if (!results.empty) {
+            value types = JArrayList<Type>();
+            for (_ -> rdec in results) {
+                types.add(rdec.type);
+            }
+            type = unit.getTupleType(types, null, -1);
         }
         else if (!returns.empty) {
             value ut = UnionType(unit);
@@ -474,7 +533,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     ModelUtil.addToUnion(list, e.typeModel);
                 }
             }
-            
             ut.caseTypes = list;
             type = ut.type;
         }
@@ -484,7 +542,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         String typeOrKeyword;
         Integer shift;
-        if (returns.empty && !resultDeclaration exists) {
+        if (returns.empty && results.empty) {
             //we're not assigning the result to anything,
             //so make a void function
             typeOrKeyword = "void";
@@ -518,52 +576,42 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 .append("(").append(params.string).append(")")
                 .append(constraints.string)
                 .append(" {");
-        if (exists rdec = resultDeclaration, 
-            !result is Tree.Declaration, 
-            !rdec.variable) {
-            definition
-                    .append(bodyIndent)
-                    .append(rdec.type.asSourceCodeString(unit))
-                    .append(" ")
-                    .append(rdec.name)
-                    .append(";");
-        }
-                
-        variable value length = end - start;
-        for (s in statements) {
-            definition
-                    .append(bodyIndent)
-                    .append(nodes.text(s, tokens));
-            variable Integer i = s.endToken.tokenIndex;
-            variable CommonToken tok;
-            while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
-                value text = tok.text;
-                if (tok.type == CeylonLexer.\iLINE_COMMENT) {
-                    definition
-                            .append(" ")
-                            .append(text.initial(text.size-1));
-                    if (s == ss.last) {
-                        length += text.size;
-                    }
-                }
-                
-                if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
-                    definition
-                            .append(" ")
-                            .append(text);
-                    if (s == ss.last) {
-                        length += text.size + 1;
-                    }
-                }
+        for (result -> rdec in results) { 
+            if (!result is Tree.Declaration &&
+                !rdec.variable) {
+                definition
+                        .append(bodyIndent)
+                        .append(rdec.type.asSourceCodeString(unit))
+                        .append(" ")
+                        .append(rdec.name)
+                        .append(";");
             }
         }
         
-        if (exists rdec = resultDeclaration) {
+        value start = ss.first.startIndex.intValue();
+        value end = appendComments(ss, definition, bodyIndent, tokens);
+        value length = end - start;
+        
+        if (results.size==1) {
+            assert (exists result -> rdec = results.first);
             definition
                     .append(bodyIndent)
                     .append("return ")
                     .append(rdec.name)
                     .append(";");
+        }
+        else if (!results.empty) {
+            definition
+                    .append(bodyIndent)
+                    .append("return [");
+            for ( _ -> rdec in results) {
+                definition
+                        .append(rdec.name)
+                        .append(", ");
+            }
+            definition
+                    .deleteTerminal(2)
+                    .append("];");
         }
         
         definition
@@ -573,43 +621,57 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 .append(indent);
         
         value call = newName + "(" + args.string + ");";
-        String invocation;
-        if (exists rdec = resultDeclaration) {
-            //we're assigning the result of the extracted function to something
-            String modifiers;
-            if (result is Tree.AttributeDeclaration) {
-                if (rdec.shared, exists type = type) {
-                    modifiers = "shared " + type.asSourceCodeString(unit) + " ";
-                }
-                else {
-                    modifiers = "value ";
-                }
+        value invocation = StringBuilder();
+        if (results.size==1) {
+            //we're assigning the result of the extracted 
+            //function to something
+            assert (exists result -> rdec = results.first);
+            invocation
+                    .append(resultModifiers(result, rdec, unit))
+                    .append(rdec.name)
+                    .append(" = ")
+                    .append(call);
+        }
+        else if (!results.empty) {
+            //we're assigning the result tuple of the extracted 
+            //function to various things
+            //TODO remove indirection if all are instances of
+            //     AttributeDeclaration and none are shared
+            //     and use destructuring instead!
+            invocation
+                    .append("value tuple = ")
+                    .append(call);
+            value ind =
+                    indents.getDefaultLineDelimiter(doc) + 
+                    indents.getIndent(ss.last, doc);
+            variable value i = 0;
+            for (result -> rdec in results) {
+                invocation
+                        .append(ind)
+                        .append(resultModifiers(result, rdec, unit))
+                        .append(rdec.name)
+                        .append(" = tuple[")
+                        .append(i.string)
+                        .append("];"); //TODO: indent!
+                i++;
             }
-            else {
-                modifiers = "";
-            }
-            invocation = modifiers + rdec.name + " = " + call;
         } 
         else if (!returns.empty) {
             //we're returning the result of the extracted function
-            invocation = "return " + call;
+            invocation.append("return ").append(call);
         }
         else {
             //we're just calling the extracted function
-            invocation = call;
+            invocation.append(call);
         }
-        
-        value space 
-                = definition.string.firstOccurrence(' ') else -1;
-        value eq 
-                = invocation.startsWith("return ") 
-                then 6 else (invocation.firstOccurrence('=') else -1);
+                
         value decStart = decNode.startIndex.intValue();
         addEditToChange(tfc, newInsertEdit(decStart, definition.string));
-        addEditToChange(tfc, newReplaceEdit(start, length, invocation));
-        typeRegion = newRegion(decStart + shift, space);
-        decRegion = newRegion(decStart + shift + space + 1, newName.size);
-        refRegion = newRegion(start + definition.size + shift + eq + 1, newName.size);
+        addEditToChange(tfc, newReplaceEdit(start, length, invocation.string));
+        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
+        decRegion = newRegion(decStart + shift + typeOrKeyword.size+1, newName.size);
+        value callLoc = invocation.string.firstInclusion(call) else 0;
+        refRegion = newRegion(start + definition.size + shift + callLoc, newName.size);
     }
     
     void addLocalType(Scope scope, Scope targetScope, Type type, 
@@ -681,7 +743,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     shared actual String initialNewName() { 
-        if (exists rdec = resultDeclaration) {
+        if (exists _ -> rdec = results.first) {
             return rdec.name;
         }
         else if (exists node = editorData?.node) {
@@ -723,11 +785,9 @@ shared class FindBodyVisitor(Node node) extends Visitor() {
 }
 
 shared class FindResultVisitor(Tree.Body scope, 
-    Collection<Tree.Statement> statements) 
+    Collection<Tree.Statement> statements,
+    MutableList<Node->TypedDeclaration> results) 
         extends Visitor() {
-    
-    variable shared Node? result = null;
-    variable shared TypedDeclaration? resultDeclaration = null;
     
     function isDefinedLocally(Declaration dec) 
             => !ModelUtil.contains(dec.scope, scope.scope.container);
@@ -742,10 +802,11 @@ shared class FindResultVisitor(Tree.Body scope,
         super.visit(that);
         value dec = that.declarationModel;
         if (hasOuterRefs(dec, scope, statements)) {
-            result = that;
-            resultDeclaration = dec;
+            results.add(that->dec);
         }
     }
+    
+    //TODO: Tree.AnyMethod!!!!
     
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
@@ -754,8 +815,7 @@ shared class FindResultVisitor(Tree.Body scope,
             if (is TypedDeclaration dec = leftTerm.declaration,
                 hasOuterRefs(dec, scope, statements), 
                 isDefinedLocally(dec)) {
-                result = that;
-                resultDeclaration = dec;
+                results.add(that->dec);
             }
         }
     }
@@ -767,8 +827,7 @@ shared class FindResultVisitor(Tree.Body scope,
             if (is TypedDeclaration dec = term.declaration,
                 hasOuterRefs(dec, scope, statements), 
                 isDefinedLocally(dec)) {
-                result = that;
-                resultDeclaration = dec;
+                results.add(that->dec);
             }
         }
     }
