@@ -40,7 +40,8 @@ import java.lang {
 import java.util {
     JList=List,
     JHashSet=HashSet,
-    JArrayList=ArrayList
+    JArrayList=ArrayList,
+    JSet=Set
 }
 
 import org.antlr.runtime {
@@ -144,15 +145,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    function applyImports(Tree.CompilationUnit rootNode, TextChange tfc, IDocument doc) {
-        value decs = JHashSet<Declaration>();
-        importProposals.importType(decs, type, rootNode);
-        return importProposals.applyImports(tfc, decs, rootNode, doc);
-    }
-    
     function typeParameters(
         ArrayList<TypeDeclaration> localTypes, 
-        String extraIndent, Unit unit) {
+        String extraIndent, Unit unit, 
+        JSet<Declaration> imports) {
         value typeParams = StringBuilder();
         value constraints = StringBuilder();
         if (!localTypes.empty) {
@@ -169,8 +165,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                             .append("given ") 
                             .append(t.name)
                             .append(" satisfies ");
-                    for (pt in sts) {
-                        value bound = pt.asSourceCodeString(unit);
+                    for (boundType in sts) {
+                        assert (exists rootNode = this.rootNode);
+                        importProposals.importType(imports, boundType, rootNode);
+                        value bound = boundType.asSourceCodeString(unit);
                         constraints
                                 .append(bound)
                                 .appendCharacter('&');
@@ -240,6 +238,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             };
         }
         
+        value imports = JHashSet<Declaration>();
+        
         value params = StringBuilder();
         value args = StringBuilder();
         for (bme in localRefs) {
@@ -253,8 +253,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 params.append("dynamic");
             }
             else {
-                value t = unit.denotableType(bme.typeModel);
-                params.append(t.asSourceCodeString(unit));
+                value paramType = unit.denotableType(bme.typeModel);
+                importProposals.importType(imports, paramType, rootNode);
+                params.append(paramType.asSourceCodeString(unit));
             }
             
             value name = bme.identifier.text;
@@ -270,7 +271,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 indents.defaultIndent + 
                 indents.defaultIndent;
         value [typeParams, constraints]
-                = typeParameters(localTypes, extraIndent, unit);
+                = typeParameters {
+                    localTypes = localTypes;
+                    extraIndent = extraIndent;
+                    unit = unit;
+                    imports = imports;
+                };
         
         value specifier = extraIndent + "=> ";
         String body;
@@ -292,29 +298,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             body = specifier + nodes.text(core, tokens) + ";";
         }
         
-        Integer shift;
         String typeOrKeyword;
         if (exists returnType = this.type, 
             !returnType.unknown) {
             value voidModifier = returnType.anything;
             if (voidModifier) {
                 typeOrKeyword = "void";
-                shift = 0;
             }
             else if (explicitType || dec.toplevel) {
-                typeOrKeyword 
-                        = returnType.asSourceCodeString(unit);
-                shift = applyImports(rootNode, tfc, doc);
+                typeOrKeyword = returnType.asSourceCodeString(unit);
+                importProposals.importType(imports, returnType, rootNode);
             }
             else {
                 typeOrKeyword = "function";
-                shift = 0;
                 canBeInferred = true;
             }
         }
         else {
             typeOrKeyword = "dynamic";
-            shift = 0;
         }
         
         value definition = 
@@ -344,6 +345,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             refStart = start;
         }
         
+        value shift 
+                = importProposals.applyImports {
+            change = tfc;
+            declarations = imports;
+            cu = rootNode;
+            doc = doc;
+        };
+        
         value decStart = decNode.startIndex.intValue();
         addEditToChange(tfc, newInsertEdit(decStart, definition));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
@@ -353,7 +362,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         refRegion = newRegion(refStart + shift + definition.size, nl);
     }
     
-    function targetDeclaration(Tree.Body body, Tree.CompilationUnit rootNode) {
+    function targetDeclaration(Tree.Body body, 
+        Tree.CompilationUnit rootNode) {
         if (exists target = this.target) {
             return target;
         }
@@ -364,9 +374,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    function resultModifiers(Node result, TypedDeclaration rdec, Unit unit) {
+    function resultModifiers(Node result, 
+        TypedDeclaration rdec, 
+        Unit unit, 
+        JSet<Declaration> imports) {
         if (result is Tree.AttributeDeclaration) {
-            if (rdec.shared, exists type = type) {
+            if (rdec.shared, exists type = rdec.type) {
+                assert (exists rootNode = this.rootNode);
+                importProposals.importType(imports, type, rootNode);
                 return "shared " + type.asSourceCodeString(unit) + " ";
             }
             else {
@@ -472,6 +487,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         
+        value imports = JHashSet<Declaration>();
+        
         value params = StringBuilder();
         value args = StringBuilder();
         value done = HashSet<Declaration>();
@@ -500,9 +517,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         params.append("dynamic");
                     }
                     else {
-                        //TODO: do I need to add imports here?!
-                        value t = unit.denotableType(bme.typeModel);
-                        params.append(t.asSourceCodeString(unit));
+                        value paramType = unit.denotableType(bme.typeModel);
+                        importProposals.importType(imports, paramType, rootNode);
+                        params.append(paramType.asSourceCodeString(unit));
                     }
                     
                     value id = bme.identifier;
@@ -520,7 +537,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 indents.defaultIndent + 
                 indents.defaultIndent;
         value [typeParams, constraints]
-                = typeParameters(localTypes, extraIndent, unit);
+                = typeParameters {
+                    localTypes = localTypes;
+                    extraIndent = extraIndent;
+                    unit = unit;
+                    imports = imports;
+                };
         
         if (results.size==1) {
             assert (exists _ -> rdec = results.first);
@@ -549,29 +571,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         String typeOrKeyword;
-        Integer shift;
         if (returns.empty && results.empty) {
             //we're not assigning the result to anything,
             //so make a void function
             typeOrKeyword = "void";
-            shift = 0;
         }
         else if (exists returnType = this.type,
                 !returnType.unknown) {
             //we need to return a value
             if (explicitType || dec.toplevel) {
-                typeOrKeyword 
-                        = returnType.asSourceCodeString(unit);
-                shift = applyImports(rootNode, tfc, doc);
+                typeOrKeyword = returnType.asSourceCodeString(unit);
+                importProposals.importType(imports, returnType, rootNode);
             }
             else {
                 typeOrKeyword = "function";
-                shift = 0;
             }
         }
         else {
             typeOrKeyword = "dynamic";
-            shift = 0;
         }
         
         value bodyIndent = indent + indents.defaultIndent;
@@ -587,9 +604,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         for (result -> rdec in results) { 
             if (!result is Tree.Declaration &&
                 !rdec.variable) {
+                value resultType = rdec.type;
+                importProposals.importType(imports, resultType, rootNode);
                 definition
                         .append(bodyIndent)
-                        .append(rdec.type.asSourceCodeString(unit))
+                        .append(resultType.asSourceCodeString(unit))
                         .append(" ")
                         .append(rdec.name)
                         .append(";");
@@ -629,7 +648,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             //function to something
             assert (exists result -> rdec = results.first);
             invocation
-                    .append(resultModifiers(result, rdec, unit))
+                    .append(resultModifiers {
+                        result = result;
+                        rdec = rdec;
+                        unit = unit;
+                        imports = imports;
+                    })
                     .append(rdec.name)
                     .append(" = ")
                     .append(call);
@@ -655,11 +679,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 for (result -> rdec in results) {
                     invocation
                             .append(ind)
-                            .append(resultModifiers(result, rdec, unit))
+                            .append(resultModifiers {
+                                result = result;
+                                rdec = rdec;
+                                unit = unit;
+                                imports = imports;
+                            })
                             .append(rdec.name)
                             .append(" = tuple[")
                             .append(i.string)
-                            .append("];"); //TODO: indent!
+                            .append("];");
                     i++;
                 }
             }
@@ -672,6 +701,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             //we're just calling the extracted function
             invocation.append(call);
         }
+        
+        value shift 
+                = importProposals.applyImports {
+            change = tfc;
+            declarations = imports;
+            cu = rootNode;
+            doc = doc;
+        };
                 
         value decStart = decNode.startIndex.intValue();
         addEditToChange(tfc, newInsertEdit(decStart, definition.string));

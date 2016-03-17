@@ -57,12 +57,6 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             then unparenthesize(term) is Tree.FunctionArgument 
             else false;
     
-    function applyImports(Tree.CompilationUnit rootNode, TextChange tfc, IDocument doc) {
-        value decs = HashSet<Declaration>();
-        importProposals.importType(decs, type, rootNode);
-        return importProposals.applyImports(tfc, decs, rootNode, doc);
-    }
-    
     shared actual void build(TextChange tfc) {
         "This method will only be called when the [[editorData]]is not [[null]]"
         assert (exists editorData = this.editorData,
@@ -188,22 +182,21 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             body = specifier + nodes.text(core, tokens) + ";";
         }
 
+        value imports = HashSet<Declaration>();
+        
         String typeDec;
-        Integer shift;
         if (exists type = this.type, !type.unknown) {
             if (explicitType || toplevel) {
                 typeDec = type.asSourceCodeString(unit);
-                shift = adjustment + applyImports(rootNode, tfc, doc);
+                importProposals.importType(imports, type, rootNode);
             }
             else {
                 canBeInferred = true;
                 typeDec = modifiers;
-                shift = adjustment;
             }
         }
         else {
             typeDec = "dynamic";
-            shift = adjustment;
         }
         
         value definition = 
@@ -211,15 +204,22 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 body + 
                 newLineOrReturn;
         
-        value tlength = typeDec.size;
-        value nstart = nodes.getNodeStartOffset(node);
+        value shift 
+                = importProposals.applyImports {
+            change = tfc;
+            declarations = imports;
+            cu = rootNode;
+            doc = doc;
+        };
+        
+        value nstart = node.startIndex.intValue();
         value nlength = node.distance.intValue();
         addEditToChange(tfc, newInsertEdit(start, definition));
         addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
         value len = newName.size;
-        typeRegion = newRegion(start + adjustment, tlength);
-        decRegion = newRegion(start + adjustment + tlength + 1, len);
-        refRegion = newRegion(nstart + adjustment + definition.size, len);
+        typeRegion = newRegion(start + adjustment + shift, typeDec.size);
+        decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, len);
+        refRegion = newRegion(nstart + adjustment + shift + definition.size, len);
     }
     
     forceWizardMode
