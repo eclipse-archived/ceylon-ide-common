@@ -27,7 +27,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     Value,
-    UnionType
+    UnionType,
+    Unit
 }
 
 import java.util {
@@ -131,7 +132,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             value node = data.node;
             if (is Tree.Term node) {
                 extractExpressionInFile(tfc, node);
-            } else if (is Tree.Body|Tree.Statement node) {
+            }
+            else if (is Tree.Body|Tree.Statement node) {
                 extractStatementsInFile(tfc, node);
             }
         }
@@ -141,6 +143,39 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value decs = HashSet<Declaration>();
         importProposals.importType(decs, returnType, rootNode);
         return importProposals.applyImports(tfc, decs, rootNode, doc);
+    }
+    
+    function typeParameters(
+        ArrayList<TypeDeclaration> localTypes, 
+        String extraIndent, Unit unit) {
+        value typeParams = StringBuilder();
+        value constraints = StringBuilder();
+        if (!localTypes.empty) {
+            typeParams.appendCharacter('<');
+            for (t in localTypes) {
+                if (typeParams.size>1) {
+                    typeParams.append(", ");
+                }
+                typeParams.append(t.name);
+                value sts = t.satisfiedTypes;
+                if (!sts.empty) {
+                    constraints
+                            .append(extraIndent)
+                            .append("given ") 
+                            .append(t.name)
+                            .append(" satisfies ");
+                    for (pt in sts) {
+                        value bound = pt.asSourceCodeString(unit);
+                        constraints
+                                .append(bound)
+                                .appendCharacter('&');
+                    }
+                    constraints.deleteTerminal(1);
+                }
+            }
+            typeParams.appendCharacter('>');
+        }
+        return [typeParams, constraints];
     }
     
     void extractExpressionInFile(TextChange tfc, Tree.Term term) {
@@ -155,26 +190,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        String body;
-        if (is Tree.FunctionArgument core) {
-            //special case for anonymous functions!
-            returnType = core.type.typeModel;
-            if (exists block = core.block) {
-                body = nodes.text(block, tokens);
-            }
-            else if (exists expression = core.expression) {
-                body = "=> " + nodes.text(expression, tokens) + ";";
-            }
-            else {
-                body = "=>;";
-            }
-        }
-        else {
-            value t = term.typeModel;
-            returnType = unit.denotableType(t);
-            body = "=> " + nodes.text(core, tokens) + ";";
-        }
-        
         Tree.Declaration decNode;
         if (exists target = this.target) {
             decNode = target;
@@ -185,7 +200,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             if (exists dec = fsv.declaration) {
                 if (is Tree.AttributeDeclaration dec) {
                     if (exists container 
-                        = nodes.getContainer(rootNode, dec.declarationModel)) {
+                            = nodes.getContainer(rootNode, 
+                                    dec.declarationModel)) {
                         decNode = container;
                     }
                     else {
@@ -244,35 +260,32 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value indent = 
                 indents.getDefaultLineDelimiter(doc) + 
                 indents.getIndent(decNode, doc);
-        value extraIndent = indent + indents.defaultIndent;
-        value typeParams = StringBuilder();
-        value constraints = StringBuilder();
-        if (!localTypes.empty) {
-            typeParams.append("<");
-            for (t in localTypes) {
-                if (typeParams.size>1) {
-                    typeParams.append(", ");
-                }
-                typeParams.append(t.name);
-                if (!t.satisfiedTypes.empty) {
-                    constraints.append(extraIndent)
-                               .append(indents.defaultIndent)
-                               .append("given ")
-                               .append(t.name)
-                               .append(" satisfies ");
-                    variable Boolean firstConstraint = true;
-                    for (pt in t.satisfiedTypes) {
-                        if (firstConstraint) {
-                            firstConstraint = false;
-                        }
-                        else {
-                            constraints.append("&");
-                        }
-                        constraints.append(pt.asSourceCodeString(unit));
-                    }
-                }
+        value extraIndent = 
+                indent + 
+                indents.defaultIndent + 
+                indents.defaultIndent;
+        value [typeParams, constraints]
+                = typeParameters(localTypes, extraIndent, unit);
+        
+        value specifier = extraIndent + "=> ";
+        String body;
+        if (is Tree.FunctionArgument core) {
+            //special case for anonymous functions!
+            returnType = core.type.typeModel;
+            if (exists block = core.block) {
+                body = nodes.text(block, tokens);
             }
-            typeParams.append(">");
+            else if (exists expression = core.expression) {
+                body = specifier + nodes.text(expression, tokens) + ";";
+            }
+            else {
+                body = specifier + ";";
+            }
+        }
+        else {
+            value t = term.typeModel;
+            returnType = unit.denotableType(t);
+            body = specifier + nodes.text(core, tokens) + ";";
         }
         
         Integer shift;
@@ -451,35 +464,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value indent = 
                 indents.getDefaultLineDelimiter(doc) + 
                 indents.getIndent(decNode, doc);
-        value extraIndent = indent + indents.defaultIndent;
-        value typeParams = StringBuilder();
-        value constraints = StringBuilder();
-        if (!localTypes.empty) {
-            for (t in localTypes) {
-                typeParams
-                        .append(t.name)
-                        .append(", ");
-                value sts = t.satisfiedTypes;
-                if (!sts.empty) {
-                    constraints
-                            .append(extraIndent)
-                            .append(indents.defaultIndent) 
-                            .append("given ") 
-                            .append(t.name)
-                            .append(" satisfies ");
-                    for (pt in sts) {
-                        constraints
-                                .append(pt.asSourceCodeString(unit))
-                                .appendCharacter('&');
-                    }
-                    constraints.deleteTerminal(1);
-                }
-            }
-            typeParams
-                    .deleteTerminal(2)
-                    .prependCharacter('<')
-                    .appendCharacter('>');
-        }
+        value extraIndent = 
+                indent + 
+                indents.defaultIndent + 
+                indents.defaultIndent;
+        value [typeParams, constraints]
+                = typeParameters(localTypes, extraIndent, unit);
         
         if (exists rdec = resultDeclaration) {
             returnType = unit.denotableType(rdec.type);
@@ -526,6 +516,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             shift = 0;
         }
         
+        value bodyIndent = indent + indents.defaultIndent;
         value definition = StringBuilder();
         definition
                 .append(typeOrKeyword)
@@ -539,7 +530,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             !result is Tree.Declaration, 
             !rdec.variable) {
             definition
-                    .append(extraIndent)
+                    .append(bodyIndent)
                     .append(rdec.type.asSourceCodeString(unit))
                     .append(" ")
                     .append(rdec.name)
@@ -548,7 +539,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         for (s in statements) {
             definition
-                    .append(extraIndent)
+                    .append(bodyIndent)
                     .append(nodes.text(s, tokens));
             variable Integer i = s.endToken.tokenIndex;
             variable CommonToken tok;
@@ -576,31 +567,35 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         if (exists rdec = resultDeclaration) {
             definition
-                    .append(extraIndent)
+                    .append(bodyIndent)
                     .append("return ")
                     .append(rdec.name)
                     .append(";");
         }
         
-        definition.append(indent).append("}").append(indent).append(indent);
+        definition
+                .append(indent)
+                .append("}")
+                .append(indent)
+                .append(indent);
         
         value call = newName + "(" + args.string + ");";
         String invocation;
         if (exists rdec = resultDeclaration) {
             //we're assigning the result of the extracted function to something
-            String modifs;
+            String modifiers;
             if (result is Tree.AttributeDeclaration) {
                 if (rdec.shared, exists type = returnType) {
-                    modifs = "shared " + type.asSourceCodeString(unit) + " ";
+                    modifiers = "shared " + type.asSourceCodeString(unit) + " ";
                 }
                 else {
-                    modifs = "value ";
+                    modifiers = "value ";
                 }
             }
             else {
-                modifs = "";
+                modifiers = "";
             }
-            invocation = modifs + rdec.name + "=" + call;
+            invocation = modifiers + rdec.name + " = " + call;
         } 
         else if (!returns.empty) {
             //we're returning the result of the extracted function
