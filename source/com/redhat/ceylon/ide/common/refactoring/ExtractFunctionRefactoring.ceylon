@@ -137,6 +137,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
+    function applyImports(Tree.CompilationUnit rootNode, TextChange tfc, IDocument doc) {
+        value decs = HashSet<Declaration>();
+        importProposals.importType(decs, returnType, rootNode);
+        return importProposals.applyImports(tfc, decs, rootNode, doc);
+    }
+    
     void extractExpressionInFile(TextChange tfc, Tree.Term term) {
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
@@ -196,13 +202,20 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         value dec = decNode.declarationModel;
-        value flrv = FindLocalReferencesVisitor(term.scope, dec.container);
+        value flrv = FindLocalReferencesVisitor {
+            scope = ModelUtil.getRealScope(term.scope);
+            targetScope = dec.container;
+        };
         term.visit(flrv);
         value localRefs = flrv.localReferences;
         value localTypes = ArrayList<TypeDeclaration>();
         for (bme in localRefs) {
-            value t = unit.denotableType(bme.typeModel);
-            addLocalType(dec, t, localTypes, ArrayList<Type>());
+            addLocalType {
+                dec = dec;
+                type = unit.denotableType(bme.typeModel);
+                localTypes = localTypes;
+                visited = ArrayList<Type>();
+            };
         }
         
         value params = StringBuilder();
@@ -261,48 +274,42 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             typeParams.append(">");
         }
         
-        Integer il;
-        String type;
-        value rt = this.returnType;
-        if (!exists rt) {
-            type = "dynamic";
-            il = 0;
-        }
-        else if (rt.unknown) {
-            type = "dynamic";
-            il = 0;
-        }
-        else {
-            value isVoid = rt.anything;
+        Integer shift;
+        String typeOrKeyword;
+        if (exists returnType = this.returnType, 
+            !returnType.unknown) {
+            value isVoid = returnType.anything;
             if (isVoid) {
-                type = "void";
-                il = 0;
+                typeOrKeyword = "void";
+                shift = 0;
             }
             else if (explicitType || dec.toplevel) {
-                type = rt.asSourceCodeString(unit);
-                value decs = HashSet<Declaration>();
-                importProposals.importType(decs, returnType, rootNode);
-                il = importProposals.applyImports(tfc, decs, rootNode, doc);
+                typeOrKeyword = returnType.asSourceCodeString(unit);
+                shift = applyImports(rootNode, tfc, doc);
             }
             else {
-                type = "function";
-                il = 0;
+                typeOrKeyword = "function";
+                shift = 0;
                 canBeInferred = true;
             }
         }
+        else {
+            typeOrKeyword = "dynamic";
+            shift = 0;
+        }
         
-        value text = 
-                type + " " + newName + 
+        value definition = 
+                typeOrKeyword + " " + newName + 
                 typeParams.string + 
                 "(" + params.string + ")" + 
                 constraints.string + " " + 
                 body + 
                 indent + indent;
-        variable String invocation;
-        variable Integer refStart;
+        
+        String invocation;
+        Integer refStart;
         if (is Tree.FunctionArgument core) {
-            value fa = core;
-            value cpl = fa.parameterLists.get(0);
+            value cpl = core.parameterLists.get(0);
             if (cpl.parameters.size() == localRefs.size) {
                 invocation = newName;
                 refStart = start;
@@ -319,12 +326,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, text));
+        addEditToChange(tfc, newInsertEdit(decStart, definition));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
-        typeRegion = newRegion(decStart + il, type.size);
+        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
         value nl = newName.size;
-        decRegion = newRegion(decStart + il + type.size + 1, nl);
-        refRegion = newRegion(refStart + il + text.size, nl);
+        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, nl);
+        refRegion = newRegion(refStart + shift + definition.size, nl);
     }
     
     void extractStatementsInFile(TextChange tfc, Tree.Body|Tree.Statement node) {
@@ -355,24 +362,36 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         value dec = decNode.declarationModel;
-        value flrv = FindLocalReferencesVisitor(body.scope, dec.container);
+        value flrv = FindLocalReferencesVisitor {
+            scope = body.scope;
+            targetScope = dec.container;
+        };
         for (s in statements) {
             s.visit(flrv);
         }
         
-        value localTypes = ArrayList<TypeDeclaration>();
         value localReferences = flrv.localReferences;
+        value localTypes = ArrayList<TypeDeclaration>();
+        value visited = ArrayList<Type>();
         for (bme in localReferences) {
-            value t = unit.denotableType(bme.typeModel);
-            addLocalType(dec, t, localTypes, ArrayList<Type>());
+            addLocalType {
+                dec = dec;
+                type = unit.denotableType(bme.typeModel);
+                localTypes = localTypes;
+                visited = visited;
+            };
         }
         
         for (s in statements) {
             object extends Visitor() {
                 shared actual void visit(Tree.TypeArgumentList that) {
                     for (pt in that.typeModels) {
-                        value t = unit.denotableType(pt);
-                        addLocalType(dec, t, localTypes, ArrayList<Type>());
+                        addLocalType {
+                            dec = dec;
+                            type = unit.denotableType(pt);
+                            localTypes = localTypes;
+                            visited = visited;
+                        };
                     }
                 }
             }.visit(s);
@@ -480,35 +499,32 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         String typeOrKeyword;
-        Integer il;
-        if (resultDeclaration exists || !returns.empty) {
-            value returnType = this.returnType;
-            if (!exists returnType) {
-                typeOrKeyword = "dynamic";
-                il = 0;
-            }
-            else if (returnType.unknown) {
-                typeOrKeyword = "dynamic";
-                il = 0;
-            }
-            else if (explicitType || dec.toplevel) {
+        Integer shift;
+        if (returns.empty && !resultDeclaration exists) {
+            //we're not assigning the result to anything,
+            //so make a void function
+            typeOrKeyword = "void";
+            shift = 0;
+        }
+        else if (exists returnType = this.returnType,
+                !returnType.unknown) {
+            //we need to return a value
+            if (explicitType || dec.toplevel) {
                 typeOrKeyword = returnType.asSourceCodeString(unit);
-                value already = HashSet<Declaration>();
-                importProposals.importType(already, returnType, rootNode);
-                il = importProposals.applyImports(tfc, already, rootNode, doc);
+                shift = applyImports(rootNode, tfc, doc);
             }
             else {
                 typeOrKeyword = "function";
-                il = 0;
+                shift = 0;
             }
         }
         else {
-            typeOrKeyword = "void";
-            il = 0;
+            typeOrKeyword = "dynamic";
+            shift = 0;
         }
         
-        value content = StringBuilder();
-        content
+        value definition = StringBuilder();
+        definition
                 .append(typeOrKeyword)
                 .append(" ")
                 .append(newName)
@@ -519,7 +535,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         if (exists rdec = resultDeclaration, 
             !result is Tree.Declaration, 
             !rdec.variable) {
-            content
+            definition
                     .append(extraIndent)
                     .append(rdec.type.asSourceCodeString(unit))
                     .append(" ")
@@ -527,9 +543,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     .append(";");
         }
         
-        value last = ss.last;
         for (s in statements) {
-            content
+            definition
                     .append(extraIndent)
                     .append(nodes.text(s, tokens));
             variable Integer i = s.endToken.tokenIndex;
@@ -537,19 +552,19 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
                 value text = tok.text;
                 if (tok.type == CeylonLexer.\iLINE_COMMENT) {
-                    content
+                    definition
                             .append(" ")
                             .append(text.initial(text.size-1));
-                    if (s == last) {
+                    if (s == ss.last) {
                         length += text.size;
                     }
                 }
                 
                 if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
-                    content
+                    definition
                             .append(" ")
                             .append(text);
-                    if (s == last) {
+                    if (s == ss.last) {
                         length += text.size + 1;
                     }
                 }
@@ -557,15 +572,17 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         if (exists rdec = resultDeclaration) {
-            content
+            definition
                     .append(extraIndent)
                     .append("return ")
                     .append(rdec.name)
                     .append(";");
         }
         
-        content.append(indent).append("}").append(indent).append(indent);
-        String ctx;
+        definition.append(indent).append("}").append(indent).append(indent);
+        
+        value call = newName + "(" + args.string + ");";
+        String invocation;
         if (exists rdec = resultDeclaration) {
             //we're assigning the result of the extracted function to something
             String modifs;
@@ -580,29 +597,28 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             else {
                 modifs = "";
             }
-            ctx = modifs + rdec.name + "=";
+            invocation = modifs + rdec.name + "=" + call;
         } 
         else if (!returns.empty) {
             //we're returning the result of the extracted function
-            ctx = "return ";
+            invocation = "return " + call;
         }
         else {
             //we're just calling the extracted function
-            ctx = "";
+            invocation = call;
         }
-        String invocation = ctx + newName + "(" + args.string + ");";
         
         value space 
-                = content.string.firstOccurrence(' ') else -1;
+                = definition.string.firstOccurrence(' ') else -1;
         value eq 
                 = invocation.startsWith("return ") 
                 then 6 else (invocation.firstOccurrence('=') else -1);
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, content.string));
+        addEditToChange(tfc, newInsertEdit(decStart, definition.string));
         addEditToChange(tfc, newReplaceEdit(start, length, invocation));
-        typeRegion = newRegion(decStart + il, space);
-        decRegion = newRegion(decStart + il + space + 1, newName.size);
-        refRegion = newRegion(start + content.size + il + eq + 1, newName.size);
+        typeRegion = newRegion(decStart + shift, space);
+        decRegion = newRegion(decStart + shift + space + 1, newName.size);
+        refRegion = newRegion(start + definition.size + shift + eq + 1, newName.size);
     }
     
     void addLocalType(Declaration dec, Type type, 
