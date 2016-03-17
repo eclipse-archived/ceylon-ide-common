@@ -1,30 +1,31 @@
 import com.redhat.ceylon.ide.common.util {
     synchronize
 }
+
 shared interface NewNameRefactoring {
     shared variable formal String? internalNewName;
     shared default String newName
             => synchronize {
-        on=this;
+        on = this;
         function do() {
-            if (exists n=internalNewName) {
+            if (exists n = internalNewName) {
                 return n;
             } else {
-                internalNewName = initialNewName();
-                assert(exists n=internalNewName);
+                internalNewName = initialNewName;
+                assert (exists n = internalNewName);
                 return n;
             }
         }
     };
     assign newName {
         synchronize {
-            on=this;
+            on = this;
             void do() {
                 internalNewName = newName;
             }
         };
     }
-    shared formal String initialNewName();
-    shared formal Boolean forceWizardMode();
+    shared formal String initialNewName;
+    shared formal Boolean forceWizardMode;
 }
 

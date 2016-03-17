@@ -30,25 +30,26 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         given InsertEdit satisfies TextEdit {
 
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-
+    value indents => importProposals.indents;
+    
+    initialNewName => nameProposals[0]?.string else "it";
+    
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
     shared formal variable Boolean getter;
 
-    value indents => importProposals.indents;
-
-    initialNewName()
-            => if (exists node = editorData?.node)
-               then nodes.nameProposals(node, false, editorData?.rootNode).get(0).string
-               else "";
+    nameProposals
+            => nodes.nameProposals {
+        node = editorData?.node;
+        unplural = false;
+        rootNode = editorData?.rootNode;
+    };
     
     enabled => if (exists node = editorData?.node,
-                   exists sourceFile = editorData?.sourceVirtualFile,
-                   editable &&
-                   sourceFile.name != "module.ceylon" &&
-                   sourceFile.name != "package.ceylon" &&
-                   node is Tree.Term)
-               then true
+                   exists sourceFile = editorData?.sourceVirtualFile)
+               then editable(rootNode?.unit) && 
+                   !descriptor(sourceFile) &&
+                   node is Tree.Term
                else false;
     
     shared Boolean extractsFunction
@@ -221,14 +222,11 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         refRegion = newRegion(nstart + adjustment + definition.size, len);
     }
     
-    forceWizardMode()
+    forceWizardMode
             => if (exists node = editorData?.node,
                    exists scope = node.scope)
                then scope.getMemberOrParameter(node.unit, newName, null, false) exists
                else false;
-
-    nameProposals
-            => nodes.nameProposals(editorData?.node, false, editorData?.rootNode);
 
     name => "Extract Value";
 }

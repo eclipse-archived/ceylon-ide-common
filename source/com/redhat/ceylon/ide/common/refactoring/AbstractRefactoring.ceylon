@@ -20,6 +20,17 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Unit
+}
+
+Boolean descriptor(VirtualFile sourceFile) 
+        => sourceFile.name == "module.ceylon" ||
+        sourceFile.name == "package.ceylon";
+
+Boolean editable(Unit? unit)
+        => unit is EditedSourceFile<in Nothing, in Nothing, in Nothing, in Nothing> |
+                   ProjectSourceFile<in Nothing, in Nothing, in Nothing, in Nothing>;
 
 shared interface AbstractRefactoring<RefactoringData> 
         satisfies Refactoring {
@@ -38,11 +49,6 @@ shared interface AbstractRefactoring<RefactoringData>
     shared formal Boolean searchInEditor();
     shared formal Tree.CompilationUnit? rootNode;
 
-    shared Boolean editable 
-            => let (unit = rootNode?.unit) 
-            unit is EditedSourceFile<in Nothing, in Nothing, in Nothing, in Nothing> |
-                    ProjectSourceFile<in Nothing, in Nothing, in Nothing, in Nothing>;
-    
     shared Tree.Term unparenthesize(Tree.Term term) {
         if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
             return unparenthesize(term.term);

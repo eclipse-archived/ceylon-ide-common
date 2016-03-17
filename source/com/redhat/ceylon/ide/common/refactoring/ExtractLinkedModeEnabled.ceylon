@@ -18,4 +18,5 @@ shared interface ExtractLinkedModeEnabled<Region=DefaultRegion> {
     shared formal Region newRegion(Integer start, Integer length);
 
     shared formal ObjectArray<JString> nameProposals;
+    
 }
