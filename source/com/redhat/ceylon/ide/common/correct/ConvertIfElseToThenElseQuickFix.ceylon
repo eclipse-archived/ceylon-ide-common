@@ -56,14 +56,10 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
         
         value ifBlockNode = ifBlock.statements.get(0);
         value elseBlockNode = elseBlock.statements.get(0);
-        value conditions = ifStmt.ifClause.conditionList.conditions;
-        if (conditions.size() != 1) {
-            return null;
-        }
+        value conditionList = ifStmt.ifClause.conditionList;
         
-        value condition = conditions.get(0);
         variable value replaceFrom = statement.startIndex.intValue();
-        variable value test = removeEnclosingParenthesis(getTerm(doc, condition));
+        variable value test = removeEnclosingParenthesis(getTerm(doc, conditionList));
 
         String thenStr;
         String  elseStr;
@@ -117,21 +113,33 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
             }
         }
         
-        variable value abbreviateToElse = false;
-        if (is Tree.ExistsCondition condition) {
-            value existsCond = condition;
-            value st = existsCond.variable;
-            if (is Tree.Variable st) {
-                value variable = st;
-                if (thenStr.equals(getTerm(doc, variable.identifier))) {
-                    value existsExpr = variable.specifierExpression.expression;
-                    test = getTerm(doc, existsExpr);
-                    abbreviateToElse = true;
-                }
+        Boolean abbreviateToElse;
+        Boolean abbreviateToThen;
+        
+        if (conditionList.conditions.size()==1) {
+            value condition = conditionList.conditions[0];
+            
+            if (is Tree.ExistsCondition condition, 
+                is Tree.Variable variable = condition.variable, 
+                thenStr == getTerm(doc, variable.identifier)) {
+                value existsExpr = variable.specifierExpression.expression;
+                test = getTerm(doc, existsExpr);
+                abbreviateToElse = true;
             }
+            else {
+                abbreviateToElse = false;
+            }
+            
+            abbreviateToThen = 
+                    condition is Tree.BooleanCondition && 
+                    elseStr.equals("null");
+            
+        }
+        else {
+            abbreviateToElse = false;
+            abbreviateToThen = false;
         }
         
-        value abbreviateToThen = condition is Tree.BooleanCondition && elseStr.equals("null");
         value replace = StringBuilder();
         replace.append(action);
         if (!abbreviateToThen, !abbreviateToElse) {
