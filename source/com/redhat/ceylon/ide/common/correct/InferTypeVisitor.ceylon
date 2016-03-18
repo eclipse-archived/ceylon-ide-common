@@ -60,14 +60,17 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
         if (is Tree.BaseMemberExpression term) {
             value bme = term;
-            if (exists d = bme.declaration, exists dec = declaration, d.equals(dec)) {
-                value t = that.type.typeModel;
+            if (exists d = bme.declaration, 
+                exists dec = declaration, 
+                d == dec, 
+                exists t = that.type.typeModel) {
                 result.intersect(t);
             }
-        } else if (exists term, exists dec = declaration) {
-            if (that.declarationModel.equals(dec)) {
-                result.union(term.typeModel);
-            }
+        } else if (exists term, 
+                   exists dec = declaration, 
+                   that.declarationModel == dec,
+                   exists t = term.typeModel) {
+            result.union(t);
         }
     }
 
@@ -79,16 +82,17 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         value term = that.specifierExpression?.expression?.term;
 
         if (is Tree.BaseMemberExpression term) {
-            value bme = term;
-
-            if (exists d = bme.declaration, exists dec = declaration, d.equals(dec)) {
-                value t = that.type.typeModel;
+            if (exists d = term.declaration, 
+                exists dec = declaration, 
+                d == dec, 
+                exists t = that.type.typeModel) {
                 result.intersect(t);
             }
-        } else if (exists term, exists dec = declaration) {
-            if (that.declarationModel.equals(dec)) {
-                result.union(term.typeModel);
-            }
+        } else if (exists term, 
+                   exists dec = declaration, 
+                   that.declarationModel == dec,
+                   exists t = term.typeModel) {
+            result.union(t);
         }
     }
 
@@ -99,19 +103,23 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         
         if (is Tree.BaseMemberExpression bme) {
             value ibme = bme;
-            if (exists d = ibme.declaration, exists dec = declaration, d.equals(dec)) {
-                if (exists term) {
-                    result.union(term.typeModel);
-                }
+            if (exists d = ibme.declaration, 
+                exists dec = declaration, 
+                d == dec, 
+                exists term,
+                exists t = term.typeModel) {
+                result.union(t);
             }
         }
         
         if (is Tree.BaseMemberExpression term) {
             value ibme = term;
-            if (exists d = ibme.declaration, exists dec = declaration, d.equals(dec)) {
-                if (exists bme) {
-                    result.intersect(bme.typeModel);
-                }
+            if (exists d = ibme.declaration, 
+                exists dec = declaration, 
+                d == dec, 
+                exists bme,
+                exists t = bme.typeModel) {
+                result.intersect(t);
             }
         }
     }
@@ -121,25 +129,23 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         Tree.Term? rt = that.rightTerm;
         Tree.Term? lt = that.leftTerm;
         
-        if (is Tree.BaseMemberExpression lt) {
-            if (exists dec = declaration, lt.declaration.equals(dec)) {
-                if (exists rt) {
-                    result.union(rt.typeModel);
-                }
-            }
+        if (is Tree.BaseMemberExpression lt, 
+            exists dec = declaration, 
+            lt.declaration == dec, 
+            exists rt, exists rtt = rt.typeModel) {
+            result.union(rtt);
         }
         
-        if (is Tree.BaseMemberExpression rt) {
-            if (exists dec = declaration, rt.declaration.equals(dec)) {
-                if (exists lt) {
-                    result.intersect(lt.typeModel);
-                }
-            }
+        if (is Tree.BaseMemberExpression rt, 
+            exists dec = declaration, 
+            rt.declaration == dec, 
+            exists lt, exists ltt = lt.typeModel) {
+            result.intersect(ltt);
         }
     }
 
     shared actual void visit(Tree.InvocationExpression that) {
-        value opr = null;
+        //value opr = null;
 
         if (exists primary = that.primary) {
             if (is Tree.MemberOrTypeExpression primary) {
@@ -149,56 +155,58 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
         
         super.visit(that);
-        pr = opr;
+        //pr = opr;
+        pr = null;
     }
     
     shared actual void visit(Tree.ListedArgument that) {
         super.visit(that);
-        value t = that.expression.term;
-        
-        if (is Tree.BaseMemberExpression t) {
-            value bme = t;
-
-            if (exists d = bme.declaration, exists dec = declaration, d.equals(dec)) {
-                if (exists p = that.parameter, exists _pr = pr) {
-                    variable value ft = _pr.getTypedParameter(p).fullType;
-                    if (p.sequenced) {
-                        ft = unit.getIteratedType(ft);
-                    }
-                    
-                    result.intersect(ft);
-                }
+        if (is Tree.BaseMemberExpression t 
+                = that.expression?.term, 
+            exists d = t.declaration, 
+            exists dec = declaration, 
+            d == dec, 
+            exists p = that.parameter, 
+            exists pr = this.pr) {
+            value ft = pr.getTypedParameter(p).fullType;
+            if (p.sequenced) {
+                result.intersect(unit.getIteratedType(ft));
+            }
+            else {
+                result.intersect(ft);
             }
         }
     }
 
     shared actual void visit(Tree.SpreadArgument that) {
         super.visit(that);
-        value t = that.expression.term;
-        if (is Tree.BaseMemberExpression t) {
-            value bme = t;
-            if (exists d = bme.declaration, exists dec = declaration, d.equals(dec)) {
-                if (exists p = that.parameter, exists _pr = pr) {
-                    value ft = _pr.getTypedParameter(p).fullType;
-                    value et = unit.getIteratedType(ft);
-                    value it = unit.getIterableType(et);
-                    result.intersect(it);
-                }
-            }
+        if (is Tree.BaseMemberExpression t 
+                = that.expression?.term, 
+            exists d = t.declaration, 
+            exists dec = declaration, 
+            d == dec, 
+            exists p = that.parameter, 
+            exists pr = this.pr) {
+            
+            value ft = pr.getTypedParameter(p).fullType;
+            value et = unit.getIteratedType(ft);
+            value it = unit.getIterableType(et);
+            result.intersect(it);
         }
     }
     
     shared actual void visit(Tree.SpecifiedArgument that) {
         super.visit(that);
-        value t = that.specifierExpression.expression.term;
-        if (is Tree.BaseMemberExpression t) {
-            value bme = t;
-            if (exists d = bme.declaration, exists dec = declaration, d.equals(dec)) {
-                if (exists p = that.parameter, exists _pr = pr) {
-                    value ft = _pr.getTypedParameter(p).fullType;
-                    result.intersect(ft);
-                }
-            }
+        if (is Tree.BaseMemberExpression t 
+                = that.specifierExpression?.expression?.term, 
+            exists d = t.declaration, 
+            exists dec = declaration, 
+            d == dec, 
+            exists p = that.parameter, 
+            exists _pr = pr) {
+            
+            value ft = _pr.getTypedParameter(p).fullType;
+            result.intersect(ft);
         }
     }
 
@@ -206,84 +214,75 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         super.visit(that);
         Tree.Term? bme = that.expression?.term;
         if (is Tree.BaseMemberExpression bme) {
-            value ibme = bme;
-            if (exists bmed = ibme.declaration, exists dec= declaration,
-                bmed.equals(dec)) {
-                
-                value d = that.declaration;
-                if (is TypedDeclaration d) {
-                    value td = d;
-                    result.intersect(td.type);
-                }
+            if (exists bmed = bme.declaration, 
+                exists dec= declaration,
+                bmed == dec, 
+                is TypedDeclaration d = that.declaration,
+                exists t = d.type) {
+                result.intersect(t);
             }
-        } else if (exists bme, exists dec = declaration) {
-            if (that.declaration.equals(dec)) {
-                result.union(bme.typeModel);
-            }
+        }
+        else if (exists bme, 
+                 exists dec = declaration, 
+                 that.declaration == dec,
+                 exists t = bme.typeModel) {
+            result.union(t);
         }
     }
 
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         super.visit(that);
-        value primary = that.primary;
-        if (is Tree.BaseMemberExpression primary) {
-            value bme = primary;
-            if (exists bmed = bme.declaration, exists dec = declaration,
-                bmed.equals(dec)) {
-                
-                assert (is TypeDeclaration td = that.declaration.refinedDeclaration.container);
-                value st = that.target.qualifyingType.getSupertype(td);
-                result.intersect(st);
-            }
+        if (is Tree.BaseMemberExpression primary = that.primary, 
+            exists bmed = primary.declaration, 
+            exists dec = declaration,
+            bmed == dec,
+            is TypeDeclaration td 
+                    = that.declaration?.refinedDeclaration?.container,
+            exists st = that.target?.qualifyingType?.getSupertype(td)) {
+            result.intersect(st);
         }
     }
 
     shared actual void visit(Tree.ValueIterator that) {
         super.visit(that);
         value primary = that.specifierExpression.expression.term;
-        if (is Tree.BaseMemberExpression primary) {
-            value bme = primary;
-            if (exists bmed = bme.declaration, exists dec = declaration,
-                bmed.equals(dec)) {
-                
-                value vt = that.variable.type.typeModel;
-                value it = unit.getIterableType(vt);
-                result.intersect(it);
-            }
+        if (is Tree.BaseMemberExpression primary, 
+            exists bmed = primary.declaration, 
+            exists dec = declaration,
+            bmed == dec, 
+            exists vt = that.variable.type.typeModel) {
+            
+            value it = unit.getIterableType(vt);
+            result.intersect(it);
         }
     }
 
     shared actual void visit(Tree.BooleanCondition that) {
         super.visit(that);
         value primary = that.expression.term;
-        if (is Tree.BaseMemberExpression primary) {
-            value bme = primary;
-            if (exists bmed = bme.declaration, exists dec = declaration,
-                bmed.equals(dec)) {
-                
-                value bt = unit.booleanDeclaration.type;
-                result.intersect(bt);
-            }
+        if (is Tree.BaseMemberExpression primary, 
+            exists bmed = primary.declaration, 
+            exists dec = declaration,
+            bmed == dec) {
+            
+            value bt = unit.booleanType;
+            result.intersect(bt);
         }
     }
 
     shared actual void visit(Tree.NonemptyCondition that) {
         super.visit(that);
-        value s = that.variable;
-        if (is Tree.Variable s) {
-            value var = s;
-            value primary = var.specifierExpression.expression.term;
-            if (is Tree.BaseMemberExpression primary) {
-                value bme = primary;
-                if (exists bmed = bme.declaration, exists dec = declaration,
-                    bmed.equals(dec)) {
-                    
-                    value vt = var.type.typeModel;
-                    value et = unit.getSequentialElementType(vt);
-                    value st = unit.getSequentialType(et);
-                    result.intersect(st);
-                }
-            }
+        if (is Tree.Variable var = that.variable, 
+            is Tree.BaseMemberExpression primary 
+                    = var.specifierExpression?.expression?.term, 
+            exists bmed = primary.declaration, 
+            exists dec = declaration,
+            bmed == dec, 
+            exists vt = var.type.typeModel) {
+            
+            value et = unit.getSequentialElementType(vt);
+            value st = unit.getSequentialType(et);
+            result.intersect(st);
         }
     }
 
@@ -354,13 +353,14 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
     }
 
     Interface getArithmeticDeclaration(Tree.ArithmeticOp that) {
-        if (is Tree.PowerOp that) {
+        switch (that)
+        case (is Tree.PowerOp) {
             return unit.exponentiableDeclaration;
-        } else if (is Tree.SumOp that) {
+        } case (is Tree.SumOp) {
             return unit.summableDeclaration;
-        } else if (is Tree.DifferenceOp that) {
+        } case (is Tree.DifferenceOp) {
             return unit.invertableDeclaration;
-        } else if (is Tree.RemainderOp that) {
+        } case (is Tree.RemainderOp) {
             return unit.integralDeclaration;
         } else {
             return unit.numericDeclaration;
@@ -368,26 +368,25 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
     }
     
     shared void operatorTerm(TypeDeclaration sd, Tree.Term lhs) {
-        if (is Tree.BaseMemberExpression lhs) {
-            value bme = lhs;
-            if (exists bmed = bme.declaration, exists dec = declaration,
-                bmed.equals(dec)) {
-                
-                result.intersect(sd.type);
-            }
+        if (is Tree.BaseMemberExpression lhs, 
+            exists bmed = lhs.declaration, 
+            exists dec = declaration,
+            bmed == dec) {
+            
+            result.intersect(sd.type);
         }
     }
     
     shared void genericOperatorTerm(TypeDeclaration sd, Tree.Term lhs) {
-        if (is Tree.BaseMemberExpression lhs) {
-            value bme = lhs;
-            if (exists bmed = bme.declaration, exists dec = declaration,
-                bmed.equals(dec)) {
-                
-                value st = lhs.typeModel.getSupertype(sd);
-                value at = st.typeArguments.get(0);
-                result.intersect(at);
-            }
+        if (is Tree.BaseMemberExpression lhs, 
+            exists bmed = lhs.declaration, 
+            exists dec = declaration,
+            bmed == dec, 
+            exists lhst = lhs.typeModel,
+            exists st = lhst.getSupertype(sd),
+            exists at = st.typeArgumentList[0]) {
+            
+            result.intersect(at);
         }
     }
 
