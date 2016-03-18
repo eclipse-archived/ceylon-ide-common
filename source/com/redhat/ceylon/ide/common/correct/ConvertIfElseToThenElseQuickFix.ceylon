@@ -27,7 +27,7 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
             value desc = text.replace("If", "'if'")
                 .replace("Then", "'then'")
                 .replace("Else", "'else'")
-                + " Expression";
+                + " expression";
             newProposal(data, desc, change, DefaultRegion(offset, 0));
         }
     }
