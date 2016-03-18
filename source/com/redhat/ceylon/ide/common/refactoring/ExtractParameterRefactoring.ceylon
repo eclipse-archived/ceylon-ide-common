@@ -145,9 +145,9 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
         value localRefs = localReferences(term);
         if (localRefs.empty) {
             //create a regular value parameter
-            definition = typeDec + " " + newName + " = " + body;
             call = newName;
             refStart = 0;
+            definition = typeDec + " " + newName + " = " + body;
         }
         else {
             //create a functional parameter which takes 
@@ -167,11 +167,14 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
                         .append(paramName);
                 args.append(paramName);
             }
-            definition = 
-                    typeDec + " " + newName + 
-                    "(" + params.string + ") => " + body;
-            if (is Tree.FunctionArgument core,
-                core.expression exists) {
+            String paramList; 
+            if (is Tree.FunctionArgument core, core.block exists) {
+                paramList = " = ";
+            }
+            else {
+                paramList = "(" + params.string + ") => ";
+            }
+            if (is Tree.FunctionArgument core) {
                 assert (exists anonParams = core.parameterLists[0]);
                 if (anonParams.parameters.size == localRefs.size) {
                     call = newName;
@@ -187,6 +190,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
                 call = newName + "(" + args.string + ")";
                 refStart = 0;
             }
+            definition = typeDec + " " + newName + paramList + body;
         }
         
         value comma
