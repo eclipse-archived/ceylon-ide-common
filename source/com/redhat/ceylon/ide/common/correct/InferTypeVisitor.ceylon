@@ -24,7 +24,7 @@ class InferredType(Unit unit) {
     
     shared void intersect(Type pt) {
         if (!isTypeUnknown(pt)) {
-            if (!exists g = generalizedType) {
+            if (!generalizedType exists) {
                 generalizedType = pt;
             } else {
                 value it = intersectionType(generalizedType, pt, unit);
@@ -37,7 +37,7 @@ class InferredType(Unit unit) {
     
     shared void union(Type pt) {
         if (!isTypeUnknown(pt)) {
-            if (!exists i = inferredType) {
+            if (!inferredType exists) {
                 inferredType = pt;
             } else {
                 inferredType = unionType(inferredType, unit.denotableType(pt), unit);
