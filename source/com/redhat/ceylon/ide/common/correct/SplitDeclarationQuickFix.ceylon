@@ -133,7 +133,7 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         variable Integer il;
         if (is Tree.LocalModifier type) {
             variable String explicitType;
-            if (exists infType = type.typeModel) {
+            if (exists infType = type.typeModel, !infType.unknown) {
                 explicitType = infType.asSourceCodeString(decNode.unit);
                 value decs = HashSet<Declaration>();
                 importProposals.importType(decs, infType, data.rootNode);
