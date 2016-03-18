@@ -171,7 +171,8 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             
             if (is Tree.MethodDeclaration decNode) {
                 value methDecNode = decNode;
-                if (methDecNode.specifierExpression exists || dec.parameter) {
+                if (methDecNode.specifierExpression exists
+                    then !dec.parameter else dec.parameter) {
                     addSplitDeclarationProposal(data, methDecNode, file);
                 }
             }
