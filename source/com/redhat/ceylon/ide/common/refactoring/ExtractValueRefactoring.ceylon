@@ -61,21 +61,21 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         "This method will only be called when the [[editorData]]is not [[null]]"
         assert (exists editorData = this.editorData,
                 exists sourceFile = editorData.sourceVirtualFile,
-                is Tree.Term node = editorData.node);
+                is Tree.Term term = editorData.node);
         
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
-        value unit = node.unit;
-        assert (exists statement = nodes.findStatement(rootNode, node));
+        value unit = term.unit;
+        assert (exists statement = nodes.findStatement(rootNode, term));
         
         variable Tree.FunctionArgument? result = null;
         object extends Visitor() {
             shared actual void visit(Tree.FunctionArgument that) {
-                if (that != node &&
-                    that.startIndex.intValue() <= node.startIndex.intValue() &&
-                    that.endIndex.intValue() >= node.endIndex.intValue() &&
+                if (that != term &&
+                    that.startIndex.intValue() <= term.startIndex.intValue() &&
+                    that.endIndex.intValue() >= term.endIndex.intValue() &&
                     that.startIndex.intValue() > statement.startIndex.intValue()) {
                     result = that;
                 }
@@ -151,7 +151,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         
         String modifiers;
         String body;
-        value core = unparenthesize(node);
+        value core = unparenthesize(term);
         if (is Tree.FunctionArgument core) {
             //we're extracting an anonymous function, so
             //actually we're going to create a function
@@ -216,8 +216,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             doc = doc;
         };
         
-        value nstart = node.startIndex.intValue();
-        value nlength = node.distance.intValue();
+        value nstart = term.startIndex.intValue();
+        value nlength = term.distance.intValue();
         addEditToChange(tfc, newInsertEdit(start, definition));
         addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
         value len = newName.size;
