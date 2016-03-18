@@ -157,32 +157,28 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     shared void addSplitDeclarationProposals(Data data, IFile file, 
         Tree.Declaration? decNode, Tree.Statement? statement) {
         
-        if (!exists decNode) {
-            return;
-        }
-        
-        if (exists dec = decNode.declarationModel) {
-            if (is Tree.AttributeDeclaration decNode) {
-                value attDecNode = decNode;
-                if (attDecNode.specifierOrInitializerExpression exists || dec.parameter) {
-                    addSplitDeclarationProposal(data, attDecNode, file);
+        if (exists decNode, 
+            exists dec = decNode.declarationModel, 
+            !dec.toplevel) {
+            switch (decNode)
+            case (is Tree.AttributeDeclaration) {
+                if (decNode.specifierOrInitializerExpression exists || dec.parameter) {
+                    addSplitDeclarationProposal(data, decNode, file);
                 }
             }
-            
-            if (is Tree.MethodDeclaration decNode) {
-                value methDecNode = decNode;
-                if (methDecNode.specifierExpression exists
+            case (is Tree.MethodDeclaration) {
+                if (decNode.specifierExpression exists
                     then !dec.parameter else dec.parameter) {
-                    addSplitDeclarationProposal(data, methDecNode, file);
+                    addSplitDeclarationProposal(data, decNode, file);
                 }
             }
-            
-            if (is Tree.Variable decNode,
-                is Tree.ControlStatement statement,
-                exists sie = decNode.specifierExpression) {
-                
-                addSplitDeclarationProposal2(data, decNode, statement, file);
+            case (is Tree.Variable) {
+                if (is Tree.ControlStatement statement,
+                    exists sie = decNode.specifierExpression) {
+                    addSplitDeclarationProposal2(data, decNode, statement, file);
+                }
             }
+            else {}
         }
     }
     
