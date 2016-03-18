@@ -32,10 +32,14 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
         }
     }
     
-    shared actual void clear() => synchronize { 
+    "Clears the whole map,
+     and returns the previous contents as un immutable map"
+    shared actual Map<Key, Item> clear() => synchronize { 
         on = this; 
-        void do() {
+        function do() {
+            value oldMap = immutableMap;
             immutableMap = emptyMap;
+            return oldMap;
         }
     };
     
