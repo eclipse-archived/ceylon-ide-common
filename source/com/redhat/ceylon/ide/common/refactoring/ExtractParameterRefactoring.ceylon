@@ -205,7 +205,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
         value termStart = term.startIndex.intValue();
         value termLength = term.distance.intValue();
         
-        addEditToChange(tfc, newInsertEdit(start, definition + comma));
+        addEditToChange(tfc, newInsertEdit(start, comma + definition));
         addEditToChange(tfc, newReplaceEdit(termStart, termLength, call));
         decRegion = newRegion(start + shift + typeDec.size + comma.size + 1, newName.size);
         refRegion = newRegion(termStart + shift + definition.size + comma.size + refStart, newName.size);
