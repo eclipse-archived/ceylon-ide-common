@@ -77,6 +77,19 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
     shared formal Boolean? isSource;
     shared formal Package? ceylonPackage;
+    
+    shared actual default Boolean equals(Object that) => 
+            if (is ResourceVirtualFile<out Object,out Object,out Object,out Object> that) 
+            then nativeResource == that.nativeResource && 
+                    nativeProject==that.nativeProject
+            else false;
+    
+    shared actual default Integer hash {
+        variable value hash = 1;
+        hash = 31*hash + nativeResource.hash;
+        hash = 31*hash + nativeProject.hash;
+        return hash;
+    }
 }
 
 shared interface BaseFolderVirtualFile
