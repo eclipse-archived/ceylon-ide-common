@@ -18,7 +18,8 @@ import java.lang {
     StringBuilder
 }
 import java.util {
-    HashSet
+    HashSet,
+    JList=List
 }
 
 
@@ -37,6 +38,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
     shared formal variable Boolean getter;
+    
+    shared formal JList<IRegion> dupeRegions;
 
     nameProposals
             => nodes.nameProposals {
@@ -220,10 +223,48 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         value nlength = term.distance.intValue();
         addEditToChange(tfc, newInsertEdit(start, definition));
         addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
-        value len = newName.size;
         typeRegion = newRegion(start + adjustment + shift, typeDec.size);
-        decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, len);
-        refRegion = newRegion(nstart + adjustment + shift + definition.size, len);
+        decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
+        refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
+        
+        object extends Visitor() {
+            variable value inScope = false;
+            variable value found = false;
+            variable value backshift = nlength - newName.size;
+            shared actual void visit(Tree.Body b) {
+                for (s in b.statements) {
+                    s.visit(this);
+                    if (found) {
+                        inScope = true;
+                        found = false; 
+                    }
+                }
+                inScope = false;
+            }
+            shared actual void visit(Tree.Term t) {
+                if (term==t) {
+                    found = true;
+                }
+                else if (inScope && !different(term, t)) {
+                    value start = t.startIndex.intValue();
+                    value length = t.distance.intValue();
+                    addEditToChange(tfc, 
+                        newReplaceEdit {
+                            start = start;
+                            length = length;
+                            text = newName;
+                        });
+                    dupeRegions.add(newRegion {
+                        start = start + adjustment + shift + definition.size - backshift;
+                        length = newName.size;
+                    });
+                    backshift += length - newName.size;
+                }
+                else {
+                    super.visit(t);
+                }
+            }
+        }.visit(rootNode);
     }
     
     forceWizardMode
