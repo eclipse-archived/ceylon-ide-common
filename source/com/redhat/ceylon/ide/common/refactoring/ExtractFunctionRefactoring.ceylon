@@ -70,6 +70,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared formal variable actual Type? type;
     shared formal actual variable Boolean canBeInferred;
     
+    shared formal JList<IRegion> dupeRegions;    
+    
     shared class CheckStatementsVisitor(Tree.Body scope, 
         Collection<Tree.Statement> statements) 
             extends Visitor() {
@@ -363,6 +365,35 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
         decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
         refRegion = newRegion(refStart + shift + definition.size, newName.size);
+
+        object extends Visitor() {
+            variable value backshift = length - invocation.size;
+            shared actual void visit(Tree.Term t) {
+                value tstart = t.startIndex.intValue();
+                value length = t.distance.intValue();
+                if (ModelUtil.contains(decNode.scope.container, t.scope)
+                    && tstart > start + length //TODO: make it work for earlier expressions in the file
+                    && t!=term 
+                    && !different(term, t)) {
+                    addEditToChange(tfc, 
+                        newReplaceEdit {
+                            start = tstart;
+                            length = length;
+                            text = invocation;
+                        });
+                    dupeRegions.add(newRegion {
+                        start = tstart + shift + definition.size - backshift;
+                        length = newName.size;
+                    });
+                    backshift += length - invocation.size;
+                }
+                else {
+                    super.visit(t);
+                }
+            }
+        }.visit(rootNode);
+        
+        //TODO: look for similar code in other files!
     }
     
     function targetDeclaration(Tree.Body body, 

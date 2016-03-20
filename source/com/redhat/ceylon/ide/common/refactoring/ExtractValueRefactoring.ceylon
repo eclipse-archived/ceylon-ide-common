@@ -11,7 +11,8 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
-    Declaration
+    Declaration,
+    ModelUtil
 }
 
 import java.lang {
@@ -228,26 +229,14 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
         
         object extends Visitor() {
-            variable value inScope = false;
-            variable value found = false;
             variable value backshift = nlength - newName.size;
-            shared actual void visit(Tree.Body b) {
-                for (s in b.statements) {
-                    s.visit(this);
-                    if (found) {
-                        inScope = true;
-                        found = false; 
-                    }
-                }
-                inScope = false;
-            }
             shared actual void visit(Tree.Term t) {
-                if (term==t) {
-                    found = true;
-                }
-                else if (inScope && !different(term, t)) {
-                    value start = t.startIndex.intValue();
-                    value length = t.distance.intValue();
+                value start = t.startIndex.intValue();
+                value length = t.distance.intValue();
+                if (ModelUtil.contains(statement.scope, t.scope) 
+                    && start > nstart + nlength
+                    && t!=term
+                    && !different(term, t)) {
                     addEditToChange(tfc, 
                         newReplaceEdit {
                             start = start;
