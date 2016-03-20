@@ -130,7 +130,8 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
         else true;
     }
     case (is SelfExpression) {
-        return false;
+        assert (is SelfExpression expression);
+        return term.declarationModel!=expression.declarationModel;
     }
     case (is Tuple) {
         assert (is Tuple expression);

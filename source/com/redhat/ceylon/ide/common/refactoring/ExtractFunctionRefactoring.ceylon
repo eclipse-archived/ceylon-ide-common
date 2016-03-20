@@ -33,7 +33,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     Value,
     UnionType,
-    Unit
+    Unit,
+    IntersectionType
 }
 
 import java.lang {
@@ -185,6 +186,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         return [typeParams, constraints];
     }
     
+    function asArgList(
+        List<Tree.Term> localRefs, 
+        List<Tree.Term> localThisRefs, 
+        JList<CommonToken> tokens) {
+        value args 
+                = localThisRefs.take(1).chain(localRefs)
+                    .map((term) => nodes.text(term, tokens));
+        return ", ".join(args);
+    }
+    
+    function fakeToken(Tree.This tr) {
+        value tok = CommonToken(CeylonLexer.\iLIDENTIFIER, "that");
+        tok.startIndex = tr.startIndex.intValue();
+        tok.stopIndex = tr.stopIndex.intValue();
+        tok.tokenIndex = tr.token.tokenIndex;
+        return tok;
+    }
+    
     shared void extractExpression(TextChange tfc, Tree.Term term, 
             Change? change = null) {
         initMultiEditChange(tfc);
@@ -210,6 +229,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         };
         term.visit(flrv);
         value localRefs = flrv.localReferences;
+        value localThisRefs = flrv.localThisReferences;
         value localTypes = ArrayList<TypeDeclaration>();
         for (bme in localRefs) {
             addLocalType {
@@ -224,6 +244,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value imports = JHashSet<Declaration>();
         
         value params = StringBuilder();
+        for (tr in localThisRefs) {
+            params.append(tr.typeModel.asSourceCodeString(unit))
+                .append(" that");
+            break;
+        }
         for (bme in localRefs) {
             if (!params.empty) {
                 params.append(", ");
@@ -242,11 +267,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             value name = bme.identifier.text;
             params.append(" ").append(name);
         }
-        value args =
-                ", ".join {
-                    for (bme in localRefs) 
-                        bme.identifier.text 
-                };
+        value argList = asArgList {
+            localRefs = localRefs;
+            localThisRefs = localThisRefs;
+            tokens = tokens;
+        };
         
         value indent = 
                 indents.getDefaultLineDelimiter(doc) + 
@@ -264,6 +289,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 };
         
         value specifier = extraIndent + "=> ";
+        value fixedTokens = JArrayList(tokens);
+        for (tr in localThisRefs) {
+            fixedTokens.set(tokens.indexOf(tr.token), 
+                fakeToken(tr));
+        }
         String body;
         if (is Tree.FunctionArgument core) {
             //special case for anonymous functions!
@@ -271,10 +301,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 type = unit.denotableType(core.type.typeModel);
             }
             if (exists block = core.block) {
-                body = nodes.text(block, tokens);
+                body = nodes.text(block, fixedTokens);
             }
             else if (exists expression = core.expression) {
-                body = specifier + nodes.text(expression, tokens) + ";";
+                body = specifier + nodes.text(expression, fixedTokens) + ";";
             }
             else {
                 body = specifier + ";";
@@ -284,7 +314,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            body = specifier + nodes.text(core, tokens) + ";";
+            body = specifier + nodes.text(core, fixedTokens) + ";";
         }
         
         String typeOrKeyword;
@@ -325,12 +355,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
             else {
                 value header = nodes.text(cpl, tokens) + " => ";
-                invocation = header + newName + "(" + args.string + ")";
+                invocation = header + newName + "(" + argList.string + ")";
                 refStart = start + header.size;
             }
         }
         else {
-            invocation = newName + "(" + args.string + ")";
+            invocation = newName + "(" + argList.string + ")";
             refStart = start;
         }
         
@@ -367,10 +397,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     value invocation = 
                             newName + 
                             "(" + 
-                            ", ".join { 
-                                for (a in args) 
-                                nodes.text(a, tokens) 
-                            } + 
+                            asArgList(args, localThisRefs, tokens) + 
                             ")";
                     addEditToChange(tfc, 
                         newReplaceEdit {
@@ -408,10 +435,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                                 value invocation = 
                                         newName + 
                                         "(" + 
-                                        ", ".join { 
-                                            for (arg in args) 
-                                            nodes.text(arg, pu.tokens) 
-                                        } + 
+                                        asArgList(args, localThisRefs, pu.tokens) +
                                         ")";
                                 addEditToChange(tc, 
                                     newReplaceEdit {
@@ -526,6 +550,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
         
         value localReferences = flrv.localReferences;
+        value localThisReferences = flrv.localThisReferences;
         value localTypes = ArrayList<TypeDeclaration>();
         value visited = ArrayList<Type>();
         for (bme in localReferences) {
@@ -568,6 +593,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value args = StringBuilder();
         value done = HashSet<Declaration>();
         done.addAll(movingDecs);
+        for (tr in localThisReferences) {
+            if (!params.empty) {
+                params.append(", ");
+                args.append(", ");
+            }
+            params.append(tr.typeModel.asSourceCodeString(unit))
+                    .append(" that");
+            args.append(tr.text);
+            break;
+        }
         for (bme in localReferences) {
             value bmed = bme.declaration;
             value variable = 
@@ -696,8 +731,18 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         
+        value fixedTokens = JArrayList(tokens);
+        for (tr in localThisReferences) {
+            fixedTokens.set(tokens.indexOf(tr.token), 
+                fakeToken(tr));
+        }
         value start = ss.first.startIndex.intValue();
-        value end = appendComments(ss, definition, bodyIndent, tokens);
+        value end = appendComments {
+            ss = ss;
+            definition = definition;
+            bodyIndent = bodyIndent;
+            tokens = fixedTokens;
+        };
         value length = end - start;
         
         if (results.size==1) {
@@ -803,34 +848,58 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     void addLocalType(Scope scope, Scope targetScope, Type type, 
         MutableList<TypeDeclaration> localTypes, 
         MutableList<Type> visited) {
-        if (!type in visited) {
-            visited.add(type);
-            
-            if (!type.unknown,
-                exists typeDec = type.declaration,
-                isLocalReference(typeDec, scope, targetScope) &&
-                !typeDec in localTypes) {
-                localTypes.add(typeDec);
+        if (!type.unknown, exists typeDec = type.declaration) {
+            switch (typeDec)
+            case (is UnionType) {
+                for (ct in type.caseTypes) {
+                    addLocalType {
+                        scope = scope;
+                        targetScope = targetScope;
+                        type = ct;
+                        localTypes = localTypes;
+                        visited = visited;
+                    };
+                }
             }
-            
-            for (st in type.satisfiedTypes) {
-                addLocalType {
-                    scope = scope;
-                    targetScope = targetScope;
-                    type = st;
-                    localTypes = localTypes;
-                    visited = visited;
-                };
+            case (is IntersectionType) {
+                for (st in type.satisfiedTypes) {
+                    addLocalType {
+                        scope = scope;
+                        targetScope = targetScope;
+                        type = st;
+                        localTypes = localTypes;
+                        visited = visited;
+                    };
+                }
             }
-            
-            for (ta in type.typeArgumentList) {
-                addLocalType {
-                    scope = scope;
-                    targetScope = targetScope;
-                    type = ta;
-                    localTypes = localTypes;
-                    visited = visited;
-                };
+            else if (!type in visited) {
+                visited.add(type);
+                
+                if (isLocalReference(typeDec, scope, targetScope) &&
+                    !typeDec in localTypes) {
+                    localTypes.add(typeDec);
+                }
+                
+                //TODO: what is this for?!
+                for (st in type.satisfiedTypes) {
+                    addLocalType {
+                        scope = scope;
+                        targetScope = targetScope;
+                        type = st;
+                        localTypes = localTypes;
+                        visited = visited;
+                    };
+                }
+                
+                for (ta in type.typeArgumentList) {
+                    addLocalType {
+                        scope = scope;
+                        targetScope = targetScope;
+                        type = ta;
+                        localTypes = localTypes;
+                        visited = visited;
+                    };
+                }
             }
         }
     }
@@ -1050,8 +1119,17 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
         extends Visitor() {
     
     value results = ArrayList<Tree.BaseMemberExpression>();
+    value thisResults = ArrayList<Tree.This>();
     
     shared List<Tree.BaseMemberExpression> localReferences => results;
+    shared List<Tree.This> localThisReferences => thisResults;
+    
+    shared actual void visit(Tree.This that) {
+        super.visit(that);
+        if (!ModelUtil.contains(that.declarationModel, targetScope)) {
+            thisResults.add(that);
+        }
+    }
     
     shared actual void visit(Tree.BaseMemberExpression that) {
         super.visit(that);
