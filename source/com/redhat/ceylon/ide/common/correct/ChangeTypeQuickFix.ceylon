@@ -3,6 +3,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node
 }
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
+}
+import com.redhat.ceylon.ide.common.util {
+    FindDeclarationNodeVisitor
+}
 import com.redhat.ceylon.model.typechecker.model {
     TypeParameter,
     Declaration,
@@ -15,12 +21,7 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     ClassOrInterface
 }
-import com.redhat.ceylon.ide.common.model {
-    ModifiableSourceFile
-}
-import com.redhat.ceylon.ide.common.util {
-    FindDeclarationNodeVisitor
-}
+
 import java.util {
     HashSet
 }
@@ -137,54 +138,51 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
     void addChangeTypeProposalsInternal(Data data, Node node, variable Type type,
         Declaration? dec, Boolean intersect, IFile file) {
         
-        if (exists dec) {
-            value u = dec.unit;
-            if (is ModifiableSourceFile<out Anything,out Anything,out Anything,out Anything> u) {
-                value msf = u;
-                assert(exists phasedUnit = msf.phasedUnit);
-                variable Type? t = null;
-                variable Node? typeNode = null;
-                if (is TypeParameter tp = dec) {
-                    t = tp.type;
-                    typeNode = node;
-                }
-                
-                if (is TypedDeclaration dec) {
-                    value typedDec = dec;
-                    value fdv = FindDeclarationNodeVisitor(typedDec);
-                    phasedUnit.compilationUnit.visit(fdv);
-                    value dn = fdv.declarationNode;
-                    if (is Tree.TypedDeclaration decNode = dn) {
-                        typeNode = decNode.type;
-                        if (is Tree.Type tn = typeNode) {
-                            t = tn.typeModel;
-                        }
+        if (exists dec, 
+            is AnyModifiableSourceFile u = dec.unit, 
+            exists phasedUnit = u.phasedUnit) {
+            variable Type? t = null;
+            variable Node? typeNode = null;
+            if (is TypeParameter tp = dec) {
+                t = tp.type;
+                typeNode = node;
+            }
+            
+            if (is TypedDeclaration dec) {
+                value typedDec = dec;
+                value fdv = FindDeclarationNodeVisitor(typedDec);
+                phasedUnit.compilationUnit.visit(fdv);
+                value dn = fdv.declarationNode;
+                if (is Tree.TypedDeclaration decNode = dn) {
+                    typeNode = decNode.type;
+                    if (is Tree.Type tn = typeNode) {
+                        t = tn.typeModel;
                     }
                 }
+            }
+            
+            //TODO: fix this condition to properly
+            //      distinguish between a method
+            //      reference and an invocation
+            value nu = node.unit;
+            if (dec is Function, nu.isCallableType(type)) {
+                type = nu.getCallableReturnType(type);
+            }
+            
+            if (exists tn = typeNode,
+                !ModelUtil.isTypeUnknown(type)) {
                 
-                //TODO: fix this condition to properly
-                //      distinguish between a method
-                //      reference and an invocation
-                value nu = node.unit;
-                if (dec is Function, nu.isCallableType(type)) {
-                    type = nu.getCallableReturnType(type);
-                }
+                value rootNode = phasedUnit.compilationUnit;
+                addChangeTypeProposal(tn, data, dec, type, file, rootNode);
                 
-                if (exists tn = typeNode,
-                    !ModelUtil.isTypeUnknown(type)) {
+                if (exists _t = t) {
+                    value newType = if (intersect)
+                                    then ModelUtil.intersectionType(t, type, u)
+                                    else ModelUtil.unionType(t, type, u);
                     
-                    value rootNode = phasedUnit.compilationUnit;
-                    addChangeTypeProposal(tn, data, dec, type, file, rootNode);
-                    
-                    if (exists _t = t) {
-                        value newType = if (intersect)
-                                        then ModelUtil.intersectionType(t, type, u)
-                                        else ModelUtil.unionType(t, type, u);
-                        
-                        if (!newType.isExactly(t),
-                            !newType.isExactly(type)) {
-                            addChangeTypeProposal(tn, data, dec, newType, file, rootNode);
-                        }
+                    if (!newType.isExactly(t),
+                        !newType.isExactly(type)) {
+                        addChangeTypeProposal(tn, data, dec, newType, file, rootNode);
                     }
                 }
             }

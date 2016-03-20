@@ -11,7 +11,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.model {
-    ModifiableSourceFile
+    AnyModifiableSourceFile
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -84,16 +84,14 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         }
         
         value changeText = correctionUtil.asIntersectionTypeString(missingSatisfiedTypes);
-        if (is ModifiableSourceFile<out Anything,out Anything,out Anything,out Anything> unit 
-                = typeDec.unit) {
-            assert(exists phasedUnit = unit.phasedUnit);
-            if (exists declaration 
-                    = determineContainer(phasedUnit.compilationUnit, typeDec),
-                is IFile file = getFile(phasedUnit, data)) {
-                
-                createProposals(data, typeDec, isTypeParam, changeText, 
-                    file, declaration, node.unit.equals(unit));
-            }
+        if (is AnyModifiableSourceFile unit = typeDec.unit, 
+            exists phasedUnit = unit.phasedUnit, 
+            exists declaration 
+                = determineContainer(phasedUnit.compilationUnit, typeDec),
+            is IFile file = getFile(phasedUnit, data)) {
+            
+            createProposals(data, typeDec, isTypeParam, changeText, 
+                file, declaration, node.unit.equals(unit));
         }
     }
     
