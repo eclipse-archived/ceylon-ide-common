@@ -60,6 +60,10 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
         return false;
     }
     switch (term) 
+    case (is Expression) {
+        assert (is Expression expression);
+        return different(term.term, expression.term);
+    }
     case (is BinaryOperatorExpression) {
         assert (is BinaryOperatorExpression expression);
         return different(term.leftTerm, expression.leftTerm) ||
@@ -84,7 +88,8 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
         return 
         if (exists tt = term.target, 
             exists et = expression.target) 
-            then tt!=et else true;
+            then tt.declaration!=et.declaration 
+            else true;
     }
     case (is QualifiedMemberOrTypeExpression) {
         assert (is QualifiedMemberOrTypeExpression expression);
