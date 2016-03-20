@@ -180,8 +180,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     Declaration annotatedNode(Node node) {
         Declaration dec;
         if (is Tree.Declaration node) {
-            value dn = node;
-            dec = dn.declarationModel;
+            dec = node.declarationModel;
         } else {
             assert (is Declaration scope = node.scope);
             dec = scope;
@@ -191,18 +190,18 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     
     shared void addMakeDefaultProposal(Project project, Node node, Data data) {
         variable Declaration? d;
-        if (is Tree.Declaration node) {
-            value decNode = node;
+        switch (node)
+        case (is Tree.Declaration) {
             //get the supertype declaration we're refining
-            d = types.getRefinedDeclaration(decNode.declarationModel);
-        } else if (is Tree.SpecifierStatement node) {
-            value specNode = node;
+            d = types.getRefinedDeclaration(node.declarationModel);
+        }
+        case (is Tree.SpecifierStatement) {
             //get the supertype declaration we're referencing
-            d = specNode.refined;
-        /*} else if (is Tree.BaseMemberExpression node) {
-            value bme = node;
-            d = bme.declaration;
-        */
+            d = node.refined;
+            /*} else if (is Tree.BaseMemberExpression node) {
+                value bme = node;
+                d = bme.declaration;
+             */
         } else {
             return;
         }
