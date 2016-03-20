@@ -77,8 +77,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
                     exists d = that.declaration,
                     !isParameterOfMethodOrClass(d) && 
                     !d in decs &&
-                    d.isDefinedInScope(term.scope) && 
-                    !d.isDefinedInScope(mc.scope.container)) {
+                    isLocalReference(d, term.scope, mc.scope.container)) {
                     localRefs.add(that);
                     decs.add(d);
                 }

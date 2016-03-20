@@ -808,8 +808,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             
             if (!type.unknown,
                 exists typeDec = type.declaration,
-                typeDec.isDefinedInScope(scope) &&
-                !typeDec.isDefinedInScope(targetScope) &&
+                isLocalReference(typeDec, scope, targetScope) &&
                 !typeDec in localTypes) {
                 localTypes.add(typeDec);
             }
@@ -1037,6 +1036,16 @@ shared class FindReturnsVisitor()
     }
 }
 
+"Is the given [[declaration|currentDec]] in scope in the
+ first given [[scope]], but out of scope in the second
+ given [[target scope|targetScope]]?"
+Boolean isLocalReference(Declaration currentDec, 
+    Scope scope, Scope targetScope) 
+        => (currentDec.isDefinedInScope(scope) 
+            || scope.isInherited(currentDec)) &&
+           !(currentDec.isDefinedInScope(targetScope) 
+            || targetScope.isInherited(currentDec));
+
 class FindLocalReferencesVisitor(Scope scope, Scope targetScope) 
         extends Visitor() {
     
@@ -1060,8 +1069,7 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
             }
         }
         
-        if (currentDec.isDefinedInScope(scope) &&
-            !currentDec.isDefinedInScope(targetScope)) {
+        if (isLocalReference(currentDec, scope, targetScope)) {
             results.add(that);
         }
     }
