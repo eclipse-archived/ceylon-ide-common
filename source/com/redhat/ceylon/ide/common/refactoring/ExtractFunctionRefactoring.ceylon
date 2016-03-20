@@ -195,34 +195,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        Tree.Declaration decNode;
-        if (exists target = this.target) {
-            decNode = target;
+        value decNode = getTargetNode(term, target, rootNode);
+        if (!exists decNode) {
+            return;
         }
-        else {
-            value fsv = FindContainerVisitor(term);
-            rootNode.visit(fsv);
-            if (exists dec = fsv.declaration) {
-                if (is Tree.AttributeDeclaration dec) {
-                    if (exists container 
-                            = nodes.getContainer(rootNode, 
-                                    dec.declarationModel)) {
-                        decNode = container;
-                    }
-                    else {
-                        decNode = dec;
-                    }
-                }
-                else {
-                    decNode = dec;
-                }
-            }
-            else {
-                return;
-            }
-        }
-        
         value dec = decNode.declarationModel;
+        
         value flrv = FindLocalReferencesVisitor {
             scope = ModelUtil.getRealScope(term.scope);
             targetScope = dec.container;
@@ -365,7 +343,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
         decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
         refRegion = newRegion(refStart + shift + definition.size, newName.size);
-
+        
         object extends Visitor() {
             variable value backshift = length - invocation.size;
             shared actual void visit(Tree.Term t) {
@@ -1022,6 +1000,36 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
         if (currentDec.isDefinedInScope(scope) &&
             !currentDec.isDefinedInScope(targetScope)) {
             results.add(that);
+        }
+    }
+}
+
+shared Tree.Declaration? getTargetNode(Tree.Term term,
+    Tree.Declaration? target, 
+    Tree.CompilationUnit rootNode) {
+    if (exists target) {
+        return target;
+    }
+    else {
+        value fsv = FindContainerVisitor(term);
+        rootNode.visit(fsv);
+        if (exists dec = fsv.declaration) {
+            if (is Tree.AttributeDeclaration dec) {
+                if (exists container 
+                    = nodes.getContainer(rootNode, 
+                    dec.declarationModel)) {
+                    return container;
+                }
+                else {
+                    return dec;
+                }
+            }
+            else {
+                return dec;
+            }
+        }
+        else {
+            return null;
         }
     }
 }
