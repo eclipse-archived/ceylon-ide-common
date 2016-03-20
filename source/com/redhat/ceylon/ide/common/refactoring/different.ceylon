@@ -1,21 +1,49 @@
+import ceylon.collection {
+    MutableList
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree {
+        ...
+    }
+}
+
 import java.util {
     JList=List
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree { ... }
-}
 
-Boolean different(Tree.Term? term, Tree.Term? expression) {
+Boolean different(Tree.Term? term, Tree.Term? expression, 
+        localRefs = [], arguments = null) {
+    List<Tree.BaseMemberExpression> localRefs;
+    "Note: function modifies this given list by side-effect!"
+    MutableList<Tree.Term>? arguments;
+    
     if (!exists term) {
         return true;
     }
     if (!exists expression) {
         return true;
     }
+    if (is Expression term) {
+        return different(term.term, expression, localRefs, arguments);
+    }
+    if (is Expression expression) {
+        return different(term, expression.term, localRefs, arguments);
+    }
+    
+    if (exists arguments) {
+        if (term in localRefs) {
+            arguments.add(expression);
+            return false;
+        }
+    }
+    
     if (term.nodeType!=expression.nodeType) {
         return true;
     }
-    function positionalArgsDifferent(JList<PositionalArgument> x, JList<PositionalArgument> y) {
+    function positionalArgsDifferent(x, y) {
+        JList<PositionalArgument> y;
+        JList<PositionalArgument> x;
         value xsize = x.size();
         value ysize = y.size();
         if (xsize!=ysize) {
@@ -25,7 +53,7 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
             value xi = x[i];
             value yi = y[i];
             if (is ListedArgument xi, is ListedArgument yi) {
-                if (different(xi.expression, yi.expression)) {
+                if (different(xi.expression, yi.expression, localRefs, arguments)) {
                     return true;
                 }
             }
@@ -35,7 +63,9 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
         }
         return false;
     }
-    function namedArgsDifferent(JList<NamedArgument> x, JList<NamedArgument> y) {
+    function namedArgsDifferent(x, y) {
+        JList<NamedArgument> y;
+        JList<NamedArgument> x;
         value xsize = x.size();
         value ysize = y.size();
         if (xsize!=ysize) {
@@ -49,7 +79,7 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
                 exists yse = yi.specifierExpression?.expression,
                 exists xp = xi.parameter?.declaration, 
                 exists yp = yi.parameter?.declaration) {
-                if (xp!=yp || different(xse, yse)) {
+                if (xp!=yp || different(xse, yse, localRefs, arguments)) {
                     return true;
                 }
             }
@@ -60,24 +90,20 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
         return false;
     }
     switch (term) 
-    case (is Expression) {
-        assert (is Expression expression);
-        return different(term.term, expression.term);
-    }
     case (is BinaryOperatorExpression) {
         assert (is BinaryOperatorExpression expression);
-        return different(term.leftTerm, expression.leftTerm) ||
-                different(term.rightTerm, expression.rightTerm);
+        return different(term.leftTerm, expression.leftTerm, localRefs, arguments) ||
+                different(term.rightTerm, expression.rightTerm, localRefs, arguments);
     }
     case (is UnaryOperatorExpression) {
         assert (is UnaryOperatorExpression expression);
-        return different(term.term, expression.term);
+        return different(term.term, expression.term, localRefs, arguments);
     }
     case (is WithinOp) {
         assert (is WithinOp expression);
-        return different(term.term, expression.term) || 
-                different(term.upperBound, expression.upperBound) || 
-                different(term.lowerBound, expression.lowerBound);
+        return different(term.term, expression.term, localRefs, arguments) || 
+                different(term.upperBound, expression.upperBound, localRefs, arguments) || 
+                different(term.lowerBound, expression.lowerBound, localRefs, arguments);
     }
     case (is Literal) {
         assert (is Literal expression);
@@ -99,7 +125,7 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
             exists tmo = term.memberOperator,
             exists emo = expression.memberOperator)
         then tt.declaration!=et.declaration || 
-                different(term.primary, expression.primary) ||
+                different(term.primary, expression.primary, localRefs, arguments) ||
                 tmo.nodeType!=emo.nodeType
         else true;
     }
@@ -160,7 +186,7 @@ Boolean different(Tree.Term? term, Tree.Term? expression) {
     }
     case (is InvocationExpression) {
         assert (is InvocationExpression expression);
-        if (different(term.primary, expression.primary)) {
+        if (different(term.primary, expression.primary, localRefs, arguments)) {
             return true;
         }
         if (exists tp = term.positionalArgumentList,

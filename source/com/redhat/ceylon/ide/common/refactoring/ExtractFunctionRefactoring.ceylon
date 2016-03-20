@@ -5,6 +5,9 @@ import ceylon.collection {
     HashSet
 }
 
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -47,9 +50,6 @@ import java.util {
 import org.antlr.runtime {
     CommonToken,
     Token
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
 }
 
 shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change, IRegion=DefaultRegion>
@@ -224,11 +224,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         value imports = JHashSet<Declaration>();
         
         value params = StringBuilder();
-        value args = StringBuilder();
         for (bme in localRefs) {
             if (!params.empty) {
                 params.append(", ");
-                args.append(", ");
             }
             
             if (is TypedDeclaration pdec = bme.declaration, 
@@ -243,8 +241,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             
             value name = bme.identifier.text;
             params.append(" ").append(name);
-            args.append(name);
         }
+        value args =
+                ", ".join {
+                    for (bme in localRefs) 
+                        bme.identifier.text 
+                };
         
         value indent = 
                 indents.getDefaultLineDelimiter(doc) + 
@@ -352,10 +354,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             shared actual void visit(Tree.Term t) {
                 value tstart = t.startIndex.intValue();
                 value length = t.distance.intValue();
+                value args = ArrayList<Tree.Term>();
                 if (ModelUtil.contains(decNode.scope.container, t.scope)
                     && tstart > start + length //TODO: make it work for earlier expressions in the file
                     && t!=term 
-                    && !different(term, t)) {
+                    && !different {
+                        term = term;
+                        expression = t;
+                        localRefs = localRefs;
+                        arguments = args;
+                    }) {
+                    value invocation = 
+                            newName + 
+                            "(" + 
+                            ", ".join { 
+                                for (a in args) 
+                                nodes.text(a, tokens) 
+                            } + 
+                            ")";
                     addEditToChange(tfc, 
                         newReplaceEdit {
                             start = tstart;
@@ -382,13 +398,25 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     variable value found = false;
                     object extends Visitor() {
                         shared actual void visit(Tree.Term t) {
-                            if (!different(term, t)) {
-                                value tstart = t.startIndex.intValue();
-                                value length = t.distance.intValue();
+                            value args = ArrayList<Tree.Term>();
+                            if (!different {
+                                term = term;
+                                expression = t;
+                                localRefs = localRefs;
+                                arguments = args;
+                            }) {
+                                value invocation = 
+                                        newName + 
+                                        "(" + 
+                                        ", ".join { 
+                                            for (arg in args) 
+                                            nodes.text(arg, pu.tokens) 
+                                        } + 
+                                        ")";
                                 addEditToChange(tc, 
                                     newReplaceEdit {
-                                        start = tstart;
-                                        length = length;
+                                        start = t.startIndex.intValue();
+                                        length = t.distance.intValue();
                                         text = invocation;
                                     });
                                 found = true;
