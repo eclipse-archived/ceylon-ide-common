@@ -607,7 +607,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             value bmed = bme.declaration;
             value variable = 
                     if (is Value bmed) 
-                    then bmed.variable else false;
+                    then bmed.variable //TODO: wrong condition, check if initialized! 
+                    else false;
             value result = bmed in results.map(Entry.item);
             //ignore it if it is a result of the function 
             //and is not a variable
@@ -719,7 +720,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 .append(" {");
         for (result -> rdec in results) { 
             if (!result is Tree.Declaration &&
-                !rdec.variable) {
+                !rdec.variable) {  //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
                 importProposals.importType(imports, resultType, rootNode);
                 definition
