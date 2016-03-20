@@ -120,13 +120,13 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
                 }
                 
                 if (is Tree.BaseMemberExpression bme = node) {
-                    value d = bme.declaration;
-                    addChangeTypeProposalsInternal(data, node, td.type, d, true, file);
+                    addChangeTypeProposalsInternal(data, node, td.type, 
+                        bme.declaration, true, file);
                 }
                 
                 if (is Tree.QualifiedMemberExpression qme = node) {
-                    value d = qme.declaration;
-                    addChangeTypeProposalsInternal(data, node, td.type, d, true, file);
+                    addChangeTypeProposalsInternal(data, node, td.type, 
+                        qme.declaration, true, file);
                 }
                 
                 addChangeTypeProposalsInternal(data, node, type, td, false, file);
