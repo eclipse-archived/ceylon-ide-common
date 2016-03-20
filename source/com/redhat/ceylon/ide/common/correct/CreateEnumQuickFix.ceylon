@@ -7,6 +7,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
+}
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
@@ -82,11 +85,9 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
     void addCreateEnumProposalInternal(Project project, String def, String desc, Icons image,
         Tree.CompilationUnit cu, Tree.TypeDeclaration cd, Data data) {
         
-        for (unit in getUnits(project)) {
-            if (unit.unit.equals(cu.unit)) {
-                addCreateEnumProposalInternal2(def, desc, image, unit, cd, data);
-                break;
-            }
+        if (is AnyModifiableSourceFile unit = cu.unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            addCreateEnumProposalInternal2(def, desc, image, phasedUnit, cd, data);
         }
     }
     

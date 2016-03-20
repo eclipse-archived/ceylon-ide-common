@@ -27,7 +27,7 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     
     shared formal Integer getTextEditOffset(TextEdit change);
     
-    shared formal List<PhasedUnit> getUnits(Project p);
+    //shared formal List<PhasedUnit> getUnits(Project p);
     
     shared formal TextChange newTextChange(String desc, PhasedUnit|IFile|IDocument u);
     

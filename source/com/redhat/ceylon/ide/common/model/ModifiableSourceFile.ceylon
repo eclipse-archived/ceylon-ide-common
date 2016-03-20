@@ -25,3 +25,6 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
     shared actual default IdeModuleSourceMapperAlias moduleSourceMapper =>
             unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
 }
+
+shared alias AnyModifiableSourceFile 
+        => ModifiableSourceFile<in Nothing, in Nothing, in Nothing, in Nothing>;

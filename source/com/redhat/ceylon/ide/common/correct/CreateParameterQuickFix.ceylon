@@ -9,6 +9,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
+}
 import com.redhat.ceylon.ide.common.util {
     nodes,
     escaping,
@@ -92,27 +95,20 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
     }
     
     shared void addCreateParameterProposal(Data data, ValueFunctionDefinitionGenerator dg) {
-        if (dg.brokenName.first?.lowercase else false) {
-            value decl = nodes.findDeclarationWithBody(dg.rootNode, dg.node);
-            if (decl?.declarationModel?.actual else true) {
-                return;
-            }
-            assert(exists decl);
-            value paramList = getParameters(decl);
-            if (exists paramList) {
-                value def = dg.generate("", "");
-                //TODO: really ugly and fragile way to strip off the trailing ;
-                value paramDef = (if (paramList.parameters.empty) then "" else ", ") + 
-                        def.spanTo(def.size - (if (def.endsWith("{}")) then 3 else 1) - 1);
-                value paramDesc = "parameter '" + dg.brokenName + "'";
-                value u = dg.rootNode.unit;
-                for (unit in getUnits(data.project)) {
-                    if (unit.unit.equals(u)) {
-                        addCreateParameterProposalInternal(data, paramDef, paramDesc, Icons.addCorrection,
-                            decl.declarationModel, unit, decl, paramList, dg.returnType, dg.getImports(), dg.node);
-                        break;
-                    }
-                }
+        if (dg.brokenName.first?.lowercase else false, 
+            exists decl = nodes.findDeclarationWithBody(dg.rootNode, dg.node), 
+            exists dm = decl.declarationModel, !dm.actual, 
+            exists paramList = getParameters(decl)) {
+            value def = dg.generate("", "");
+            //TODO: really ugly and fragile way to strip off the trailing ;
+            value paramDef = (if (paramList.parameters.empty) then "" else ", ") + 
+                    def.spanTo(def.size - (if (def.endsWith("{}")) then 3 else 1) - 1);
+            value paramDesc = "parameter '" + dg.brokenName + "'";
+            value u = dg.rootNode.unit;
+            if (is AnyModifiableSourceFile u, 
+                exists phasedUnit = u.phasedUnit) {
+                addCreateParameterProposalInternal(data, paramDef, paramDesc, Icons.addCorrection,
+                    decl.declarationModel, phasedUnit, decl, paramList, dg.returnType, dg.getImports(), dg.node);
             }
         }
     }
@@ -189,48 +185,41 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
     }
 
     void addCreateParameterProposalsInternal(Data data, variable String def, String desc, Declaration? typeDec, Type t) {
-        if (exists typeDec, is Functional typeDec) {
-            for (unit in getUnits(data.project)) {
-                if ((typeDec of Declaration).unit.equals(unit.unit)) {
-                    value fdv = FindDeclarationNodeVisitor(typeDec);
-                    correctionUtil.getRootNode(unit).visit(fdv);
-                    if (is Tree.Declaration decNode = fdv.declarationNode) {
-                        value paramList = getParameters(decNode);
-                        if (exists paramList) {
-                            if (!paramList.parameters.empty) {
-                                def = ", " + def;
-                            }
-                            value imports = HashSet<Declaration>();
-                            importProposals.importType(imports, t, unit.compilationUnit);
-                            addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
-                                unit, decNode, paramList, t, imports, data.node);
-                            break;
-                        }
-                    }
+        if (exists typeDec, is Functional typeDec, 
+            is AnyModifiableSourceFile unit 
+                    = (typeDec of Declaration).unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            value fdv = FindDeclarationNodeVisitor(typeDec);
+            correctionUtil.getRootNode(phasedUnit).visit(fdv);
+            if (is Tree.Declaration decNode = fdv.declarationNode, 
+                exists paramList = getParameters(decNode)) {
+                if (!paramList.parameters.empty) {
+                    def = ", " + def;
                 }
+                value imports = HashSet<Declaration>();
+                importProposals.importType(imports, t, phasedUnit.compilationUnit);
+                addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
+                    phasedUnit, decNode, paramList, t, imports, data.node);
             }
         }
     }
-
+    
     void addCreateParameterAndAttributeProposals(Data data, variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
-        if (is ClassOrInterface typeDec) {
-            for (unit in getUnits(data.project)) {
-                if (typeDec.unit.equals(unit.unit)) {
-                    value fdv = FindDeclarationNodeVisitor(typeDec);
-                    correctionUtil.getRootNode(unit).visit(fdv);
-                    if (is Tree.Declaration decNode = fdv.declarationNode) {
-                        value paramList = getParameters(decNode);
-                        value body = correctionUtil.getClassOrInterfaceBody(decNode);
-                        if (exists body, exists paramList) {
-                            if (!paramList.parameters.empty) {
-                                pdef = ", " + pdef;
-                            }
-                            addCreateParameterAndAttributeProposal(data, pdef, adef, desc, 
-                                Icons.addCorrection, typeDec, unit, 
-                                decNode, paramList, body, t);
-                        }
-                    }
+        if (is ClassOrInterface typeDec, 
+            is AnyModifiableSourceFile unit 
+                    = (typeDec of Declaration).unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            value fdv = FindDeclarationNodeVisitor(typeDec);
+            correctionUtil.getRootNode(phasedUnit).visit(fdv);
+            if (is Tree.Declaration decNode = fdv.declarationNode, 
+                exists body = correctionUtil.getClassOrInterfaceBody(decNode), 
+                exists paramList = getParameters(decNode)) {
+                if (!paramList.parameters.empty) {
+                    pdef = ", " + pdef;
                 }
+                addCreateParameterAndAttributeProposal(data, pdef, adef, desc, 
+                    Icons.addCorrection, typeDec, phasedUnit, 
+                    decNode, paramList, body, t);
             }
         }
     }

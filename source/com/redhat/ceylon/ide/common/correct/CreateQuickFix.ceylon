@@ -11,6 +11,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
+}
 import com.redhat.ceylon.ide.common.util {
     nodes,
     FindContainerVisitor,
@@ -166,50 +169,45 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
     void addCreateMemberProposals2(Data data, DefinitionGenerator dg,
         Declaration? typeDec, Tree.Statement? statement) {
         
-        if (exists typeDec, (typeDec is Class || (typeDec is Interface && dg.isFormalSupported))) {
-            for (unit in getUnits(data.project)) {
-                if (typeDec.unit.equals(unit.unit)) {
-                    value fdv = FindDeclarationNodeVisitor(typeDec);
-                    correctionUtil.getRootNode(unit).visit(fdv);
-
-                    if (is Tree.Declaration decNode = fdv.declarationNode,
-                        exists body = correctionUtil.getClassOrInterfaceBody(decNode)) {
-                        addCreateMemberProposal(data, dg, typeDec, unit, decNode, body, statement);
-                        break;
-                    }
-                }
+        if (exists typeDec, 
+            typeDec is Class || 
+                    typeDec is Interface && dg.isFormalSupported, 
+            is AnyModifiableSourceFile unit = typeDec.unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            value fdv = FindDeclarationNodeVisitor(typeDec);
+            correctionUtil.getRootNode(phasedUnit).visit(fdv);
+            
+            if (is Tree.Declaration decNode = fdv.declarationNode,
+                exists body = correctionUtil.getClassOrInterfaceBody(decNode)) {
+                addCreateMemberProposal(data, dg, typeDec, phasedUnit, decNode, body, statement);
             }
         }
     }
     
     void addCreateLocalProposals(Data data, DefinitionGenerator dg) {
-        value statement = nodes.findStatement(dg.rootNode, dg.node);
-        if (exists statement) {
-            for (unit in getUnits(data.project)) {
-                if (unit.unit.equals(dg.rootNode.unit)) {
-                    addCreateProposal(data, true, dg, unit, statement);
-                    break;
-                }
-            }
+        if (exists statement 
+                = nodes.findStatement(dg.rootNode, dg.node), 
+            is AnyModifiableSourceFile unit = dg.rootNode.unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            addCreateProposal(data, true, dg, phasedUnit, statement);
         }
     }
 
     void addCreateToplevelProposals(Data data, DefinitionGenerator dg) {
-        value statement = nodes.findTopLevelStatement(dg.rootNode, dg.node);
-        if (exists statement) {
-            for (unit in getUnits(data.project)) {
-                if (unit.unit.equals(dg.rootNode.unit)) {
-                    addCreateProposal(data, false, dg, unit, statement);
-                    break;
-                }
-            }
+        if (exists statement 
+                = nodes.findTopLevelStatement(dg.rootNode, dg.node), 
+            is AnyModifiableSourceFile unit = dg.rootNode.unit, 
+            exists phasedUnit = unit.phasedUnit) {
+            addCreateProposal(data, false, dg, phasedUnit, statement);
         }
     }
     
     shared void addCreateProposals(Data data, IFile file, Node node = data.node) {
         assert (is Tree.MemberOrTypeExpression smte = node);
         
-        if (exists idNode = nodes.getIdentifyingNode(node), exists brokenName = idNode.text, !brokenName.empty) {
+        if (exists idNode = nodes.getIdentifyingNode(node), 
+            exists brokenName = idNode.text, 
+            !brokenName.empty) {
             
             value vfdg = createValueFunctionDefinitionGenerator(brokenName, smte, data.rootNode, importProposals);
             if (exists vfdg) {
