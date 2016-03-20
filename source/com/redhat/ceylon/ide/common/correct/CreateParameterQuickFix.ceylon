@@ -180,7 +180,7 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
         } else if (is Tree.AnyMethod decNode) {
             value am = decNode;
             value pls = am.parameterLists;
-            return if (pls.empty) then null else pls.get(0);
+            return pls[0];
         } else if (is Tree.Constructor decNode) {
             value c = decNode;
             return c.parameterList;
@@ -194,17 +194,18 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
                 if ((typeDec of Declaration).unit.equals(unit.unit)) {
                     value fdv = FindDeclarationNodeVisitor(typeDec);
                     correctionUtil.getRootNode(unit).visit(fdv);
-                    assert (is Tree.Declaration decNode = fdv.declarationNode);
-                    value paramList = getParameters(decNode);
-                    if (exists paramList) {
-                        if (!paramList.parameters.empty) {
-                            def = ", " + def;
+                    if (is Tree.Declaration decNode = fdv.declarationNode) {
+                        value paramList = getParameters(decNode);
+                        if (exists paramList) {
+                            if (!paramList.parameters.empty) {
+                                def = ", " + def;
+                            }
+                            value imports = HashSet<Declaration>();
+                            importProposals.importType(imports, t, unit.compilationUnit);
+                            addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
+                                unit, decNode, paramList, t, imports, data.node);
+                            break;
                         }
-                        value imports = HashSet<Declaration>();
-                        importProposals.importType(imports, t, unit.compilationUnit);
-                        addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
-                            unit, decNode, paramList, t, imports, data.node);
-                        break;
                     }
                 }
             }
@@ -217,16 +218,17 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
                 if (typeDec.unit.equals(unit.unit)) {
                     value fdv = FindDeclarationNodeVisitor(typeDec);
                     correctionUtil.getRootNode(unit).visit(fdv);
-                    assert (is Tree.Declaration decNode = fdv.declarationNode);
-                    value paramList = getParameters(decNode);
-                    value body = correctionUtil.getClassOrInterfaceBody(decNode);
-                    if (exists body, exists paramList) {
-                        if (!paramList.parameters.empty) {
-                            pdef = ", " + pdef;
+                    if (is Tree.Declaration decNode = fdv.declarationNode) {
+                        value paramList = getParameters(decNode);
+                        value body = correctionUtil.getClassOrInterfaceBody(decNode);
+                        if (exists body, exists paramList) {
+                            if (!paramList.parameters.empty) {
+                                pdef = ", " + pdef;
+                            }
+                            addCreateParameterAndAttributeProposal(data, pdef, adef, desc, 
+                                Icons.addCorrection, typeDec, unit, 
+                                decNode, paramList, body, t);
                         }
-                        addCreateParameterAndAttributeProposal(data, pdef, adef, desc, 
-                            Icons.addCorrection, typeDec, unit, 
-                            decNode, paramList, body, t);
                     }
                 }
             }
