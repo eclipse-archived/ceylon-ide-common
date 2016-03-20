@@ -48,9 +48,11 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 
-
-shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, IRegion=DefaultRegion>
+shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change, IRegion=DefaultRegion>
         satisfies ExtractInferrableTypedRefactoring<TextChange>
         & NewNameRefactoring
         & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
@@ -183,7 +185,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         return [typeParams, constraints];
     }
     
-    void extractExpression(TextChange tfc, Tree.Term term) {
+    shared void extractExpression(TextChange tfc, Tree.Term term, 
+            Change? change = null) {
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = term.unit;
@@ -371,8 +374,40 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }.visit(rootNode);
         
-        //TODO: look for similar code in other files!
+        if (exists change) {
+            for (pu in getAllUnits()) {
+                if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
+                    value tc = newFileChange(pu);
+                    initMultiEditChange(tc);
+                    variable value found = false;
+                    object extends Visitor() {
+                        shared actual void visit(Tree.Term t) {
+                            if (!different(term, t)) {
+                                value tstart = t.startIndex.intValue();
+                                value length = t.distance.intValue();
+                                addEditToChange(tc, 
+                                    newReplaceEdit {
+                                        start = tstart;
+                                        length = length;
+                                        text = invocation;
+                                    });
+                                found = true;
+                            }
+                            else {
+                                super.visit(t);
+                            }
+                        }
+                    }.visit(pu.compilationUnit);
+                    if (found) {
+                        addChangeToChange(change, tc);
+                    }
+                }
+            }
+        }
     }
+    
+    shared formal TextChange newFileChange(PhasedUnit pu);
+    shared formal void addChangeToChange(Change change, TextChange tc);
     
     function targetDeclaration(Tree.Body body, 
         Tree.CompilationUnit rootNode) {
