@@ -103,8 +103,16 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
     switch (term) 
     case (is BinaryOperatorExpression) {
         assert (is BinaryOperatorExpression expression);
-        return different(term.leftTerm, expression.leftTerm, localRefs, arguments) ||
-                different(term.rightTerm, expression.rightTerm, localRefs, arguments);
+        if (term is Tree.SumOp|Tree.ProductOp|Tree.UnionOp|Tree.IntersectionOp|Tree.EqualOp|Tree.NotEqualOp) {
+            return (different(term.leftTerm, expression.leftTerm, localRefs, arguments) ||
+                different(term.rightTerm, expression.rightTerm, localRefs, arguments)) &&
+                    (different(term.leftTerm, expression.rightTerm, localRefs, arguments) ||
+                different(term.rightTerm, expression.leftTerm, localRefs, arguments));
+        }
+        else {
+            return different(term.leftTerm, expression.leftTerm, localRefs, arguments) ||
+                    different(term.rightTerm, expression.rightTerm, localRefs, arguments);
+        }
     }
     case (is UnaryOperatorExpression) {
         assert (is UnaryOperatorExpression expression);
