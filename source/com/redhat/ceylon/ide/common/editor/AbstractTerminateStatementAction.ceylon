@@ -323,12 +323,12 @@ shared interface AbstractTerminateStatementAction
             }
         }
         
-        Boolean withinLine(Node that) {
-            return that.startIndex exists
-                    && that.stopIndex exists
-                    && that.startIndex.intValue() <= endOfCodeInLine
-                    && that.stopIndex.intValue() >= endOfCodeInLine;
-        }
+        Boolean withinLine(Node that) 
+                => if (exists start = that.startIndex,
+                       exists stop = that.stopIndex)
+                then start.intValue() <= endOfCodeInLine
+                    && stop.intValue() >= endOfCodeInLine
+                else false;
         
         Boolean missingBlock(Tree.Block? block) {
             return !block exists 
@@ -347,8 +347,10 @@ shared interface AbstractTerminateStatementAction
         
         shared actual void visit(Tree.Expression that) {
             super.visit(that);
-            if (that.stopIndex.intValue() <= endOfCodeInLine,
-                that.startIndex.intValue() >= startOfCodeInLine,
+            if (exists start = that.startIndex, 
+                exists stop = that.stopIndex,
+                stop.intValue() <= endOfCodeInLine &&
+                start.intValue() >= startOfCodeInLine,
                 exists st = that.mainToken,
                 st.type == CeylonLexer.\iLPAREN,
                 ((that.mainEndToken?.type else -1) !=CeylonLexer.\iRPAREN),
@@ -495,10 +497,11 @@ shared interface AbstractTerminateStatementAction
             }
         }
         
-        Boolean inLine(Node that) {
-            return that.startIndex.intValue() >= startOfCodeInLine
-                    && that.startIndex.intValue() <= endOfCodeInLine;
-        }
+        Boolean inLine(Node that) 
+                => if (exists start = that.startIndex) 
+                then start.intValue() >= startOfCodeInLine
+                  && start.intValue() <= endOfCodeInLine
+                else false;
         
         void terminate(Node that, Integer tokenType, String ch) {
             if (inLine(that)) {

@@ -231,9 +231,9 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         object extends Visitor() {
             variable value backshift = nlength - newName.size;
             shared actual void visit(Tree.Term t) {
-                value start = t.startIndex.intValue();
-                value length = t.distance.intValue();
-                if (ModelUtil.contains(statement.scope, t.scope) 
+                if (exists start = t.startIndex?.intValue(),
+                    exists length = t.distance?.intValue(),
+                    ModelUtil.contains(statement.scope, t.scope) 
                     && start > nstart + nlength
                     && t!=term
                     && !different(term, t)) {

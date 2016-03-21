@@ -382,10 +382,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         object extends Visitor() {
             variable value backshift = length - invocation.size;
             shared actual void visit(Tree.Term t) {
-                value tstart = t.startIndex.intValue();
-                value length = t.distance.intValue();
+                value tstart = t.startIndex?.intValue();
+                value tlength = t.distance?.intValue();
                 value args = ArrayList<Tree.Term>();
-                if (ModelUtil.contains(decNode.scope.container, t.scope)
+                if (exists tstart, exists tlength,
+                    ModelUtil.contains(decNode.scope.container, t.scope)
                     && tstart > start + length //TODO: make it work for earlier expressions in the file
                     && t!=term 
                     && !different {
@@ -402,14 +403,14 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     addEditToChange(tfc, 
                         newReplaceEdit {
                             start = tstart;
-                            length = length;
+                            length = tlength;
                             text = invocation;
                         });
                     dupeRegions.add(newRegion {
                         start = tstart + shift + definition.size - backshift;
                         length = newName.size;
                     });
-                    backshift += length - invocation.size;
+                    backshift += tlength - invocation.size;
                 }
                 else {
                     super.visit(t);
@@ -425,13 +426,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                     variable value found = false;
                     object extends Visitor() {
                         shared actual void visit(Tree.Term t) {
+                            value tstart = t.startIndex?.intValue();
+                            value tlength = t.distance?.intValue();
                             value args = ArrayList<Tree.Term>();
-                            if (!different {
-                                term = term;
-                                expression = t;
-                                localRefs = localRefs;
-                                arguments = args;
-                            }) {
+                            if (exists tstart, exists tlength,
+                                !different {
+                                    term = term;
+                                    expression = t;
+                                    localRefs = localRefs;
+                                    arguments = args;
+                                }) {
                                 value invocation = 
                                         newName + 
                                         "(" + 
@@ -439,8 +443,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                                         ")";
                                 addEditToChange(tc, 
                                     newReplaceEdit {
-                                        start = t.startIndex.intValue();
-                                        length = t.distance.intValue();
+                                        start = tstart;
+                                        length = tlength;
                                         text = invocation;
                                     });
                                 found = true;
