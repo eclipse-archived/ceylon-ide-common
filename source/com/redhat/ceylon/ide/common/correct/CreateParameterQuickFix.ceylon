@@ -116,56 +116,62 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
     shared void addCreateParameterProposals(Data data) {
         value fav = FindInvocationVisitor(data.node);
         (fav of Visitor).visit(data.rootNode);
-        value res = fav.result;
-        if (!exists res) {
-            return;
-        }
-
-        value prim = res.primary;
-        if (is Tree.MemberOrTypeExpression prim) {
-            value mte = prim;
-            Reference? pr = mte.target;
-            if (exists pr) {
-                value d = pr.declaration;
-                variable Type? t = null;
-                variable String? parameterName = null;
-                if (is Tree.Term term = data.node) {
-                    t = term.typeModel;
-                    if (exists _t = t) {
-                        parameterName = _t.declaration.name;
-                        if (exists pn = parameterName) {
-                            parameterName = escaping.toInitialLowercase(pn)
-                                    .replace("?", "")
-                                    .replace("[]", "");
-                            if (exists pn2 = parameterName, pn2 == "string") {
-                                parameterName = "text";
-                            }
-                        }
-                    }
-                } else if (is Tree.SpecifiedArgument sa = data.node) {
-                    if (exists se = sa.specifierExpression) {
-                        if (exists e = se.expression) {
-                            t = e.typeModel;
-                        }
-                    }
-                    parameterName = sa.identifier.text;
-                } else if (is Tree.TypedArgument ta = data.node) {
-                    t = ta.type.typeModel;
-                    parameterName = ta.identifier.text;
+        if (is Tree.MemberOrTypeExpression prim 
+                = fav.result?.primary, 
+            exists pr = prim.target) {
+            
+            Type parameterType;
+            String parameterName;
+            switch (node = data.node)
+            case (is Tree.Term) {
+                if (exists tt = node.typeModel) {
+                    //exists tn = tt.declaration.name) {
+                    value pn = nodes.nameProposals(node)[0]?.string;
+                            //escaping.toInitialLowercase(tn)
+                            //    .replace("?", "")
+                            //    .replace("[]", "");
+                    parameterName 
+                            = switch(pn) 
+                            case (null) "it"
+                            case ("string") "text"
+                            case ("true"|"false") "boolean" 
+                            else pn;
+                    parameterType = tt;
                 }
-                if (exists _t = t, exists pn = parameterName) {
-                    t = data.node.unit.denotableType(_t);
-                    value defaultValue = correctionUtil.defaultValue(prim.unit, t);
-                    value parameterType = _t.asString();
-                    value def = parameterType + " " + pn + " = " + defaultValue;
-                    value desc = "parameter '" + pn + "'";
-                    addCreateParameterProposalsInternal(data, def, desc, d, _t);
-                    value pdef = pn + " = " + defaultValue;
-                    value adef = parameterType + " " + pn + ";";
-                    value padesc = "attribute '" + pn + "'";
-                    addCreateParameterAndAttributeProposals(data, pdef, adef, padesc, d, _t);
+                else {
+                    return;
                 }
             }
+            case (is Tree.SpecifiedArgument) {
+                if (exists se = node.specifierExpression, 
+                    exists e = se.expression) {
+                    parameterType = e.typeModel;
+                }
+                else {
+                    return;
+                }
+                parameterName = node.identifier.text;
+            }
+            case (is Tree.TypedArgument) {
+                parameterType = node.type.typeModel;
+                parameterName = node.identifier.text;
+            }
+            else {
+                return;
+            }
+            
+            value dec = pr.declaration;
+            value dt = data.node.unit.denotableType(parameterType);
+            value defaultValue = correctionUtil.defaultValue(prim.unit, dt);
+            value parameterTypeStr = dt.asSourceCodeString(prim.unit);
+            value def = parameterTypeStr + " " + parameterName + " = " + defaultValue;
+            value desc = "parameter '" + parameterName + "'";
+            addCreateParameterProposalsInternal(data, def, desc, dec, dt);
+            value pdef = parameterName + " = " + defaultValue;
+            value adef = parameterTypeStr + " " + parameterName + ";";
+            value padesc = "attribute '" + parameterName + "'";
+            addCreateParameterAndAttributeProposals(data, pdef, adef, padesc, dec, dt);
+            
         }
     }
 
