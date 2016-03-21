@@ -3,8 +3,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
-    toCeylonString
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -214,7 +213,7 @@ shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
             return null;
         }
         
-        names = nodes.nameProposals(expression).array.map(toCeylonString).coalesced;
+        names = nodes.nameProposals(expression);
         offset = startIndex;
         type = unit.denotableType(resultType);
         this.currentOffset = currentOffset;

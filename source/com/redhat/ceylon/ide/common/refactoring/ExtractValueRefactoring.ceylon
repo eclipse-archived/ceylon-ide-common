@@ -34,7 +34,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
     value indents => importProposals.indents;
     
-    initialNewName => nameProposals[0]?.string else "it";
+    initialNewName => nameProposals[0];
     
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
@@ -45,7 +45,6 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     nameProposals
             => nodes.nameProposals {
         node = editorData?.node;
-        unplural = false;
         rootNode = editorData?.rootNode;
     };
     

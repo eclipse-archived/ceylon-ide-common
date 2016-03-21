@@ -37,10 +37,6 @@ import com.redhat.ceylon.model.typechecker.model {
     IntersectionType
 }
 
-import java.lang {
-    JString=String,
-    ObjectArray
-}
 import java.util {
     JList=List,
     JHashSet=HashSet,
@@ -63,7 +59,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
     value indents => importProposals.indents;
     
-    initialNewName => nameProposals[0]?.string else "it";
+    initialNewName => nameProposals[0];
     
     shared formal List<Tree.Statement> statements;
     shared formal Tree.Declaration? target;
@@ -953,18 +949,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                             => statement is Tree.Constructor))
                else false;
     
-    shared actual ObjectArray<JString> nameProposals {
+    shared actual [String+] nameProposals {
         value proposals
                 = nodes.nameProposals {
             node = editorData?.node;
-            unplural = false;
             rootNode = editorData?.rootNode;
-        };
-        for (i in 0:proposals.size) {
-            if (proposals.get(i)=="it") {
-                proposals.set(i, "do");
-            }
-        }
+        }.collect((n) => n=="it" then "do" else n);
         if (!results.empty) {
             value name =
                     "get" + 
@@ -972,12 +962,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         for (_ -> rdec in results) 
                         rdec.name[0..0].uppercased + 
                                 rdec.name[1...] };
-            value result 
-                    = ObjectArray<JString>
-                        (proposals.size+1);
-            result.set(0, JString(name));
-            proposals.copyTo(result, 0, 1);
-            return result;
+            return proposals.withLeading(name);
         }
         else {
             return proposals;

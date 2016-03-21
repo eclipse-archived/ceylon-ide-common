@@ -197,20 +197,22 @@ shared abstract class ControlStructureProposal<IdeComponent,
     
     shared void enterLinkedMode(Document doc) {
         if (exists loc = text.firstInclusion(" val =")) {
-            value lm = newLinkedMode();
-            
-            value names = nodes.nameProposals(node, false, cpc.parsedRootNode).array.map(
-                (_) => newNameCompletion(_?.string)
-            ).sequence();
+            value linkedMode = newLinkedMode();
             
             value startOffset = node?.startIndex?.intValue() else offset;
-            value exitOffset = (text.endsWith("{}"))
+            value exitOffset = text.endsWith("{}")
                                 then startOffset + text.size - 1
                                 else startOffset + text.size;
             
-            addEditableRegion(lm, doc, startOffset + loc + 1, 3, 0, names);
+            addEditableRegion(linkedMode, doc, 
+                startOffset + loc + 1, 3, 0, 
+                nodes.nameProposals {
+                        node = node;
+                        unplural = false;
+                        rootNode = cpc.parsedRootNode;
+                    }.collect(newNameCompletion));
             
-            installLinkedMode(doc, lm, this, 1, exitOffset);
+            installLinkedMode(doc, linkedMode, this, 1, exitOffset);
         }
     }
     

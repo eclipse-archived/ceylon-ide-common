@@ -1,32 +1,31 @@
 import ceylon.file {
-	lines,
-	File
+    lines,
+    File
 }
 import ceylon.interop.java {
-	CeylonIterable,
-	toStringArray
+    CeylonIterable
 }
 import ceylon.test {
-	assertEquals,
-	test,
-	assertTrue,
-	assertFalse
+    assertEquals,
+    test,
+    assertTrue,
+    assertFalse
 }
 
 import com.redhat.ceylon.compiler.typechecker.analyzer {
-	UsageWarning
+    UsageWarning
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-	Message
+    Message
 }
 import com.redhat.ceylon.ide.common.util {
-	nodes
+    nodes
 }
 
 import test.com.redhat.ceylon.ide.common.testUtils {
-	SourceCode,
-	parseAndTypecheckCode,
-	findInLines
+    SourceCode,
+    parseAndTypecheckCode,
+    findInLines
 }
 
 shared class NodesNameProposalsTests() {
@@ -49,12 +48,13 @@ shared class NodesNameProposalsTests() {
 	assertEquals(CeylonIterable(pu.compilationUnit.errors)
 			.filter((Message message) => !(message is UsageWarning)).sequence(), []);
 	
-	Array<String?> nameProposals(String stringLiteralValue) {
+	[String+] nameProposals(String stringLiteralValue) {
 		String searchedText = "\"``stringLiteralValue``\"";
 		value offset = findInLines(theLines, searchedText, 0);
-		value found = nodes.findNode(pu.compilationUnit, pu.tokens, offset, offset);
-		assert (exists found);
-		return toStringArray(nodes.nameProposals(found, false, pu.compilationUnit));
+		return nodes.nameProposals {
+		    node = nodes.findNode(pu.compilationUnit, pu.tokens, offset, offset);
+		    rootNode = pu.compilationUnit;
+		};
 	}
 	
 	void test(String stringLiteralValue, Condition condition) {
@@ -104,11 +104,11 @@ shared class NodesNameProposalsTests() {
 	test shared void withUpperCase() => test("uppercase", Proposed("\\iArgument"));
 	
 	interface Condition {
-		shared formal void check(Array<String?> proposedNames);
+		shared formal void check([String+] proposedNames);
 	}
 	
 	class Proposed(String* names) satisfies Condition {
-		shared actual void check(Array<String?> proposedNames) {
+		shared actual void check([String+] proposedNames) {
 			for(value name in names){
 				assertTrue(proposedNames.contains(name), "Expected proposal \"``name``\" to be found in propositions ``proposedNames``");
 			}
@@ -116,7 +116,7 @@ shared class NodesNameProposalsTests() {
 	}
 	
 	class NotProposed(String* names) satisfies Condition {
-		shared actual void check(Array<String?> proposedNames) {			
+		shared actual void check([String+] proposedNames) {			
 			for(value name in names){
 				assertFalse(proposedNames.contains(name), "Expected proposal \"``name``\" not to be found in propositions ``proposedNames``");
 			}

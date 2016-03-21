@@ -3,8 +3,7 @@ import ceylon.collection {
     MutableSet
 }
 import ceylon.interop.java {
-    javaString,
-    createJavaStringArray
+    javaString
 }
 
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -36,7 +35,6 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    ObjectArray,
     JString=String,
     StringBuilder
 }
@@ -605,9 +603,21 @@ shared object nodes {
     
     "Generates proposed names for provided node.
      
-     Returned names are quoted to be valid text representing a variable name."
-    shared ObjectArray<JString> nameProposals(Node? node, Boolean unplural = false,
-        Tree.CompilationUnit? rootNode = null) {
+     Returned names are quoted to be valid text representing a 
+     variable name."
+    shared [String+] nameProposals(node = null, rootNode = null, unplural = false, avoidClash = true) {
+        "If given a [[Tree.Term]], suggest names based on the
+         type of the term."
+        Node? node;
+        "Use English pluralization rules to find a singular 
+         form of the proposed name."
+        Boolean unplural;
+        "Don't suggest a name if it would clash with a base
+         reference within the given [[node]]."
+        Boolean avoidClash;
+        "If specified, and the given [[node]] occurs in an 
+         argument list, suggest the name of the parameter."
+        Tree.CompilationUnit? rootNode;
         
         value names = HashSet<String>();
         
@@ -639,11 +649,12 @@ shared object nodes {
                 }
             }
             case (is Tree.BaseMemberOrTypeExpression) {
-                if (unplural) {
-                    value name = baseTerm.declaration.name;
-                    value result = singularize(name);
-                    if (name!=result) {
-                        addNameProposals(names, false, result);
+                if (exists decl = baseTerm.declaration) {
+                    if (unplural) {
+                        addNameProposals(names, false, singularize(decl.name));
+                    }
+                    else {
+                        addNameProposals(names, false, decl.name);
                     }
                 }
             }
@@ -712,11 +723,19 @@ shared object nodes {
             }
         }
         
-        if (names.empty) {
-            names.add("it");
+        if (avoidClash, exists node) {
+            node.visit(object extends Visitor() {
+                shared actual void visit(Tree.BaseMemberExpression that) {
+                    if (exists decl = that.declaration) {
+                        names.remove(decl.name);
+                    }
+                }
+            });
         }
         
-        return createJavaStringArray(names);
+        return 
+        if (nonempty result = names.sequence()) 
+        then result else ["it"];
     }
     
     "String literal name proposals:

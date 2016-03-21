@@ -1,7 +1,4 @@
-import java.lang {
-    ObjectArray,
-    JString=String
-}
+
 
 shared class DefaultRegion(start, length) {
     shared Integer start;
@@ -17,6 +14,6 @@ shared interface ExtractLinkedModeEnabled<Region=DefaultRegion> {
 
     shared formal Region newRegion(Integer start, Integer length);
 
-    shared formal ObjectArray<JString> nameProposals;
+    shared formal [String+] nameProposals;
     
 }

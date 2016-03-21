@@ -14,13 +14,11 @@ import com.redhat.ceylon.ide.common.model {
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    escaping,
     FindDeclarationNodeVisitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Type,
-    Reference,
     Functional,
     ClassOrInterface
 }
@@ -126,13 +124,15 @@ shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextE
             case (is Tree.Term) {
                 if (exists tt = node.typeModel) {
                     //exists tn = tt.declaration.name) {
-                    value pn = nodes.nameProposals(node)[0]?.string;
+                    value pn = nodes.nameProposals {
+                        node = node;
+                        avoidClash = false;
+                    }[0];
                             //escaping.toInitialLowercase(tn)
                             //    .replace("?", "")
                             //    .replace("[]", "");
                     parameterName 
-                            = switch(pn) 
-                            case (null) "it"
+                            = switch(pn)
                             case ("string") "text"
                             case ("true"|"false") "boolean" 
                             else pn;

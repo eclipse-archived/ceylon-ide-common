@@ -34,7 +34,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
 
     shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
     
-    initialNewName => nameProposals[0]?.string else "it";
+    initialNewName => nameProposals[0];
     
     shared formal variable Tree.Declaration? methodOrClass;
     shared formal actual variable Type? type;
@@ -42,7 +42,6 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
     nameProposals
             => nodes.nameProposals {
         node = editorData?.node;
-        unplural = false;
         rootNode = editorData?.rootNode;
     };
     
