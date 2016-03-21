@@ -31,6 +31,16 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
         return different(term, expression.term, localRefs, arguments);
     }
     
+    if (exists tt = term.typeModel, 
+        exists et = expression.typeModel) {
+        if (!et.isSubtypeOf(tt)) {
+            return true;
+        }
+    }
+    else {
+        return true;
+    }
+    
     if (exists arguments) {
         if (term in localRefs) {
             arguments.add(expression);
@@ -41,6 +51,7 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
     if (term.nodeType!=expression.nodeType) {
         return true;
     }
+    
     function positionalArgsDifferent(x, y) {
         JList<PositionalArgument> y;
         JList<PositionalArgument> x;
