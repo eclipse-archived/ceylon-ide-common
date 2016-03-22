@@ -806,8 +806,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value template = nodes.text(definition, declarationTokens);
                 value templateStart = definition.startIndex.intValue();
                 void text(Node it) {
-                    value text = template.span(start, 
-                        it.startIndex.intValue() - templateStart - 1);
+                    value text = template.measure(start, 
+                        it.startIndex.intValue() - templateStart - start);
                     result.append(text);
                     start = it.endIndex.intValue() - templateStart;
                 }
@@ -831,7 +831,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
                 
                 shared void finish() {
-                    value text = template.span(start, template.size - 1);
+                    value text = template.measure(start, template.size - start);
                     result.append(text);
                 }
             }
