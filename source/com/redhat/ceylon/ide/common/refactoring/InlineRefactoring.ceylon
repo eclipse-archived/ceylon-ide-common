@@ -35,7 +35,8 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Unit,
     TypeParameter,
-    Generic
+    Generic,
+    Referenceable
 }
 
 import java.util {
@@ -50,6 +51,48 @@ import org.antlr.runtime {
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
+}
+
+shared Boolean isInlineRefactoringAvailable(Referenceable? ref, 
+    Tree.CompilationUnit rootNode, Boolean inSameProject) {
+    
+    if (is Declaration declaration = ref,
+        inSameProject) {
+        if (is FunctionOrValue declaration) {
+            value fov = declaration;
+            return !fov.parameter 
+                    && !(fov is Setter) 
+                    && !fov.default 
+                    && !fov.formal 
+                    && !fov.native 
+                    && (fov.typeDeclaration exists) 
+                    && (!fov.typeDeclaration.anonymous) 
+                    && (fov.toplevel 
+                        || !fov.shared 
+                        || (!fov.formal && !fov.default && !fov.actual))
+                    && (!fov.unit.equals(rootNode.unit) 
+                    //not a Destructure
+                    || !(getDeclarationNode(rootNode, declaration) is Tree.Variable));
+            //TODO: && !declaration is a control structure variable 
+            //TODO: && !declaration is a value with lazy init
+        } else if (is TypeAlias declaration) {
+            return true;
+        } else if (is ClassOrInterface declaration) {
+            return declaration.\ialias;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+Tree.StatementOrArgument? getDeclarationNode(
+    Tree.CompilationUnit declarationUnit, Declaration declaration) {
+    
+    value fdv = FindDeclarationNodeVisitor(declaration);
+    declarationUnit.visit(fdv);
+    return fdv.declarationNode;
 }
 
 shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change>
@@ -74,38 +117,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             !node is Tree.Declaration 
             && nodes.getIdentifyingNode(node) is Tree.Identifier;
     
-    shared actual Boolean enabled {
-        value declaration = editorData.declaration;
-
-        if (inSameProject(declaration)) {
-            if (is FunctionOrValue declaration) {
-                value fov = declaration;
-                return !fov.parameter 
-                        && !(fov is Setter) 
-                        && !fov.default 
-                        && !fov.formal 
-                        && !fov.native 
-                        && (fov.typeDeclaration exists) 
-                        && (!fov.typeDeclaration.anonymous) 
-                        && (fov.toplevel 
-                            || !fov.shared 
-                            || (!fov.formal && !fov.default && !fov.actual))
-                        && (!fov.unit.equals(rootNode.unit) 
-                            //not a Destructure
-                            || !(getDeclarationNode(rootNode) is Tree.Variable));
-                //TODO: && !declaration is a control structure variable 
-                //TODO: && !declaration is a value with lazy init
-            } else if (is TypeAlias declaration) {
-                return true;
-            } else if (is ClassOrInterface declaration) {
-                return declaration.\ialias;
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
+    shared actual Boolean enabled => true;
 
     shared actual Integer countReferences(Tree.CompilationUnit cu) { 
         value vis = FindReferencesVisitor(editorData.declaration);
@@ -127,7 +139,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             return "Compilation unit not found";
         }
         
-        value declarationNode = getDeclarationNode(declarationUnit);
+        value declarationNode = getDeclarationNode(declarationUnit, editorData.declaration);
         if (is Tree.AttributeDeclaration declarationNode,
             !declarationNode.specifierOrInitializerExpression exists) {
 
@@ -221,7 +233,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         
         if (exists declUnit = declarationUnit,
             exists declTokens = declarationTokens,
-            is Tree.Declaration declarationNode = getDeclarationNode(declUnit)) {
+            is Tree.Declaration declarationNode = getDeclarationNode(declUnit, 
+                editorData.declaration)) {
 
             value term = getInlinedTerm(declarationNode);
         
@@ -243,12 +256,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
         
         return cc;
-    }
-
-    Tree.StatementOrArgument? getDeclarationNode(Tree.CompilationUnit declarationUnit) {
-        value fdv = FindDeclarationNodeVisitor(editorData.declaration);
-        declarationUnit.visit(fdv);
-        return fdv.declarationNode;
     }
 
     Boolean affectsUnit(Unit unit) {
