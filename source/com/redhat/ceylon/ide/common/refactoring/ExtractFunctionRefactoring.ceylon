@@ -135,14 +135,12 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     shared actual void build(TextChange tfc) {
-        if (exists data = editorData) {
-            value node = data.node;
-            if (is Tree.Term node) {
-                extractExpression(tfc, node);
-            }
-            else if (is Tree.Body|Tree.Statement node) {
-                extractStatements(tfc, node);
-            }
+        value node = editorData.node;
+        if (is Tree.Term node) {
+            extractExpression(tfc, node);
+        }
+        else if (is Tree.Body|Tree.Statement node) {
+            extractStatements(tfc, node);
         }
     }
     
@@ -167,7 +165,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                             .append(t.name)
                             .append(" satisfies ");
                     for (boundType in sts) {
-                        assert (exists rootNode = this.rootNode);
                         importProposals.importType(imports, boundType, rootNode);
                         value bound = boundType.asSourceCodeString(unit);
                         constraints
@@ -205,7 +202,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = term.unit;
-        assert (exists editorData = this.editorData);
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
         
@@ -479,7 +475,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         JSet<Declaration> imports) {
         if (result is Tree.AttributeDeclaration) {
             if (rdec.shared, exists type = rdec.type) {
-                assert (exists rootNode = this.rootNode);
                 importProposals.importType(imports, type, rootNode);
                 return "shared " + type.asSourceCodeString(unit) + " ";
             }
@@ -530,7 +525,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     void extractStatements(TextChange tfc, Tree.Body|Tree.Statement node) {
         assert (exists body = this.body);
-        assert (exists editorData = this.editorData);
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
         value unit = body.unit;
@@ -906,8 +900,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     shared actual Boolean forceWizardMode {
-        if (exists node = editorData?.node,
-            exists scope = node.scope) {
+        value node = editorData.node;
+
+        if (exists scope = node.scope) {
             if (is Tree.Body|Tree.Statement node, 
                 exists body = this.body) {
                 for (s in statements) {
@@ -938,23 +933,21 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    enabled => if (exists node = editorData?.node,
-                   exists sourceFile = editorData?.sourceVirtualFile)
-               then editable(rootNode?.unit) &&
+    enabled => if (exists sourceFile = editorData.sourceVirtualFile)
+               then editable(editorData.rootNode.unit) &&
                    !descriptor(sourceFile) &&
-                   (node is Tree.Term ||
-                    node is Tree.Body|Tree.Statement &&
+                   (editorData.node is Tree.Term|Tree.Body|Tree.Statement &&
                         !statements.empty &&
                         !statements.any((statement) 
                             => statement is Tree.Constructor))
                else false;
     
     shared actual [String+] nameProposals {
-        value proposals
-                = nodes.nameProposals {
-            node = editorData?.node;
-            rootNode = editorData?.rootNode;
+        value proposals = nodes.nameProposals {
+            node = editorData.node;
+            rootNode = editorData.rootNode;
         }.collect((n) => n=="it" then "do" else n);
+        
         if (!results.empty) {
             value name =
                     "get" + 

@@ -44,26 +44,25 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
     nameProposals
             => nodes.nameProposals {
-        node = editorData?.node;
-        rootNode = editorData?.rootNode;
+        node = editorData.node;
+        rootNode = editorData.rootNode;
     };
     
-    enabled => if (exists node = editorData?.node,
-                   exists sourceFile = editorData?.sourceVirtualFile)
-               then editable(rootNode?.unit) && 
+    enabled => let(node = editorData.node)
+               if (exists sourceFile = editorData.sourceVirtualFile)
+               then editable(rootNode.unit) && 
                    !descriptor(sourceFile) &&
                    node is Tree.Term
                else false;
     
     shared Boolean extractsFunction
-            => if (is Tree.Term term = editorData?.node) 
+            => if (is Tree.Term term = editorData.node) 
             then unparenthesize(term) is Tree.FunctionArgument 
             else false;
     
     shared actual void build(TextChange tfc) {
         "This method will only be called when the [[editorData]]is not [[null]]"
-        assert (exists editorData = this.editorData,
-                exists sourceFile = editorData.sourceVirtualFile,
+        assert (exists sourceFile = editorData.sourceVirtualFile,
                 is Tree.Term term = editorData.node);
         
         initMultiEditChange(tfc);
@@ -256,8 +255,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     }
     
     forceWizardMode
-            => if (exists node = editorData?.node,
-                   exists scope = node.scope)
+            => let(node = editorData.node)
+               if (exists scope = node.scope)
                then scope.getMemberOrParameter(node.unit, newName, null, false) exists
                else false;
 

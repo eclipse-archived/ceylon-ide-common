@@ -21,7 +21,8 @@ import org.antlr.runtime {
     CommonToken
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Unit
+    Unit,
+    Declaration
 }
 
 Boolean descriptor(VirtualFile sourceFile) 
@@ -38,16 +39,17 @@ shared interface AbstractRefactoring<RefactoringData>
     shared interface EditorData {
         shared formal List<CommonToken> tokens;
         shared formal Tree.CompilationUnit rootNode;
-        shared formal Node? node;
+        shared formal Node node;
         shared formal VirtualFile? sourceVirtualFile;
     }
 
-    shared formal EditorData? editorData;
+    shared formal EditorData editorData;
 
     shared formal List<PhasedUnit> getAllUnits();
     shared formal Boolean searchInFile(PhasedUnit pu);
     shared formal Boolean searchInEditor();
-    shared formal Tree.CompilationUnit? rootNode;
+    shared formal Boolean inSameProject(Declaration decl);
+    shared default Tree.CompilationUnit rootNode => editorData.rootNode;
 
     shared Tree.Term unparenthesize(Tree.Term term) {
         if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
@@ -63,8 +65,8 @@ shared interface AbstractRefactoring<RefactoringData>
                 count += countReferences(pu.compilationUnit);
             }
         }
-        if (searchInEditor(), exists existingRoot=rootNode) {
-            count += countReferences(existingRoot);
+        if (searchInEditor()) {
+            count += countReferences(rootNode);
         }
         return count;
     }

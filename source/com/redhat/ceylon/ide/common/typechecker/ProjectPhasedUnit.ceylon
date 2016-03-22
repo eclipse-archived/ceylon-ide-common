@@ -12,8 +12,7 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
-    TypecheckerUnit,
-    PhasedUnit
+    TypecheckerUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -23,8 +22,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     ProjectSourceFile,
     BaseIdeModule,
-    ModelAliases,
-    BaseIdeModuleSourceMapper
+    ModelAliases
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 import com.redhat.ceylon.ide.common.util {
     synchronize,
@@ -51,9 +52,8 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
+
+shared alias AnyProjectPhasedUnit => ProjectPhasedUnit<in Nothing, in Nothing, in Nothing, in Nothing>;
 
 shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>

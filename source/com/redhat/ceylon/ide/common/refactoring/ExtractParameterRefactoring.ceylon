@@ -39,24 +39,22 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
     shared formal variable Tree.Declaration? methodOrClass;
     shared formal actual variable Type? type;
     
-    nameProposals
-            => nodes.nameProposals {
-        node = editorData?.node;
-        rootNode = editorData?.rootNode;
+    nameProposals => nodes.nameProposals {
+        node = editorData.node;
+        rootNode = editorData.rootNode;
     };
     
-    enabled => if (exists node = editorData?.node,
-                   exists sourceFile = editorData?.sourceVirtualFile,
+    enabled => if (exists sourceFile = editorData.sourceVirtualFile,
                    exists methodOrClass = this.methodOrClass)
-               then editable(rootNode?.unit) && 
+               then editable(rootNode.unit) && 
                    !descriptor(sourceFile) &&
-                   node is Tree.Term &&
+                   editorData.node is Tree.Term &&
                    !methodOrClass.declarationModel.actual &&
-                   !withinParameterList(methodOrClass, node)
+                   !withinParameterList(methodOrClass, editorData.node)
                else false;
     
     shared Boolean extractsFunction
-            => if (is Tree.Term term = editorData?.node) 
+            => if (is Tree.Term term = editorData.node) 
             then unparenthesize(term) is Tree.FunctionArgument 
             else false;
     
@@ -87,8 +85,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
     
     shared actual void build(TextChange tfc) {
         "This method will only be called when the [[editorData]]is not [[null]]"
-        assert (exists editorData = this.editorData,
-                exists sourceFile = editorData.sourceVirtualFile,
+        assert (exists sourceFile = editorData.sourceVirtualFile,
                 is Tree.Term term = editorData.node);
         
         initMultiEditChange(tfc);
@@ -215,9 +212,9 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
     }
     
     forceWizardMode
-            => if (exists node = editorData?.node,
-                   exists scope = node.scope)
-               then scope.getMemberOrParameter(node.unit, newName, null, false) exists
+            => if (exists scope = editorData.node.scope)
+               then scope.getMemberOrParameter(editorData.node.unit,
+                    newName, null, false) exists
                else false;
 
     name => "Extract Parameter";
