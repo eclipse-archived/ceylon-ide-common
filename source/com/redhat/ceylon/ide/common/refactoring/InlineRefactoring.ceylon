@@ -16,9 +16,6 @@ import com.redhat.ceylon.ide.common.correct {
 import com.redhat.ceylon.ide.common.model {
     CeylonUnit
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
 import com.redhat.ceylon.ide.common.typechecker {
     AnyProjectPhasedUnit
 }
@@ -51,6 +48,9 @@ import org.antlr.runtime {
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
+}
+import com.redhat.ceylon.ide.common.platform {
+    ImportProposalServicesConsumer
 }
 
 shared Boolean isInlineRefactoringAvailable(Referenceable? ref, 
@@ -97,6 +97,7 @@ Tree.StatementOrArgument? getDeclarationNode(
 
 shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change>
         satisfies AbstractRefactoring<Change>
+                & ImportProposalServicesConsumer<Nothing, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>
                 & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {
     
@@ -263,8 +264,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 || !editorData.justOne  
                 || unit == editorData.node.unit;
     }
-
-    value importProposals => platformServices.importProposals<Nothing,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
 
     Boolean addImports(TextChange change, Tree.Declaration declarationNode,
         Tree.CompilationUnit cu) {
