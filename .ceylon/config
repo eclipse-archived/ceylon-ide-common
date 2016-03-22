@@ -10,3 +10,4 @@ source=test-source
 
 [repositories]
 lookup=./repo
+lookup=../ceylon-sdk/modules
