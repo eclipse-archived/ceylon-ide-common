@@ -9,6 +9,12 @@ import ceylon.language {
 shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap = emptyMap) satisfies MutableMap<Key, Item> 
         given Key satisfies Object {
     
+    shared Map<Key, Item> immutable =>
+            synchronize { 
+                on = this; 
+                function do() => immutableMap;
+            };
+    
     shared actual MutableMap<Key,Item> clone() => ImmutableMapWrapper(immutableMap);
     
     shared actual Boolean defines(Object key) => immutableMap.defines(key);
@@ -52,13 +58,13 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
                 return this;
             }) synchronize(this, do);
     
-    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key)) => 
+    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key), Boolean reuseExistingItems=true) => 
             let(do = () {
                 if (immutableMap.size != newKeys.size
                     || !immutableMap.keys.containsEvery(newKeys)) {
                     immutableMap = newMap(newKeys.map((key) => 
                         key -> (
-                            if (exists item=immutableMap[key]) 
+                            if (reuseExistingItems, exists item=immutableMap[key]) 
                             then item 
                             else toItem(key))));
                 }
@@ -68,8 +74,9 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
     shared actual Item? put(Key key, Item item) => 
             let(do = () {
                 Item? result = immutableMap.get(key);
-                immutableMap = newMap { key->item,
-                    *immutableMap.filterKeys((keyToKeep) => keyToKeep != key) };
+                immutableMap = newMap(
+                    immutableMap.filterKeys((keyToKeep) => 
+                        keyToKeep != key).chain { key->item });
                 return result;
             }) synchronize(this, do);
             
