@@ -824,7 +824,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     inlineDefinitionReference(tokens, declarationTokens, reference, that, result, it);
                 }
                 
-                shared actual void visit(Tree.Type it) {
+                shared actual void visit(Tree.SimpleType it) {
                     super.visit(it);
                     text(it);
                     inlineAliasDefinitionReference(tokens, declarationTokens, reference, result, it);
