@@ -11,8 +11,7 @@ import com.redhat.ceylon.ide.common.model.delta {
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    BaseFileVirtualFile,
-    VfsServicesConsumer
+    BaseFileVirtualFile
 }
 import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
@@ -42,6 +41,9 @@ import ceylon.interop.java {
 }
 import com.redhat.ceylon.ide.common.model.parsing {
     CeylonSourceParser
+}
+import com.redhat.ceylon.ide.common.platform {
+    VfsServicesConsumer
 }
 
 DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();

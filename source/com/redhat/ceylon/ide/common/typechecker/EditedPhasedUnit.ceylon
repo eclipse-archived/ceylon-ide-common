@@ -12,8 +12,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.model {
     ModelAliases,
-    EditedSourceFile,
     isCentralModelDeclaration
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -37,18 +39,16 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
-}
 import com.redhat.ceylon.ide.common.platform {
-    platformServices
+    ModelServicesConsumer
 }
 
 
 
 shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
@@ -86,7 +86,8 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
     }
     
     shared actual TypecheckerUnit newUnit() => 
-            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newEditedSourceFile(this);
+            object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
+            }.modelServices.newEditedSourceFile(this);
     
     shared actual EditedSourceFileAlias? unit =>
             unsafeCast<EditedSourceFileAlias?>(super.unit);

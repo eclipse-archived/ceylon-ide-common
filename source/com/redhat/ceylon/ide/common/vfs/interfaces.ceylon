@@ -16,13 +16,16 @@ import ceylon.interop.java {
     CeylonIterable
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject,
-    ModelServicesConsumer
+    CeylonProject
 }
 import com.redhat.ceylon.ide.common.util {
     equalsWithNulls,
     unsafeCast,
     Path
+}
+import com.redhat.ceylon.ide.common.platform {
+    VfsServicesConsumer,
+    ModelServicesConsumer
 }
 
 

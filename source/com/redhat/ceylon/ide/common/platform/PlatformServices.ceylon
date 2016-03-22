@@ -22,5 +22,5 @@ variable PlatformServices _platformServices = object satisfies PlatformServices 
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
 };
 
-shared PlatformServices platformServices => _platformServices;
+PlatformServices platformServices => _platformServices;
 shared IdeUtils platformUtils => platformServices.utils();

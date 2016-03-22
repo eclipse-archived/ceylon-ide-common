@@ -24,9 +24,6 @@ import com.redhat.ceylon.ide.common.model {
     BaseIdeModule,
     ModelAliases
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
 import com.redhat.ceylon.ide.common.util {
     synchronize,
     unsafeCast
@@ -52,12 +49,16 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer
+}
 
 shared alias AnyProjectPhasedUnit => ProjectPhasedUnit<in Nothing, in Nothing, in Nothing, in Nothing>;
 
 shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
@@ -90,7 +91,8 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
             ceylonProjectRef.get();
 
     shared actual TypecheckerUnit newUnit() => 
-            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newProjectSourceFile(this);
+            object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
+            }.modelServices.newProjectSourceFile(this);
 
     shared actual NativeFile resourceFile => 
             unitFile.nativeResource;

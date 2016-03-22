@@ -38,11 +38,13 @@ import org.antlr.runtime {
     CommonToken
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformServices
+    ModelServicesConsumer
 }
+
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
         extends ExternalPhasedUnit
-        satisfies ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+        satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+        & ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
         & TypecheckerAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
         given NativeProject satisfies Object
         given OriginalNativeResource satisfies Object
@@ -94,7 +96,8 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
             unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
     
     shared actual TypecheckerUnit newUnit()  => 
-            platformServices.model<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>().newCrossProjectSourceFile(this);
+            object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
+            }.modelServices.newCrossProjectSourceFile(this);
     
     shared actual CrossProjectSourceFileAlias unit =>
             unsafeCast<CrossProjectSourceFileAlias>(super.unit);

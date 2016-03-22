@@ -54,8 +54,7 @@ import com.redhat.ceylon.ide.common.vfs {
     BaseFolderVirtualFile,
     BaseFileVirtualFile,
     FileVirtualFile,
-    VfsAliases,
-    VfsServicesConsumer
+    VfsAliases
 }
 import com.redhat.ceylon.launcher {
     Bootstrap
@@ -104,7 +103,9 @@ import java.net {
     URI
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformUtils
+    platformUtils,
+    VfsServicesConsumer,
+    ModelServicesConsumer
 }
 
 shared final class ProjectState
@@ -396,7 +397,7 @@ shared abstract class BaseCeylonProject() {
      after which the it stops waiting for the source 
      model availability and throws a [[RuntimeException|java.lang::RuntimeException]] Exception.
      The thrown exception is the one produced by 
-     [[IdePlatformUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.util::IdePlatformUtils.newOperationCanceledException]]
+     [[IdeUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.platform::IdeUtils.newOperationCanceledException]]
      "
     shared Return withSourceModel<Return>(Boolean readonly, Return() do, Integer waitForModelInSeconds=20) {
         try {

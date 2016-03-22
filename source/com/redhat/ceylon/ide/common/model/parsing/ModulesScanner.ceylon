@@ -17,7 +17,8 @@ import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
-    FolderVirtualFile
+    FolderVirtualFile,
+    FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -51,7 +52,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
         given NativeFile satisfies NativeResource {
     
     shared actual ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> parser(
-        FileVirtualFileAlias moduleFile) =>
+        FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> moduleFile) =>
             object extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
             outer.ceylonProject,
             moduleFile,

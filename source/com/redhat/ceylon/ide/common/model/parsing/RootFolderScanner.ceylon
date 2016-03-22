@@ -12,7 +12,9 @@ import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
-    VfsAliases,
+    VfsAliases
+}
+import com.redhat.ceylon.ide.common.platform {
     VfsServicesConsumer
 }
 
