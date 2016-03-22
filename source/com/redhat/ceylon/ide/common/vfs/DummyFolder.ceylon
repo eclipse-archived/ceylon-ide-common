@@ -45,7 +45,4 @@ shared class DummyFolder<NativeProject,NativeResource,NativeFolder,NativeFile>
     shared actual Nothing rootFolder => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing vfs => nothing;
-    
 }

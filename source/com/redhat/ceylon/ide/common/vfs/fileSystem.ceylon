@@ -92,8 +92,6 @@ shared class LocalFileVirtualFile(file)
     shared actual Nothing ceylonProject => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual CeylonProjects<Nothing,File,File,File>.VirtualFileSystem vfs => nothing;
 }
 
 shared class LocalFolderVirtualFile(file) 
@@ -172,6 +170,4 @@ shared class LocalFolderVirtualFile(file)
     shared actual Nothing rootFolder => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing vfs => nothing;
 }

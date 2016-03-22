@@ -66,7 +66,4 @@ shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,Na
     shared actual Nothing ceylonProject => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing vfs => nothing;
-    
 }

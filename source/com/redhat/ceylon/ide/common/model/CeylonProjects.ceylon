@@ -4,15 +4,19 @@ import ceylon.collection {
     unlinked
 }
 
-import com.redhat.ceylon.ide.common.util {
-    Path,
-    unsafeCast
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    LocalFileVirtualFile,
-    LocalFolderVirtualFile,
-    ZipFileVirtualFile
+    VirtualFileSystem
+}
+import com.redhat.ceylon.model.typechecker.context {
+    TypeCache
 }
 
 import java.lang {
@@ -22,32 +26,6 @@ import java.lang {
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VFS,
-    VirtualFile,
-    ClosableVirtualFile
-}
-import java.io {
-    File
-}
-import java.util.zip {
-    ZipFile
-}
-import com.redhat.ceylon.model.typechecker.context {
-    TypeCache
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit,
-    CrossProjectPhasedUnit,
-    EditedPhasedUnit
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
 }
 
 shared abstract class BaseCeylonProjects() {
@@ -79,6 +57,8 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
     value modelListeners = HashSet<ListenerAlias>(unlinked);
     value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
     value lock = ReentrantReadWriteLock(true);
+
+    shared VirtualFileSystem vfs = VirtualFileSystem();
 
     TypeCache.setEnabledByDefault(false);
     
@@ -175,50 +155,70 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
     shared {PhasedUnit*} parsedUnits
         => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
             
-    shared abstract default class VirtualFileSystem() extends VFS()
-            satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
 
-        
-        shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource,
-            NativeProject project) {
-            assert (is NativeFolder | NativeFile resource);
-            if (isFolder(resource)) {
-                return createVirtualFolder(unsafeCast<NativeFolder>(resource), project);
-            }
-            else {
-                return createVirtualFile(unsafeCast<NativeFile>(resource), project);
-            }
-        }
-        
-        shared formal NativeFolder? getParent(NativeResource resource);
-        shared formal NativeFile? findFile(NativeFolder resource, String fileName);
-        shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
-        shared formal Boolean isFolder(NativeResource resource);
-        shared formal Boolean existsOnDisk(NativeResource resource);
-        shared formal String getShortName(NativeResource resource);
-
-        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, NativeProject project);
-        shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
-        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder, NativeProject project);
-        shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
-        
-        shared actual VirtualFile getFromFile(File file) =>
-                if (file.directory) 
-                then LocalFolderVirtualFile(file) 
-                else LocalFileVirtualFile(file);
-        
-        shared actual VirtualFile getFromZipFile(ZipFile zipFile) =>
-                ZipFileVirtualFile(zipFile);
-        
-        shared actual ClosableVirtualFile getFromZipFile(File zipFile) =>
-                ZipFileVirtualFile(ZipFile(zipFile), true);
-        
-        shared actual ClosableVirtualFile? openAsContainer(VirtualFile virtualFile) =>
-                switch(virtualFile)
-                case(is ZipFileVirtualFile) virtualFile
-                case(is LocalFileVirtualFile) getFromZipFile(virtualFile.file)
-                else null;
+    shared final class ResourceChangeType
+    {
+        shared new fileContentChange {}
+        shared new fileAddition {}
+        shared new fileRemoval {}
+        shared new folderAddition {}
+        shared new folderRemoval {}
     }
     
-    shared formal VirtualFileSystem vfs;
+    shared abstract class ResourceChange()
+            of FileChange | FolderChange {
+        shared formal ResourceChangeType type;
+        shared formal ResourceVirtualFileAlias resource;
+        
+        shared actual Boolean equals(Object that) => 
+                if (is ResourceChange that) 
+        then type==that.type && 
+                resource==that.resource 
+        else false;
+    }
+    
+    shared abstract class FileChange(FileVirtualFileAlias theFile)
+            of FileContentChange | FileAddition | FileRemoval
+            extends ResourceChange() {
+        shared actual FileVirtualFileAlias resource = theFile;
+    }
+    
+    shared class FileContentChange(FileVirtualFileAlias theFile)
+            extends FileChange(theFile) {
+        type = ResourceChangeType.fileContentChange;
+    }
+    
+    shared class FileAddition(FileVirtualFileAlias theFile)
+            extends FileChange(theFile) {
+        type = ResourceChangeType.fileAddition;
+    }
+    
+    shared class FileRemoval(
+        FileVirtualFileAlias theFile,
+        "if [[theFile]] has been removed after a move or rename,
+         this indicates the new file to which [[theFile]] has been moved or renamed."
+        shared FileVirtualFileAlias? movedTo)
+            extends FileChange(theFile) {
+        type = ResourceChangeType.fileRemoval;
+    }
+    
+    shared abstract class FolderChange(FolderVirtualFileAlias theFolder)
+            of FolderAddition | FolderRemoval
+            extends ResourceChange() {
+        shared actual FolderVirtualFileAlias resource = theFolder;
+    }
+    
+    shared class FolderAddition(FolderVirtualFileAlias theFolder)
+            extends FolderChange(theFolder) {
+        type = ResourceChangeType.folderAddition;
+    }
+    
+    shared class FolderRemoval(
+        FolderVirtualFileAlias theFolder,
+        "if [[theFolder]] has been removed after a move or rename,
+         this indicates the new file to which [[theFolder]] has been moved or renamed."
+        shared FolderVirtualFileAlias? movedTo)
+            extends FolderChange(theFolder) {
+        type = ResourceChangeType.folderRemoval;
+    }
 }

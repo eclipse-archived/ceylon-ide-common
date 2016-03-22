@@ -53,7 +53,9 @@ import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
     BaseFolderVirtualFile,
     BaseFileVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    VfsAliases,
+    VfsServicesConsumer
 }
 import com.redhat.ceylon.launcher {
     Bootstrap
@@ -436,7 +438,10 @@ shared abstract class BaseCeylonProject() {
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -449,8 +454,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
 
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
-    
-    shared CeylonProjects<NativeProject,NativeResource,NativeFolder,NativeFile>.VirtualFileSystem vfs => model.vfs; 
     
     shared actual abstract class Modules() 
             extends super.Modules() 
@@ -499,14 +502,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             sourceFoldersMap.resetKeys(
                 sourceNativeFolders, 
                 (nativeFolder) => 
-                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
+                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact)).items;
     
     "Virtual folders of existing resource folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
             resourceFoldersMap.resetKeys(
                 resourceNativeFolders, 
                 (nativeFolder) => 
-                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
+                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact)).items;
 
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders => 
             sourceFolders.chain(resourceFolders);
@@ -522,31 +525,70 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared {NativeFile*} projectNativeFiles => 
             projectFilesMap.keys;
 
-    shared void addFile(NativeFile file) {
+    shared Boolean addFileToModel(NativeFile file) {
+        value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
+        value parentFolder = vfsServices.getParent(file);
+        if (!exists parentFolder) {
+            // the file is a direct child of the project: 
+            //files directly under the project are not part of the project source files.
+            return false;
+        }
+        
+        if (! vfsServices.getRootPropertyForNativeFolder(this, parentFolder) exists) {
+            if (exists grandParent=vfsServices.getParent(parentFolder)) {
+                if (! addFolderToModel(parentFolder, grandParent)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        
         projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
-        projectFilesMap.put(file, vfs.createVirtualFile(file, ideArtifact));
+        projectFilesMap.put(file, virtualFile);
+        
         // TODO : add the delta element
+        
+        return true;
     }
     
-    shared void removeFile(NativeFile file) {
+    shared void removeFileFromModel(NativeFile file) {
         projectFilesMap.remove(file);
+        // TODO : remove the properties on the corresponding NativeFile
         // TODO : add the delta element
     }
     
-    shared void addFolder(NativeFolder folder, NativeFolder parent) {
-        value parentVirtualFile = vfs.createVirtualFolder(parent, ideArtifact);
-        if (exists parentPkg = parentVirtualFile.ceylonPackage, 
-            exists root=parentVirtualFile.rootFolder,
-            exists loader = modelLoader) {
-            Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, 
-                if (parentPkg.nameAsString.empty) 
-                then vfs.getShortName(folder) 
-                else ".".join {parentPkg.nameAsString, vfs.getShortName(folder)});
-            setPackageForNativeFolder(folder, WeakReference(pkg));
-            setRootForNativeFolder(folder, WeakReference(root));
+    shared Boolean addFolderToModel(NativeFolder folder, NativeFolder parent) {
+        value parentVirtualFile = vfsServices.createVirtualFolder(parent, ideArtifact);
+        Boolean addIfParentAlreadyAdded() {
+            if (exists parentPkg = parentVirtualFile.ceylonPackage,
+                exists root=parentVirtualFile.rootFolder,
+                exists loader = modelLoader) {
+                Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, 
+                    if (parentPkg.nameAsString.empty) 
+                    then vfsServices.getShortName(folder) 
+                    else ".".join {parentPkg.nameAsString, vfsServices.getShortName(folder)});
+                vfsServices.setPackagePropertyForNativeFolder(this,folder, WeakReference(pkg));
+                vfsServices.setRootPropertyForNativeFolder(this, folder, WeakReference(root));
+                return true;
+            }
+            return false;
         }
 
+        if (!addIfParentAlreadyAdded()) {
+            if (exists grandParent=vfsServices.getParent(parent),
+                addFolderToModel(parent, grandParent)) {
+                return addIfParentAlreadyAdded();
+            } else {
+                return false;
+            }
+        }
+        
+        // TODO : for incremental module and package build support, manage the module and package here
+        // (local step corresponding to the ModuleScanner and ProjectFilesScanner)
+
         // TODO : add the delta element
+        return true;
     }
 
     "Existing source folders as read form the IDE native project"
@@ -571,9 +613,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;
     
-    shared formal void setPackageForNativeFolder(NativeFolder folder, WeakReference<Package> p);
-    shared formal void setRootForNativeFolder(NativeFolder folder, WeakReference<FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> root);
-    shared formal void setRootIsForSource(NativeFolder rootFolder, Boolean isSource);
     shared formal void scanRootFolder(RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner);
     
     shared Boolean isCompilable(NativeFile file) {
@@ -590,13 +629,13 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     }
     
     shared default Boolean isCeylon(NativeFile file) => 
-            vfs.getShortName(file).endsWith(".ceylon");
+            vfsServices.getShortName(file).endsWith(".ceylon");
     
     shared default Boolean isJava(NativeFile file) =>
-            isJavaLikeFileName(vfs.getShortName(file));
+            isJavaLikeFileName(vfsServices.getShortName(file));
     
     shared default Boolean isJavascript(NativeFile file) =>
-            vfs.getShortName(file).endsWith(".js");
+            vfsServices.getShortName(file).endsWith(".js");
     
     "TODO: make it unshared as soon as the calling method is also in CeylonProject"
     shared void scanFiles(BaseProgressMonitor monitor) {
@@ -643,7 +682,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     throw platformUtils.newOperationCanceledException("");
                 }
                 
-                value newTypechecker = TypeCheckerBuilder(vfs)
+                value newTypechecker = TypeCheckerBuilder(model.vfs)
                         .verbose(false)
                         .moduleManagerFactory(moduleManagerFactory)
                         .setRepositoryManager(repositoryManager).typeChecker;

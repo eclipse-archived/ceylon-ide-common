@@ -11,7 +11,8 @@ import com.redhat.ceylon.ide.common.model.delta {
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    BaseFileVirtualFile
+    BaseFileVirtualFile,
+    VfsServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     SingleSourceUnitPackage,
@@ -48,7 +49,8 @@ DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
 shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(
     ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> thePhasedUnit)
         extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>(thePhasedUnit)
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
@@ -72,9 +74,8 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
         try {
             value modelPhasedUnit  = phasedUnit;
             
-            value vfs = modelPhasedUnit.ceylonProject.model.vfs;
-            value virtualSrcFile = vfs.createVirtualFile(modelPhasedUnit.resourceFile, modelPhasedUnit.ceylonProject.ideArtifact);
-            value virtualSrcDir = vfs.createVirtualFolder(modelPhasedUnit.resourceRootFolder, modelPhasedUnit.ceylonProject.ideArtifact);
+            value virtualSrcFile = vfsServices.createVirtualFile(modelPhasedUnit.resourceFile, modelPhasedUnit.ceylonProject.ideArtifact);
+            value virtualSrcDir = vfsServices.createVirtualFolder(modelPhasedUnit.resourceRootFolder, modelPhasedUnit.ceylonProject.ideArtifact);
             value currentTypechecker = modelPhasedUnit.typeChecker;
             if (! exists currentTypechecker) {
                 return null;

@@ -17,11 +17,14 @@ import ceylon.interop.java {
 }
 import com.redhat.ceylon.ide.common.model {
     CeylonProject,
-    CeylonProjects
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
-    equalsWithNulls
+    equalsWithNulls,
+    unsafeCast,
+    Path
 }
+
 
 shared interface WithParentVirtualFile satisfies VirtualFile {
     shared formal VirtualFile? parent;
@@ -54,6 +57,8 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
         of FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
         | FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
         satisfies BaseResourceVirtualFile
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -62,20 +67,37 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared formal CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? ceylonProject;
 
     shared formal NativeProject nativeProject;
-    shared formal CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>.VirtualFileSystem vfs;
 
     shared formal actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children;
     shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? parent =>
-            if (exists folderParent = vfs.getParent(nativeResource))
-            then vfs.createVirtualFolder(folderParent, nativeProject)
+            if (exists folderParent = vfsServices.getParent(nativeResource))
+            then vfsServices.createVirtualFolder(folderParent, nativeProject)
             else null;
+    
+    shared actual default String name => vfsServices.getShortName(nativeResource);
+    shared actual default String path => vfsServices.getPathString(nativeResource);
     
     shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
     
-    shared actual default Boolean \iexists() => vfs.existsOnDisk(nativeResource);
+    shared actual default Boolean \iexists() => vfsServices.existsOnDisk(nativeResource);
+    
+    shared Boolean isDescendantOfAny({FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} possibleAncestors) =>
+            let(descendantPath = Path(path))
+            possibleAncestors.any((ancestor) => 
+                Path(ancestor.path).isPrefixOf(descendantPath));
     
     shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
-    shared formal Boolean? isSource;
+    
+    shared default Boolean? isSource => 
+            let (root = rootFolder) 
+            if (exists root,
+                exists existingProject=ceylonProject)
+            then
+                if (root == this)
+                then vfsServices.getRootIsSourceProperty(existingProject, unsafeCast<NativeFolder>(nativeResource))
+                else root.isSource
+            else null;
+    
     shared formal Package? ceylonPackage;
     
     shared actual default Boolean equals(Object that) => 
@@ -85,7 +107,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
             else false;
     
     shared actual default Integer hash {
-        variable value hash = 1;
+        variable Integer hash = 1;
         hash = 31*hash + nativeResource.hash;
         hash = 31*hash + nativeProject.hash;
         return hash;
@@ -101,7 +123,9 @@ shared interface BaseFolderVirtualFile
 }
 
 shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> & BaseFolderVirtualFile
+        satisfies BaseFolderVirtualFile
+        & ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -111,14 +135,42 @@ shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, 
 
     shared actual default [String*] toPackageName(BaseFolderVirtualFile srcDir) {
         assert(is FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir);
-        return vfs.toPackageName(nativeResource, srcDir.nativeResource);
+        return vfsServices.toPackageName(nativeResource, srcDir.nativeResource);
     }
 
     shared actual default FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>? findFile(String fileName) =>
-            if (exists nativeFile = vfs.findFile(nativeResource, fileName))
-            then vfs.createVirtualFile(nativeFile, nativeProject)
+            if (exists nativeFile = vfsServices.findFile(nativeResource, fileName))
+            then vfsServices.createVirtualFile(nativeFile, nativeProject)
             else null;
 
+    shared actual default FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder {
+        if (exists existingProject=ceylonProject) {
+            NativeFolder folder = nativeResource;
+            if (! vfsServices.existsOnDisk(folder)) {
+                Path searchedPath = Path(path);
+                return ceylonProject?.rootFolders?.find((aRootFolder) => Path(aRootFolder.path).isPrefixOf(searchedPath));
+            }
+            return vfsServices.getRootPropertyForNativeFolder(existingProject, folder)?.get();
+        } else {
+            return null;
+        }
+    }
+    
+    shared actual default Package? ceylonPackage {
+        if (exists existingProject=ceylonProject) {
+            if (! vfsServices.existsOnDisk(nativeResource)) {
+                if (exists theRootFolder = rootFolder) {
+                    Path rootRelativePath = Path(path).makeRelativeTo(Path(theRootFolder.path));
+                    return existingProject.modelLoader?.findPackage(".".join(rootRelativePath.segments));
+                }
+                return null;
+            }
+            return vfsServices.getPackagePropertyForNativeFolder(existingProject, nativeResource)?.get();
+        } else {
+            return null;
+        }
+    }
+    
     shared default Boolean isRoot =>
             equalsWithNulls(rootFolder, this);
 }

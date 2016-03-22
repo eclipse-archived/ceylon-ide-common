@@ -13,7 +13,7 @@ shared class Status of _OK | _INFO | _WARNING | _ERROR {
     string => _string;
 }
 
-shared interface IdePlatformUtils {
+shared interface IdeUtils {
     shared formal void log(Status status, String message, Exception? e=null);
     
     "Creates a [[RuntimeException|java.lang::RuntimeException]]
@@ -43,7 +43,7 @@ shared interface IdePlatformUtils {
     };
 }
 
-shared class DefaultPlatformUtils() satisfies IdePlatformUtils {
+shared class DefaultIdeUtils() satisfies IdeUtils {
     shared actual void log(Status status, String message, Exception? e) {
         Anything(String) printFunction;
         switch (status)

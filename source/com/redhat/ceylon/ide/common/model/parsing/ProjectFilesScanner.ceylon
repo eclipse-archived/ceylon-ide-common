@@ -3,12 +3,8 @@ import ceylon.collection {
 }
 
 import com.redhat.ceylon.ide.common.model {
-    ModelAliases,
     BaseIdeModule,
     CeylonProject
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor,
@@ -16,7 +12,6 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    VfsAliases,
     FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -38,9 +33,6 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
         rootDir,
         progress
     )
-        satisfies ModelAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
-            & TypecheckerAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
-            & VfsAliases<NativeProject,NativeResource,NativeFolder,NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -54,13 +46,13 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
         
         if (resource == nativeRootDir) {
             assert(is NativeFolder resource);
-            ceylonProject.setPackageForNativeFolder(resource, WeakReference(modelLoader.findPackage("")));
-            ceylonProject.setRootForNativeFolder(resource, WeakReference(rootDir));
-            ceylonProject.setRootIsForSource(resource, rootDirIsForSource);
+            vfsServices.setPackagePropertyForNativeFolder(ceylonProject, resource, WeakReference(modelLoader.findPackage("")));
+            vfsServices.setRootPropertyForNativeFolder(ceylonProject, resource, WeakReference(rootDir));
+            vfsServices.setRootIsSourceProperty(ceylonProject, resource, rootDirIsForSource);
             return true;
         }
         
-        if (exists parent = vfs.getParent(resource),
+        if (exists parent = vfsServices.getParent(resource),
             parent == nativeRootDir) {
             // We've come back to a source directory child :
             //  => reset the current Module to default and set the package to emptyPackage
@@ -70,14 +62,14 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
         
 
         NativeFolder pkgFolder;
-        if (vfs.isFolder(resource)) {
+        if (vfsServices.isFolder(resource)) {
             pkgFolder = unsafeCast<NativeFolder>(resource);
         } else {
-            assert(exists parent = vfs.getParent(resource));
+            assert(exists parent = vfsServices.getParent(resource));
             pkgFolder = parent;
         }
         
-        value pkgName = vfs.toPackageName(pkgFolder, nativeRootDir);
+        value pkgName = vfsServices.toPackageName(pkgFolder, nativeRootDir);
         value pkgNameAsString = ".".join(pkgName);
                 
         if (currentModule != defaultModule) {
@@ -88,24 +80,24 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
         }
 
         if (exists realModule = modelLoader.getLoadedModule(pkgNameAsString, null)) {
-            assert(is BaseIdeModule realModule);
+            assert(is BaseIdeModule realModule);    
             currentModule = realModule;
         }
 
         currentPackage = modelLoader.findOrCreatePackage(currentModule, pkgNameAsString);
         
 
-        if (vfs.isFolder(resource)) {
+        if (vfsServices.isFolder(resource)) {
             assert(is NativeFolder folder=resource);
-            ceylonProject.setPackageForNativeFolder(folder, WeakReference(currentPackage));
-            ceylonProject.setRootForNativeFolder(folder, WeakReference(rootDir));
+            vfsServices.setPackagePropertyForNativeFolder(ceylonProject, folder, WeakReference(currentPackage));
+            vfsServices.setRootPropertyForNativeFolder(ceylonProject, folder, WeakReference(rootDir));
             return true;
         } else {
             assert(is NativeFile file=resource);
-            if (vfs.existsOnDisk(resource)) {
+            if (vfsServices.existsOnDisk(resource)) {
                 if (ceylonProject.isCompilable(file) || 
                     ! rootDirIsForSource) {
-                    FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> virtualFile = vfs.createVirtualFile(file, ceylonProject.ideArtifact);
+                    FileVirtualFileAlias virtualFile = vfsServices.createVirtualFile(file, ceylonProject.ideArtifact);
                     scannedFiles.put(file, virtualFile);
                     
                     if (rootDirIsForSource && 
