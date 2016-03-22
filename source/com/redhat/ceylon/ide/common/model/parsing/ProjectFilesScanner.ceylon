@@ -12,7 +12,8 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
@@ -33,6 +34,7 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
         rootDir,
         progress
     )
+        satisfies VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile> 
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
