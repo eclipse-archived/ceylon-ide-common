@@ -42,7 +42,14 @@ shared T withCeylonModelCaching<T>(T() do) {
 }
 
 
-
+shared final class ResourceChangeType
+{
+    shared new fileContentChange {}
+    shared new fileAddition {}
+    shared new fileRemoval {}
+    shared new folderAddition {}
+    shared new folderRemoval {}
+}
 
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
@@ -156,15 +163,6 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
             
 
-    shared final class ResourceChangeType
-    {
-        shared new fileContentChange {}
-        shared new fileAddition {}
-        shared new fileRemoval {}
-        shared new folderAddition {}
-        shared new folderRemoval {}
-    }
-    
     shared abstract class ResourceChange()
             of FileChange | FolderChange {
         shared formal ResourceChangeType type;
