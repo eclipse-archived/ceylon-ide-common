@@ -137,7 +137,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
                 ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false);
                 ideConfig.setOption("project.system-repository", transientSystemRepository else "");
 
-                ConfigWriter.write(ideConfig, ideConfigFile);
+                ConfigWriter.instance().write(ideConfig, ideConfigFile);
                 refresh();
             } catch (IOException e) {
                 throw Exception("", e);

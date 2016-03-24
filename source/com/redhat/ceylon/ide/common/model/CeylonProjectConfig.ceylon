@@ -379,7 +379,7 @@ shared class CeylonProjectConfig(project) {
                     setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, transientSuppressWarnings);
                 }
 
-                ConfigWriter.write(projectConfig, projectConfigFile);
+                ConfigWriter.instance().write(projectConfig, projectConfigFile);
                 refresh();
                 project.refreshConfigFile();
             } catch (IOException e) {
