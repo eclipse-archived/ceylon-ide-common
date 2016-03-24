@@ -126,94 +126,96 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     }
     
     shared actual void visit(Tree.WhileClause that) {
-        value cl = that.conditionList;
-        value conditions = cl.conditions;
-        variable value i = 0;
-        while (i < conditions.size()) {
-            value c = conditions.get(i);
-            value var = getConditionVariable(c);
-            if (exists var,
-                var.type is Tree.SyntheticVariable) {
-                
-                value vd = var.declarationModel;
-                if (exists od = vd.originalDeclaration,
-                    od.equals(declaration)) {
+        if (exists cl = that.conditionList) {
+            value conditions = cl.conditions;
+            variable value i = 0;
+            while (i < conditions.size()) {
+                value c = conditions.get(i);
+                value var = getConditionVariable(c);
+                if (exists var,
+                    var.type is Tree.SyntheticVariable) {
                     
-                    variable value j = 0;
-                    while (j <= i) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
+                    value vd = var.declarationModel;
+                    if (exists od = vd.originalDeclaration,
+                        od.equals(declaration)) {
+                        
+                        variable value j = 0;
+                        while (j <= i) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        value d = declaration;
+                        declaration = vd;
+                        that.block.visit(this);
+                        j = i;
+                        while (j < conditions.size()) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        declaration = d;
+                        return;
                     }
-                    
-                    value d = declaration;
-                    declaration = vd;
-                    that.block.visit(this);
-                    j = i;
-                    while (j < conditions.size()) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    declaration = d;
-                    return;
                 }
+                
+                i++;
             }
-            
-            i++;
         }
-        
+
         super.visit(that);
     }
     
     shared actual void visit(Tree.IfClause that) {
-        value cl = that.conditionList;
-        value conditions = cl.conditions;
-        variable value i = 0;
-        
-        while (i < conditions.size()) {
-            value c = conditions.get(i);
-            value var = getConditionVariable(c);
-            if (exists var,
-                var.type is Tree.SyntheticVariable) {
-                
-                value vd = var.declarationModel;
-                if (exists od = vd.originalDeclaration,
-                    od.equals(declaration)) {
-                    
-                    variable value j = 0;
-                    while (j <= i) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    value d = declaration;
-                    declaration = vd;
-                    if (that.block exists) {
-                        that.block.visit(this);
-                    }
-                    
-                    if (that.expression exists) {
-                        that.expression.visit(this);
-                    }
-                    
-                    j = i + 1;
-                    while (j < conditions.size()) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    declaration = d;
-                    return;
-                }
-            }
+        if (exists cl = that.conditionList) {
+            value conditions = cl.conditions;
+            variable value i = 0;
             
-            i++;
+            while (i < conditions.size()) {
+                value c = conditions.get(i);
+                value var = getConditionVariable(c);
+                if (exists var,
+                    var.type is Tree.SyntheticVariable) {
+                    
+                    value vd = var.declarationModel;
+                    if (exists od = vd.originalDeclaration,
+                        od.equals(declaration)) {
+                        
+                        variable value j = 0;
+                        while (j <= i) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        value d = declaration;
+                        declaration = vd;
+                        if (that.block exists) {
+                            that.block.visit(this);
+                        }
+                        
+                        if (that.expression exists) {
+                            that.expression.visit(this);
+                        }
+                        
+                        j = i + 1;
+                        while (j < conditions.size()) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        declaration = d;
+                        return;
+                    }
+                }
+                
+                i++;
+            }
         }
-        
+
         super.visit(that);
     }
     
