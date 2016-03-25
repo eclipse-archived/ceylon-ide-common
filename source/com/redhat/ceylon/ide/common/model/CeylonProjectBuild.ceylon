@@ -20,31 +20,31 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject;
     
     class State() {
-        shared variable Boolean fullBuildRequired_ = true;
-        shared variable Boolean classpathResolutionRequired_ = true;
+        shared variable Boolean fullBuildRequired = true;
+        shared variable Boolean classpathResolutionRequired = true;
         
         "Sources requiring a typechecking during the next [[performTypechecking]] call"
-        shared ImmutableSetWrapper<NativeFile> typecheckingRequired_ = ImmutableSetWrapper<NativeFile>();
+        shared ImmutableSetWrapper<NativeFile> typecheckingRequired = ImmutableSetWrapper<NativeFile>();
         
         "Sources requiring a JVM binary generation during the next [[performBinaryGeneration]] call"
-        shared ImmutableSetWrapper<NativeFile> jvmBackendGenerationRequired_ = ImmutableSetWrapper<NativeFile>();
+        shared ImmutableSetWrapper<NativeFile> jvmBackendGenerationRequired = ImmutableSetWrapper<NativeFile>();
         
         "Sources removed since the last time [[cleanRemovedFiles]] was called"
-        shared ImmutableSetWrapper<NativeFile> removedSources_ = ImmutableSetWrapper<NativeFile>();
+        shared ImmutableSetWrapper<NativeFile> removedSources = ImmutableSetWrapper<NativeFile>();
         
         "Source changes since the last time [[calculateDependencies]] was called"
-        shared ImmutableSetWrapper<CeylonProjectsAlias.ResourceChange> changeEvents_ = ImmutableSetWrapper<CeylonProjectsAlias.ResourceChange>();
+        shared ImmutableSetWrapper<CeylonProjectsAlias.ResourceVirtualFileChange> changeEvents = ImmutableSetWrapper<CeylonProjectsAlias.ResourceVirtualFileChange>();
     }
         
     State state = State();
         
-    Boolean shouldDoFullBuild => state.fullBuildRequired_ && ! ceylonProject.parsed;
-    Boolean shouldResolveClasspath = state.classpathResolutionRequired_;
+    Boolean shouldDoFullBuild => state.fullBuildRequired && ! ceylonProject.parsed;
+    Boolean shouldResolveClasspath = state.classpathResolutionRequired;
 
     {NativeFile*} typecheckingRequired =>
-            if (state.fullBuildRequired_)
+            if (state.fullBuildRequired)
     then ceylonProject.projectNativeFiles
-    else state.typecheckingRequired_;
+    else state.typecheckingRequired;
     
     
     
@@ -81,8 +81,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     
     void setFullBuildRequired() {
-        state.fullBuildRequired_ = true;
-        state.typecheckingRequired_.clear();
+        state.fullBuildRequired = true;
+        state.typecheckingRequired.clear();
     }
     
     shared void classPathChanged() {
@@ -91,20 +91,20 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     shared void requestFullBuild() {
         setFullBuildRequired();
-        state.classpathResolutionRequired_ = true;
+        state.classpathResolutionRequired = true;
     }
     
     shared void requestCleanBuild() {
         setFullBuildRequired();
-        state.classpathResolutionRequired_ = true;
+        state.classpathResolutionRequired = true;
     }
     
-    shared void fileTreeChanged({CeylonProjectsAlias.ResourceChange+} changes) {
+    shared void fileTreeChanged({CeylonProjectsAlias.ResourceVirtualFileChange+} changes) {
         for (change in changes) {
             
         }
         // TODO Faire la modification du modèle (ajout dans le liste les files en cours, etc ...) avant ou après la mise à jour de changedEvents_ ??
-        state.changeEvents_.addAll(changes); 
+        state.changeEvents.addAll(changes); 
     }
 // TODO : au démarrage : charger le buildState + erreurs depuis le disque et effacer le build state du disque
 // TODO :  A la fin : flusher le buildState + erreurs  sur le disque
