@@ -105,7 +105,9 @@ import java.net {
 import com.redhat.ceylon.ide.common.platform {
     platformUtils,
     VfsServicesConsumer,
-    ModelServicesConsumer
+    ModelServicesConsumer,
+    IdeUtils,
+    Status
 }
 
 shared final class ProjectState
@@ -557,7 +559,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     
     shared void removeFileFromModel(NativeFile file) {
         projectFilesMap.remove(file);
-        // TODO : remove the properties on the corresponding NativeFile
         // TODO : add the delta element
     }
     
@@ -594,6 +595,24 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         return true;
     }
 
+    shared void removeFolderFromModel(NativeFolder folder) {
+        void removeProperty(
+            String propertyName, 
+            Anything(CeylonProjectAlias, NativeFolder) remove)  {
+            try {
+                remove(this, folder);
+            } catch(Exception e) {
+                platformUtils.log(
+                    Status._WARNING, 
+                    "``propertyName`` property could not be removed from native folder : ``
+                    vfsServices.getPathString(folder)``", e);
+            }
+        }
+        removeProperty("Package", vfsServices.removePackagePropertyForNativeFolder);
+        removeProperty("Root", vfsServices.removeRootPropertyForNativeFolder);
+        removeProperty("RootIsSource", vfsServices.removeRootIsSourceProperty);
+    }
+    
     "Existing source folders as read form the IDE native project"
     shared formal {NativeFolder*} sourceNativeFolders;
     "Existing resource folders as read form the IDE native project"

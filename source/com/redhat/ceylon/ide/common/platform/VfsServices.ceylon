@@ -52,10 +52,13 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
        
     shared formal void setPackagePropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder, WeakReference<Package> p);
     shared formal WeakReference<Package>? getPackagePropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder);
+    shared formal void removePackagePropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder);
     
     shared formal void setRootPropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder, WeakReference<FolderVirtualFileAlias> root);
     shared formal WeakReference<FolderVirtualFileAlias>? getRootPropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder);
+    shared formal void removeRootPropertyForNativeFolder(CeylonProjectAlias ceylonProject, NativeFolder folder);
     
     shared formal void setRootIsSourceProperty(CeylonProjectAlias ceylonProject, NativeFolder rootFolder, Boolean isSource);
     shared formal Boolean? getRootIsSourceProperty(CeylonProjectAlias ceylonProject, NativeFolder rootFolder);
+    shared formal void removeRootIsSourceProperty(CeylonProjectAlias ceylonProject, NativeFolder rootFolder);
 }
