@@ -936,7 +936,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     enabled => if (exists sourceFile = editorData.sourceVirtualFile)
                then editable(editorData.rootNode.unit) &&
                    !descriptor(sourceFile) &&
-                   (editorData.node is Tree.Term|Tree.Body|Tree.Statement &&
+                   (editorData.node is Tree.Term ||
+                    editorData.node is Tree.Body|Tree.Statement &&
                         !statements.empty &&
                         !statements.any((statement) 
                             => statement is Tree.Constructor))
