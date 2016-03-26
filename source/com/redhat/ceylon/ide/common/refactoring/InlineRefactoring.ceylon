@@ -720,10 +720,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 if (that.type is Tree.SyntheticVariable,
                     exists od = that.declarationModel.originalDeclaration,
                     od == editorData.declaration,
-                    editorData.delete) {
+                    editorData.delete,
+                    exists se = that.specifierExpression,
+                    se.mainToken exists) {
                     addEditToChange(tfc, 
                         newInsertEdit {
-                            position = that.specifierExpression.startIndex.intValue();
+                            position = se.startIndex.intValue();
                             text = that.identifier.text + " = ";
                         });
                 }
