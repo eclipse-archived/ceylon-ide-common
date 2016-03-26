@@ -788,9 +788,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineAliasDefinitionReference(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, Node reference, 
-        StringBuilder result, Tree.Type it) {
+        StringBuilder result, Tree.BaseType baseType) {
         
-        if (exists t = it.typeModel,
+        if (exists t = baseType.typeModel,
             is TypeParameter td = t.declaration,
             is Generic ta = editorData.declaration) {
             
@@ -798,32 +798,28 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (index >= 0) {
                 switch (reference)
                 case (is Tree.SimpleType) {
-                    value tal = reference.typeArgumentList;
-                    value types = tal.types;
-                    if (types.size() > index) {
-                        if (exists type = types[index]) {
-                            result.append(nodes.text(type, tokens));
-                        }
-                        return;
+                    value types = reference.typeArgumentList.types;
+                    if (types.size() > index, 
+                        exists type = types[index]) {
+                        result.append(nodes.text(type, tokens));
+                        return; //EARLY EXIT!
                     }
                 }
                 case (is Tree.StaticMemberOrTypeExpression) {
                     value tas = reference.typeArguments;
                     if (is Tree.TypeArgumentList tas) {
                         value types = tas.types;
-                        if (types.size() > index) {
-                            if (exists type = types[index]) {
-                                result.append(nodes.text(type, tokens));
-                            }
-                            return;
+                        if (types.size() > index, 
+                            exists type = types[index]) {
+                            result.append(nodes.text(type, tokens));
+                            return;  //EARLY EXIT!
                         }
                     } else {
                         value types = tas.typeModels;
-                        if (types.size() > index) {
-                            if (exists type = types[index]) {
-                                result.append(type.asSourceCodeString(it.unit));
-                            }
-                            return;
+                        if (types.size() > index, 
+                            exists type = types[index]) {
+                            result.append(type.asSourceCodeString(baseType.unit));
+                            return; //EARLY EXIT!
                         }
                     }
                 }
@@ -831,7 +827,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
         }
         
-        result.append(nodes.text(it, declarationTokens));
+        result.append(baseType.identifier.text);
     }
 
     void inlineDefinitionReference(
@@ -839,69 +835,55 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         JList<CommonToken> declarationTokens, 
         Node reference, 
         Tree.InvocationExpression? invocation, 
-        Tree.StaticMemberOrTypeExpression localReference, 
+        Tree.BaseMemberExpression|Tree.This localReference, 
         StringBuilder result) {
         
-        if (exists invocation,
-            localReference is Tree.BaseMemberOrTypeExpression,
-            is FunctionOrValue dec = localReference.declaration,
-            dec.parameter) {
-
-            value param = dec.initializerParameter;
-            if (param.declaration == editorData.declaration) {
-                if (invocation.positionalArgumentList exists) {
-                    interpolatePositionalArguments {
-                        result = result;
-                        invocation = invocation;
-                        reference = localReference;
-                        sequenced = param.sequenced;
-                        tokens = tokens;
-                    };
+        if (is Tree.This localReference) {
+            if (is Tree.QualifiedMemberOrTypeExpression reference) {
+                result.append(nodes.text(reference.primary, tokens));
+                return;
+            }
+        }
+        else {
+            if (exists invocation,
+                is FunctionOrValue dec = localReference.declaration,
+                dec.parameter) {
+    
+                value param = dec.initializerParameter;
+                if (param.declaration == editorData.declaration) {
+                    if (invocation.positionalArgumentList exists) {
+                        interpolatePositionalArguments {
+                            result = result;
+                            invocation = invocation;
+                            reference = localReference;
+                            sequenced = param.sequenced;
+                            tokens = tokens;
+                        };
+                    }
+                    if (invocation.namedArgumentList exists) {
+                        interpolateNamedArguments {
+                            result = result;
+                            invocation = invocation;
+                            reference = localReference;
+                            sequenced = param.sequenced;
+                            tokens = tokens;
+                        };
+                    }
+                    return; //NOTE: early exit!
                 }
-                if (invocation.namedArgumentList exists) {
-                    interpolateNamedArguments {
-                        result = result;
-                        invocation = invocation;
-                        reference = localReference;
-                        sequenced = param.sequenced;
-                        tokens = tokens;
-                    };
-                }
-                return; //NOTE: early exit!
+            }
+            
+            if (is Tree.QualifiedMemberOrTypeExpression reference, 
+                localReference.declaration.classOrInterfaceMember) {
+                //assume it's a reference to the immediately 
+                //containing class, i.e. the receiver
+                //TODO: handle refs to outer classes
+                result.append(nodes.text(reference.primary, tokens))
+                    .append(".");
             }
         }
         
-        value expressionText 
-                = nodes.text(localReference, declarationTokens);
-        if (is Tree.QualifiedMemberOrTypeExpression reference) {
-            //TODO: handle more depth, for example, foo.bar.baz
-            value prim = nodes.text(reference.primary, tokens);
-            if (is Tree.QualifiedMemberOrTypeExpression localReference) {
-                value p = localReference.primary;
-                if (is Tree.This p) {
-                    value op = localReference.memberOperator.text;
-                    value id = localReference.identifier.text;
-                    result.append(prim).append(op).append(id);
-                } else {
-                    value primaryText = nodes.text(p, declarationTokens);
-                    if (is Tree.MemberOrTypeExpression p) {
-                        if (p.declaration.classOrInterfaceMember) {
-                            result.append(prim).append(".").append(primaryText);
-                        }
-                    } else {
-                        result.append(primaryText);
-                    }
-                }
-            } else {
-                if (localReference.declaration.classOrInterfaceMember) {
-                    result.append(prim).append(".").append(expressionText);
-                } else {
-                    result.append(expressionText);
-                }
-            }
-        } else {
-            result.append(expressionText);
-        }
+        result.append(nodes.text(localReference, declarationTokens));
     }
 
     void inlineDefinition(
@@ -934,16 +916,28 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 variable Integer start = 0;
                 value template = nodes.text(definition, declarationTokens);
                 value templateStart = definition.startIndex.intValue();
-                void text(Node it) {
+                void appendUpTo(Node it) {
                     value text = template[start:
                         it.startIndex.intValue() - templateStart - start];
                     result.append(text);
                     start = it.endIndex.intValue() - templateStart;
                 }
                 
+                shared actual void visit(Tree.This it) {
+                    appendUpTo(it);
+                    inlineDefinitionReference {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        reference = reference;
+                        invocation = invocation;
+                        result = result;
+                        localReference = it;
+                    };
+                    super.visit(it);
+                }
+                
                 shared actual void visit(Tree.BaseMemberExpression it) {
-                    super.visit(it);
-                    text(it);
+                    appendUpTo(it.identifier);
                     inlineDefinitionReference {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
@@ -952,31 +946,30 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         result = result;
                         localReference = it;
                     };
+                    super.visit(it);
                 }
                 
-                shared actual void visit(Tree.QualifiedMemberExpression it) {
-                    super.visit(it);
-                    text(it);
-                    inlineDefinitionReference {
-                        tokens = tokens;
-                        declarationTokens = declarationTokens;
-                        reference = reference;
-                        invocation = invocation;
-                        localReference = it;
-                        result = result;
-                    };
+                shared actual void visit(Tree.QualifiedType it) {
+                    //visit the qualifying type before 
+                    //visiting the type argument list
+                    if (exists ot = it.outerType) {
+                        ot.visit(this);
+                    }
+                    if (exists tal = it.typeArgumentList) {
+                        tal.visit(this);
+                    }
                 }
                 
-                shared actual void visit(Tree.SimpleType it) {
-                    super.visit(it);
-                    text(it);
+                shared actual void visit(Tree.BaseType it) {
+                    appendUpTo(it.identifier);
                     inlineAliasDefinitionReference {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         reference = reference;
                         result = result;
-                        it = it;
+                        baseType = it;
                     };
+                    super.visit(it);
                 }
                 
                 shared void finish() {
