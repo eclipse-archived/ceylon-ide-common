@@ -982,13 +982,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             definition.visit(iv);
             iv.finish();
             
-            if (needsParens, 
-                (definition is Tree.OperatorExpression 
-                    || definition is Tree.IfExpression
-                    || definition is Tree.SwitchExpression
-                    || definition is Tree.ObjectExpression
-                    || definition is Tree.LetExpression
-                    || definition is Tree.FunctionArgument)) {
+            if (needsParens &&
+                (definition is 
+                    Tree.OperatorExpression
+                  | Tree.IfExpression
+                  | Tree.SwitchExpression
+                  | Tree.ObjectExpression
+                  | Tree.LetExpression
+                  | Tree.FunctionArgument)) {
                 result.insert(0, "(").append(")");
             }
             
