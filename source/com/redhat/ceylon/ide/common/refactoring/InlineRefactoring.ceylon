@@ -39,7 +39,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     TypeParameter,
     Generic,
-    Referenceable
+    Referenceable,
+    Value
 }
 
 import java.util {
@@ -53,33 +54,39 @@ import org.antlr.runtime {
     Token
 }
 
-shared Boolean isInlineRefactoringAvailable(Referenceable? ref, 
-    Tree.CompilationUnit rootNode, Boolean inSameProject) {
+shared Boolean isInlineRefactoringAvailable(
+    Referenceable? declaration, 
+    Tree.CompilationUnit rootNode, 
+    Boolean inSameProject) {
     
-    if (is Declaration declaration = ref,
+    if (is Declaration declaration,
         inSameProject) {
-        if (is FunctionOrValue declaration) {
-            value fov = declaration;
-            return !fov.parameter 
-                    && !(fov is Setter) 
-                    && !fov.default 
-                    && !fov.formal 
-                    && !fov.native 
-                    && (fov.typeDeclaration exists) 
-                    && (!fov.typeDeclaration.anonymous) 
-                    && (fov.toplevel 
-                        || !fov.shared 
-                        || (!fov.formal && !fov.default && !fov.actual))
-                    && (!fov.unit.equals(rootNode.unit) 
+        switch (declaration)
+        case (is FunctionOrValue) {
+            return !declaration.parameter 
+                    && !(declaration is Setter) 
+                    && !declaration.default 
+                    && !declaration.formal 
+                    && !declaration.native 
+                    && (declaration.typeDeclaration exists) 
+                    && (!declaration.typeDeclaration.anonymous) 
+                    && (declaration.toplevel 
+                        || !declaration.shared 
+                        || !declaration.formal && !declaration.default && !declaration.actual)
+                    && (!declaration.unit == rootNode.unit 
                     //not a Destructure
-                    || !(getDeclarationNode(rootNode, declaration) is Tree.Variable));
+                    || !(getDeclarationNode(rootNode, declaration) 
+                            is Tree.Variable));
             //TODO: && !declaration is a control structure variable 
             //TODO: && !declaration is a value with lazy init
-        } else if (is TypeAlias declaration) {
+        }
+        case (is TypeAlias) {
             return true;
-        } else if (is ClassOrInterface declaration) {
+        } 
+        case (is ClassOrInterface) {
             return declaration.\ialias;
-        } else {
+        }
+        else {
             return false;
         }
     } else {
@@ -93,6 +100,14 @@ Tree.StatementOrArgument? getDeclarationNode(
     value fdv = FindDeclarationNodeVisitor(declaration);
     declarationUnit.visit(fdv);
     return fdv.declarationNode;
+}
+
+Declaration original(Declaration d) {
+    if (is Value d,
+        exists od = d.originalDeclaration) {
+        return original(od);
+    }
+    return d;
 }
 
 shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change>
@@ -716,15 +731,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         JList<CommonToken> declarationTokens, TextChange tfc) {
         
         object extends Visitor() {
-            variable value replacing = editorData.declaration;
             variable value needsParens = false;
+            variable value disabled = false;
             
             shared actual void visit(Tree.Variable that) {
+                value dec = that.declarationModel;
                 if (that.type is Tree.SyntheticVariable,
                     exists id = that.identifier,
-                    exists od = that.declarationModel.originalDeclaration,
-                    od == replacing,
+                    original(dec) == editorData.declaration,
                     editorData.delete) {
+                    disabled = true;
                     addEditToChange(tfc, 
                         newInsertEdit {
                             position = id.startIndex.intValue();
@@ -732,6 +748,13 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         });
                 }
                 super.visit(that);
+            }
+            
+            shared actual void visit(Tree.Body that) {
+                if (!disabled) {
+                    super.visit(that);
+                }
+                disabled = false;
             }
             
             shared actual void visit(Tree.ElseClause that) {
@@ -1000,10 +1023,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     Boolean inlineRef(Node that, Declaration dec)
             => (!editorData.justOne
-            || that.unit == editorData.node.unit
-                && that.startIndex exists
-                && that.startIndex == editorData.node.startIndex)
-                && dec == editorData.declaration;
+              || that.unit == editorData.node.unit
+                 && that.startIndex exists
+                 && that.startIndex == editorData.node.startIndex)
+            && original(dec) == editorData.declaration;
 
     void interpolatePositionalArguments(StringBuilder result, 
         Tree.InvocationExpression invocation, 
