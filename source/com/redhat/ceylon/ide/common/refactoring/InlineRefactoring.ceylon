@@ -502,7 +502,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         if (is Tree.AnyAttribute declarationNode,
             is Tree.Term expression = definition) {
             inlineAttributeReferences {
-                pu = pu;
+                rootNode = pu;
                 tokens = tokens;
                 term = expression;
                 declarationTokens = declarationTokens;
@@ -711,18 +711,19 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }.visit(pu);
     }
 
-    void inlineAttributeReferences(Tree.CompilationUnit pu, 
+    void inlineAttributeReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.Term term, 
         JList<CommonToken> declarationTokens, TextChange tfc) {
         
         object extends Visitor() {
-            variable Boolean needsParens = false;
+            variable value replacing = editorData.declaration;
+            variable value needsParens = false;
             
             shared actual void visit(Tree.Variable that) {
                 if (that.type is Tree.SyntheticVariable,
                     exists id = that.identifier,
                     exists od = that.declarationModel.originalDeclaration,
-                    od == editorData.declaration,
+                    od == replacing,
                     editorData.delete) {
                     addEditToChange(tfc, 
                         newInsertEdit {
@@ -783,7 +784,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 super.visit(that);
                 needsParens = onp;
             }
-        }.visit(pu);
+        }.visit(rootNode);
     }
 
     void inlineAliasDefinitionReference(JList<CommonToken> tokens, 
@@ -892,21 +893,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Node definition, 
         TextChange tfc,
         Tree.InvocationExpression? invocation, 
-        Node reference, 
+        Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
         Boolean needsParens) {
         
-        Declaration dec;
-        switch (reference)
-        case (is Tree.MemberOrTypeExpression) {
-            dec = reference.declaration;
-        }
-        case (is Tree.SimpleType) {
-            dec = reference.declarationModel;
-        }
-        else {
-            //can't happen
-            return;
-        }
+        value dec = switch (reference)
+            case (is Tree.MemberOrTypeExpression) 
+                reference.declaration
+            case (is Tree.SimpleType) 
+                reference.declarationModel;
         
         if (inlineRef(reference, dec)) {
             //TODO: breaks for invocations like f(f(x, y),z)
