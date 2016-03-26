@@ -347,8 +347,8 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         return il;
     }
 
-    shared Integer applyImports(TextChange change, JSet<Declaration> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null)
-        => applyImportsInternal(change, declarations, null, cu, doc, declarationBeingDeleted);
+    shared Integer applyImports(TextChange change, JSet<Declaration> declarations, Tree.CompilationUnit rootNode, IDocument? doc, Declaration? declarationBeingDeleted=null)
+        => applyImportsInternal(change, declarations, null, rootNode, doc, declarationBeingDeleted);
 
     shared Integer applyImportsWithAliases(TextChange change, JMap<Declaration, JString> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null)
         => applyImportsInternal(change, declarations.keySet(), declarations.values(), cu, doc, declarationBeingDeleted);

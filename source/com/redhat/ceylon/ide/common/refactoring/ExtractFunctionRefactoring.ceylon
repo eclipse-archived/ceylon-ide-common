@@ -360,7 +360,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 = importProposals.applyImports {
             change = tfc;
             declarations = imports;
-            cu = rootNode;
+            rootNode = rootNode;
             doc = doc;
         };
         
@@ -827,7 +827,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 = importProposals.applyImports {
             change = tfc;
             declarations = imports;
-            cu = rootNode;
+            rootNode = rootNode;
             doc = doc;
         };
                 

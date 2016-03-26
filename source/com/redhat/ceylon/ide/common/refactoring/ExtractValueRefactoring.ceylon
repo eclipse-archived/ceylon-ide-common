@@ -214,7 +214,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 = importProposals.applyImports {
             change = tfc;
             declarations = imports;
-            cu = rootNode;
+            rootNode = rootNode;
             doc = doc;
         };
         

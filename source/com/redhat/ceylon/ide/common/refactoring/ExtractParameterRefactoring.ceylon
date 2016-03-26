@@ -196,7 +196,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
                 = importProposals.applyImports {
             change = tfc;
             declarations = imports;
-            cu = rootNode;
+            rootNode = rootNode;
             doc = doc;
         };
         
