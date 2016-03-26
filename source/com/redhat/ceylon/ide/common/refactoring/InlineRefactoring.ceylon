@@ -2,6 +2,9 @@ import ceylon.collection {
     ArrayList
 }
 
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -15,6 +18,9 @@ import com.redhat.ceylon.ide.common.correct {
 }
 import com.redhat.ceylon.ide.common.model {
     CeylonUnit
+}
+import com.redhat.ceylon.ide.common.platform {
+    ImportProposalServicesConsumer
 }
 import com.redhat.ceylon.ide.common.typechecker {
     AnyProjectPhasedUnit
@@ -45,12 +51,6 @@ import java.util {
 import org.antlr.runtime {
     CommonToken,
     Token
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
-import com.redhat.ceylon.ide.common.platform {
-    ImportProposalServicesConsumer
 }
 
 shared Boolean isInlineRefactoringAvailable(Referenceable? ref, 
@@ -122,6 +122,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     shared actual Integer countReferences(Tree.CompilationUnit cu) { 
         value vis = FindReferencesVisitor(editorData.declaration);
+        //TODO: don't count references which are being narrowed
+        //      in a Tree.Variable, since they don't get inlined
         cu.visit(vis);
         return vis.nodeSet.size();
     }
@@ -718,19 +720,27 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             
             shared actual void visit(Tree.Variable that) {
                 if (that.type is Tree.SyntheticVariable,
+                    exists id = that.identifier,
                     exists od = that.declarationModel.originalDeclaration,
                     od == editorData.declaration,
-                    editorData.delete,
-                    exists se = that.specifierExpression,
-                    se.mainToken exists) {
+                    editorData.delete) {
                     addEditToChange(tfc, 
                         newInsertEdit {
-                            position = se.startIndex.intValue();
-                            text = that.identifier.text + " = ";
+                            position = id.startIndex.intValue();
+                            text = id.text + " = ";
                         });
                 }
-                
                 super.visit(that);
+            }
+            
+            shared actual void visit(Tree.ElseClause that) {
+                //don't re-visit the Variable!
+                if (exists block = that.block) { 
+                    block.visit(this);
+                }
+                if (exists expression = that.expression) { 
+                    expression.visit(this);
+                }
             }
             
             shared actual void visit(Tree.MemberOrTypeExpression that) {
@@ -925,8 +935,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value template = nodes.text(definition, declarationTokens);
                 value templateStart = definition.startIndex.intValue();
                 void text(Node it) {
-                    value text = template.measure(start, 
-                        it.startIndex.intValue() - templateStart - start);
+                    value text = template[start:
+                        it.startIndex.intValue() - templateStart - start];
                     result.append(text);
                     start = it.endIndex.intValue() - templateStart;
                 }
