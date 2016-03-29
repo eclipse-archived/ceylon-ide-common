@@ -126,11 +126,18 @@ shared interface ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
             addEditToChange(change, newInsertEdit(loc, kw));
         }
         
-        value text = " {" + (if (isVoid) then "" else " return") + " ";
+        value doc = getDocumentForChange(change);
+        value baseIndent = indents.getIndent(decNode, doc);
+        value indent = indents.defaultIndent;
+        value nl = indents.getDefaultLineDelimiter(doc);
+        value text = " {" + nl
+                + baseIndent + indent + (if (isVoid) then "" else "return ");
         addEditToChange(change, newReplaceEdit(offset, length, text));
-        addEditToChange(change, newInsertEdit(decNode.endIndex.intValue(), semi + " }"));
+        addEditToChange(change, newInsertEdit(decNode.endIndex.intValue(), 
+            semi + nl + baseIndent + "}"));
         
-        newProposal(data, desc, change, DefaultRegion(offset + 3, 0));
+        value newOffset = offset + 2 + nl.size + baseIndent.size + indent.size;
+        newProposal(data, desc, change, DefaultRegion(newOffset, 0));
     }
 
 }
