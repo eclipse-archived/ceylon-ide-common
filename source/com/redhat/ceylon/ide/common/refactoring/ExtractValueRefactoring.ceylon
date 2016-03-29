@@ -205,10 +205,15 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             typeDec = "dynamic";
         }
         
+        value isReplacingStatement = if (is Tree.ExpressionStatement statement,
+                                         statement.expression.startIndex == term.startIndex,
+                                         statement.expression.distance == term.distance)
+                                     then true
+                                     else false;
         value definition = 
                 typeDec + " " + newName + 
                 body + 
-                newLineOrReturn;
+                (isReplacingStatement then "" else newLineOrReturn);
         
         value shift 
                 = importProposals.applyImports {
@@ -220,11 +225,18 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         
         value nstart = term.startIndex.intValue();
         value nlength = term.distance.intValue();
-        addEditToChange(tfc, newInsertEdit(start, definition));
-        addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
-        typeRegion = newRegion(start + adjustment + shift, typeDec.size);
-        decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
-        refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
+
+        if (isReplacingStatement) {
+            addEditToChange(tfc, newReplaceEdit(statement.startIndex.intValue(), statement.distance.intValue(), definition));
+            typeRegion = newRegion(start + adjustment + shift, typeDec.size);
+            decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
+        } else {
+            addEditToChange(tfc, newInsertEdit(start, definition));
+            addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
+            typeRegion = newRegion(start + adjustment + shift, typeDec.size);
+            decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
+            refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
+        }
         
         object extends Visitor() {
             variable value backshift = nlength - newName.size;
