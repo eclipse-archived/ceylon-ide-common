@@ -36,4 +36,6 @@ shared interface ModelServices<NativeProject, NativeResource, NativeFolder, Nati
      
      Necessary because of [issue #25](https://github.com/ceylon/ceylon-ide-common/issues/25)"
     shared formal EditedSourceFileAlias newEditedSourceFile(EditedPhasedUnitAlias phasedUnit);
+    
+    shared formal Boolean isResourceContainedInProject(NativeResource resource, CeylonProjectAlias ceylonProject);
 }

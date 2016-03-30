@@ -84,7 +84,8 @@ import java.lang {
     ByteArray
 }
 import java.lang.ref {
-    WeakReference
+    WeakReference,
+    SoftReference
 }
 import java.util.concurrent {
     TimeUnit
@@ -108,6 +109,9 @@ import com.redhat.ceylon.ide.common.platform {
     ModelServicesConsumer,
     IdeUtils,
     Status
+}
+import java.util {
+    WeakHashMap
 }
 
 shared final class ProjectState
@@ -443,7 +447,8 @@ shared abstract class BaseCeylonProject() {
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
-        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -454,11 +459,25 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFilesMap = 
             ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
 
-    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
-    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
+    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
+    
+    value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
+    value virtualFolderCacheLock = ReentrantReadWriteLock();
 
+    variable CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>? build_ = null;
+    
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
+
+    shared CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile> build {
+        if (exists build=build_) {
+            return build;
+        }
+        value build = CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(this);
+        build_ = build;
+        return build;
+    }
     
     shared actual abstract class Modules() 
             extends super.Modules() 
@@ -530,31 +549,28 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared {NativeFile*} projectNativeFiles => 
             projectFilesMap.keys;
 
-    shared Boolean addFileToModel(NativeFile file) {
-        value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
+    "Returns the [[FileVirtualFileAlias]] added to the model,
+     or [[null]] if it could not be added"
+    shared FileVirtualFileAlias? addFileToModel(NativeFile file) {
         value parentFolder = vfsServices.getParent(file);
         if (!exists parentFolder) {
             // the file is a direct child of the project: 
             //files directly under the project are not part of the project source files.
-            return false;
+            return null;
         }
         
-        if (! vfsServices.getRootPropertyForNativeFolder(this, parentFolder) exists) {
-            if (exists grandParent=vfsServices.getParent(parentFolder)) {
-                if (! addFolderToModel(parentFolder, grandParent)) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
+        if (! vfsServices.getRootPropertyForNativeFolder(this, parentFolder) exists && 
+            ! addFolderToModel(parentFolder) exists) {
+            return null;
         }
         
         projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
+        value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
         projectFilesMap.put(file, virtualFile);
         
         // TODO : add the delta element
         
-        return true;
+        return virtualFile;
     }
     
     shared void removeFileFromModel(NativeFile file) {
@@ -562,9 +578,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         // TODO : add the delta element
     }
     
-    shared Boolean addFolderToModel(NativeFolder folder, NativeFolder parent) {
+    shared FolderVirtualFileAlias? addFolderToModel(NativeFolder folder) {
+        NativeFolder? parent = vfsServices.getParent(folder);
+        if (!exists parent) {
+            return null;
+        }
+
         value parentVirtualFile = vfsServices.createVirtualFolder(parent, ideArtifact);
-        Boolean addIfParentAlreadyAdded() {
+        FolderVirtualFileAlias? addIfParentAlreadyAdded() {
             if (exists parentPkg = parentVirtualFile.ceylonPackage,
                 exists root=parentVirtualFile.rootFolder,
                 exists loader = modelLoader) {
@@ -574,17 +595,23 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     else ".".join {parentPkg.nameAsString, vfsServices.getShortName(folder)});
                 vfsServices.setPackagePropertyForNativeFolder(this,folder, WeakReference(pkg));
                 vfsServices.setRootPropertyForNativeFolder(this, folder, WeakReference(root));
-                return true;
+                return vfsServices.createVirtualFolder(folder, ideArtifact);
             }
-            return false;
+            return null;
         }
 
-        if (!addIfParentAlreadyAdded()) {
-            if (exists grandParent=vfsServices.getParent(parent),
-                addFolderToModel(parent, grandParent)) {
-                return addIfParentAlreadyAdded();
+        FolderVirtualFileAlias addedVirtualFolder;
+        if (exists added = addIfParentAlreadyAdded()) {
+            addedVirtualFolder = added;
+        } else {
+            if (addFolderToModel(parent) exists) {
+                if (exists added = addIfParentAlreadyAdded()) {
+                    addedVirtualFolder = added;
+                } else {
+                    return null;
+                }
             } else {
-                return false;
+                return null;
             }
         }
         
@@ -592,7 +619,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         // (local step corresponding to the ModuleScanner and ProjectFilesScanner)
 
         // TODO : add the delta element
-        return true;
+        return addedVirtualFolder;
     }
 
     shared void removeFolderFromModel(NativeFolder folder) {
@@ -895,5 +922,143 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     };
     
     shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
+    
+    shared FileVirtualFileAlias getOrCreateFileVirtualFile(NativeFile nativeFile) =>
+            if (exists existingFile=projectFilesMap.get(nativeFile))
+            then existingFile 
+            else vfsServices.createVirtualFile(nativeFile, ideArtifact);
+
+    shared FolderVirtualFileAlias getOrCreateFolderVirtualFile(NativeFolder nativeFolder) {
+        SoftReference<FolderVirtualFileAlias>? virtualFolderRef = virtualFolderCache.get(nativeFolder);
+        if (exists virtualFile=virtualFolderRef?.get()) {
+            return virtualFile;
+        }
+        value virtualFile = vfsServices.createVirtualFolder(nativeFolder, ideArtifact);
+        virtualFolderCache.put(virtualFile.nativeResource, SoftReference(virtualFile));
+        return virtualFile;
+    }
+    
+    shared Boolean isFileInSourceFolder(NativeFile file) =>
+            isFileInRootFolder(file, true);
+
+    shared Boolean isFileInResourceFolder(NativeFile file) =>
+            isFileInRootFolder(file, false);
+
+    Boolean isFileInRootFolder(NativeFile file, Boolean? sourceRoot=null) {
+        value parentFolder = vfsServices.getParent(file);
+        if (exists parentFolder) {
+            return isFolderInRootFolder(parentFolder, sourceRoot);
+        }
+        return false;
+    }
+
+    Boolean isFolderInRootFolder(NativeFolder folder, Boolean? sourceRoot=null) {
+        if (exists rootIsSource = vfsServices.getRootIsSourceProperty(this, folder)) {
+            if (exists sourceRoot) {
+                return sourceRoot == rootIsSource;
+            } else {
+                return true;
+            }
+        }
+        return vfsServices.isDescendantOfAny(folder,
+                    if (exists sourceRoot)
+                    then 
+                        if (sourceRoot)
+                        then sourceNativeFolders 
+                        else resourceNativeFolders
+                    else rootNativeFolders);
+    }
+     
+     shared Boolean isResourceForModel(NativeResource resource) { 
+         if (!vfsServices.isFolder(resource),
+             is NativeFile file=resource) {
+             return isSourceFile(file)
+                     || isResourceFile(file);
+         }
+         else {
+             assert(is NativeFolder folder=resource);
+             return isFolderInRootFolder(folder);
+         }
+     }
+     
+     shared Boolean isSourceFile(NativeFile file) =>
+            isFileInSourceFolder(file) && isCompilable(file);
+    
+    shared Boolean isResourceFile(NativeFile file) =>
+            isFileInResourceFolder(file); // TODO: add the constraint that it should be in the right packages ?
+    
+    shared void projectFileTreeChanged({NativeResourceChange+} projectFileChanges) {
+        
+        ChangeToConvert updateModelAndConvertToProjectFileChange(NativeResourceChange nativeChange) {
+            switch (nativeChange) 
+            case(is NativeFileChange) {
+                function convertToVirtualFile(NativeFile file) {
+                    switch(nativeChange)
+                    case(is NativeFileContentChange) {
+                        return getOrCreateFileVirtualFile(file);
+                    }
+                    case(is NativeFileAddition) {
+                        return addFileToModel(file);
+                    }
+                    case(is NativeFileRemoval) {
+                        FileVirtualFileAlias removedFile = getOrCreateFileVirtualFile(file);
+                        removeFileFromModel(file);
+                        return removedFile;
+                    }
+                }
+                return [nativeChange, convertToVirtualFile];
+            }
+            case(is NativeFolderChange) {
+                function convertToVirtualFile(NativeFolder folder) {
+                    switch(nativeChange)
+                    case(is NativeFolderAddition) {
+                        if(vfsServices.existsOnDisk(folder)) {
+                            return addFolderToModel(folder);
+                        } else {
+                            return null;
+                        }
+                    }
+                    case(is NativeFolderRemoval) {
+                        FolderVirtualFileAlias removedFolder = getOrCreateFolderVirtualFile(folder);
+                        removeFolderFromModel(folder);
+                        return removedFolder;
+                    }
+                }
+                return [nativeChange, convertToVirtualFile];
+            }
+        }
+        
+        build.fileTreeChanged(projectFileChanges.map((nativeChange) => 
+            if (isResourceForModel(nativeChange.resource),
+                    exists projectFileChange=model.toProjectChange(updateModelAndConvertToProjectFileChange(nativeChange)))
+            then projectFileChange
+            else [nativeChange, ideArtifact]));
+        
+
+        for (referencingProject in referencingCeylonProjects) {
+            referencingProject.referencedProjectFileTreeChanged(this, projectFileChanges);
+        }
+        // Positionner le full-build, etc ... + quelque chose à builder en fonction des change events (aussi des changements de binaires, d'overrides.xml, etc ...)
+        // Ajouter des changements dans le sourceChangeEvent du CeylonProjectBuild (seulement sur les sources qui font partie des root folders de moi ou des projets référencés) (=> créer les ResourceVirtualFileChange)
+        // Ajouter les changements dans tous les projets qui me référencent
+    }
+    
+    shared void referencedProjectFileTreeChanged(CeylonProjectAlias referencedProject, {NativeResourceChange+} changesInReferencedProject) {
+        function convertToProjectFileChange(NativeResourceChange nativeChange) {
+            switch (nativeChange) 
+            case(is NativeFileChange) {
+                return [nativeChange, referencedProject.getOrCreateFileVirtualFile];
+            }
+            case(is NativeFolderChange) {
+                return [nativeChange, referencedProject.getOrCreateFolderVirtualFile];
+            }
+        }
+
+        build.fileTreeChanged(changesInReferencedProject.map((nativeChange) => 
+            if (isResourceForModel(nativeChange.resource),
+                    exists projectFileChange=model.toProjectChange(convertToProjectFileChange(nativeChange)))
+            then projectFileChange
+            else [nativeChange, ideArtifact]));
+    }
 }
 

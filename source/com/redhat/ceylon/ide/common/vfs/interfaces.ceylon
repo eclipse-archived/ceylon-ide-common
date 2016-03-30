@@ -85,9 +85,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared actual default Boolean \iexists() => vfsServices.existsOnDisk(nativeResource);
     
     shared Boolean isDescendantOfAny({FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} possibleAncestors) =>
-            let(descendantPath = Path(path))
-            possibleAncestors.any((ancestor) => 
-                Path(ancestor.path).isPrefixOf(descendantPath));
+            vfsServices.isDescendantOfAny(nativeResource, possibleAncestors.map(FolderVirtualFile.nativeResource));
     
     shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
     

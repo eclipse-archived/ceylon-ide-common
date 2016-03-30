@@ -1,5 +1,6 @@
 import com.redhat.ceylon.ide.common.vfs {
-    VfsAliases
+    VfsAliases,
+    FolderVirtualFile
 }
 import java.lang.ref {
     WeakReference
@@ -13,6 +14,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast
+}
+import java.io {
+    File
 }
 
 shared interface VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -43,7 +47,13 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
     shared formal String getShortName(NativeResource resource);
     shared formal Path getPath(NativeResource resource);
     shared formal String getPathString(NativeResource resource);
-    
+    shared formal File? getJavaFile(NativeResource resource);
+
+    shared Boolean isDescendantOfAny(NativeResource resource, {NativeFolder*} possibleAncestors) =>
+            let(descendantPath = getPath(resource))
+            possibleAncestors.any((ancestor) => 
+                getPath(ancestor).isPrefixOf(descendantPath));
+
     shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, NativeProject project);
     shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
     shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder, NativeProject project);

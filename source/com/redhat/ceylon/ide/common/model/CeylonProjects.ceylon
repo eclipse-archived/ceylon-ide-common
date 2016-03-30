@@ -9,11 +9,14 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformUtils,
-    Status
+    Status,
+    ModelServicesConsumer,
+    VfsServicesConsumer
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    VirtualFileSystem
+    VirtualFileSystem,
+    ResourceVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.context {
     TypeCache
@@ -26,6 +29,9 @@ import java.lang {
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 
 shared abstract class BaseCeylonProjects() {
@@ -41,19 +47,12 @@ shared T withCeylonModelCaching<T>(T() do) {
     }
 }
 
-
-shared final class ResourceChangeType
-{
-    shared new fileContentChange {}
-    shared new fileAddition {}
-    shared new fileRemoval {}
-    shared new folderAddition {}
-    shared new folderRemoval {}
-}
-
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
         satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
@@ -161,111 +160,19 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
 
     shared {PhasedUnit*} parsedUnits
         => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
-            
-
-    shared abstract class ResourceChange<Resource, Folder, File>()
-            of FolderChange<Resource, Folder, File>
-            | FileChange<Resource, Folder, File> 
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        shared formal ResourceChangeType type;
-        shared formal Resource resource;
+    
+    
+    "Dispatch the changes to the projects that might be interested
+     (have the corresponding native resource in the project contents)"
+    shared void fileTreeChanged({NativeResourceChange+} changes) {
+        value projectsInModel = ceylonProjects;
         
-        shared actual Boolean equals(Object that) => 
-                if (is ResourceChange<out Object, out Object, out Object> that) 
-        then type==that.type && 
-                resource==that.resource 
-        else false;
-    }
-    
-    shared abstract class FileChange<Resource, Folder, File>(File theFile)
-            of FileContentChange<Resource, Folder, File>
-            | FileAddition<Resource, Folder, File> 
-            | FileRemoval<Resource, Folder, File>
-            extends ResourceChange<Resource, Folder, File>()
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-         shared actual File resource = theFile;
-    }
-    
-    shared class FileContentChange<Resource, Folder, File>(File theFile)
-            extends FileChange<Resource, Folder, File>(theFile)
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        type = ResourceChangeType.fileContentChange;
-    }
-    
-    shared class FileAddition<Resource, Folder, File>(File theFile)
-            extends FileChange<Resource, Folder, File>(theFile)
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        type = ResourceChangeType.fileAddition;
-    }
-    
-    shared class FileRemoval<Resource, Folder, File>(
-        File theFile,
-        "if [[theFile]] has been removed after a move or rename,
-         this indicates the new file to which [[theFile]] has been moved or renamed."
-        shared File? movedTo)
-            extends FileChange<Resource, Folder, File>(theFile)
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        type = ResourceChangeType.fileRemoval;
-    }
-    
-    shared abstract class FolderChange<Resource, Folder, File>(Folder theFolder)
-            of FolderAddition<Resource, Folder, File>
-            | FolderRemoval<Resource, Folder, File>
-            extends ResourceChange<Resource, Folder, File>()
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        shared actual Folder resource = theFolder;
-    }
-    
-    shared class FolderAddition<Resource, Folder, File>(Folder theFolder)
-            extends FolderChange<Resource, Folder, File>(theFolder)
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        type = ResourceChangeType.folderAddition;
-    }
-    
-    shared class FolderRemoval<Resource, Folder, File>(
-        Folder theFolder,
-        "if [[theFolder]] has been removed after a move or rename,
-         this indicates the new file to which [[theFolder]] has been moved or renamed."
-        shared Folder? movedTo)
-            extends FolderChange<Resource, Folder, File>(theFolder)
-            given Resource satisfies Object 
-            given Folder satisfies Resource 
-            given File satisfies Resource {
-        type = ResourceChangeType.folderRemoval;
-    }
-    
-    shared alias NativeResourceChange => ResourceChange<NativeResource, NativeFolder, NativeFile>;
-    shared alias NativeFileChange => FileChange<NativeResource, NativeFolder, NativeFile>;
-    shared class NativeFileContentChange(NativeFile theFile) => FileContentChange<NativeResource, NativeFolder, NativeFile>(theFile);
-    shared class NativeFileAddition(NativeFile theFile) => FileAddition<NativeResource, NativeFolder, NativeFile>(theFile);
-    shared class NativeFileRemoval(NativeFile theFile, NativeFile? movedTo) => FileRemoval<NativeResource, NativeFolder, NativeFile>(theFile, movedTo);
-    shared alias NativeFolderChange => FolderChange<NativeResource, NativeFolder, NativeFile>;
-    shared class NativeFolderAddition(NativeFolder theFolder) => FolderAddition<NativeResource, NativeFolder, NativeFile>(theFolder);
-    shared class NativeFolderRemoval(NativeFolder theFolder, NativeFolder? movedTo) => FolderRemoval<NativeResource, NativeFolder, NativeFile>(theFolder, movedTo);
-
-    shared alias ResourceVirtualFileChange => ResourceChange<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>;
-    shared alias FileVirtualFileChange => FileChange<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>;
-    shared class FileVirtualFileContentChange(FileVirtualFileAlias theFile) => FileContentChange<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFile);
-    shared class FileVirtualFileAddition(FileVirtualFileAlias theFile) => FileAddition<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFile);
-    shared class FileVirtualFileRemoval(FileVirtualFileAlias theFile, FileVirtualFileAlias? movedTo) => FileRemoval<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFile, movedTo);
-    shared alias FolderVirtualFileChange => FolderChange<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>;
-    shared class FolderVirtualFileAddition(FolderVirtualFileAlias theFolder) => FolderAddition<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFolder);
-    shared class FolderVirtualFileRemoval(FolderVirtualFileAlias theFolder, FolderVirtualFileAlias? movedTo) => FolderRemoval<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFolder, movedTo);
-    
-    
-        
+        for (ceylonProject in projectsInModel) {
+            value changesForProject = changes.filter((nativeChange) => 
+                                            modelServices.isResourceContainedInProject(nativeChange.resource, ceylonProject));
+            if (exists first=changesForProject.first) {
+                ceylonProject.projectFileTreeChanged({first, *changesForProject.rest});
+            }
+        }
+    }       
 }
