@@ -479,6 +479,8 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         return build;
     }
     
+    shared actual Boolean nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
+
     shared actual abstract class Modules() 
             extends super.Modules() 
             satisfies {IdeModuleAlias*} {
@@ -640,29 +642,26 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         removeProperty("RootIsSource", vfsServices.removeRootIsSourceProperty);
     }
     
-    "Existing source folders as read form the IDE native project"
-    shared formal {NativeFolder*} sourceNativeFolders;
-    "Existing resource folders as read form the IDE native project"
-    shared formal {NativeFolder*} resourceNativeFolders;
-
+    "Existing source folders as read from the IDE native project"
+    shared {NativeFolder*} sourceNativeFolders =>
+            modelServices.sourceNativeFolders(this);
+            
+    "Existing resource folders as read from the IDE native project"
+    shared {NativeFolder*} resourceNativeFolders =>
+            modelServices.resourceNativeFolders(this);
+    
     shared {NativeFolder*} rootNativeFolders =>
             sourceNativeFolders.chain(resourceNativeFolders);
-
-    
-    shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
-    shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);
     
     shared actual {CeylonProjectAlias*} referencedCeylonProjects =>
-            referencedNativeProjects(ideArtifact)
+            modelServices.referencedNativeProjects(ideArtifact)
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;
 
     shared actual {CeylonProjectAlias*} referencingCeylonProjects =>
-            referencingNativeProjects(ideArtifact)
+            modelServices.referencingNativeProjects(ideArtifact)
             .map((NativeProject nativeProject) => model.getProject(nativeProject))
             .coalesced;
-    
-    shared formal void scanRootFolder(RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner);
     
     shared Boolean isCompilable(NativeFile file) {
         if (isCeylon(file)) {
@@ -696,7 +695,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     if (progress.cancelled) {
                         throw platformUtils.newOperationCanceledException("");
                     }
-                    scanRootFolder(scanner(root));
+                    modelServices.scanRootFolder(scanner(root));
                 }
             }
             
