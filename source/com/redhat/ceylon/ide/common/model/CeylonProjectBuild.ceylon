@@ -24,7 +24,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     CeylonProjectAlias ceylonProject;
 
-    class State() {
+    shared class State() {
         shared variable Boolean fullBuildRequired = true;
         shared variable Boolean classpathResolutionRequired = true;
         
@@ -48,7 +48,6 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     }
         
     State state = State();
-
 
     Boolean shouldDoFullBuild => state.fullBuildRequired && ! ceylonProject.parsed;
     Boolean shouldResolveClasspath => state.classpathResolutionRequired;
@@ -102,22 +101,22 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     shared void requestCleanBuild() {
         setFullBuildRequired();
-        state.classpathResolutionRequired = true;
     }
     
-    void analyzeChange([NativeResourceChange, NativeProject]|ResourceVirtualFileChange change) {
+    shared default void analyzeChange([NativeResourceChange, NativeProject]|ResourceVirtualFileChange change) {
         switch(change)
         case(is [NativeResourceChange, NativeProject]) {
             // Change outside project sources or resources
             value [nonModelChange, changeProject] = change;
             switch(nonModelChange)
-            case(is CeylonProjectsAlias.NativeFolderRemoval) {
+            case(is NativeFolderRemoval) {
                  // Check if either the .exploded directory or one modules.car is removed
             }
-            case(is CeylonProjectsAlias.NativeFileChange) {
+            case(is NativeFileChange) {
                 // Check if .classpath, config file, overrides.xml file is changed, removed or added
             }
             else {}
+            
         }
         case(is ResourceVirtualFileChange) {
             // Change in project sources or resources
@@ -131,6 +130,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             }
             else {}
         }
+        
+        ceylonProject.buildHooks.each((hook) => hook.analyzingChange(change, this, state));
     }
     
     shared void fileTreeChanged({<[NativeResourceChange, NativeProject]|ResourceVirtualFileChange>+} changes) {

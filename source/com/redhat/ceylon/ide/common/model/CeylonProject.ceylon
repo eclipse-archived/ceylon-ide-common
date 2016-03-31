@@ -444,6 +444,19 @@ shared abstract class BaseCeylonProject() {
 }
 
 
+shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
+    shared alias ChangeToAnalyze => [NativeResourceChange, NativeProject]|ResourceVirtualFileChange;
+    shared alias Build => CeylonProjectBuildAlias;
+    shared alias State => CeylonProjectBuildAlias.State;
+    
+    shared default void analyzingChange(ChangeToAnalyze change,  Build build, State state) {}
+}
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
@@ -465,12 +478,12 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
     value virtualFolderCacheLock = ReentrantReadWriteLock();
 
-    variable CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>? build_ = null;
+    variable CeylonProjectBuildAlias? build_ = null;
     
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
 
-    shared CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile> build {
+    shared CeylonProjectBuildAlias build {
         if (exists build=build_) {
             return build;
         }
@@ -920,8 +933,6 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         });
     };
     
-    shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
-    
     shared FileVirtualFileAlias getOrCreateFileVirtualFile(NativeFile nativeFile) =>
             if (exists existingFile=projectFilesMap.get(nativeFile))
             then existingFile 
@@ -1059,5 +1070,9 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             then projectFileChange
             else [nativeChange, ideArtifact]));
     }
+    
+    shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
+    
+    shared default {BuildHookAlias*} buildHooks => {};
 }
 
