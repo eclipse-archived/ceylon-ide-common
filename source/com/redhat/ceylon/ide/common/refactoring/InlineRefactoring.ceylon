@@ -940,6 +940,13 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     start = it.endIndex.intValue() - templateStart;
                 }
                 
+                shared actual void visit(Tree.QualifiedMemberOrTypeExpression it) {
+                    //visit the primary first!
+                    if (exists p = it.primary) {
+                        p.visit(this);
+                    }
+                }
+                
                 shared actual void visit(Tree.This it) {
                     appendUpTo(it);
                     inlineDefinitionReference {
