@@ -704,7 +704,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     addEditToChange(textChange, 
                         newInsertEdit {
                             position = that.startIndex.intValue();
-                            text = "void ";
+                            text = "shared actual void ";
                         });
                     //delete the fat arrow
                     addEditToChange(textChange,
