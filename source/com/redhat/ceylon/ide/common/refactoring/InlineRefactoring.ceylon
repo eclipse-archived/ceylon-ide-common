@@ -64,16 +64,9 @@ shared Boolean isInlineRefactoringAvailable(
         inSameProject) {
         switch (declaration)
         case (is FunctionOrValue) {
-            return !declaration.parameter 
-                    && !(declaration is Setter) 
-                    && !declaration.default 
-                    && !declaration.formal 
-                    && !declaration.native 
+            return !(declaration is Setter)
                     && (declaration.typeDeclaration exists) 
                     && (!declaration.typeDeclaration.anonymous) 
-                    && (declaration.toplevel 
-                        || !declaration.shared 
-                        || !declaration.formal && !declaration.default && !declaration.actual)
                     && (!declaration.unit == rootNode.unit 
                     //not a Destructure
                     || !(getDeclarationNode(rootNode, declaration) 
@@ -176,7 +169,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         case (is Tree.MethodDeclaration) {
             if (!declarationNode.specifierExpression exists) {
                 return "Cannot inline forward declaration: " + declaration.name;
-            }            
+            }
         }
         case (is Tree.AttributeGetterDefinition) {
             value statements = declarationNode.block.statements;
@@ -184,7 +177,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 return "Getter body is not a single statement: " + declaration.name;
             }
             
-            if (!(statements.get(0) is Tree.Return)) {
+            if (!(statements[0] is Tree.Return)) {
                 return "Getter body is not a return statement: " + declaration.name;
             }
         }
@@ -194,17 +187,36 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 if (statements.size() != 1) {
                     return "Function body is not a single statement: " + declaration.name;
                 }
-                else if (!statements.get(0) is Tree.Return) {
+                else if (!statements[0] is Tree.Return) {
                     return "Function body is not a return statement: " + declaration.name;
                 }
             }
         }
-        else {}
+        else {
+            return "Declaration is not a value, function, or type alias: " + declaration.name;
+        }
+        
+        
         
         value warnings = ArrayList<String>();
         
-        if (is Tree.AnyAttribute declarationNode) {
-            if (declarationNode.declarationModel.variable) {
+        if (is FunctionOrValue declaration) {
+            if (declaration.parameter) {
+                return "Declaration is a parameter: " + declaration.name;
+            }
+            if (declaration.native) {
+                return "Declaration is native: " + declaration.name;
+            }
+            if (declaration.formal) {
+                return "Declaration is formal: " + declaration.name;
+            }
+            if (declaration.default) {
+                return "Declaration is default: " + declaration.name;
+            }
+            if (declaration.actual) {
+                return "Declaration is actual: " + declaration.name;
+            }
+            if (declaration.variable) {
                 warnings.add("Inlined value is variable");
             }
         }
@@ -232,7 +244,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         JList<CommonToken> declarationTokens, 
         TypecheckerUnit editorUnit) {
         
-        value term = getInlinedTerm(declarationNode);
+        value term = getInlinedDefinition(declarationNode);
         
         for (phasedUnit in getAllUnits()) {
             if (searchInFile(phasedUnit)
@@ -494,40 +506,46 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
 
     Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block
-    getInlinedTerm(Tree.Declaration declarationNode) {
+    getInlinedDefinition(Tree.Declaration declarationNode) {
         switch (declarationNode)
+        case (is Tree.MethodDeclaration) {
+            return declarationNode.specifierExpression.expression;
+        }
         case (is Tree.AttributeDeclaration) {
             return declarationNode.specifierOrInitializerExpression.expression;
         }
         case (is Tree.MethodDefinition) {
             value statements = declarationNode.block.statements;
             if (declarationNode.type is Tree.VoidModifier) {
-                if (isSingleExpression(statements)) {
-                    assert(is Tree.ExpressionStatement e = statements[0]);
+                if (statements.size() == 1, 
+                    is Tree.ExpressionStatement e = statements[0]) {
                     return e.expression;
                 }
                 else {
                     return declarationNode.block;
                 }
-                
-            } else {
-                if (!isSingleReturn(statements)) {
-                    throw Exception("method body is not a single expression statement");
-                }
-                assert (is Tree.Return ret = statements[0]);
-                return ret.expression;
             }
-        }
-        case (is Tree.MethodDeclaration) {
-            return declarationNode.specifierExpression.expression;
+            else {
+                if (statements.size() == 1,
+                    is Tree.Return r = statements[0]) {
+                    return r.expression;
+                }
+                else {
+                    "method body is not a single expression statement"
+                    assert (false);
+                }
+            }
         }
         case (is Tree.AttributeGetterDefinition) {
             value statements = declarationNode.block.statements;
-            if (!isSingleReturn(statements)) {
-                throw Exception("getter body is not a single expression statement");
+            if (statements.size() == 1, 
+                is Tree.Return r = statements[0]) {
+                return r.expression;
             }
-            assert(is Tree.Return r = declarationNode.block.statements[0]);
-            return r.expression;
+            else {
+                "getter body is not a single return statement"
+                assert (false);
+            }
         }
         case (is Tree.ClassDeclaration) {
             return declarationNode.classSpecifier;
@@ -538,20 +556,11 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         case (is Tree.TypeAliasDeclaration) {
             return declarationNode.typeSpecifier;
         } else {
-            throw Exception("not a value, function, or type alias");
+            "not a value, function, or type alias"
+            assert (false);
         }
     }
-
-    Boolean isSingleExpression(JList<Tree.Statement> statements) {
-        return statements.size() == 1
-                && statements.get(0) is Tree.ExpressionStatement;
-    }
     
-    Boolean isSingleReturn(JList<Tree.Statement> statements) {
-        return statements.size() == 1
-                && statements.get(0) is Tree.Return;
-    }
-
     void inlineReferences(Tree.Declaration declarationNode, 
         Tree.CompilationUnit declarationUnit, 
         Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block definition, 
@@ -575,7 +584,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             inlineFunctionReferences {
                 rootNode = rootNode;
                 tokens = tokens;
-                term = if (is Tree.Expression definition) then definition.term else definition;
+                definition = if (is Tree.Expression definition) then definition.term else definition;
                 decNode = declarationNode;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
@@ -598,7 +607,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             inlineTypeAliasReferences {
                 rootNode = rootNode;
                 tokens = tokens;
-                term = definition.type;
+                type = definition.type;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
             };
@@ -607,14 +616,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
 
     void inlineFunctionReferences(Tree.CompilationUnit rootNode, JList<CommonToken> tokens,
-        Tree.Term|Tree.Block term, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
+        Tree.Term|Tree.Block definition, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
         TextChange textChange) {
         
         object extends Visitor() {
             variable Boolean needsParens = false;
             
             shared actual void visit(Tree.MethodDeclaration that) {
-                if (is Tree.Block term,
+                if (is Tree.Block definition,
                     is Tree.LazySpecifierExpression se 
                             = that.specifierExpression,
                     is Tree.InvocationExpression ie = se.expression.term,
@@ -629,7 +638,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
@@ -649,7 +658,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.AttributeDeclaration that) {
-                if (is Tree.Block term,
+                if (is Tree.Block definition,
                     is Tree.LazySpecifierExpression se 
                             = that.specifierOrInitializerExpression,
                     is Tree.InvocationExpression ie = se.expression.term,
@@ -664,7 +673,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
@@ -684,7 +693,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.SpecifierStatement that) {
-                if (is Tree.Block term,
+                if (is Tree.Block definition,
                     that.refinement,
                     is Tree.LazySpecifierExpression se 
                             = that.specifierExpression,
@@ -706,7 +715,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
@@ -726,14 +735,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.ExpressionStatement that) {
-                if (is Tree.Block term,
+                if (is Tree.Block definition,
                     is Tree.InvocationExpression ie = that.expression.term,
                     is Tree.MemberOrTypeExpression primary = ie.primary,
                     inlineRef(primary, primary.declaration)) {
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
@@ -753,13 +762,13 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.InvocationExpression that) {
-                if (!is Tree.Block term,
+                if (!is Tree.Block definition,
                     is Tree.MemberOrTypeExpression primary = that.primary,
                     inlineRef(primary, primary.declaration)) {
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = that;
                         reference = primary;
@@ -790,7 +799,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         text.append(nodes.text(declarationTokens, pl));
                     }
                     text.append(" ");
-                    if (!term is Tree.Block) {
+                    if (!definition is Tree.Block) {
                         text.append("=> ");
                     }
                     addEditToChange(textChange,
@@ -802,7 +811,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
-                        definition = term;
+                        definition = definition;
                         textChange = textChange;
                         invocation = null;
                         reference = that;
@@ -846,7 +855,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
 
     void inlineTypeAliasReferences(Tree.CompilationUnit rootNode, 
-        JList<CommonToken> tokens, Tree.Type term, 
+        JList<CommonToken> tokens, Tree.Type type, 
         JList<CommonToken> declarationTokens, TextChange textChange) {
         
         object extends Visitor() {
@@ -855,7 +864,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 inlineDefinition {
                     tokens = tokens;
                     declarationTokens = declarationTokens;
-                    definition = term;
+                    definition = type;
                     textChange = textChange;
                     invocation = null;
                     reference = that;
