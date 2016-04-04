@@ -192,6 +192,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
             }
         }
+        case (is Tree.ClassDeclaration|Tree.InterfaceDeclaration) {}
+        case (is Tree.TypeAliasDeclaration) {}
         else {
             return "Declaration is not a value, function, or type alias: " + declaration.name;
         }
