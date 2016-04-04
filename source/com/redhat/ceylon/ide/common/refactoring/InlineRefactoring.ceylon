@@ -572,7 +572,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         switch (declarationNode)
         case (is Tree.AnyAttribute) {
             assert (is Tree.Expression definition);
-            inlineAttributeReferences {
+            inlineValueReferences {
                 rootNode = rootNode;
                 tokens = tokens;
                 term = definition.term;
@@ -643,7 +643,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
-                        needsParens = needsParens;
+                        needsParens = false;
                         removeBraces = false;
                     };
                     //delete the semicolon
@@ -678,7 +678,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
-                        needsParens = needsParens;
+                        needsParens = false;
                         removeBraces = false;
                     };
                     //delete the semicolon
@@ -720,7 +720,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         textChange = textChange;
                         invocation = ie;
                         reference = primary;
-                        needsParens = needsParens;
+                        needsParens = false;
                         removeBraces = false;
                     };
                     //delete the semicolon
@@ -828,7 +828,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     }
                 }
                 else {
+                    value onp = needsParens;
+                    if (that is Tree.QualifiedMemberOrTypeExpression) {
+                        needsParens = true;
+                    }
                     super.visit(that);
+                    needsParens = onp;
                 }
             }
             
@@ -959,7 +964,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }.visit(rootNode);
     }
 
-    void inlineAttributeReferences(Tree.CompilationUnit rootNode, 
+    void inlineValueReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.Term term, 
         JList<CommonToken> declarationTokens, TextChange textChange) {
         
@@ -1001,7 +1006,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.MemberOrTypeExpression that) {
+                value onp = needsParens;
+                if (that is Tree.QualifiedMemberOrTypeExpression) {
+                    needsParens = true;
+                }
                 super.visit(that);
+                needsParens = onp;
                 inlineDefinition {
                     tokens = tokens;
                     declarationTokens = declarationTokens;
@@ -1015,13 +1025,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             shared actual void visit(Tree.OperatorExpression that) {
-                value onp = needsParens;
-                needsParens = true;
-                super.visit(that);
-                needsParens = onp;
-            }
-            
-            shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
                 value onp = needsParens;
                 needsParens = true;
                 super.visit(that);
