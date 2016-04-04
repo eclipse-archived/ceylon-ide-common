@@ -26,3 +26,7 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
     shared formal String getLineContent(IDocument doc, Integer line);
 }
+
+shared interface CommonDocument {
+    shared formal Integer getLineOfOffset(Integer offset);
+}
