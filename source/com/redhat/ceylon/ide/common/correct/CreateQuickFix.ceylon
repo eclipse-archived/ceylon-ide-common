@@ -236,15 +236,14 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
                 addCreateLocalProposals(data, dg);
                 variable value container = findClassContainer(data.rootNode, smte);
                 if (exists con = container, con != smte.scope) {
-                    while (true) {
-                        addCreateMemberProposals2(data, dg, container, nodes.findStatement(data.rootNode, smte));
-                        if (is Declaration innerCon = con.container) {
+                    while (exists _container = container) {
+                        addCreateMemberProposals2(data, dg, _container, nodes.findStatement(data.rootNode, smte));
+                        if (is Declaration innerCon = _container.container) {
                             value outerContainer = innerCon;
                             container = findClassContainer2(outerContainer);
                         } else {
                             break;
                         }
-                        if (exists c = container) { break; }
                     }
                 }
             }
