@@ -41,18 +41,22 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
     
     shared formal NativeFolder? getParent(NativeResource resource);
     shared formal NativeFile? findFile(NativeFolder resource, String fileName);
+    shared formal NativeResource? findChild(NativeFolder parent, Path path);
     shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
     shared formal Boolean isFolder(NativeResource resource);
     shared formal Boolean existsOnDisk(NativeResource resource);
     shared formal String getShortName(NativeResource resource);
-    shared formal Path getPath(NativeResource resource);
-    shared formal String getPathString(NativeResource resource);
+    shared formal Path getVirtualFilePath(NativeResource resource);
+    shared formal String getVirtualFilePathString(NativeResource resource);
+    shared formal Path? getProjectRelativePath(NativeResource resource);
+    shared formal String? getProjectRelativePathString(NativeResource resource);
     shared formal File? getJavaFile(NativeResource resource);
+    shared formal NativeResource? fromJavaFile(File javaFile, NativeProject project);
 
     shared Boolean isDescendantOfAny(NativeResource resource, {NativeFolder*} possibleAncestors) =>
-            let(descendantPath = getPath(resource))
+            let(descendantPath = getVirtualFilePath(resource))
             possibleAncestors.any((ancestor) => 
-                getPath(ancestor).isPrefixOf(descendantPath));
+                getVirtualFilePath(ancestor).isPrefixOf(descendantPath));
 
     shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, NativeProject project);
     shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);

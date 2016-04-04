@@ -99,7 +99,7 @@ shared class CeylonProjectConfig(project) {
     variable Boolean isSuppressWarningsChanged = false;
     
 
-    File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
+    shared File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
 
     void initMergedConfig() {
         mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);

@@ -451,11 +451,10 @@ shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFi
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared alias ChangeToAnalyze => [NativeResourceChange, NativeProject]|ResourceVirtualFileChange;
-    shared alias Build => CeylonProjectBuildAlias;
-    shared alias State => CeylonProjectBuildAlias.State;
-    
-    shared default void analyzingChange(ChangeToAnalyze change,  Build build, State state) {}
+    shared default void analyzingChanges(
+        {ChangeToAnalyze*} changes,  
+        CeylonProjectBuildAlias build, 
+        CeylonProjectBuildAlias.State state) {}
 }
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
@@ -491,7 +490,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         build_ = build;
         return build;
     }
-    
+
     shared actual Boolean nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
 
     shared actual abstract class Modules() 
@@ -647,7 +646,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 platformUtils.log(
                     Status._WARNING, 
                     "``propertyName`` property could not be removed from native folder : ``
-                    vfsServices.getPathString(folder)``", e);
+                    vfsServices.getVirtualFilePathString(folder)``", e);
             }
         }
         removeProperty("Package", vfsServices.removePackagePropertyForNativeFolder);

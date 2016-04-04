@@ -4,7 +4,7 @@ shared interface ModelAliases<NativeProject, NativeResource, NativeFolder, Nativ
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     shared alias CeylonProjectAlias => CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>;
-    shared class CeylonProjectBuildAlias(CeylonProjectAlias ceylonProject) => CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject);
+    shared alias CeylonProjectBuildAlias => CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias BuildHookAlias => BuildHook<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias CeylonProjectsAlias => CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>;
 

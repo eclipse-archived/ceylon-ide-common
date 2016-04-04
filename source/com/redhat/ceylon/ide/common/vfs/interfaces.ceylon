@@ -78,7 +78,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
             else null;
     
     shared actual default String name => vfsServices.getShortName(nativeResource);
-    shared actual default String path => vfsServices.getPathString(nativeResource);
+    shared actual default String path => vfsServices.getVirtualFilePathString(nativeResource);
     
     shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
     

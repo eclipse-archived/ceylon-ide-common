@@ -40,7 +40,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     variable Boolean isCompileToJsChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
 
-    File ideConfigFile => File(File(project.rootDirectory, ".ceylon"), "ide-config");
+    shared File ideConfigFile => File(File(project.rootDirectory, ".ceylon"), "ide-config");
 
     void initMergedConfig() {
         mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);

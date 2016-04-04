@@ -1,6 +1,9 @@
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
 }
+import com.redhat.ceylon.ide.common.util {
+    ifExists
+}
 
 shared final class ResourceChangeType 
         of fileContentChange 
@@ -125,13 +128,12 @@ shared interface ChangeAware<NativeProject, NativeResource, NativeFolder, Native
     shared alias FolderVirtualFileChange => FolderChange<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>;
     shared class FolderVirtualFileAddition(FolderVirtualFileAlias theFolder) => FolderAddition<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFolder);
     shared class FolderVirtualFileRemoval(FolderVirtualFileAlias theFolder, FolderVirtualFileAlias? movedTo) => FolderRemoval<ResourceVirtualFileAlias, FolderVirtualFileAlias, FileVirtualFileAlias>(theFolder, movedTo);
-    
+
+    shared alias ChangeToAnalyze => [NativeResourceChange, NativeProject]|ResourceVirtualFileChange;
+        
     shared alias ChangeToConvert => [NativeFolderChange, FolderVirtualFileAlias?(NativeFolder)] | [NativeFileChange,FileVirtualFileAlias?(NativeFile)];
     
     shared ResourceVirtualFileChange? toProjectChange(ChangeToConvert changeToConvert) { 
-        Result? ifExists<Result,Param>(Param? p, Result(Param) f) =>
-                if (exists p) then f(p) else null;
-        
         switch(changeToConvert)
         case(is [NativeFileChange,FileVirtualFileAlias?(NativeFile)]) {
             value [change, convert] = changeToConvert;

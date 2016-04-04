@@ -1,15 +1,20 @@
 import com.redhat.ceylon.common {
-    Backend
+    Backend,
+    FileUtil
 }
 import com.redhat.ceylon.ide.common.platform {
     VfsServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     ImmutableMapWrapper,
-    ImmutableSetWrapper
+    ImmutableSetWrapper,
+    Path
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
+}
+import java.io {
+    File
 }
 
 shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject)
@@ -103,41 +108,79 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         setFullBuildRequired();
     }
     
-    shared default void analyzeChange([NativeResourceChange, NativeProject]|ResourceVirtualFileChange change) {
-        switch(change)
-        case(is [NativeResourceChange, NativeProject]) {
-            // Change outside project sources or resources
-            value [nonModelChange, changeProject] = change;
-            switch(nonModelChange)
-            case(is NativeFolderRemoval) {
-                 // Check if either the .exploded directory or one modules.car is removed
-            }
-            case(is NativeFileChange) {
-                // Check if .classpath, config file, overrides.xml file is changed, removed or added
-            }
-            else {}
-            
-        }
-        case(is ResourceVirtualFileChange) {
-            // Change in project sources or resources
+    shared default void analyzeChanges({ChangeToAnalyze*} changes) {
+        // get the modules
+        value outputRepoMap = map(ceylonProject.referencedCeylonProjects
+                .follow(ceylonProject)
+                .map((project) => 
+                        project.ideArtifact -> [ 
+                            Path(project.configuration.outputRepoProjectRelativePath),
+                            vfsServices.fromJavaFile(project.configuration.projectConfigFile, project.ideArtifact),
+                            vfsServices.fromJavaFile(project.ideConfiguration.ideConfigFile, project.ideArtifact)
+                         ]));
+
+        value overridesResource =
+                if (exists overridesFilePath = ceylonProject.configuration.overrides,
+                    exists overridesFile = FileUtil.absoluteFile(FileUtil.applyCwd(ceylonProject.rootDirectory, File(overridesFilePath))))
+                then vfsServices.fromJavaFile(overridesFile, ceylonProject.ideArtifact)
+                else null;
+        
+        for (change in changes) {
             switch(change)
-            case(is FolderVirtualFileRemoval) {
-                // Check if a folder with an existing package is removed
+            case(is [NativeResourceChange, NativeProject]) {
+                // Change outside project sources or resources
+                value [nonModelChange, changeProject] = change;
+                value resource = nonModelChange.resource;
+                switch(nonModelChange)
+                case(is NativeFolderRemoval) {
+                    if (exists relativePath = vfsServices.getProjectRelativePath(resource),
+                        exists [outputRepo, _, __] = outputRepoMap.get(changeProject),
+                        outputRepo.isPrefixOf(relativePath)) {
+                        state.fullBuildRequired = true;
+                        state.classpathResolutionRequired = true;
+                        }
+                }
+                case(is NativeFileChange) {
+                    if (exists overridesResource, 
+                        resource == overridesResource) {
+                        state.fullBuildRequired = true;
+                        state.classpathResolutionRequired = true;
+                    }
+                    if (exists [_, configResource, ideConfigResource] = outputRepoMap.get(changeProject)) {
+                        if (exists configResource,
+                            resource == configResource) {
+                            state.fullBuildRequired = true;
+                            state.classpathResolutionRequired = true;
+                        }
+                        if (exists ideConfigResource,
+                            resource == ideConfigResource) {
+                            state.fullBuildRequired = true;
+                            state.classpathResolutionRequired = true;
+                        }
+                    }
+                }
+                else {}
                 
             }
-            case(is NativeFileChange) {
-                // Check if a *source file* module descriptor or package descriptor is changed ( ast no changes + errors, etc ...)
+            case(is ResourceVirtualFileChange) {
+                // Change in project sources or resources
+                switch(change)
+                case(is FolderVirtualFileRemoval) {
+                    // Check if a folder with an existing package is removed
+                    
+                }
+                case(is FileVirtualFileChange) {
+                    // Check if a *source file* module descriptor or package descriptor is changed ( ast no changes + errors, etc ...)
+                }
+                else {}
             }
-            else {}
         }
         
-        ceylonProject.buildHooks.each((hook) => hook.analyzingChange(change, this, state));
+        ceylonProject.buildHooks.each((hook) => hook.analyzingChanges(changes, this, state));
     }
     
     shared void fileTreeChanged({<[NativeResourceChange, NativeProject]|ResourceVirtualFileChange>+} changes) {
-        for (change in changes) {
-            analyzeChange(change);
-        }
+        analyzeChanges(changes);
         
         state.changeEvents.addAll(changes.narrow<ResourceVirtualFileChange>()); 
     }
