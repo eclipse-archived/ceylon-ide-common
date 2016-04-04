@@ -238,7 +238,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 value start = startIndex - decNode.startIndex.intValue();
                 value end = pl.startIndex.intValue() - decNode.startIndex.intValue();
                 
-                return nodes.text(decNode, tokens).substring(start, end)
+                return nodes.text(tokens, decNode).substring(start, end)
                         + getInsertedText(edit);
             }
             
@@ -289,11 +289,11 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             for ([pModel, pTree] in params) {
                 //value pm = pTree.parameterModel.model;
                 value _defaultArgs = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
-                then nodes.text(sie.expression, editorData.tokens)
+                then nodes.text(editorData.tokens, sie.expression)
                 else null;
                 value _paramList = if (is Tree.FunctionalParameterDeclaration pTree,
                     is Tree.MethodDeclaration pd = pTree.typedDeclaration)
-                then nodes.text(pd.parameterLists.get(0), editorData.tokens)
+                then nodes.text(editorData.tokens, pd.parameterLists.get(0))
                 else null;
                 
                 value p = Param( 
@@ -568,7 +568,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         
         for (p in list.parameters) {
             if (exists oldVal = oldArgs.find((oa) => isSameParameter(oa.parameter, p.model))) {
-                builder.append(nodes.text(oldVal, tokens));
+                builder.append(nodes.text(tokens, oldVal));
             } else {
                 builder.append(getInlinedArg(p));
             }
@@ -649,7 +649,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     String paramString(Tree.Parameter parameter, String newName, 
         JList<CommonToken> tokens) {
         
-        value paramString = nodes.text(parameter, tokens);
+        value paramString = nodes.text(tokens, parameter);
         value loc = parameter.startIndex.intValue();
         value id = getIdentifier(parameter);
         value start = id.startIndex.intValue() - loc;
@@ -661,7 +661,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     String paramStringWithoutDefaultArg(Tree.Parameter parameter, String newName,
         JList<CommonToken> tokens) {
         
-        variable String paramString = nodes.text(parameter, tokens);
+        variable String paramString = nodes.text(tokens, parameter);
         // first remove the default arg
         value sie = nodes.getDefaultArgSpecifier(parameter);
         value loc = parameter.startIndex.intValue();
