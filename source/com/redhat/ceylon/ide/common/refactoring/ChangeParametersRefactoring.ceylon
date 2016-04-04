@@ -14,6 +14,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.correct {
     DocumentChanges
 }
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit
+}
 import com.redhat.ceylon.ide.common.platform {
     IndentsServicesConsumer
 }
@@ -43,10 +46,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonUnit
-}
 
+"Finds out which [[Declaration]] the 'Change Parameters' refactoring
+ can work on."
 shared <Functional&Declaration>? getDeclarationForChangeParameters
     (Node node, Tree.CompilationUnit rootNode) {
     
@@ -70,12 +72,6 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
                 & IndentsServicesConsumer<IDocument>
         given InsertEdit satisfies TextEdit {
-    
-    shared interface ChangeParametersData satisfies EditorData {
-        shared formal Declaration declaration;
-    }
-    
-    shared formal actual ChangeParametersData editorData;
     
     class FindInvocationsVisitor(Declaration declaration) extends Visitor() {
         value posResults = HashSet<Tree.PositionalArgumentList>();
@@ -122,6 +118,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     shared formal TextChange newDocChange();
     shared formal void addChangeToChange(Change change, TextChange tc);
 
+    "Applies the changes made in the `ParameterList`."
     shared actual void build([Change, ParameterList] data) {
         value units = getAllUnits();
         // TODO ProgressMonitor
@@ -154,6 +151,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
     }
 
+    "An object holding information related to the signature of the function
+     being refactored."
     shared class ParameterList(declaration) {
         value params = ArrayList<Param>();
 
@@ -162,6 +161,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         shared Integer size => params.size;
         shared void add(Param p) => params.add(p);
         
+        "Moves the parameter at [[position]] up in the list of parameters."
         shared Boolean moveUp(Integer position) {
             if (0 < position < size) {
                 params.swap(position, position - 1);
@@ -170,6 +170,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             return false;
         }
         
+        "Moves the parameter at [[position]] down in the list of parameters."
         shared Boolean moveDown(Integer position) {
             if (0 <= position < size - 1) {
                 params.swap(position, position + 1);
@@ -178,6 +179,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             return false;
         }
         
+        "Deletes the parameter at [[position]] from the list of parameters."
         shared Boolean delete(Integer position) {
             if (0 <= position < size - 1) {
                 params.delete(position);
@@ -186,7 +188,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             return false;
         }
         
-        shared Param create(String name = "p", Type type = declaration.unit.anythingType) {
+        "Adds a parameter at the end of the list of parameters."
+        shared Param create(String name = "something", Type type = declaration.unit.anythingType) {
             value model = Value();
             model.type = type;
             model.name = name;
@@ -207,6 +210,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             return param;
         }
         
+        "Creates a preview of the function's new signature, based on the current
+         changes made to this object."
         shared String previewSignature() {
             value decNode = nodes.getReferencedNode(declaration);
             
@@ -246,10 +251,13 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
     }
 
+    "Holds information related to a given parameter of the function being
+     refactored."
     shared class Param(position, model, name = model.name, defaulted = model.defaulted,
             defaultArgs = null, originalDefaultArgs = defaultArgs, 
             paramList = null) {
         
+        "The original position in the list of parameters."
         shared Integer position;
         shared variable String name;
         shared Parameter model;
@@ -265,7 +273,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 then true else false;
     }
     
-    // TODO find a better name
+    "Creates a new [[ParameterList]] that can be modified in the UI.
+     Call [[ChangeParametersRefactoring.build]] to apply changes."
     shared ParameterList? computeParameters() {
         if (exists decl = getDeclarationForChangeParameters(editorData.node, rootNode),
             is Functional refDec = decl.refinedDeclaration,
@@ -287,7 +296,6 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             );
             
             for ([pModel, pTree] in params) {
-                //value pm = pTree.parameterModel.model;
                 value _defaultArgs = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
                 then nodes.text(editorData.tokens, sie.expression)
                 else null;
@@ -314,6 +322,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         return null;
     }
     
+    "Counts all the references to the function being refactored."
     shared Integer countAllReferences(ParameterList list, Tree.CompilationUnit cu) {
         value frv = FindInvocationsVisitor(list.declaration);
         value fdv = FindRefinementsVisitor(list.declaration);
@@ -609,42 +618,6 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             builder.string
         );
     }
-
-    //Integer countRequiredParameters(ParameterList info) {
-    //    variable Integer requiredParams = -1;
-    //    variable value i = 0;
-    //    
-    //    for (p in info.parameters) {
-    //        if (!p.defaulted || p.defaultHasChanged,
-    //            i > requiredParams) {
-    //            
-    //            requiredParams = i;
-    //        }
-    //    }
-    //    
-    //    return requiredParams;
-    //}
-
-    //Integer countExistingArgs(ParametersInfo info, 
-    //    JList<Tree.PositionalArgument> pas) {
-    //    
-    //    variable Integer existingArgs = 0;
-    //    variable Integer i = 0;
-    //    
-    //    while (i < pas.size()) {
-    //        if (exists p = pas.get(i).parameter,
-    //            exists tuple = info.parameters.get(i)) {
-    //            value newLoc = tuple[1];
-    //            if (newLoc > existingArgs) {
-    //                existingArgs = newLoc;
-    //            }
-    //        }
-    //        
-    //        i++;
-    //    }
-    //    
-    //    return existingArgs;
-    //}
     
     String paramString(Tree.Parameter parameter, String newName, 
         JList<CommonToken> tokens) {
