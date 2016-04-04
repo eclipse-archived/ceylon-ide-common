@@ -239,7 +239,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 is CeylonUnit ceylonUnit = declaration.unit,
                 exists tokens = ceylonUnit.phasedUnit?.tokens) {
                 
-                value edit = reorderParameters(this, pl, tokens);
+                value edit = reorderDeclaration(this, pl, false, tokens);
                 value start = startIndex - decNode.startIndex.intValue();
                 value end = pl.startIndex.intValue() - decNode.startIndex.intValue();
                 
