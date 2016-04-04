@@ -196,8 +196,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             return "Declaration is not a value, function, or type alias: " + declaration.name;
         }
         
-        
-        
         value warnings = ArrayList<String>();
         
         if (is FunctionOrValue declaration) {
@@ -224,12 +222,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         declarationNode.visit(object extends Visitor() {
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);
-                if (exists dec = that.declaration) {
-                    if (declaration.shared, !dec.shared, !dec.parameter) {
-                        warnings.add("Definition contains reference to unshared declaration: " + dec.name);
-                    }
-                } else {
-                    warnings.add("Definition contains unresolved reference");
+                if (exists dec = that.declaration, 
+                    declaration.shared, !dec.shared, !dec.parameter) {
+                    warnings.add("Definition contains reference to unshared declaration: " + dec.name);
+                }
+            }
+            shared actual void visit(Tree.Return that) {
+                super.visit(that);
+                if (is Tree.MethodDefinition declarationNode,
+                    declarationNode.type is Tree.VoidModifier) {
+                    warnings.add("Void function body contains return statement");
                 }
             }
         });
@@ -1275,12 +1277,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
 
-    Boolean inlineRef(Node that, Declaration dec)
-            => (!editorData.justOne
+    Boolean inlineRef(Node that, Declaration? dec) {
+        if (!exists dec) {
+            return false;
+        }
+        return (!editorData.justOne
               || that.unit == editorData.node.unit
                  && that.startIndex exists
                  && that.startIndex == editorData.node.startIndex)
             && original(dec) == editorData.declaration;
+    }
 
     void interpolatePositionalArguments(StringBuilder result, 
         Tree.InvocationExpression invocation, 
