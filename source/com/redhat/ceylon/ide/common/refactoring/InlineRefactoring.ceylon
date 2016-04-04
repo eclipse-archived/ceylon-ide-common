@@ -364,7 +364,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineInFile(TextChange textChange, Change parentChange, 
         Tree.Declaration declarationNode, Tree.CompilationUnit declarationRootNode, 
-        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier definition, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block definition, 
         JList<CommonToken> declarationTokens, Tree.CompilationUnit rootNode,
         JList<CommonToken> tokens) {
         
@@ -493,7 +493,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
 
-    Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier 
+    Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block
     getInlinedTerm(Tree.Declaration declarationNode) {
         switch (declarationNode)
         case (is Tree.AttributeDeclaration) {
@@ -502,20 +502,18 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         case (is Tree.MethodDefinition) {
             value statements = declarationNode.block.statements;
             if (declarationNode.type is Tree.VoidModifier) {
-                //TODO: in the case of a void method, tolerate 
-                //      multiple statements , including control
-                //      structures, not just expression statements
-                if (!isSingleExpression(statements)) {
-                    throw Exception("method body is not a single expression statement");
+                if (isSingleExpression(statements)) {
+                    assert(is Tree.ExpressionStatement e = statements[0]);
+                    return e.expression;
+                }
+                else {
+                    return declarationNode.block;
                 }
                 
-                assert(is Tree.ExpressionStatement e = statements[0]);
-                return e.expression;
             } else {
                 if (!isSingleReturn(statements)) {
                     throw Exception("method body is not a single expression statement");
                 }
-                
                 assert (is Tree.Return ret = statements[0]);
                 return ret.expression;
             }
@@ -528,9 +526,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (!isSingleReturn(statements)) {
                 throw Exception("getter body is not a single expression statement");
             }
-            
-            assert(is Tree.Return r 
-                = declarationNode.block.statements[0]);
+            assert(is Tree.Return r = declarationNode.block.statements[0]);
             return r.expression;
         }
         case (is Tree.ClassDeclaration) {
@@ -558,7 +554,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineReferences(Tree.Declaration declarationNode, 
         Tree.CompilationUnit declarationUnit, 
-        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier definition, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block definition, 
         JList<CommonToken> declarationTokens, 
         Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, TextChange textChange) {
@@ -575,11 +571,11 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             };
         }
         case (is Tree.AnyMethod) {
-            assert (is Tree.Expression definition);
+            assert (is Tree.Expression|Tree.Block definition);
             inlineFunctionReferences {
                 rootNode = rootNode;
                 tokens = tokens;
-                term = definition.term;
+                term = if (is Tree.Expression definition) then definition.term else definition;
                 decNode = declarationNode;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
@@ -611,7 +607,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
 
     void inlineFunctionReferences(Tree.CompilationUnit rootNode, JList<CommonToken> tokens,
-        Tree.Term term, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
+        Tree.Term|Tree.Block term, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
         TextChange textChange) {
         
         object extends Visitor() {
@@ -628,6 +624,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = that;
                         reference = primary;
                         needsParens = needsParens;
+                        removeBraces = true;
                     };
                 }
             }
@@ -646,9 +643,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         text.append("void ");
                     }
                     for (pl in decNode.parameterLists) {
-                        text.append(nodes.text(pl, declarationTokens));
+                        text.append(nodes.text(declarationTokens, pl));
                     }
-                    text.append(" => ");
+                    text.append(" ");
+                    if (!term is Tree.Block) {
+                        text.append("=> ");
+                    }
                     addEditToChange(textChange,
                         newInsertEdit {
                             position = that.startIndex.intValue();
@@ -663,6 +663,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = null;
                         reference = that;
                         needsParens = needsParens;
+                        removeBraces = false;
                     };
                 }
             }
@@ -705,6 +706,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     invocation = null;
                     reference = that;
                     needsParens = false;
+                    removeBraces = false;
                 };
             }
         }.visit(rootNode);
@@ -728,6 +730,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     invocation = null;
                     reference = that;
                     needsParens = false;
+                    removeBraces = false;
                 };
             }
             
@@ -744,6 +747,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = that;
                         reference = mte;
                         needsParens = needsParens;
+                        removeBraces = false;
                     };
                 }
             }
@@ -756,9 +760,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     if (decNode.declarationModel.declaredVoid) {
                         text.append("void ");
                     }
-                    text.append(nodes.text(decNode.parameterList, declarationTokens))
+                    text.append(nodes.text(declarationTokens, decNode.parameterList))
                         .append(" => ")
-                        .append(nodes.text(term, declarationTokens));
+                        .append(nodes.text(declarationTokens, term));
                     addEditToChange(textChange, 
                         newReplaceEdit {
                             start = that.startIndex.intValue();
@@ -842,6 +846,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     invocation = null;
                     reference = that;
                     needsParens = needsParens;
+                    removeBraces = false;
                 };
             }
             
@@ -890,7 +895,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     value types = reference.typeArgumentList.types;
                     if (types.size() > index, 
                         exists type = types[index]) {
-                        result.append(nodes.text(type, tokens));
+                        result.append(nodes.text(tokens, type));
                         return; //EARLY EXIT!
                     }
                 }
@@ -900,7 +905,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         value types = tas.types;
                         if (types.size() > index, 
                             exists type = types[index]) {
-                            result.append(nodes.text(type, tokens));
+                            result.append(nodes.text(tokens, type));
                             return;  //EARLY EXIT!
                         }
                     } else {
@@ -929,10 +934,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         
         if (is Tree.This localReference) {
             if (is Tree.QualifiedMemberOrTypeExpression reference) {
-                result.append(nodes.text(reference.primary, tokens));
+                result.append(nodes.text(tokens, reference.primary));
             }
             else {
-                result.append(nodes.text(localReference, declarationTokens));
+                result.append(nodes.text(declarationTokens, localReference));
             }
         }
         else if (exists invocation,
@@ -964,23 +969,22 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             //assume it's a reference to the immediately 
             //containing class, i.e. the receiver
             //TODO: handle refs to outer classes
-            result.append(nodes.text(reference.primary, tokens))
+            result.append(nodes.text(tokens, reference.primary))
                 .append(".")
-                .append(nodes.text(localReference, declarationTokens));
+                .append(nodes.text(declarationTokens, localReference));
         }
         else {
-            result.append(nodes.text(localReference, declarationTokens));
+            result.append(nodes.text(declarationTokens, localReference));
         }
     }
 
-    void inlineDefinition(
-        JList<CommonToken> tokens, 
+    void inlineDefinition(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, 
-        Node definition, 
-        TextChange textChange,
+        Tree.Term|Tree.Type|Tree.Block definition, 
+        TextChange textChange, 
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
-        Boolean needsParens) {
+        Boolean needsParens, Boolean removeBraces) {
         
         value dec = switch (reference)
             case (is Tree.MemberOrTypeExpression) 
@@ -994,8 +998,25 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
             class InterpolationVisitor() extends Visitor() {
                 variable Integer start = 0;
-                value template = nodes.text(definition, declarationTokens);
-                value templateStart = definition.startIndex.intValue();
+                String template;
+                Integer templateStart;
+                if (removeBraces, is Tree.Block definition) {
+                    value sts = definition.statements;
+                    if (sts.empty) {
+                        template = "";
+                        templateStart = definition.startIndex.intValue()+1;
+                    }
+                    else {
+                        value firstStatement = sts.get(0);
+                        value lastStatement = sts.get(sts.size()-1);
+                        template = nodes.text(declarationTokens, firstStatement, lastStatement);
+                        templateStart = sts.get(0).startIndex.intValue();
+                    }
+                }
+                else {
+                    template = nodes.text(declarationTokens, definition);
+                    templateStart = definition.startIndex.intValue();
+                }
                 void appendUpTo(Node it) {
                     value text = template[start:
                         it.startIndex.intValue() - templateStart - start];
@@ -1125,7 +1146,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     first = false;
                 }
                 
-                result.append(nodes.text(arg, tokens));
+                result.append(nodes.text(tokens, arg));
                 found = true;
             }
         }
@@ -1155,7 +1176,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 assert (is Tree.SpecifiedArgument sa = arg);
                 value argTerm = sa.specifierExpression.expression.term;
                 result//.append(template.substring(start,it.getStartIndex()-templateStart))
-                    .append(nodes.text(argTerm, tokens));
+                    .append(nodes.text(tokens, argTerm));
                 //start = it.getStopIndex()-templateStart+1;
                 found = true;
             }
@@ -1180,7 +1201,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
                 
                 first = false;
-                result.append(nodes.text(pa, tokens));
+                result.append(nodes.text(tokens, pa));
             }
             
             if (!first) {

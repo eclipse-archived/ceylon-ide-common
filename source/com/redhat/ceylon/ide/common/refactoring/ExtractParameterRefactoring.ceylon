@@ -110,7 +110,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
             if (!type exists) {
                 type = unit.denotableType(core.type.typeModel);
             }
-            body = nodes.text(expr, tokens);
+            body = nodes.text(tokens, expr);
         }
         //TODO: add a special case for object expressions
         else {
@@ -120,7 +120,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            body = nodes.text(core, tokens);
+            body = nodes.text(tokens, core);
         }
         
         value imports = JHashSet<Declaration>();
@@ -176,7 +176,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
                     refStart = 0;
                 }
                 else {
-                    value header = nodes.text(anonParams, tokens) + " => ";
+                    value header = nodes.text(tokens, anonParams) + " => ";
                     call = header + newName + "(" + args.string + ")";
                     refStart = header.size;
                 }

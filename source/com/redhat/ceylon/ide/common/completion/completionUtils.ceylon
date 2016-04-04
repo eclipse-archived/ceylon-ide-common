@@ -242,7 +242,7 @@ shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysi
             }
             else if (exists tokens = cpc.tokens, 
                     term.unit == cpc.lastCompilationUnit.unit) {
-                value impl = nodes.text(term, tokens);
+                value impl = nodes.text(tokens, term);
                 if (impl.size < 10) {
                     return arrow + impl;
                 }

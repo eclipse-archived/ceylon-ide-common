@@ -168,10 +168,10 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             value bodyWithParams = StringBuilder();
             nodes.appendParameters(bodyWithParams, core, unit, tokens);
             if (exists block = core.block) {
-                bodyWithParams.append(" ").append(nodes.text(block, tokens));
+                bodyWithParams.append(" ").append(nodes.text(tokens, block));
             }
             else if (exists expr = core.expression) {
-                bodyWithParams.append(" => ").append(nodes.text(expr, tokens)).append(";");
+                bodyWithParams.append(" => ").append(nodes.text(tokens, expr)).append(";");
             }
             else {
                 bodyWithParams.append(" => ");
@@ -185,7 +185,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             }
             modifiers = "value";
             value specifier = getter then " => " else " = ";
-            body = specifier + nodes.text(core, tokens) + ";";
+            body = specifier + nodes.text(tokens, core) + ";";
         }
 
         value imports = HashSet<Declaration>();

@@ -548,7 +548,7 @@ shared object nodes {
                               .append(" ");
                     }
                 }
-                result.append(text(p, tokens));
+                result.append(text(tokens, p));
             }
             result.append(")");
         }
@@ -578,9 +578,9 @@ shared object nodes {
         }
     }
     
-    shared String text(Node term, JList<CommonToken> tokens) {
-        value start = term.startIndex.intValue();
-        value length = term.endIndex.intValue() - start;
+    shared String text(JList<CommonToken> tokens, Node from, Node to = from) {
+        value start = from.startIndex.intValue();
+        value length = to.endIndex.intValue() - start;
         value exp = StringBuilder();
         if (exists ti = getTokenIterator(tokens, DefaultRegion(start, length))) {
             while (ti.hasNext()) {

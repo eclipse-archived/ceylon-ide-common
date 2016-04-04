@@ -185,7 +185,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         JList<CommonToken> tokens) {
         value args 
                 = localThisRefs.take(1).chain(localRefs)
-                    .map((term) => nodes.text(term, tokens));
+                    .map((term) => nodes.text(tokens, term));
         return ", ".join(args);
     }
     
@@ -293,10 +293,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 type = unit.denotableType(core.type.typeModel);
             }
             if (exists block = core.block) {
-                body = nodes.text(block, fixedTokens);
+                body = nodes.text(fixedTokens, block);
             }
             else if (exists expression = core.expression) {
-                body = specifier + nodes.text(expression, fixedTokens) + ";";
+                body = specifier + nodes.text(fixedTokens, expression) + ";";
             }
             else {
                 body = specifier + ";";
@@ -306,7 +306,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            body = specifier + nodes.text(core, fixedTokens) + ";";
+            body = specifier + nodes.text(fixedTokens, core) + ";";
         }
         
         String typeOrKeyword;
@@ -346,7 +346,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 refStart = start;
             }
             else {
-                value header = nodes.text(cpl, tokens) + " => ";
+                value header = nodes.text(tokens, cpl) + " => ";
                 invocation = header + newName + "(" + argList.string + ")";
                 refStart = start + header.size;
             }
@@ -496,7 +496,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         for (s in statements) {
             definition
                     .append(bodyIndent)
-                    .append(nodes.text(s, tokens));
+                    .append(nodes.text(tokens, s));
             variable Integer i = s.endToken.tokenIndex;
             variable CommonToken tok;
             while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
