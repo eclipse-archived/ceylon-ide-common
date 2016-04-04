@@ -176,7 +176,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (statements.size() != 1) {
                 return "Getter body is not a single statement: " + declaration.name;
             }
-            
             if (!(statements[0] is Tree.Return)) {
                 return "Getter body is not a return statement: " + declaration.name;
             }
@@ -533,7 +532,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     return r.expression;
                 }
                 else {
-                    "method body is not a single expression statement"
+                    "function body is not a single return statement"
                     assert (false);
                 }
             }
