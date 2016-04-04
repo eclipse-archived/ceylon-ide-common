@@ -613,9 +613,149 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         object extends Visitor() {
             variable Boolean needsParens = false;
             
+            shared actual void visit(Tree.MethodDeclaration that) {
+                if (is Tree.Block term,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //delete the fat arrow
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinition {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = term;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = false;
+                    };
+                    //delete the semicolon
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.AttributeDeclaration that) {
+                if (is Tree.Block term,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierOrInitializerExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //delete the fat arrow
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinition {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = term;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = false;
+                    };
+                    //delete the semicolon
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.SpecifierStatement that) {
+                if (is Tree.Block term,
+                    that.refinement,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //convert from shortcut refinement
+                    addEditToChange(textChange, 
+                        newInsertEdit {
+                            position = that.startIndex.intValue();
+                            text = "void ";
+                        });
+                    //delete the fat arrow
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinition {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = term;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = false;
+                    };
+                    //delete the semicolon
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.ExpressionStatement that) {
+                if (is Tree.Block term,
+                    is Tree.InvocationExpression ie = that.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    inlineDefinition {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = term;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = true;
+                    };
+                    //delete the semicolon
+                    addEditToChange(textChange,
+                        newDeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
             shared actual void visit(Tree.InvocationExpression that) {
-                super.visit(that);
-                if (is Tree.MemberOrTypeExpression primary = that.primary) {
+                if (!is Tree.Block term,
+                    is Tree.MemberOrTypeExpression primary = that.primary,
+                    inlineRef(primary, primary.declaration)) {
                     inlineDefinition {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
@@ -627,18 +767,22 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         removeBraces = true;
                     };
                 }
+                else {
+                    super.visit(that);
+                }
             }
             
             shared actual void visit(Tree.MemberOrTypeExpression that) {
-                super.visit(that);
-                if (!that.directlyInvoked && 
-                    inlineRef(that, that.declaration)) {
+                if (inlineRef(that, that.declaration)) {
                     //we have a function ref to the inlined
                     //function (not an invocation)
                     
                     //create an anonymous function to wrap
                     //the inlined function
                     value text = StringBuilder();
+                    if (that.directlyInvoked) {
+                        text.append("(");
+                    }
                     if (decNode.declarationModel.declaredVoid) {
                         text.append("void ");
                     }
@@ -665,6 +809,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         needsParens = needsParens;
                         removeBraces = false;
                     };
+                    if (that.directlyInvoked) {
+                        addEditToChange(textChange,
+                            newInsertEdit {
+                                position = that.endIndex.intValue();
+                                text = ")";
+                            });
+                    }
+                }
+                else {
+                    super.visit(that);
                 }
             }
             
