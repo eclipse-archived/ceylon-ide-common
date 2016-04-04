@@ -1,5 +1,6 @@
 import ceylon.collection {
-    ArrayList
+    ArrayList,
+    HashMap
 }
 
 import com.redhat.ceylon.compiler.typechecker.context {
@@ -620,6 +621,27 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.Term|Tree.Block definition, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
         TextChange textChange) {
         
+        value defaultArgs = HashMap<Declaration,Tree.Expression>();
+        for (pl in decNode.parameterLists) {
+            for (p in pl.parameters) {
+                switch (p) 
+                case (is Tree.InitializerParameter) {
+                    if (exists e = p.specifierExpression?.expression,
+                        exists d = p.parameterModel?.declaration) {
+                        defaultArgs.put(d, e);
+                    }
+                }
+                case (is Tree.ValueParameterDeclaration) {
+                    if (is Tree.AttributeDeclaration ad = p.typedDeclaration,
+                        exists e = ad.specifierOrInitializerExpression?.expression) {
+                        defaultArgs.put(ad.declarationModel, e);
+                    }
+                }
+                //TODO: default args for function parameters
+                else {}
+            }
+        }
+        
         object extends Visitor() {
             variable Boolean needsParens = false;
             
@@ -636,7 +658,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                             start = se.startIndex.intValue();
                             length = 2;
                         });
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -645,6 +667,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = false;
                         removeBraces = false;
+                        defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -671,7 +694,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                             start = se.startIndex.intValue();
                             length = 2;
                         });
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -680,6 +703,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = false;
                         removeBraces = false;
+                        defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -713,7 +737,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                             start = se.startIndex.intValue();
                             length = 2;
                         });
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -722,6 +746,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = false;
                         removeBraces = false;
+                        defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -740,7 +765,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     is Tree.InvocationExpression ie = that.expression.term,
                     is Tree.MemberOrTypeExpression primary = ie.primary,
                     inlineRef(primary, primary.declaration)) {
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -749,6 +774,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = needsParens;
                         removeBraces = true;
+                        defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -766,7 +792,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 if (!is Tree.Block definition,
                     is Tree.MemberOrTypeExpression primary = that.primary,
                     inlineRef(primary, primary.declaration)) {
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -775,6 +801,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = needsParens;
                         removeBraces = true;
+                        defaultArgs = defaultArgs;
                     };
                 }
                 else {
@@ -809,7 +836,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                             text = text.string;
                         });
                     //now inline the body of the function
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = definition;
@@ -818,6 +845,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = that;
                         needsParens = needsParens;
                         removeBraces = false;
+                        defaultArgs = defaultArgs;
                     };
                     if (that.directlyInvoked) {
                         addEditToChange(textChange,
@@ -1097,7 +1125,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Node reference, 
         Tree.InvocationExpression? invocation, 
         Tree.BaseMemberExpression|Tree.This localReference, 
-        StringBuilder result) {
+        StringBuilder result, 
+        Map<Declaration,Tree.Expression> defaultArgs) {
         
         if (is Tree.This localReference) {
             if (is Tree.QualifiedMemberOrTypeExpression reference) {
@@ -1119,6 +1148,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = localReference;
                     sequenced = param.sequenced;
                     tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    defaultArgs = defaultArgs;
                 };
             }
             if (invocation.namedArgumentList exists) {
@@ -1128,6 +1159,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = localReference;
                     sequenced = param.sequenced;
                     tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    defaultArgs = defaultArgs;
                 };
             }
         }
@@ -1144,14 +1177,36 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             result.append(nodes.text(declarationTokens, localReference));
         }
     }
-
+    
+    //TODO: Needed due to compiler backend bug
+    //      Should just use a default arg!
     void inlineDefinition(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, 
         Tree.Term|Tree.Type|Tree.Block definition, 
         TextChange textChange, 
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
-        Boolean needsParens, Boolean removeBraces) {
+        Boolean needsParens, Boolean removeBraces) 
+            => inlineDefinitionWithDefaultArgs {
+                tokens = tokens;
+                declarationTokens = declarationTokens;
+                definition = definition;
+                textChange = textChange;
+                invocation = invocation;
+                reference = reference;
+                needsParens = needsParens;
+                removeBraces = removeBraces;
+                defaultArgs = emptyMap;
+            };
+
+    void inlineDefinitionWithDefaultArgs(JList<CommonToken> tokens, 
+        JList<CommonToken> declarationTokens, 
+        Tree.Term|Tree.Type|Tree.Block definition, 
+        TextChange textChange, 
+        Tree.InvocationExpression? invocation, 
+        Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
+        Boolean needsParens, Boolean removeBraces, 
+        Map<Declaration,Tree.Expression> defaultArgs) {
         
         value dec = switch (reference)
             case (is Tree.MemberOrTypeExpression) 
@@ -1207,6 +1262,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
+                        defaultArgs = defaultArgs;
                     };
                     super.visit(it);
                 }
@@ -1220,6 +1276,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
+                        defaultArgs = defaultArgs;
                     };
                     super.visit(it);
                 }
@@ -1293,7 +1350,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     void interpolatePositionalArguments(StringBuilder result, 
         Tree.InvocationExpression invocation, 
         Tree.StaticMemberOrTypeExpression reference, 
-        Boolean sequenced, JList<CommonToken> tokens) {
+        Boolean sequenced, 
+        JList<CommonToken> tokens,
+        JList<CommonToken> declarationTokens,
+        Map<Declaration,Tree.Expression> defaultArgs) {
         
         variable Boolean first = true;
         variable Boolean found = false;
@@ -1331,7 +1391,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
         
         if (!found) {
-            //TODO: use default value!
+            if (exists e = defaultArgs[reference.declaration]) {
+                result.append(nodes.text(declarationTokens, e));
+            }
         }
     }
 
@@ -1339,7 +1401,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.InvocationExpression invocation, 
         Tree.StaticMemberOrTypeExpression reference,
         Boolean sequenced, 
-        JList<CommonToken> tokens) {
+        JList<CommonToken> tokens,
+        JList<CommonToken> declarationTokens,
+        Map<Declaration,Tree.Expression> defaultArgs) {
         
         variable Boolean found = false;
         for (arg in invocation.namedArgumentList.namedArguments) {
@@ -1387,7 +1451,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (sequenced) {
                 result.append("{}");
             } else {
-                //TODO: use default value!
+                if (exists e = defaultArgs[reference.declaration]) {
+                    result.append(nodes.text(declarationTokens, e));
+                }
             }
         }
     }
