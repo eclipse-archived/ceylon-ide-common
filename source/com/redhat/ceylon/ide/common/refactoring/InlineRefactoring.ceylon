@@ -601,7 +601,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 tokens = tokens;
                 term = definition.invocationExpression;
                 type = definition.type;
-                decNode = declarationNode;
+                declarationNode = declarationNode;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
             };
@@ -612,6 +612,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 rootNode = rootNode;
                 tokens = tokens;
                 type = definition.type;
+                declarationNode = declarationNode;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
             };
@@ -892,12 +893,19 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineTypeAliasReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.Type type, 
+        Tree.TypeAliasDeclaration|Tree.InterfaceDeclaration declarationNode,
         JList<CommonToken> declarationTokens, TextChange textChange) {
+        
+        value defaultTypeArgs = map {
+            for (tp in declarationNode.typeParameterList.typeParameterDeclarations)
+            if (exists t = tp.typeSpecifier?.type)
+            tp.declarationModel -> t
+        };
         
         object extends Visitor() {
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                inlineDefinition {
+                inlineDefinitionWithDefaultArgs {
                     tokens = tokens;
                     declarationTokens = declarationTokens;
                     definition = type;
@@ -906,6 +914,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = false;
                     removeBraces = false;
+                    defaultArgs = defaultTypeArgs;
                 };
             }
         }.visit(rootNode);
@@ -913,15 +922,21 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineClassAliasReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.InvocationExpression term,
-        Tree.Type type, Tree.ClassDeclaration decNode,
+        Tree.Type type, Tree.ClassDeclaration declarationNode,
         JList<CommonToken> declarationTokens, TextChange textChange) {
+        
+        value defaultTypeArgs = map {
+            for (tp in declarationNode.typeParameterList.typeParameterDeclarations)
+            if (exists t = tp.typeSpecifier?.type)
+            tp.declarationModel -> t
+        };
         
         object extends Visitor() {
             variable Boolean needsParens = false;
 
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                inlineDefinition {
+                inlineDefinitionWithDefaultArgs {
                     tokens = tokens;
                     declarationTokens = declarationTokens;
                     definition = type;
@@ -930,6 +945,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = false;
                     removeBraces = false;
+                    defaultArgs = defaultTypeArgs;
                 };
             }
             
@@ -938,7 +954,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value primary = that.primary;
                 if (is Tree.MemberOrTypeExpression primary) {
                     value mte = primary;
-                    inlineDefinition {
+                    inlineDefinitionWithDefaultArgs {
                         tokens = tokens;
                         declarationTokens = declarationTokens;
                         definition = term;
@@ -947,6 +963,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = mte;
                         needsParens = needsParens;
                         removeBraces = false;
+                        defaultArgs = defaultTypeArgs;
                     };
                 }
             }
@@ -956,10 +973,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value d = that.declaration;
                 if (!that.directlyInvoked, inlineRef(that, d)) {
                     value text = StringBuilder();
-                    if (decNode.declarationModel.declaredVoid) {
+                    if (declarationNode.declarationModel.declaredVoid) {
                         text.append("void ");
                     }
-                    text.append(nodes.text(declarationTokens, decNode.parameterList))
+                    text.append(nodes.text(declarationTokens, declarationNode.parameterList))
                         .append(" => ")
                         .append(nodes.text(declarationTokens, term));
                     addEditToChange(textChange, 
@@ -1079,7 +1096,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineAliasDefinitionReference(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, Node reference, 
-        StringBuilder result, Tree.BaseType baseType) {
+        StringBuilder result, Tree.BaseType baseType,
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (exists t = baseType.typeModel,
             is TypeParameter td = t.declaration,
@@ -1089,9 +1107,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (index >= 0) {
                 switch (reference)
                 case (is Tree.SimpleType) {
-                    value types = reference.typeArgumentList.types;
-                    if (types.size() > index, 
-                        exists type = types[index]) {
+                    if (exists type 
+                            = reference.typeArgumentList.types[index] 
+                            else defaultArgs[td]) {
                         result.append(nodes.text(tokens, type));
                         return; //EARLY EXIT!
                     }
@@ -1099,16 +1117,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 case (is Tree.StaticMemberOrTypeExpression) {
                     value tas = reference.typeArguments;
                     if (is Tree.TypeArgumentList tas) {
-                        value types = tas.types;
-                        if (types.size() > index, 
-                            exists type = types[index]) {
+                        if (exists type 
+                                = tas.types[index] 
+                                else defaultArgs[td]) {
                             result.append(nodes.text(tokens, type));
                             return;  //EARLY EXIT!
                         }
                     } else {
-                        value types = tas.typeModels;
-                        if (types.size() > index, 
-                            exists type = types[index]) {
+                        if (exists type = tas.typeModels[index]) {
                             result.append(type.asSourceCodeString(baseType.unit));
                             return; //EARLY EXIT!
                         }
@@ -1128,7 +1144,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.InvocationExpression? invocation, 
         Tree.BaseMemberExpression|Tree.This localReference, 
         StringBuilder result, 
-        Map<Declaration,Tree.Expression> defaultArgs) {
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (is Tree.This localReference) {
             if (is Tree.QualifiedMemberOrTypeExpression reference) {
@@ -1208,7 +1224,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
         Boolean needsParens, Boolean removeBraces, 
-        Map<Declaration,Tree.Expression> defaultArgs) {
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         value dec = switch (reference)
             case (is Tree.MemberOrTypeExpression) 
@@ -1302,6 +1318,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = reference;
                         result = result;
                         baseType = it;
+                        defaultArgs = defaultArgs;
                     };
                     super.visit(it);
                 }
@@ -1355,7 +1372,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Boolean sequenced, 
         JList<CommonToken> tokens,
         JList<CommonToken> declarationTokens,
-        Map<Declaration,Tree.Expression> defaultArgs) {
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         variable Boolean first = true;
         variable Boolean found = false;
@@ -1405,7 +1422,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Boolean sequenced, 
         JList<CommonToken> tokens,
         JList<CommonToken> declarationTokens,
-        Map<Declaration,Tree.Expression> defaultArgs) {
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         variable Boolean found = false;
         for (arg in invocation.namedArgumentList.namedArguments) {
