@@ -852,4 +852,20 @@ shared object nodes {
             }
         }*/
     }
+    
+    shared Tree.SpecifierOrInitializerExpression? getDefaultArgSpecifier(Tree.Parameter p) {
+        if (is Tree.ValueParameterDeclaration p,
+            is Tree.AttributeDeclaration pd = p.typedDeclaration) {
+
+            return pd.specifierOrInitializerExpression;
+        } else if (is Tree.FunctionalParameterDeclaration p,
+                   is Tree.MethodDeclaration pd = p.typedDeclaration) {
+
+            return pd.specifierExpression;
+        } else if (is Tree.InitializerParameter p) {
+            return p.specifierExpression;
+        } else {
+            return null;
+        }
+    }
 }

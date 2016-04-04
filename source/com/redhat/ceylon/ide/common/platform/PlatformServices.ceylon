@@ -1,6 +1,9 @@
 import com.redhat.ceylon.ide.common.correct {
     ImportProposals
 }
+import com.redhat.ceylon.ide.common.util {
+    Indents
+}
 
 shared interface PlatformServices {
     shared void register() {
@@ -12,6 +15,7 @@ shared interface PlatformServices {
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>
     importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
+    shared formal Indents<IDocument> indents<IDocument>();
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -20,6 +24,7 @@ variable PlatformServices _platformServices = object satisfies PlatformServices 
     shared actual IdeUtils utils() => DefaultIdeUtils();
     shared actual ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>() => nothing;
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
+    shared actual Indents<IDocument> indents<IDocument>() => nothing;   
 };
 
 PlatformServices platformServices => _platformServices;

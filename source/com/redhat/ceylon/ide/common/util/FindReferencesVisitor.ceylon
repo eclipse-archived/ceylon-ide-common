@@ -59,7 +59,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
         declaration = extended.declaration;
     }
     
-    Boolean isReference(Parameter|Declaration? param) {
+    shared default Boolean isReference(Parameter|Declaration? param) {
         if (is Parameter param) {
             return isReference(param.model);
         } else if (is Declaration ref = param) {
@@ -358,7 +358,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
         }
     }
     
-    shared actual void visit(Tree.InitializerParameter that) {
+    shared actual default void visit(Tree.InitializerParameter that) {
         if (isReference(that.parameterModel)) {
             _nodes.add(that);
         } else {

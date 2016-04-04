@@ -5,7 +5,7 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
     shared formal IDocument getDocumentForChange(TextChange change);
 
-    shared formal String getInsertedText(InsertEdit edit);
+    shared formal String getInsertedText(TextEdit edit);
 
     shared formal void initMultiEditChange(TextChange change);
 

@@ -21,7 +21,7 @@ shared interface CommonDocumentChanges
         return tc.document;
     }
     
-    shared actual String getInsertedText(InsertEdit ie) {
+    shared actual String getInsertedText(TextEdit ie) {
         return ie.text;
     }
     
