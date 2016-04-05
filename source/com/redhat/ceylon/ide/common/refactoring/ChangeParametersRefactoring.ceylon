@@ -6,10 +6,22 @@ import ceylon.interop.java {
     CeylonIterable
 }
 
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    TypeVisitor,
+    ExpressionVisitor
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
+}
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer,
+    CeylonParser
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Tree,
-    Node
+    Node,
+    Message
 }
 import com.redhat.ceylon.ide.common.correct {
     DocumentChanges
@@ -26,7 +38,8 @@ import com.redhat.ceylon.ide.common.typechecker {
 import com.redhat.ceylon.ide.common.util {
     nodes,
     FindReferencesVisitor,
-    FindRefinementsVisitor
+    FindRefinementsVisitor,
+    ErrorVisitor
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -35,7 +48,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Class,
     FunctionOrValue,
     Type,
-    Value
+    Value,
+    Scope
 }
 
 import java.util {
@@ -44,7 +58,9 @@ import java.util {
 }
 
 import org.antlr.runtime {
-    CommonToken
+    CommonToken,
+    ANTLRStringStream,
+    CommonTokenStream
 }
 
 "Finds out which [[Declaration]] the 'Change Parameters' refactoring
@@ -65,6 +81,59 @@ shared <Functional&Declaration>? getDeclarationForChangeParameters
     }
     
     return null;
+}
+
+"Tries to parse a type expression, and returns the corresponding [[Type]] in
+ case of success, or a [[String]] indicating a parse/lex error."
+shared String|Type parseTypeExpression(String typeText, TypecheckerUnit unit, Scope scope) {
+    try {
+        value lexer = CeylonLexer(ANTLRStringStream(typeText));
+        value ts = CommonTokenStream(lexer);
+        ts.fill();
+        value lexErrors = lexer.errors;
+        
+        if (!lexErrors.empty) {
+            return lexErrors.get(0).message;
+        }
+        
+        value parser = CeylonParser(ts);
+        Tree.StaticType? staticType = parser.type();
+        
+        if (ts.index() < ts.size() - 1) {
+            return "extra tokens in type expression";
+        }
+        
+        value parseErrors = parser.errors;
+        if (!parseErrors.empty) {
+            return parseErrors.get(0).message;
+        }
+        
+        assert(exists staticType);
+    
+        staticType.visit(object extends Visitor() {
+            shared actual void visitAny(Node that) {
+                that.unit = unit;
+                that.scope = scope;
+                super.visitAny(that);
+            }
+        });
+        staticType.visit(TypeVisitor(unit));
+        staticType.visit(ExpressionVisitor(unit));
+        
+        variable String? err = null;
+        
+        object extends ErrorVisitor() {
+            shared actual void handleMessage(Integer startOffset, Integer endOffset,
+                Integer startCol, Integer startLine, Message error) {
+                
+                err = error.message; 
+            }
+        }.visit(staticType);
+        
+        return err else staticType.typeModel;
+    } catch (Exception e) {
+        return "Could not parse type expression";
+    }
 }
 
 shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, TextChange, Change>
@@ -253,16 +322,20 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
 
     "Holds information related to a given parameter of the function being
      refactored."
-    shared class Param(position, model, name = model.name, defaulted = model.defaulted,
-            defaultArgs = null, originalDefaultArgs = defaultArgs, 
+    shared class Param(position, model, name = model.name,
+            initDefaulted = model.defaulted,
+            initDefaultArgs = null, originalDefaultArgs = initDefaultArgs, 
             paramList = null) {
+        
+        Boolean initDefaulted;
+        String? initDefaultArgs;
         
         "The original position in the list of parameters."
         shared Integer position;
         shared variable String name;
         shared Parameter model;
-        shared Boolean defaulted;
-        shared String? defaultArgs;
+        shared variable Boolean defaulted = initDefaulted;
+        shared variable String? defaultArgs = initDefaultArgs;
         shared String? originalDefaultArgs;
         shared String? paramList;
         
