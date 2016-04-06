@@ -139,8 +139,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         if (is Tree.Term node) {
             extractExpression(tfc, node);
         }
-        else if (is Tree.Body|Tree.Statement node) {
-            extractStatements(tfc, node);
+        else {
+            extractStatements(tfc);
         }
     }
     
@@ -523,7 +523,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         return endOfComments;
     }
     
-    void extractStatements(TextChange tfc, Tree.Body|Tree.Statement node) {
+    void extractStatements(TextChange tfc) {
         assert (exists body = this.body);
         initMultiEditChange(tfc);
         value doc = getDocumentForChange(tfc);
@@ -937,10 +937,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                then editable(editorData.rootNode.unit) &&
                    !descriptor(sourceFile) &&
                    (editorData.node is Tree.Term ||
-                    editorData.node is Tree.Body|Tree.Statement &&
-                        !statements.empty &&
-                        !statements.any((statement) 
-                            => statement is Tree.Constructor))
+                    !statements.empty &&
+                    !statements.any((statement) => statement is Tree.Constructor))
                else false;
     
     shared actual [String+] nameProposals {
@@ -966,11 +964,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     name => "Extract Function";
 }
 
-shared class FindBodyVisitor(Node node) extends Visitor() {
+shared class FindBodyVisitor(Tree.Statement node) extends Visitor() {
     shared variable Tree.Body? body = null;
     shared actual void visit(Tree.Body that) {
         super.visit(that);
-        if (that.statements.contains(node)) {
+        if (node in that.statements) {
             body = that;
         }
     }
