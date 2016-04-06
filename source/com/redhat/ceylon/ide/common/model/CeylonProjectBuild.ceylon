@@ -8,7 +8,9 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.util {
     ImmutableMapWrapper,
     ImmutableSetWrapper,
-    Path
+    Path,
+    ifExists,
+    BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -16,6 +18,35 @@ import com.redhat.ceylon.ide.common.vfs {
 import java.io {
     File
 }
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
+}
+import ceylon.interop.java {
+    CeylonIterable
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Unit
+}
+import com.redhat.ceylon.ide.common.model.delta {
+    CompilationUnitDelta
+}
+
+shared final class Severity
+        of info | warning | error
+        satisfies Comparable<Severity> {
+    Integer ordinal;
+    shared new info {ordinal=0;}
+    shared new warning {ordinal=1;}
+    shared new error {ordinal=2;}
+
+    compare(Severity other) => 
+            ordinal <=> other.ordinal;
+    equals(Object that) =>
+            if (is Severity that)
+    then ordinal==that.ordinal
+    else false;
+}
+
 
 shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject)
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -62,33 +93,121 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 then ceylonProject.projectNativeFiles
                 else state.typecheckingRequired;
     
+    shared abstract class BuildMessage(String theMessage, Backend theBackend=Backend.\iHeader) 
+            of ProjectMessage | SourceFileMessage {
+        shared String message = theMessage;
+        shared Backend backend = theBackend;
+        shared formal Severity severity;
+        
+        shared actual formal Boolean equals(Object that);
+    }
     
+    shared abstract class ProjectMessage(
+        String theMessage,
+        NativeProject theProject,
+        Backend theBackend=Backend.\iHeader)
+            of ProjectWarning | ProjectError
+            extends BuildMessage(theMessage, theBackend) {
+        shared NativeProject project = theProject;
+
+        shared actual Boolean equals(Object that) {
+            if (is ProjectMessage that) {
+                return message==that.message && 
+                        backend==that.backend && 
+                        backend==that.severity && 
+                        project==that.project;
+            }
+            else {
+                return false;
+            }
+        }
+        
+        shared actual Integer hash {
+            variable value hash = 1;
+            hash = 31*hash + message.hash;
+            hash = 31*hash + backend.hash;
+            hash = 31*hash + project.hash;
+            hash = 31*hash + severity.hash;
+            return hash;
+        }
+    }
     
-    shared abstract class Error(Backend theBackend=Backend.\iHeader) 
-            of ProjectError | SourceFileError {
-        Backend backend = theBackend;
+    shared abstract class ProjectError(
+        String theMessage,
+        NativeProject theProject,
+        Backend theBackend=Backend.\iHeader)
+            extends ProjectMessage(theMessage, theProject, theBackend) {
+            severity = Severity.error;
+    }
+    
+    shared abstract class ProjectWarning(
+        String theMessage,
+        NativeProject theProject,
+        Backend theBackend=Backend.\iHeader)
+            extends ProjectMessage(theMessage, theProject, theBackend) {
+        severity = Severity.warning;
     }
 
-    shared class ProjectError(Backend theBackend=Backend.\iHeader)
-        extends Error(theBackend) {
-    }
-
-    shared class SourceFileError (
+    shared abstract class SourceFileMessage (
+        String theMessage,
         NativeFile theFile,
         Backend theBackend=Backend.\iHeader)  
-            extends Error(theBackend) 
-             {
+            of SourceFileWarning | SourceFileError
+            extends BuildMessage(theMessage, theBackend) {
         shared NativeFile file = theFile;
+
+        shared actual Boolean equals(Object that) {
+            if (is SourceFileMessage that) {
+                return message==that.message && 
+                        backend==that.backend && 
+                        backend==that.severity && 
+                        file==that.file;
+            }
+            else {
+                return false;
+            }
+        }
+        
+        shared actual Integer hash {
+            variable value hash = 1;
+            hash = 31*hash + message.hash;
+            hash = 31*hash + backend.hash;
+            hash = 31*hash + file.hash;
+            hash = 31*hash + severity.hash;
+            return hash;
+        }
     }
     
-    shared Set<SourceFileError> backendErrors => state.backendErrors.immutable;
-    shared Set<SourceFileError> frontendErrors => state.frontendErrors.immutable;
-    shared {SourceFileError*} sourceFileErrors => state.frontendErrors.immutable.chain(state.backendErrors.immutable);
-    shared Set<ProjectError> projectErrors => state.projectErrors.immutable;
-    shared {Error*} errors => sourceFileErrors.chain(state.projectErrors.immutable);
+    shared abstract class SourceFileError(
+        String theMessage, 
+        NativeFile theFile,
+        Backend theBackend=Backend.\iHeader)
+            extends SourceFileMessage(theMessage, theFile, theBackend) {
+        severity = Severity.error;
+    }
+    
+    shared abstract class SourceFileWarning(
+        String theMessage,
+        NativeFile theFile,
+        Backend theBackend=Backend.\iHeader)
+            extends SourceFileMessage(theMessage, theFile, theBackend) {
+        severity = Severity.warning;
+    }
+    
+    shared Set<SourceFileMessage> backendErrors => state.backendErrors.immutable;
+    shared Set<SourceFileMessage> frontendErrors => state.frontendErrors.immutable;
+    shared {SourceFileMessage*} sourceFileErrors => state.frontendErrors.immutable.chain(state.backendErrors.immutable);
+    shared Set<ProjectMessage> projectErrors => state.projectErrors.immutable;
+    shared {BuildMessage*} errors => sourceFileErrors.chain(state.projectErrors.immutable);
+
+    shared {SourceFileMessage*} errorsForSourceFile(NativeFile file) => 
+            sourceFileErrors.filter((error) => error.file == file);
+    
+    shared Boolean sourceFileHasErrors(NativeFile file, Boolean searchedSeverity(Severity severity) => true) =>
+            errorsForSourceFile(file)
+                .any((message) => searchedSeverity(message.severity));
 
     shared Map<NativeFile,Set<String>> missingClasses => state.missingClasses.immutable;
-    
     
     void setFullBuildRequired() {
         state.fullBuildRequired = true;
@@ -109,6 +228,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     }
     
     shared default void analyzeChanges({ChangeToAnalyze*} changes) {
+        value astAwareIncrementalBuild = true;
+        
         // get the modules
         value outputRepoMap = map(ceylonProject.referencedCeylonProjects
                 .follow(ceylonProject)
@@ -138,7 +259,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         outputRepo.isPrefixOf(relativePath)) {
                         state.fullBuildRequired = true;
                         state.classpathResolutionRequired = true;
-                        }
+                    }
                 }
                 case(is NativeFileChange) {
                     if (exists overridesResource, 
@@ -167,10 +288,39 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 switch(change)
                 case(is FolderVirtualFileRemoval) {
                     // Check if a folder with an existing package is removed
-                    
+                    if (change.resource.ceylonPackage exists) {
+                        state.fullBuildRequired = true;
+                    }
                 }
                 case(is FileVirtualFileChange) {
                     // Check if a *source file* module descriptor or package descriptor is changed ( ast no changes + errors, etc ...)
+                    value file = change.resource;
+                    if (exists isInSourceFolder = file.isSource,
+                        isInSourceFolder) {
+                        value fileName = file.name;
+                        if (fileName == ModuleManager.\iPACKAGE_FILE || 
+                            fileName == ModuleManager.\iMODULE_FILE) {
+                            
+                            //a package or module descriptor has been added, removed, or changed
+                            if (astAwareIncrementalBuild,
+                                file.\iexists(),
+                                ! sourceFileHasErrors(file.nativeResource, Severity.error.equals),
+                                is ProjectSourceFileAlias projectSourceFile = file.unit,
+                                exists delta = projectSourceFile.buildDeltaAgainstModel(),
+                                delta.changes.empty,
+                                delta.childrenDeltas.empty) {
+                                
+                                // Descriptor didn't change significantly => don't request a full build
+                            } else {
+                                
+                                state.fullBuildRequired = true;
+                                if (fileName == ModuleManager.\iMODULE_FILE) {
+                                    state.classpathResolutionRequired = true;
+                                }
+                            }
+                        }
+                    }
+                    
                 }
                 else {}
             }
@@ -185,8 +335,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         state.changeEvents.addAll(changes.narrow<ResourceVirtualFileChange>()); 
     }
     
-    shared void performBuild() {
+    shared void performBuild(BaseProgressMonitor monitor) {
         
+        try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
+            
+            
+        }
     }
     
 // TODO : au démarrage : charger le buildState + erreurs depuis le disque et effacer le build state du disque

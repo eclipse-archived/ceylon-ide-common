@@ -9,19 +9,25 @@ import com.redhat.ceylon.compiler.typechecker.io {
     VirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Package,
+    Unit
 }
 
 import ceylon.interop.java {
     CeylonIterable
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonProject
+    CeylonProject,
+    IResourceAware,
+    ModifiableSourceFile,
+    BaseJavaUnit,
+    ModelAliases
 }
 import com.redhat.ceylon.ide.common.util {
     equalsWithNulls,
     unsafeCast,
-    Path
+    Path,
+    ifExists
 }
 import com.redhat.ceylon.ide.common.platform {
     VfsServicesConsumer,
@@ -185,7 +191,9 @@ shared interface BaseFileVirtualFile
 }
 
 shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
-        satisfies ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> & BaseFileVirtualFile 
+        satisfies ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & BaseFileVirtualFile 
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource
@@ -201,4 +209,9 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
 
     shared actual Package? ceylonPackage =>
             parent?.ceylonPackage;
+    
+    shared <ModifiableSourceFileAlias | BaseJavaUnitAlias>? unit =>
+            ifExists(ceylonPackage?.units, CeylonIterable<Unit>)
+            ?.narrow<ModifiableSourceFileAlias | BaseJavaUnitAlias>()
+            ?.find((unit) => unit.filename == name);
 }

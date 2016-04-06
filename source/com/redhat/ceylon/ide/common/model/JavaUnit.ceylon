@@ -12,14 +12,30 @@ shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
     shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
 }
 
-shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
+shared abstract class BaseJavaUnit<NativeProject,NativeFolder,NativeFile>
         extends IdeUnit
-        satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement> 
-        & IResourceAware<NativeProject, NativeFolder, NativeFile>
-        & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
-    
+        satisfies IResourceAware<NativeProject, NativeFolder, NativeFile> {
     shared new(String theFilename, String theRelativePath, String theFullPath, Package thePackage)
             extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {}
+    
+    shared void remove() {
+        value p = \ipackage;
+        p.removeUnit(this);
+        assert (is BaseIdeModule m = p.\imodule);
+        m.moduleInReferencingProjects
+                .each((BaseIdeModule m) 
+            => m.removedOriginalUnit(relativePath));
+    }
+}
+
+shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>(
+    String theFilename, 
+    String theRelativePath, 
+    String theFullPath, 
+    Package thePackage)
+        extends BaseJavaUnit<NativeProject,NativeFolder,NativeFile>(theFilename, theRelativePath, theFullPath, thePackage)
+        satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement>
+        & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
     
     shared actual NativeFile? resourceFile =>
             javaClassRootToNativeFile(typeRoot);
@@ -33,14 +49,5 @@ shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRo
         }
         
         return null;
-    }
-    
-    shared void remove() {
-        value p = \ipackage;
-        p.removeUnit(this);
-        assert (is BaseIdeModule m = p.\imodule);
-        m.moduleInReferencingProjects
-            .each((BaseIdeModule m) 
-                => m.removedOriginalUnit(relativePath));
     }
 }
