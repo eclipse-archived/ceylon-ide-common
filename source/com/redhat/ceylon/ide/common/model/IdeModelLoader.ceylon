@@ -615,7 +615,7 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared actual default void logVerbose(String message) {
-       platformUtils.log(Status._INFO, message);
+       platformUtils.log(Status._DEBUG, message);
    }
    
    shared void setModuleAndPackageUnits() {

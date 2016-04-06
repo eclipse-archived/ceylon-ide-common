@@ -4,10 +4,11 @@ import java.lang {
 import com.redhat.ceylon.common.log {
     Logger
 }
-shared class Status of _OK | _INFO | _WARNING | _ERROR {
+shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
     String _string;
     shared new _OK { _string = "OK"; }
     shared new _INFO  { _string = "INFO"; }
+    shared new _DEBUG  { _string = "DEBUG"; }
     shared new _WARNING  { _string = "WARNING"; }
     shared new _ERROR  { _string = "ERROR"; }
     string => _string;
@@ -50,7 +51,7 @@ shared class DefaultIdeUtils() satisfies IdeUtils {
         case( Status._WARNING | Status._ERROR) {
             printFunction = process.writeErrorLine;
         }
-        case( Status._INFO | Status._OK) {
+        case( Status._INFO | Status._OK | Status._DEBUG) {
             printFunction = process.writeLine;
         }
         
