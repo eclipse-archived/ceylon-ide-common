@@ -1226,17 +1226,18 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Boolean needsParens, Boolean removeBraces, 
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
-        if (inlineRef { 
-            node = reference; 
-            declaration = switch (reference)
-                case (is Tree.MemberOrTypeExpression) 
+        if (inlineRef {
+            node = reference;
+            declaration =
+                switch (reference)
+                case (is Tree.MemberOrTypeExpression)
                     reference.declaration
-                case (is Tree.SimpleType) 
-                    reference.declarationModel; 
+                case (is Tree.SimpleType)
+                    reference.declarationModel;
         }) {
             //TODO: breaks for invocations like f(f(x, y),z)
             value result = StringBuilder();
-
+            
             class InterpolationVisitor() extends Visitor() {
                 variable Integer start = 0;
                 String template;
@@ -1258,11 +1259,18 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     template = nodes.text(declarationTokens, definition);
                     templateStart = definition.startIndex.intValue();
                 }
+                
                 void appendUpTo(Node it) {
                     value text = template[start:
                         it.startIndex.intValue() - templateStart - start];
                     result.append(text);
                     start = it.endIndex.intValue() - templateStart;
+                }
+                
+                shared actual void visit(Tree.IsCase it) {
+                    if (exists t = it.type) {
+                        t.visit(this);
+                    }
                 }
                 
                 shared actual void visit(Tree.QualifiedMemberOrTypeExpression it) {
