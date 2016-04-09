@@ -1159,10 +1159,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             dec.parameter, 
             exists param = dec.initializerParameter, 
             param.declaration == editorData.declaration) {
-            if (invocation.positionalArgumentList exists) {
+            if (exists pal = invocation.positionalArgumentList) {
                 interpolatePositionalArguments {
                     result = result;
-                    invocation = invocation;
+                    positionalArgumentList = pal;
                     reference = localReference;
                     sequenced = param.sequenced;
                     tokens = tokens;
@@ -1170,10 +1170,10 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     defaultArgs = defaultArgs;
                 };
             }
-            if (invocation.namedArgumentList exists) {
+            if (exists nal = invocation.namedArgumentList) {
                 interpolateNamedArguments {
                     result = result;
-                    invocation = invocation;
+                    namedArgumentList = nal;
                     reference = localReference;
                     sequenced = param.sequenced;
                     tokens = tokens;
@@ -1226,13 +1226,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Boolean needsParens, Boolean removeBraces, 
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
-        value dec = switch (reference)
-            case (is Tree.MemberOrTypeExpression) 
-                reference.declaration
-            case (is Tree.SimpleType) 
-                reference.declarationModel;
-        
-        if (inlineRef(reference, dec)) {
+        if (inlineRef { 
+            node = reference; 
+            declaration = switch (reference)
+                case (is Tree.MemberOrTypeExpression) 
+                    reference.declaration
+                case (is Tree.SimpleType) 
+                    reference.declarationModel; 
+        }) {
             //TODO: breaks for invocations like f(f(x, y),z)
             value result = StringBuilder();
 
@@ -1355,19 +1356,19 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
 
-    Boolean inlineRef(Node that, Declaration? dec) {
-        if (!exists dec) {
+    Boolean inlineRef(Node node, Declaration? declaration) {
+        if (!exists declaration) {
             return false;
         }
         return (!editorData.justOne
-              || that.unit == editorData.node.unit
-                 && that.startIndex exists
-                 && that.startIndex == editorData.node.startIndex)
-            && original(dec) == editorData.declaration;
+              || node.unit == editorData.node.unit
+                 && node.startIndex exists
+                 && node.startIndex == editorData.node.startIndex)
+            && original(declaration) == editorData.declaration;
     }
 
     void interpolatePositionalArguments(StringBuilder result, 
-        Tree.InvocationExpression invocation, 
+        Tree.PositionalArgumentList positionalArgumentList, 
         Tree.StaticMemberOrTypeExpression reference, 
         Boolean sequenced, 
         JList<CommonToken> tokens,
@@ -1380,7 +1381,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         if (sequenced) {
             result.append("{");
         }
-        for (arg in invocation.positionalArgumentList.positionalArguments) {
+        for (arg in positionalArgumentList.positionalArguments) {
             value param = arg.parameter;
             if (reference.declaration == param.model) {
                 if (param.sequenced &&
@@ -1417,7 +1418,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
 
     void interpolateNamedArguments(StringBuilder result, 
-        Tree.InvocationExpression invocation, 
+        Tree.NamedArgumentList namedArgumentList, 
         Tree.StaticMemberOrTypeExpression reference,
         Boolean sequenced, 
         JList<CommonToken> tokens,
@@ -1425,7 +1426,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         variable Boolean found = false;
-        for (arg in invocation.namedArgumentList.namedArguments) {
+        for (arg in namedArgumentList.namedArguments) {
             if (reference.declaration == arg.parameter.model) {
                 assert (is Tree.SpecifiedArgument sa = arg);
                 value argTerm = sa.specifierExpression.expression.term;
@@ -1436,7 +1437,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
         }
         
-        if (exists seqArg = invocation.namedArgumentList.sequencedArgument, 
+        if (exists seqArg = namedArgumentList.sequencedArgument, 
             reference.declaration == seqArg.parameter.model) {
             result//.append(template.substring(start,it.getStartIndex()-templateStart))
                 .append("{");
