@@ -696,7 +696,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 moduleSourceMapper.typeChecker = newTypechecker;
                 Context context = newTypechecker.context;
                 BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
-                Module defaultModule = context.modules.defaultModule;
+                //Module defaultModule = context.modules.defaultModule;
                 
                 progress.worked(1);
                 

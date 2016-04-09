@@ -13,6 +13,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     ModelAliases
 }
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer
+}
 import com.redhat.ceylon.ide.common.util {
     unsafeCast
 }
@@ -36,9 +39,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.platform {
-    ModelServicesConsumer
 }
 
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
@@ -78,15 +78,12 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         if (exists originalPhasedUnit = originalProjectPhasedUnitRef.get()) {
             return originalPhasedUnit;
         } 
-        CeylonProjectAlias? originalProject = originalProjectRef.get();
-        if (exists originalProject) {
-            TypeChecker? originalTypeChecker = originalProject.typechecker;
-            if (exists originalTypeChecker,
-                is ProjectPhasedUnitAlias originalPhasedUnit =
-                        originalTypeChecker.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
-                originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(originalPhasedUnit);
-                return originalPhasedUnit;
-            }
+        if (exists originalProject = originalProjectRef.get(), 
+            exists originalTypeChecker = originalProject.typechecker,
+            is ProjectPhasedUnitAlias originalPhasedUnit =
+                    originalTypeChecker.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
+            originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(originalPhasedUnit);
+            return originalPhasedUnit;
         }
         
         return null;

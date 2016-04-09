@@ -1,10 +1,5 @@
 import ceylon.collection {
-    MutableMap,
     MutableSet
-}
-
-import ceylon.language {
-    newMap = map
 }
 
 shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySet) satisfies MutableSet<Item> 

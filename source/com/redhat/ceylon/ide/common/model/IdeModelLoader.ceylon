@@ -12,10 +12,19 @@ import ceylon.interop.java {
     javaString
 }
 
+import com.redhat.ceylon.common {
+    JVMModuleUtil
+}
+import com.redhat.ceylon.compiler.java.codegen {
+    Naming
+}
 import com.redhat.ceylon.compiler.java.loader {
     TypeFactory,
     AnnotationLoader,
     SourceDeclarationVisitor
+}
+import com.redhat.ceylon.compiler.java.util {
+    Util
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit,
@@ -29,11 +38,17 @@ import com.redhat.ceylon.ide.common.model.mirror {
     SourceClass,
     IdeClassMirror
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
+}
 import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     synchronize,
-    equalsWithNulls,
-    toJavaString
+    equalsWithNulls
+}
+import com.redhat.ceylon.model.cmr {
+    ArtifactResult
 }
 import com.redhat.ceylon.model.loader {
     TypeParser,
@@ -78,22 +93,6 @@ import java.util {
     JList=List,
     JArrayList=ArrayList,
     Collections
-}
-import com.redhat.ceylon.common {
-    JVMModuleUtil
-}
-import com.redhat.ceylon.model.cmr {
-    ArtifactResult
-}
-import com.redhat.ceylon.compiler.java.util {
-    Util
-}
-import com.redhat.ceylon.compiler.java.codegen {
-    Naming
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
 }
 
 shared abstract class BaseIdeModelLoader(

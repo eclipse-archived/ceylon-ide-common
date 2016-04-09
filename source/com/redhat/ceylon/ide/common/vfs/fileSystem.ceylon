@@ -16,9 +16,6 @@ import java.lang {
 import java.util {
     Collections
 }
-import com.redhat.ceylon.ide.common.model {
-    CeylonProjects
-}
 
 alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
 alias LocalFolderVirtualFileAlias => FolderVirtualFile<Nothing,File, File, File>;
