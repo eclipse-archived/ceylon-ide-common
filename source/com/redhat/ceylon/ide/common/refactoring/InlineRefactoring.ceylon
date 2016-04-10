@@ -67,7 +67,7 @@ shared Boolean isInlineRefactoringAvailable(
         case (is FunctionOrValue) {
             return !(declaration is Setter)
                     && (declaration.typeDeclaration exists) 
-                    && (!declaration.typeDeclaration.anonymous) 
+                    //&& (!declaration.typeDeclaration.anonymous) 
                     && (!declaration.unit == rootNode.unit 
                     //not a Destructure
                     || !(getDeclarationNode(rootNode, declaration) 
@@ -77,7 +77,7 @@ shared Boolean isInlineRefactoringAvailable(
         }
         case (is TypeAlias) {
             return true;
-        } 
+        }
         case (is ClassOrInterface) {
             return declaration.\ialias;
         }
@@ -192,6 +192,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
             }
         }
+        case (is Tree.ObjectDefinition) {}
         case (is Tree.ClassDeclaration|Tree.InterfaceDeclaration) {}
         case (is Tree.TypeAliasDeclaration) {}
         else {
@@ -224,8 +225,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         declarationNode.visit(object extends Visitor() {
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);
-                if (exists dec = that.declaration, 
-                    declaration.shared, !dec.shared, !dec.parameter) {
+                if (exists dec = that.declaration,
+                    declaration.shared && !dec.shared && !dec.parameter) {
                     warnings.add("Definition contains reference to unshared declaration: " + dec.name);
                 }
             }
@@ -380,7 +381,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineInFile(TextChange textChange, Change parentChange, 
         Tree.Declaration declarationNode, Tree.CompilationUnit declarationRootNode, 
-        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block definition, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition definition, 
         JList<CommonToken> declarationTokens, Tree.CompilationUnit rootNode,
         JList<CommonToken> tokens) {
         
@@ -509,7 +510,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
 
-    Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block
+    Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition
     getInlinedDefinition(Tree.Declaration declarationNode) {
         switch (declarationNode)
         case (is Tree.MethodDeclaration) {
@@ -554,6 +555,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         case (is Tree.ClassDeclaration) {
             return declarationNode.classSpecifier;
         }
+        case (is Tree.ObjectDefinition) {
+            return declarationNode;
+        }
         case (is Tree.InterfaceDeclaration) {
             return declarationNode.typeSpecifier;
         }
@@ -565,9 +569,33 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
     
+    shared void inlineObjectReferences(
+        Tree.CompilationUnit rootNode, 
+        JList<CommonToken> tokens, 
+        Tree.ObjectDefinition declarationNode, 
+        JList<CommonToken> declarationTokens, 
+        TextChange textChange) {
+        
+        object extends Visitor() {
+            shared actual void visit(Tree.MemberOrTypeExpression that) {
+                super.visit(that);
+                inlineDefinition {
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    definition = declarationNode;
+                    textChange = textChange;
+                    invocation = null;
+                    reference = that;
+                    needsParens = false;
+                    removeBraces = false;
+                };
+            }
+        }.visit(rootNode);
+    }
+    
     void inlineReferences(Tree.Declaration declarationNode, 
         Tree.CompilationUnit declarationUnit, 
-        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block definition, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition definition, 
         JList<CommonToken> declarationTokens, 
         Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, TextChange textChange) {
@@ -612,6 +640,15 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 rootNode = rootNode;
                 tokens = tokens;
                 type = definition.type;
+                declarationNode = declarationNode;
+                declarationTokens = declarationTokens;
+                textChange = textChange;
+            };
+        }
+        case (is Tree.ObjectDefinition) {
+            inlineObjectReferences {
+                rootNode = rootNode;
+                tokens = tokens;
                 declarationNode = declarationNode;
                 declarationTokens = declarationTokens;
                 textChange = textChange;
@@ -1143,11 +1180,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Node reference, 
         Tree.InvocationExpression? invocation, 
         Tree.BaseMemberExpression|Tree.This localReference, 
+        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition,
         StringBuilder result, 
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (is Tree.This localReference) {
-            if (is Tree.QualifiedMemberOrTypeExpression reference) {
+            if (is Tree.ObjectDefinition definition,
+                definition.anonymousClass == localReference.declarationModel) {
+                result.append(nodes.text(declarationTokens, localReference));
+            }
+            else if (is Tree.QualifiedMemberOrTypeExpression reference) {
                 result.append(nodes.text(tokens, reference.primary));
             }
             else {
@@ -1187,9 +1229,15 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             //assume it's a reference to the immediately 
             //containing class, i.e. the receiver
             //TODO: handle refs to outer classes
-            result.append(nodes.text(tokens, reference.primary))
-                .append(".")
-                .append(nodes.text(declarationTokens, localReference));
+            if (is Tree.ObjectDefinition definition,
+                definition.anonymousClass == localReference.declaration.container) {
+                //no qualifier needed
+            }
+            else {
+                result.append(nodes.text(tokens, reference.primary))
+                        .append(".");
+            }
+            result.append(nodes.text(declarationTokens, localReference));
         }
         else {
             result.append(nodes.text(declarationTokens, localReference));
@@ -1200,7 +1248,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     //      Should just use a default arg!
     void inlineDefinition(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, 
-        Tree.Term|Tree.Type|Tree.Block definition, 
+        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition, 
         TextChange textChange, 
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
@@ -1219,7 +1267,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineDefinitionWithDefaultArgs(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, 
-        Tree.Term|Tree.Type|Tree.Block definition, 
+        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition, 
         TextChange textChange, 
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
@@ -1242,7 +1290,13 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 variable Integer start = 0;
                 String template;
                 Integer templateStart;
-                if (removeBraces, is Tree.Block definition) {
+                if (is Tree.ObjectDefinition definition) {
+                    result.append("object");
+                    templateStart = definition.startIndex.intValue();
+                    start = definition.identifier.endIndex.intValue() - templateStart;
+                    template = nodes.text(declarationTokens, definition);
+                }
+                else if (removeBraces, is Tree.Block definition) {
                     value sts = definition.statements;
                     if (sts.empty) {
                         template = "";
@@ -1261,10 +1315,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
                 
                 void appendUpTo(Node it) {
-                    value text = template[start:
-                        it.startIndex.intValue() - templateStart - start];
-                    result.append(text);
-                    start = it.endIndex.intValue() - templateStart;
+                    value len = it.startIndex.intValue() - templateStart - start;
+                    if (len>=0) {
+                        value text = template[start:len];
+                        result.append(text);
+                        start = it.endIndex.intValue() - templateStart;
+                    }
                 }
                 
                 shared actual void visit(Tree.IsCase it) {
@@ -1289,9 +1345,22 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
+                        definition = definition;
                         defaultArgs = defaultArgs;
                     };
                     super.visit(it);
+                }
+                
+                shared actual void visit(Tree.AnnotationList it) {}
+                
+                shared actual void visit(Tree.SpecifierStatement it) {
+                    if (!it.refinement, 
+                        exists lhs = it.baseMemberExpression) {
+                        lhs.visit(this);
+                    }
+                    if (exists se = it.specifierExpression) {
+                        se.visit(this);
+                    }
                 }
                 
                 shared actual void visit(Tree.BaseMemberExpression it) {
@@ -1303,6 +1372,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
+                        definition = definition;
                         defaultArgs = defaultArgs;
                     };
                     super.visit(it);
