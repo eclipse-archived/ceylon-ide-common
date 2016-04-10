@@ -42,7 +42,9 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeParameter,
     Generic,
     Referenceable,
-    Value
+    Value,
+    Scope,
+    ModelUtil
 }
 
 import java.util {
@@ -226,6 +228,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);
                 if (exists dec = that.declaration,
+                    if (is Scope scope = declaration)
+                        then !ModelUtil.contains(scope, dec.container) 
+                        else true,
                     declaration.shared && !dec.shared && !dec.parameter) {
                     warnings.add("Definition contains reference to unshared declaration: " + dec.name);
                 }
@@ -588,6 +593,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = false;
                     removeBraces = false;
+                    inlinedScope = declarationNode.anonymousClass;
                 };
             }
         }.visit(rootNode);
@@ -608,6 +614,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 tokens = tokens;
                 term = definition.term;
                 declarationTokens = declarationTokens;
+                decNode = declarationNode;
                 textChange = textChange;
             };
         }
@@ -708,6 +715,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         needsParens = false;
                         removeBraces = false;
                         defaultArgs = defaultArgs;
+                        inlinedScope = decNode.declarationModel;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -744,6 +752,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         needsParens = false;
                         removeBraces = false;
                         defaultArgs = defaultArgs;
+                        inlinedScope = null;
                     };
                     //delete the semicolon
                     addEditToChange(textChange,
@@ -786,6 +795,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = false;
                         removeBraces = false;
+                        inlinedScope = decNode.declarationModel;
                         defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
@@ -814,6 +824,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = needsParens;
                         removeBraces = true;
+                        inlinedScope = decNode.declarationModel;
                         defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
@@ -841,6 +852,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = primary;
                         needsParens = needsParens;
                         removeBraces = true;
+                        inlinedScope = decNode.declarationModel;
                         defaultArgs = defaultArgs;
                     };
                 }
@@ -885,6 +897,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = that;
                         needsParens = needsParens;
                         removeBraces = false;
+                        inlinedScope = decNode.declarationModel;
                         defaultArgs = defaultArgs;
                     };
                     if (that.directlyInvoked) {
@@ -951,6 +964,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = false;
                     removeBraces = false;
+                    inlinedScope = null;
                     defaultArgs = defaultTypeArgs;
                 };
             }
@@ -982,6 +996,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = false;
                     removeBraces = false;
+                    inlinedScope = null;
                     defaultArgs = defaultTypeArgs;
                 };
             }
@@ -1000,6 +1015,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         reference = mte;
                         needsParens = needsParens;
                         removeBraces = false;
+                        inlinedScope = null;
                         defaultArgs = defaultTypeArgs;
                     };
                 }
@@ -1050,7 +1066,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineValueReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.Term term, 
-        JList<CommonToken> declarationTokens, TextChange textChange) {
+        JList<CommonToken> declarationTokens,
+        Tree.AnyAttribute decNode, 
+        TextChange textChange) {
         
         object extends Visitor() {
             variable value needsParens = false;
@@ -1105,6 +1123,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     reference = that;
                     needsParens = needsParens;
                     removeBraces = false;
+                    inlinedScope = 
+                            if (is Tree.AttributeGetterDefinition decNode) 
+                            then decNode.declarationModel else null;
                 };
             }
             
@@ -1180,16 +1201,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Node reference, 
         Tree.InvocationExpression? invocation, 
         Tree.BaseMemberExpression|Tree.This localReference, 
-        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition,
+        Scope? inlinedScope,
         StringBuilder result, 
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (is Tree.This localReference) {
-            if (is Tree.ObjectDefinition definition,
-                definition.anonymousClass == localReference.declarationModel) {
-                result.append(nodes.text(declarationTokens, localReference));
-            }
-            else if (is Tree.QualifiedMemberOrTypeExpression reference) {
+            if (is Tree.QualifiedMemberOrTypeExpression reference,
+                exists refdec = localReference.declarationModel,
+                !ModelUtil.contains(inlinedScope, refdec)) {
                 result.append(nodes.text(tokens, reference.primary));
             }
             else {
@@ -1224,20 +1243,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 };
             }
         }
-        else if (is Tree.QualifiedMemberOrTypeExpression reference, 
-            localReference.declaration.classOrInterfaceMember) {
+        else if (is Tree.QualifiedMemberOrTypeExpression reference,
+            exists refDec = localReference.declaration, 
+            refDec.classOrInterfaceMember,
+            !ModelUtil.contains(inlinedScope, refDec.container)) {
             //assume it's a reference to the immediately 
             //containing class, i.e. the receiver
             //TODO: handle refs to outer classes
-            if (is Tree.ObjectDefinition definition,
-                definition.anonymousClass == localReference.declaration.container) {
-                //no qualifier needed
-            }
-            else {
-                result.append(nodes.text(tokens, reference.primary))
-                        .append(".");
-            }
-            result.append(nodes.text(declarationTokens, localReference));
+            result.append(nodes.text(tokens, reference.primary))
+                    .append(".")
+                    .append(nodes.text(declarationTokens, localReference));
         }
         else {
             result.append(nodes.text(declarationTokens, localReference));
@@ -1252,7 +1267,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         TextChange textChange, 
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
-        Boolean needsParens, Boolean removeBraces) 
+        Boolean needsParens, Boolean removeBraces, 
+        Scope? inlinedScope) 
             => inlineDefinitionWithDefaultArgs {
                 tokens = tokens;
                 declarationTokens = declarationTokens;
@@ -1262,6 +1278,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 reference = reference;
                 needsParens = needsParens;
                 removeBraces = removeBraces;
+                inlinedScope = inlinedScope;
                 defaultArgs = emptyMap;
             };
 
@@ -1272,6 +1289,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.InvocationExpression? invocation, 
         Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
         Boolean needsParens, Boolean removeBraces, 
+        Scope? inlinedScope,
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (inlineRef {
@@ -1345,7 +1363,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
-                        definition = definition;
+                        inlinedScope = inlinedScope;
                         defaultArgs = defaultArgs;
                     };
                     super.visit(it);
@@ -1372,7 +1390,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         invocation = invocation;
                         result = result;
                         localReference = it;
-                        definition = definition;
+                        inlinedScope = inlinedScope;
                         defaultArgs = defaultArgs;
                     };
                     super.visit(it);
