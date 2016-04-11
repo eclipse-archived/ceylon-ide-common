@@ -308,26 +308,24 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     
     void addCreationProposals(Data data, IFile file) {
         value node = data.node;
-
-        if (is Tree.MemberOrTypeExpression node) {
+        
+        switch (node)
+        case (is Tree.MemberOrTypeExpression) {
             createQuickFix.addCreateProposals(data, file);
-        } else if (is Tree.SimpleType node) {
-            class FindExtendedTypeExpressionVisitor() extends Visitor() {
-                shared variable Tree.InvocationExpression? invocationExpression = null;
-                
+        }
+        case (is Tree.SimpleType) {
+            object extends Visitor() {
                 shared actual void visit(Tree.ExtendedType that) {
                     super.visit(that);
                     if (that.type == node) {
-                        invocationExpression = that.invocationExpression;
+                        createQuickFix.addCreateProposals(data, file, 
+                            that.invocationExpression.primary);
                     }
                 }
-            }
-            value v = FindExtendedTypeExpressionVisitor();
-            (v of Visitor).visit(data.rootNode);
-            if (exists expr = v.invocationExpression) {
-                createQuickFix.addCreateProposals(data, file, expr.primary);
-            }
+            }.visit(data.rootNode);
         }
+        else {}
+        
         //TODO: should we add this stuff back in??
         /*else if (node instanceof Tree.BaseType) {
             Tree.BaseType bt = (Tree.BaseType) node;
@@ -347,13 +345,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             
          }*/
 
-        if (is Tree.BaseType node) {
-            value bt = node;
-            Tree.Identifier? id = bt.identifier;
-            if (exists id) {
-                value brokenName = id.text;
-                addCreateTypeParameterProposal(data, bt, brokenName);
-            }
+        if (is Tree.BaseType node, 
+            exists id = node.identifier) {
+            addCreateTypeParameterProposal(data, node, id.text);
         }
     }
 }
