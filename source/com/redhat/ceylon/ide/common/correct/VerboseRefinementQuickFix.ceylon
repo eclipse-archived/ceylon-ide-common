@@ -41,6 +41,9 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
         if (is Tree.TypedDeclaration statement,
             exists model = statement.declarationModel,
             model.actual, 
+            if (is Tree.AnyMethod statement)
+                then !statement.typeParameterList exists 
+                else true,
             exists spec = 
                     switch (statement) 
                     case (is Tree.AttributeDeclaration) 
