@@ -250,7 +250,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         
         "Deletes the parameter at [[position]] from the list of parameters."
         shared Boolean delete(Integer position) {
-            if (0 <= position < size - 1) {
+            if (0 <= position < size) {
                 params.delete(position);
                 return true;
             }
