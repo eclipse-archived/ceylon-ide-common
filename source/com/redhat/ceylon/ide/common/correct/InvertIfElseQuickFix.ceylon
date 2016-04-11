@@ -29,8 +29,10 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                     super.visit(that);
                     if (that.ifClause exists,
                         that.elseClause exists,
-                        that.startIndex.intValue() <= data.node.startIndex.intValue(),
-                        that.endIndex.intValue() >= data.node.endIndex.intValue()) {
+                        that.startIndex.intValue() 
+                                <= data.node.startIndex.intValue(),
+                        that.endIndex.intValue() 
+                                >= data.node.endIndex.intValue()) {
                         
                         result = that;
                     }
@@ -110,11 +112,19 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             
             replace.append("else ").append(getTerm(doc, ifBlock));
             value change = newTextChange("Invert If Then Else", file);
-            addEditToChange(change, newReplaceEdit(ifExpr.startIndex.intValue(),
-                ifExpr.distance.intValue(), replace.string));
+            addEditToChange(change, 
+                newReplaceEdit {
+                    start = ifExpr.startIndex.intValue();
+                    length = ifExpr.distance.intValue();
+                    text = replace.string;
+                });
             
-            newProposal(data, "Invert 'if' 'then' 'else' expression", change, 
-                DefaultRegion(ifExpr.startIndex.intValue(), 0));
+            newProposal {
+                data = data;
+                desc = "Invert 'if' 'then' 'else' expression";
+                change = change;
+                region = DefaultRegion(ifExpr.startIndex.intValue(), 0);
+            };
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -203,7 +213,12 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         value baseIndent = indents.getIndent(ifStmt, doc);
         value indent = indents.defaultIndent;
         value delim = indents.getDefaultLineDelimiter(doc);
-        value elseStr = addEnclosingBraces(getTerm(doc, elseBlock), baseIndent, indent, delim);
+        value elseStr = addEnclosingBraces {
+            s = getTerm(doc, elseBlock);
+            baseIndent = baseIndent;
+            _indent = indent;
+            delim = delim;
+        };
         test = removeEnclosingParenthesis(test else "");
         value replace = StringBuilder();
         replace.append("if (").append(test else "").append(") ").append(elseStr);
@@ -216,8 +231,12 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         
         replace.append("else ").append(getTerm(doc, ifBlock));
         value change = newTextChange("Invert If Else", file);
-        addEditToChange(change, newReplaceEdit(ifStmt.startIndex.intValue(),
-            ifStmt.distance.intValue(), replace.string));
+        addEditToChange(change, 
+            newReplaceEdit {
+                start = ifStmt.startIndex.intValue();
+                length = ifStmt.distance.intValue();
+                text = replace.string;
+            });
         
         newProposal(data, "Invert 'if' 'else' statement", change, 
             DefaultRegion(ifStmt.startIndex.intValue(), 0));
@@ -246,10 +265,9 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         return getTerm(doc, compOp.leftTerm) + op + getTerm(doc, compOp.rightTerm);
     }
     
-    Boolean isElseOnOwnLine(IDocument doc, Node ifBlock, Node elseBlock) {
-        return getLineOfOffset(doc, ifBlock.stopIndex.intValue())
+    Boolean isElseOnOwnLine(IDocument doc, Node ifBlock, Node elseBlock) 
+            => getLineOfOffset(doc, ifBlock.stopIndex.intValue())
                 != getLineOfOffset(doc, elseBlock.startIndex.intValue());
-    }
     
     String addEnclosingBraces(String s, String baseIndent, String _indent, String delim) {
         assert(exists first = s.first);
@@ -257,14 +275,14 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             return "{" + delim + baseIndent + _indent 
                     + indent(s, _indent, delim) + delim + baseIndent + "}";
         }
-        
-        return s;
+        else {
+            return s;
+        }
     }
     
-    String indent(String s, String indentation, String delim) {
-        return javaString(s)
+    String indent(String s, String indentation, String delim) 
+            => javaString(s)
                 .replaceAll(delim + "(\\s*)", delim + "$1" + indentation);
-    }
     
     String removeEnclosingParenthesis(String s) {
         assert(exists first = s.first);
@@ -273,9 +291,8 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             variable value startIndex = 0;
             while ((endIndex = (s.firstOccurrence(')', endIndex + 1) else -1)) > 0) {
                 if (endIndex == s.size - 1) {
-                    return s.span(1, s.size - 2);
+                    return s[1 .. s.size - 2];
                 }
-                
                 if ((startIndex = (s.firstOccurrence('(', startIndex + 1) else -1)) > endIndex) {
                     return s;
                 }
@@ -285,7 +302,10 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         return s;
     }
     
-    String getTerm(IDocument doc, Node node) {
-        return getDocContent(doc, node.startIndex.intValue(), node.distance.intValue());
-    }
+    String getTerm(IDocument doc, Node node) 
+            => getDocContent {
+                doc = doc;
+                start = node.startIndex.intValue();
+                length = node.distance.intValue();
+            };
 }
