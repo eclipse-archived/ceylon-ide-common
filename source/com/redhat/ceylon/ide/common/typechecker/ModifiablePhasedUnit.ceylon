@@ -1,9 +1,3 @@
-import java.util {
-    List
-}
-import org.antlr.runtime {
-    CommonToken
-}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -16,24 +10,31 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Package
-}
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
-}
 import com.redhat.ceylon.ide.common.model {
     IResourceAware,
-    BaseIdeModuleSourceMapper,
     ModelAliases
+}
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     FileVirtualFile,
     FolderVirtualFile,
     VfsAliases
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
+}
+
+import java.util {
+    List
+}
+
+import org.antlr.runtime {
+    CommonToken
 }
 
 shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>

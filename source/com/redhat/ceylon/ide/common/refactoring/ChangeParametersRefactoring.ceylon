@@ -615,6 +615,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                     
                     variable value argString = getInlinedNamedArg(p, p.defaultArgs);
                     value startOffset = nal.startIndex.intValue();
+                    suppressWarnings("deprecation")
                     value stopOffset = nal.stopIndex.intValue();
                     value doc = getDocumentForChange(tfc);
                     
