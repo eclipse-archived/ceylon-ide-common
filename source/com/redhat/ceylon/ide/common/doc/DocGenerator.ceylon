@@ -257,8 +257,8 @@ shared interface DocGenerator<Document> {
 
     
     //see getTermTypeHoverText(Node, String, IDocument doc, IProject project)        
-    shared String? getTermTypeText(Tree.Term term, String? selection = null) {
-        if (exists type = term.typeModel) {
+    shared String? getTermTypeText(Tree.Term? term, String? selection = null) {
+        if (exists term, exists type = term.typeModel) {
             value builder = StringBuilder();
             
             appendPageProlog(builder);
