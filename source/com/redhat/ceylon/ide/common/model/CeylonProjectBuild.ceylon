@@ -1,21 +1,12 @@
-import com.redhat.ceylon.ide.common.vfs {
-    FileVirtualFile,
-    VfsAliases
-}
-import com.redhat.ceylon.ide.common.util {
-    Path,
-    ImmutableMapWrapper,
-    ImmutableSetWrapper
-}
-import ceylon.collection {
-    HashMap,
-    ArrayList
-}
 import com.redhat.ceylon.common {
     Backend
 }
-import ceylon.interop.java {
-    javaClassFromInstance
+import com.redhat.ceylon.ide.common.util {
+    ImmutableMapWrapper,
+    ImmutableSetWrapper
+}
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
 }
 
 shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject)
