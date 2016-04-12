@@ -156,13 +156,15 @@ shared abstract class BaseCeylonProject() {
         File absoluteFile, 
         Integer overridesLine, 
         Integer overridesColumn);
-    deprecated("Only here for compatibility with legacy code
-                This should be removed, since the real entry point is the [[PhasedUnits]] object
-                
-                The only interesting data contained in the [[TypeChecker]] is the
-                [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
-                should be managed in a modular way in each [[IdeModule]] object accessible from the
-                [[PhasedUnits]]")
+    //TODO: Only here for compatibility with legacy code!
+    //
+    //      This should be removed, since the real entry point is the 
+    //      [[PhasedUnits]] object
+    //            
+    //      The only interesting data contained in the [[TypeChecker]] is the
+    //      [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. 
+    //      But new they should be managed in a modular way in each [[IdeModule]] 
+    //      object accessible from the [[PhasedUnits]]")
     shared variable TypeChecker? typechecker=null;
     
     shared formal void removeOverridesProblemMarker();
