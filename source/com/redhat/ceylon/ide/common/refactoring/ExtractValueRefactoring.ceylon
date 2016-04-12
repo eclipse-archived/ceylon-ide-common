@@ -151,10 +151,11 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                     else false;
         }
         
-        String modifiers;
+        String keyword;
         String body;
         value core = unparenthesize(term);
-        if (is Tree.FunctionArgument core) {
+        switch (core)
+        case (is Tree.FunctionArgument) {
             //we're extracting an anonymous function, so
             //actually we're going to create a function
             //instead of a value
@@ -163,7 +164,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             }
             
             value voidModifier = core.type is Tree.VoidModifier;
-            modifiers = voidModifier then "void" else "function";
+            keyword = voidModifier then "void" else "function";
             
             value bodyWithParams = StringBuilder();
             nodes.appendParameters(bodyWithParams, core, unit, tokens);
@@ -178,27 +179,33 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             }
             body = bodyWithParams.string;
         }
-        //TODO: add a special case for object expressions
+        case (is Tree.ObjectExpression) {
+            keyword = "object";
+            body = nodes.text(tokens, core)[6...];
+        }
         else {
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            modifiers = "value";
+            keyword = "value";
             value specifier = getter then " => " else " = ";
             body = specifier + nodes.text(tokens, core) + ";";
         }
-
+        
         value imports = HashSet<Declaration>();
         
         String typeDec;
-        if (exists type = this.type, !type.unknown) {
+        if (is Tree.ObjectExpression core) {
+            typeDec = keyword;
+        }
+        else if (exists type = this.type, !type.unknown) {
             if (explicitType || toplevel) {
                 typeDec = type.asSourceCodeString(unit);
                 importProposals.importType(imports, type, rootNode);
             }
             else {
                 canBeInferred = true;
-                typeDec = modifiers;
+                typeDec = keyword;
             }
         }
         else {
@@ -212,8 +219,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                     ex.distance == term.distance
                 else false;
         value definition = 
-                typeDec + " " + newName + 
-                body + 
+                typeDec + " " + newName + body + 
                 (isReplacingStatement then "" else newLineOrReturn);
         
         value shift 
