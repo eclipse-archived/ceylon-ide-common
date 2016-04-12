@@ -205,11 +205,12 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             typeDec = "dynamic";
         }
         
-        value isReplacingStatement = if (is Tree.ExpressionStatement statement,
-                                         statement.expression.startIndex == term.startIndex,
-                                         statement.expression.distance == term.distance)
-                                     then true
-                                     else false;
+        value isReplacingStatement 
+                = if (is Tree.ExpressionStatement statement) 
+                then let (ex = statement.expression)
+                    ex.startIndex == term.startIndex &&
+                    ex.distance == term.distance
+                else false;
         value definition = 
                 typeDec + " " + newName + 
                 body + 
@@ -227,23 +228,56 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         value nlength = term.distance.intValue();
 
         if (isReplacingStatement) {
-            addEditToChange(tfc, newReplaceEdit(statement.startIndex.intValue(), statement.distance.intValue(), definition));
-            typeRegion = newRegion(start + adjustment + shift, typeDec.size);
-            decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
+            addEditToChange(tfc, 
+                newReplaceEdit {
+                    start = statement.startIndex.intValue();
+                    length = statement.distance.intValue();
+                    text = definition;
+                });
+            typeRegion = newRegion {
+                start = start + adjustment + shift;
+                length = typeDec.size;
+            };
+            decRegion = newRegion {
+                start = start + adjustment + shift + typeDec.size + 1;
+                length = newName.size;
+            };
         } else {
-            addEditToChange(tfc, newInsertEdit(start, definition));
-            addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
-            typeRegion = newRegion(start + adjustment + shift, typeDec.size);
-            decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
-            refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
+            addEditToChange(tfc, 
+                newInsertEdit {
+                    position = start;
+                    text = definition;
+                });
+            addEditToChange(tfc, 
+                newReplaceEdit {
+                    start = nstart;
+                    length = nlength;
+                    text = newName;
+                });
+            typeRegion = newRegion {
+                start = start + adjustment + shift;
+                length = typeDec.size;
+            };
+            decRegion = newRegion {
+                start = start + adjustment + shift + typeDec.size + 1;
+                length = newName.size;
+            };
+            refRegion = newRegion {
+                start = nstart + adjustment + shift + definition.size;
+                length = newName.size;
+            };
         }
         
         object extends Visitor() {
             variable value backshift = nlength - newName.size;
+            value statementScope = statement.scope;
+            value targetScope = 
+                    statement is Tree.AttributeDeclaration 
+                    then statementScope.container else statementScope;
             shared actual void visit(Tree.Term t) {
                 if (exists start = t.startIndex?.intValue(),
                     exists length = t.distance?.intValue(),
-                    ModelUtil.contains(statement.scope, t.scope) 
+                    ModelUtil.contains(targetScope, t.scope) 
                     && start > nstart + nlength
                     && t!=term
                     && !different(term, t)) {
