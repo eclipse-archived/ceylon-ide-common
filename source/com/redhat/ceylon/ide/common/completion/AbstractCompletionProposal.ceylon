@@ -24,9 +24,9 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
     
     start() => offset - prefix.size;
     
-    getSelectionInternal(Document document) 
+    shared actual default Region getSelectionInternal(Document document) 
             => newRegion {
-                start = offset + text.size - prefix.size;
+                start = start() + text.size;
                 length = 0;
             };
     
