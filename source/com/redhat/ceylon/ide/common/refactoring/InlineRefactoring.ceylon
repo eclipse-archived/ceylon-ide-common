@@ -246,6 +246,28 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         
         return warnings.sequence();
     }
+    
+    shared actual Boolean visibleOutsideUnit() {
+        Declaration? declaration = editorData.declaration;
+        if (!exists declaration) {
+            return false;
+        }
+        
+        if (declaration.toplevel || declaration.shared) {
+            return true;
+        }
+        
+        if (declaration.parameter) {
+            assert (is FunctionOrValue declaration);
+            assert (is Declaration container = declaration.container);
+            if ((container of Declaration).toplevel || container.shared) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
 
     void inlineInFiles(
         Tree.Declaration declarationNode, 
@@ -256,20 +278,22 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         
         value term = getInlinedDefinition(declarationNode);
         
-        for (phasedUnit in getAllUnits()) {
-            if (searchInFile(phasedUnit)
-                && affectsUnit(phasedUnit.unit)) {
-                assert (is AnyProjectPhasedUnit phasedUnit);
-                inlineInFile {
-                    textChange = newFileChange(phasedUnit);
-                    parentChange = change;
-                    declarationNode = declarationNode;
-                    declarationRootNode = declarationRootNode;
-                    definition = term;
-                    declarationTokens = declarationTokens;
-                    rootNode = phasedUnit.compilationUnit;
-                    tokens = phasedUnit.tokens;
-                };
+        if (visibleOutsideUnit()) {
+            for (phasedUnit in getAllUnits()) {
+                if (searchInFile(phasedUnit)
+                    && affectsUnit(phasedUnit.unit)) {
+                    assert (is AnyProjectPhasedUnit phasedUnit);
+                    inlineInFile {
+                        textChange = newFileChange(phasedUnit);
+                        parentChange = change;
+                        declarationNode = declarationNode;
+                        declarationRootNode = declarationRootNode;
+                        definition = term;
+                        declarationTokens = declarationTokens;
+                        rootNode = phasedUnit.compilationUnit;
+                        tokens = phasedUnit.tokens;
+                    };
+                }
             }
         }
         

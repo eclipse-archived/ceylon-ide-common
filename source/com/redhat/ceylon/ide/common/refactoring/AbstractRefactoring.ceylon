@@ -58,11 +58,15 @@ shared interface AbstractRefactoring<RefactoringData>
         return term;
     }
     
+    shared default Boolean visibleOutsideUnit() => true;
+    
     shared default Integer countDeclarationOccurrences() {
         variable Integer count = 0;
-        for (pu in getAllUnits()) {
-            if (searchInFile(pu)) {
-                count += countReferences(pu.compilationUnit);
+        if (visibleOutsideUnit()) {
+            for (pu in getAllUnits()) {
+                if (searchInFile(pu)) {
+                    count += countReferences(pu.compilationUnit);
+                }
             }
         }
         if (searchInEditor()) {
