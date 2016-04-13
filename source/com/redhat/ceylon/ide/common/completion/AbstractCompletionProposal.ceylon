@@ -8,34 +8,50 @@ import java.lang {
 }
 
 shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region>
-        (shared actual variable Integer offset, shared actual String prefix, /*Image image,*/ shared actual String description, shared actual String text)
+        (offset, prefix, /*Image image,*/ description, text)
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
                 & CommonCompletionProposal<Document,Region>
         given InsertEdit satisfies TextEdit {
+    
+    shared actual variable Integer offset;
+    shared actual String prefix;
+    shared actual String description;
+    shared actual String text;
     
     shared actual variable Integer length = prefix.size;
     shared formal Boolean toggleOverwrite;
     shared formal ImportProposals<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange> importProposals;
     
-    shared actual default Region getSelectionInternal(Document document) {
-        return newRegion(offset + text.size - prefix.size, 0);
-    }
+    start() => offset - prefix.size;
     
-    shared default void applyInternal(Document document) {
-        replaceInDoc(document, start(), lengthOf(document), withoutDupeSemi(document));
-    }
+    getSelectionInternal(Document document) 
+            => newRegion {
+                start = offset + text.size - prefix.size;
+                length = 0;
+            };
     
-    shared TextEdit createEdit(Document document) {
-        return newReplaceEdit(start(), lengthOf(document), withoutDupeSemi(document));
-    }
+    shared default void applyInternal(Document document) 
+            => replaceInDoc {
+                doc = document;
+                start = start();
+                length = lengthOf(document);
+                newText = withoutDupeSemi(document);
+            };
+    
+    shared TextEdit createEdit(Document document) 
+            => newReplaceEdit {
+                start = start();
+                length = lengthOf(document);
+                text = withoutDupeSemi(document);
+            };
     
     shared Integer lengthOf(Document document) {
-        value overwrite = completionMode;
-        
-        if ("overwrite".equals(overwrite) != toggleOverwrite) {
+        if (("overwrite"==completionMode) != toggleOverwrite) {
             variable value length = prefix.size;
             variable value i = offset;
-            while (i < getDocLength(document) && Character.isJavaIdentifierPart(getDocChar(document, i).charValue())) {
+            value doclen = getDocLength(document);
+            while (i < doclen
+                && Character.isJavaIdentifierPart(getDocChar(document, i).charValue())) {
                 length++;
                 i++;
             }
@@ -43,10 +59,6 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
         } else {
             return this.length;
         }
-    }
-    
-    shared actual Integer start() {
-        return offset - prefix.size;
     }
     
     shared actual String withoutDupeSemi(Document document) {
