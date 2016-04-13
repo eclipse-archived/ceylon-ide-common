@@ -1,27 +1,17 @@
-import java.util {
-    JList=List,
-    Collections
-}
-import java.io {
-    InputStream
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VirtualFile
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package,
-    Unit
-}
-
 import ceylon.interop.java {
     CeylonIterable
 }
+
+import com.redhat.ceylon.compiler.typechecker.io {
+    VirtualFile
+}
 import com.redhat.ceylon.ide.common.model {
     CeylonProject,
-    IResourceAware,
-    ModifiableSourceFile,
-    BaseJavaUnit,
     ModelAliases
+}
+import com.redhat.ceylon.ide.common.platform {
+    VfsServicesConsumer,
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     equalsWithNulls,
@@ -29,9 +19,17 @@ import com.redhat.ceylon.ide.common.util {
     Path,
     ifExists
 }
-import com.redhat.ceylon.ide.common.platform {
-    VfsServicesConsumer,
-    ModelServicesConsumer
+import com.redhat.ceylon.model.typechecker.model {
+    Package,
+    Unit
+}
+
+import java.io {
+    InputStream
+}
+import java.util {
+    JList=List,
+    Collections
 }
 
 
