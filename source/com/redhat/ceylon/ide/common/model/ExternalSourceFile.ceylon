@@ -21,12 +21,14 @@ import com.redhat.ceylon.ide.common.util {
 shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit) 
         extends SourceFile(thePhasedUnit) {
         
+        modifiable => false;
+        
         shared actual default ExternalPhasedUnit phasedUnit =>
                 unsafeCast<ExternalPhasedUnit>(super.phasedUnit);
         
-        shared Boolean binaryDeclarationSource {
-            return ceylonModule.isCeylonBinaryArchive && (ceylonPackage is SingleSourceUnitPackage);
-        }
+        shared Boolean binaryDeclarationSource 
+                => ceylonModule.isCeylonBinaryArchive && 
+                ceylonPackage is SingleSourceUnitPackage;
         
         // TODO : check this method !!!
         shared Declaration? retrieveBinaryDeclaration(Declaration sourceDeclaration) {

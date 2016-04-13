@@ -19,12 +19,13 @@ shared abstract class SourceFile(
     IdePhasedUnit phasedUnit) 
         extends CeylonUnit(phasedUnit.moduleSourceMapper) {
     
+    shared formal Boolean modifiable; 
+    
     shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef = 
             WeakReference<IdePhasedUnit>(phasedUnit);
 
-    shared actual Package \ipackage {
-        return super.\ipackage;
-    }
+    shared actual Package \ipackage => super.\ipackage;
+    
     assign \ipackage {
         value p = \ipackage;
         super.\ipackage = \ipackage;

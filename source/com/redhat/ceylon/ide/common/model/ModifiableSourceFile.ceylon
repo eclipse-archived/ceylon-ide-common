@@ -15,12 +15,14 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
     
+    modifiable => true;
+    
     shared new (IdePhasedUnit phasedUnit) 
             extends SourceFile(phasedUnit) {
     }
     
     shared actual default ModifiablePhasedUnitAlias? phasedUnit =>
-            unsafeCast<ModifiablePhasedUnitAlias?> (super.phasedUnit);
+            unsafeCast<ModifiablePhasedUnitAlias?>(super.phasedUnit);
 
     shared actual default IdeModuleSourceMapperAlias moduleSourceMapper =>
             unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
