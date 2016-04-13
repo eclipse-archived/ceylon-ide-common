@@ -411,7 +411,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     }
 
     name => "Change Parameter List";
-    
+    affectsOtherFiles => true;
+
     void refactorReferences(ParameterList list, TextChange tfc, 
         Tree.CompilationUnit root) {
         
