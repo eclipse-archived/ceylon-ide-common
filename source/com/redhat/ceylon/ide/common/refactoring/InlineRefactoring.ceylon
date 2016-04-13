@@ -130,7 +130,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             !node is Tree.Declaration 
             && nodes.getIdentifyingNode(node) is Tree.Identifier;
     
-    shared actual Boolean enabled => true;
+    enabled => true;
 
     shared actual Integer countReferences(Tree.CompilationUnit cu) { 
         value vis = FindReferencesVisitor(editorData.declaration);
