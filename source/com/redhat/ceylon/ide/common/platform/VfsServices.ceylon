@@ -1,22 +1,22 @@
-import com.redhat.ceylon.ide.common.vfs {
-    VfsAliases,
-    FolderVirtualFile
-}
-import java.lang.ref {
-    WeakReference
-}
 import com.redhat.ceylon.ide.common.model {
     ModelAliases
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package
 }
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast
 }
+import com.redhat.ceylon.ide.common.vfs {
+    VfsAliases
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+
 import java.io {
     File
+}
+import java.lang.ref {
+    WeakReference
 }
 
 shared interface VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -48,8 +48,8 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
     shared formal String getShortName(NativeResource resource);
     shared formal Path getVirtualFilePath(NativeResource resource);
     shared formal String getVirtualFilePathString(NativeResource resource);
-    shared formal Path? getProjectRelativePath(NativeResource resource);
-    shared formal String? getProjectRelativePathString(NativeResource resource);
+    shared formal Path? getProjectRelativePath(NativeResource resource, CeylonProjectAlias project);
+    shared formal String? getProjectRelativePathString(NativeResource resource, CeylonProjectAlias project);
     shared formal File? getJavaFile(NativeResource resource);
     shared formal NativeResource? fromJavaFile(File javaFile, NativeProject project);
 

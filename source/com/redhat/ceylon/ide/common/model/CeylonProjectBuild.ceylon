@@ -245,7 +245,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 value resource = nonModelChange.resource;
                 switch(nonModelChange)
                 case(is NativeFolderRemoval) {
-                    if (exists relativePath = vfsServices.getProjectRelativePath(resource),
+                    if (exists relativePath = vfsServices.getProjectRelativePath(resource, ceylonProject),
                         exists [outputRepo, _, __] = outputRepoMap.get(changeProject),
                         outputRepo.isPrefixOf(relativePath)) {
                         state.fullBuildRequired = true;
