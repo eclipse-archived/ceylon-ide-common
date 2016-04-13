@@ -50,8 +50,10 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
     }
     
     shared actual String withoutDupeSemi(Document document) {
-        if (text.endsWith(";"), getDocChar(document, offset) == ';') {
-            return text.spanTo(text.size - 2);
+        if (text.endsWith(";"), 
+            getDocLength(document)>offset && 
+                    getDocChar(document, offset) == ';') {
+            return text.initial(text.size - 1);
         }
         return text;
     }
