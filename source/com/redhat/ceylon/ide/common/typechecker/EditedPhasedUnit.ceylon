@@ -44,6 +44,7 @@ import com.redhat.ceylon.ide.common.platform {
 }
 
 
+shared alias AnyEditedPhasedUnit => EditedPhasedUnit<in Nothing, in Nothing, in Nothing, in Nothing>;
 
 shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>

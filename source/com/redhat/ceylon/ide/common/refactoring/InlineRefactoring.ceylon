@@ -25,7 +25,8 @@ import com.redhat.ceylon.ide.common.platform {
     ImportProposalServicesConsumer
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    AnyProjectPhasedUnit
+    AnyProjectPhasedUnit,
+    AnyEditedPhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -279,7 +280,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         if (affectsOtherFiles) {
             for (phasedUnit in getAllUnits()) {
                 if (searchInFile(phasedUnit)
-                    && affectsUnit(phasedUnit.unit)) {
+                        && affectsUnit(phasedUnit.unit)) {
                     assert (is AnyProjectPhasedUnit phasedUnit);
                     inlineInFile {
                         textChange = newFileChange(phasedUnit);
@@ -294,8 +295,25 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 }
             }
         }
+        else {
+            value phasedUnit = editorPhasedUnit;
+            if (searchInFile(phasedUnit)
+                    && affectsUnit(phasedUnit.unit)) {
+                assert (is AnyEditedPhasedUnit phasedUnit);
+                inlineInFile {
+                    textChange = newFileChange(phasedUnit);
+                    parentChange = change;
+                    declarationNode = declarationNode;
+                    declarationRootNode = declarationRootNode;
+                    definition = term;
+                    declarationTokens = declarationTokens;
+                    rootNode = phasedUnit.compilationUnit;
+                    tokens = phasedUnit.tokens;
+                };
+            }
+        }
         
-        if ((!affectsOtherFiles || searchInEditor()) 
+        if (searchInEditor() 
                 && affectsUnit(editorUnit)) {
             inlineInFile {
                 textChange = newDocChange(editorData.doc);

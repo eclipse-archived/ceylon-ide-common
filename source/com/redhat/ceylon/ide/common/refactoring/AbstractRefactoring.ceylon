@@ -46,6 +46,7 @@ shared interface AbstractRefactoring<RefactoringData>
     shared formal EditorData editorData;
 
     shared formal List<PhasedUnit> getAllUnits();
+    shared formal PhasedUnit editorPhasedUnit;
     shared formal Boolean searchInFile(PhasedUnit pu);
     shared formal Boolean searchInEditor();
     shared formal Boolean inSameProject(Declaration decl);
