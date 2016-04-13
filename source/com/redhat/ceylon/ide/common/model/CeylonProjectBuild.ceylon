@@ -9,26 +9,17 @@ import com.redhat.ceylon.ide.common.util {
     ImmutableMapWrapper,
     ImmutableSetWrapper,
     Path,
-    ifExists,
     BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
 }
-import java.io {
-    File
-}
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Unit
-}
-import com.redhat.ceylon.ide.common.model.delta {
-    CompilationUnitDelta
+
+import java.io {
+    File
 }
 
 shared final class Severity
@@ -335,12 +326,75 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         state.changeEvents.addAll(changes.narrow<ResourceVirtualFileChange>()); 
     }
     
-    shared void performBuild(BaseProgressMonitor monitor) {
-        
+    shared Boolean performBuild(BaseProgressMonitor monitor) {
+        variable Boolean success = false;
         try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
+            // should do pre-build checks
             
+            if (shouldResolveClasspath || shouldDoFullBuild) {
+                ceylonProject.parseCeylonModel(progress.newChild(100));
+            }
+            progress.updateRemainingWork(900);
+            //some other stuff
+            if (!performTypechecking(progress.newChild(400))) {
+                return false;
+            }
+            if (!performBinaryGeneration(progress.newChild(400))) {
+                return false;
+            }
+            success = true;
+        } finally {
+            if (!success) {
+                requestFullBuild();
+            }
+        }
+        return success;
+    }
+    
+    shared Boolean performTypechecking(BaseProgressMonitor monitor) {
+        variable Boolean success = false;
+        try(progress = monitor.Progress(1000, "Typechecking of project `` ceylonProject.name ``")) {
+            if (!shouldDoFullBuild) {
+                 calculateDependencies(progress.newChild(300));                       
+            }
+            progress.updateRemainingWork(700);
+            // TODO do the incremental or full typecheck here
+            for (fileToTypecheck in typecheckingRequired) {
+                
+            }
+            // TODO Add the typechecker errors in the error list
+            success = true;
+        } finally {
             
         }
+        return success;
+    }
+
+    shared Boolean performBinaryGeneration(BaseProgressMonitor monitor) {
+        try(progress = monitor.Progress(1000, "Binary Generation of project `` ceylonProject.name ``")) {
+            
+        } finally {
+            
+        }
+        return true;
+    }
+
+    shared Boolean calculateDependencies(BaseProgressMonitor monitor) {
+        try(progress = monitor.Progress(1000, "Calculating dependencies on project `` ceylonProject.name ``")) {
+            
+        } finally {
+            
+        }
+        return true;
+    }
+
+    shared Boolean cleanRemovedFiles(BaseProgressMonitor monitor) {
+        try(progress = monitor.Progress(1000, "Cleaning removed files on project `` ceylonProject.name ``")) {
+            
+        } finally {
+            
+        }
+        return true;
     }
     
 // TODO : au démarrage : charger le buildState + erreurs depuis le disque et effacer le build state du disque
