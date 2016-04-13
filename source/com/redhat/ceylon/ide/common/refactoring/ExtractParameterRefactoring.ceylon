@@ -36,6 +36,8 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
     
     initialNewName => nameProposals[0];
     
+    visibleOutsideUnit => false;
+    
     shared formal variable Tree.Declaration? methodOrClass;
     shared formal actual variable Type? type;
     

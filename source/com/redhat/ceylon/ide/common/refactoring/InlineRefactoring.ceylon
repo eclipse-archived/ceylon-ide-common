@@ -4,8 +4,7 @@ import ceylon.collection {
 }
 
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit,
-    TypecheckerUnit
+    PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
@@ -19,7 +18,8 @@ import com.redhat.ceylon.ide.common.correct {
     DocumentChanges
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonUnit
+    CeylonUnit,
+    SourceFile
 }
 import com.redhat.ceylon.ide.common.platform {
     ImportProposalServicesConsumer
@@ -247,24 +247,21 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         return warnings.sequence();
     }
     
-    shared actual Boolean visibleOutsideUnit() {
-        Declaration? declaration = editorData.declaration;
-        if (!exists declaration) {
-            return false;
-        }
-        
-        if (declaration.toplevel || declaration.shared) {
-            return true;
-        }
-        
-        if (declaration.parameter) {
-            assert (is FunctionOrValue declaration);
-            assert (is Declaration container = declaration.container);
-            if ((container of Declaration).toplevel || container.shared) {
+    shared actual Boolean visibleOutsideUnit {
+        value declaration = editorData.declaration;
+        if (editorData.delete ||
+            declaration.unit != editorData.rootNode.unit) {
+            if (declaration.toplevel || declaration.shared) {
                 return true;
             }
+            if (declaration.parameter) {
+                assert (is FunctionOrValue declaration);
+                assert (is Declaration container = declaration.container);
+                if ((container of Declaration).toplevel || container.shared) {
+                    return true;
+                }
+            }
         }
-        
         return false;
     }
 
@@ -274,11 +271,12 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Change change, 
         Tree.CompilationUnit declarationRootNode, 
         JList<CommonToken> declarationTokens, 
-        TypecheckerUnit editorUnit) {
+        Unit editorUnit) {
         
         value term = getInlinedDefinition(declarationNode);
         
-        if (visibleOutsideUnit()) {
+        //TODO: progress reporting!
+        if (visibleOutsideUnit) {
             for (phasedUnit in getAllUnits()) {
                 if (searchInFile(phasedUnit)
                     && affectsUnit(phasedUnit.unit)) {
@@ -316,7 +314,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         Tree.CompilationUnit rootNode, 
         Declaration dec, 
         Change change, 
-        TypecheckerUnit editorUnit, 
+        Unit editorUnit, 
         JList<CommonToken> tokens) {
         if (is Tree.Declaration declarationNode 
             = getDeclarationNode {
@@ -347,19 +345,16 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 tokens = editorData.tokens;
             };
         }
-        else {
-            for (phasedUnit in getAllUnits()) {
-                if (phasedUnit.unit == declarationUnit) {
-                    inlineIfDeclaration {
-                        rootNode = phasedUnit.compilationUnit;
-                        dec = editorData.declaration;
-                        change = change;
-                        editorUnit = editorUnit;
-                        tokens = phasedUnit.tokens;
-                    };
-                    break;
-                }
-            }
+        else if (is SourceFile declarationUnit, 
+                declarationUnit.modifiable,
+                exists phasedUnit = declarationUnit.phasedUnit) {
+            inlineIfDeclaration {
+                rootNode = phasedUnit.compilationUnit;
+                dec = editorData.declaration;
+                change = change;
+                editorUnit = editorUnit;
+                tokens = phasedUnit.tokens;
+            };
         }
         
         return change;

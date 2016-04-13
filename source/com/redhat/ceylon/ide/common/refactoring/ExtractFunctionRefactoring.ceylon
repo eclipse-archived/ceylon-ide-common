@@ -61,6 +61,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     initialNewName => nameProposals[0];
     
+    visibleOutsideUnit => false;
+    
     shared formal List<Tree.Statement> statements;
     shared formal Tree.Declaration? target;
     shared formal List<Node->TypedDeclaration> results;
@@ -410,8 +412,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }.visit(rootNode);
         
-        if (exists change) {
+        if (exists change, dec.toplevel) {
             for (pu in getAllUnits()) {
+                //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
                     value tc = newFileChange(pu);
                     initMultiEditChange(tc);
