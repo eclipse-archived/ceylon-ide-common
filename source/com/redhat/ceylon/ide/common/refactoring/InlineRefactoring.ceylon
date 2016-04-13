@@ -247,7 +247,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         return warnings.sequence();
     }
     
-    shared actual Boolean visibleOutsideUnit {
+    shared actual Boolean affectsOtherFiles {
         value declaration = editorData.declaration;
         if (editorData.delete ||
             declaration.unit != editorData.rootNode.unit) {
@@ -276,7 +276,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         value term = getInlinedDefinition(declarationNode);
         
         //TODO: progress reporting!
-        if (visibleOutsideUnit) {
+        if (affectsOtherFiles) {
             for (phasedUnit in getAllUnits()) {
                 if (searchInFile(phasedUnit)
                     && affectsUnit(phasedUnit.unit)) {
@@ -295,8 +295,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
         }
         
-        if (searchInEditor() 
-            && affectsUnit(editorUnit)) {
+        if ((!affectsOtherFiles || searchInEditor()) 
+                && affectsUnit(editorUnit)) {
             inlineInFile {
                 textChange = newDocChange(editorData.doc);
                 parentChange = change;
@@ -335,7 +335,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         value declarationUnit = editorData.declaration.unit;
         value editorUnit = editorData.rootNode.unit;
         
-        if (searchInEditor() &&
+        if ((!affectsOtherFiles || searchInEditor()) &&
             editorUnit == declarationUnit) {
             inlineIfDeclaration {
                 rootNode = editorData.rootNode;

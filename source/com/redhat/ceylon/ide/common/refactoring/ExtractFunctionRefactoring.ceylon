@@ -61,7 +61,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     
     initialNewName => nameProposals[0];
     
-    visibleOutsideUnit => false;
+    affectsOtherFiles => false;
     
     shared formal List<Tree.Statement> statements;
     shared formal Tree.Declaration? target;

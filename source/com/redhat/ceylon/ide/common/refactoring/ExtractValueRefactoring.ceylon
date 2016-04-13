@@ -36,7 +36,7 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
     
     initialNewName => nameProposals[0];
     
-    visibleOutsideUnit => false;
+    affectsOtherFiles => false;
     
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
