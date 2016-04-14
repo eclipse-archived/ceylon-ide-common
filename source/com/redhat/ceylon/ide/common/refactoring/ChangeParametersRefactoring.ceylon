@@ -12,7 +12,8 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     ExpressionVisitor
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit
+    TypecheckerUnit,
+    PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer,
@@ -34,7 +35,8 @@ import com.redhat.ceylon.ide.common.platform {
     IndentsServicesConsumer
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    AnyProjectPhasedUnit
+    AnyProjectPhasedUnit,
+    AnyEditedPhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -134,8 +136,45 @@ shared String|Type parseTypeExpression(String typeText, TypecheckerUnit unit, Sc
         }.visit(staticType);
         
         return err else staticType.typeModel;
-    } catch (Exception e) {
+    } catch (e) {
         return "Could not parse type expression";
+    }
+}
+
+class FindInvocationsVisitor(Declaration declaration) 
+        extends Visitor() {
+    value posResults = HashSet<Tree.PositionalArgumentList>();
+    value namedResults = HashSet<Tree.NamedArgumentList>();
+    
+    shared Set<Tree.PositionalArgumentList> positionalArgLists => posResults;        
+    shared Set<Tree.NamedArgumentList> namedArgLists => namedResults;
+    
+    shared actual void visit(Tree.InvocationExpression that) {
+        super.visit(that);
+        if (is Tree.MemberOrTypeExpression mte = that.primary) {
+            if (mte.declaration.refines(declaration)) {
+                if (exists pal = that.positionalArgumentList) {
+                    posResults.add(pal);
+                }
+                if (exists nal = that.namedArgumentList) {
+                    namedResults.add(nal);
+                }
+            }
+        }
+    }
+}
+
+class FindArgumentsVisitor(Declaration declaration) 
+        extends Visitor() {
+    shared MutableSet<Tree.MethodArgument> results 
+            = HashSet<Tree.MethodArgument>();
+    
+    shared actual void visit(Tree.MethodArgument that) {
+        super.visit(that);
+        if (exists p = that.parameter,
+            p.model == declaration) {
+            results.add(that);
+        }
     }
 }
 
@@ -145,64 +184,63 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 & IndentsServicesConsumer<IDocument>
         given InsertEdit satisfies TextEdit {
     
-    class FindInvocationsVisitor(Declaration declaration) 
-            extends Visitor() {
-        value posResults = HashSet<Tree.PositionalArgumentList>();
-        value namedResults = HashSet<Tree.NamedArgumentList>();
-
-        shared Set<Tree.PositionalArgumentList> positionalArgLists => posResults;        
-        shared Set<Tree.NamedArgumentList> namedArgLists => namedResults;
-         
-        shared actual void visit(Tree.InvocationExpression that) {
-            super.visit(that);
-            if (is Tree.MemberOrTypeExpression mte = that.primary) {
-                if (mte.declaration.refines(declaration)) {
-                    if (exists pal = that.positionalArgumentList) {
-                        posResults.add(pal);
-                    }
-                    if (exists nal = that.namedArgumentList) {
-                        namedResults.add(nal);
-                    }
-                }
-            }
+    // TODO move up, shared with InlineRefacto and probably others
+    shared formal TextChange newFileChange(PhasedUnit pu);
+    shared formal TextChange newDocChange();
+    shared formal void addChangeToChange(Change change, TextChange tc);
+    
+    shared actual Boolean affectsOtherFiles {
+        if (exists declaration 
+            = getDeclarationForChangeParameters(editorData.node, rootNode)) {
+            return declaration.toplevel || declaration.shared;
+        }
+        else {
+            return false;
         }
     }
     
-    class FindArgumentsVisitor(Declaration declaration) 
-            extends Visitor() {
-        shared MutableSet<Tree.MethodArgument> results 
-                = HashSet<Tree.MethodArgument>();
-        
-        shared actual void visit(Tree.MethodArgument that) {
-            super.visit(that);
-            if (exists p = that.parameter,
-                p.model == declaration) {
-                results.add(that);
-            }
-        }
-    }
-
-    // TODO move up, shared with InlineRefacto and probably others
-    shared formal TextChange newTextChange(AnyProjectPhasedUnit pu);
-    shared formal TextChange newDocChange();
-    shared formal void addChangeToChange(Change change, TextChange tc);
-
     "Applies the changes made in the `ParameterList`."
     shared actual void build([Change, ParameterList] data) {
-        value units = getAllUnits();
-        // TODO ProgressMonitor
+        
         value [change, params] = data;
         
-        for (u in units) {
-            if (searchInFile(u), is AnyProjectPhasedUnit u) {
-                value tfc = newTextChange(u);
-                refactorInFile(params, tfc, change, u.compilationUnit, u.tokens);
+        // TODO progress reporting!
+        if (affectsOtherFiles) {
+            for (phasedUnit in getAllUnits()) {
+                if (searchInFile(phasedUnit)) {
+                    assert (is AnyProjectPhasedUnit phasedUnit);
+                    refactorInFile {
+                        params = params;
+                        tfc = newFileChange(phasedUnit);
+                        cc = change;
+                        root = phasedUnit.compilationUnit;
+                        tokens = phasedUnit.tokens;
+                    };
+                }
+            }
+        }
+        else {
+            value phasedUnit = editorPhasedUnit;
+            if (searchInFile(phasedUnit)) {
+                assert (is AnyEditedPhasedUnit phasedUnit);
+                refactorInFile {
+                    params = params;
+                    tfc = newFileChange(phasedUnit);
+                    cc = change;
+                    root = phasedUnit.compilationUnit;
+                    tokens = phasedUnit.tokens;
+                };
             }
         }
         
         if (searchInEditor()) {
-            value dc = newDocChange();
-            refactorInFile(params, dc, change, editorData.rootNode, editorData.tokens);
+            refactorInFile {
+                params = params;
+                tfc = newDocChange();
+                cc = change;
+                root = editorData.rootNode;
+                tokens = editorData.tokens;
+            };
         }
     }
 
@@ -441,8 +479,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     }
 
     name => "Change Parameter List";
-    affectsOtherFiles => true;
-
+    
     void refactorReferences(ParameterList list, TextChange tfc, 
         Tree.CompilationUnit root) {
         
