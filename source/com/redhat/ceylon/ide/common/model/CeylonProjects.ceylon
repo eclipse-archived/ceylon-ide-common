@@ -15,8 +15,7 @@ import com.redhat.ceylon.ide.common.platform {
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    VirtualFileSystem,
-    ResourceVirtualFile
+    VirtualFileSystem
 }
 import com.redhat.ceylon.model.typechecker.context {
     TypeCache
@@ -29,9 +28,6 @@ import java.lang {
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
-}
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
 }
 
 shared abstract class BaseCeylonProjects() {

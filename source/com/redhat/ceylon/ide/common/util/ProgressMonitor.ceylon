@@ -8,8 +8,18 @@ shared interface BaseProgressMonitor satisfies Cancellable {
         shared formal void changeTaskName(String taskDescription);
         shared formal void updateRemainingWork(Integer remainingWork);
         shared formal void subTask(String subTaskDescription);
-        shared formal void worked(Integer amount);
+        shared formal void worked(Integer amountOfWork);
         shared formal BaseProgressMonitorChild newChild(Integer allocatedWork);
+        shared Anything() work(Integer amountOfWork, void action()) => () {
+            action();
+            worked(amountOfWork);
+        };
+        shared void iterate<Element>({Element*} iterable)(Integer unitAmountOfWork, Anything(Element) action) {
+            iterable.each((e) {
+                action(e);
+                worked(unitAmountOfWork);
+            });
+        }
     }
 }
 

@@ -41,6 +41,15 @@ import com.redhat.ceylon.ide.common.model.parsing {
     ModulesScanner,
     ProjectFilesScanner
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    VfsServicesConsumer,
+    ModelServicesConsumer,
+    Status
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    TypecheckerAliases
+}
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
@@ -87,6 +96,12 @@ import java.lang.ref {
     WeakReference,
     SoftReference
 }
+import java.net {
+    URI
+}
+import java.util {
+    WeakHashMap
+}
 import java.util.concurrent {
     TimeUnit
 }
@@ -99,19 +114,6 @@ import java.util.concurrent.locks {
 
 import org.xml.sax {
     SAXParseException
-}
-import java.net {
-    URI
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    VfsServicesConsumer,
-    ModelServicesConsumer,
-    IdeUtils,
-    Status
-}
-import java.util {
-    WeakHashMap
 }
 
 shared final class ProjectState
@@ -260,7 +262,7 @@ shared abstract class BaseCeylonProject() {
         
     }
 
-    shared {PhasedUnit*} parsedUnits =>
+    shared default {PhasedUnit*} parsedUnits =>
             if (parsed,
                 exists units=typechecker?.phasedUnits?.phasedUnits)
             then CeylonIterable(units)
@@ -451,10 +453,13 @@ shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFi
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared default void analyzingChanges(
+    "Returns [[true]] if the analysis has been correctly done by the hook,
+     or [[false]] if the hook analysis has been cancelled due to
+     critical errors that would make the upcoming build impossible or pointless."
+    shared default Boolean analyzingChanges(
         {ChangeToAnalyze*} changes,  
         CeylonProjectBuildAlias build, 
-        CeylonProjectBuildAlias.State state) {}
+        CeylonProjectBuildAlias.State state) => true;
 }
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
@@ -463,6 +468,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
@@ -475,7 +481,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
     
     value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
-    value virtualFolderCacheLock = ReentrantReadWriteLock();
+    // value virtualFolderCacheLock = ReentrantReadWriteLock();
 
     variable CeylonProjectBuildAlias? build_ = null;
     
@@ -563,6 +569,9 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared {NativeFile*} projectNativeFiles => 
             projectFilesMap.keys;
 
+    shared actual {ProjectPhasedUnitAlias*} parsedUnits =>
+            super.parsedUnits.map((pu) => unsafeCast<ProjectPhasedUnitAlias>(pu));
+    
     "Returns the [[FileVirtualFileAlias]] added to the model,
      or [[null]] if it could not be added"
     shared FileVirtualFileAlias? addFileToModel(NativeFile file) {
@@ -582,14 +591,12 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
         projectFilesMap.put(file, virtualFile);
         
-        // TODO : add the delta element
-        
         return virtualFile;
     }
+
     
     shared void removeFileFromModel(NativeFile file) {
         projectFilesMap.remove(file);
-        // TODO : add the delta element
     }
     
     shared FolderVirtualFileAlias? addFolderToModel(NativeFolder folder) {

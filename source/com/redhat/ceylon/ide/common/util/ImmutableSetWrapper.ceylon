@@ -88,5 +88,15 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
                 return containedAnyElement;
             }) synchronize(this, do);
     
+    shared Boolean removeEvery(Boolean(Item) selecting)  => 
+            let(do = () {
+                value anyElementToRemove = immutableSet.any(selecting);
+                if (anyElementToRemove) {
+                    immutableSet = set(
+                        immutableSet.filter((elementToKeep) => ! selecting(elementToKeep)));
+                }
+                return anyElementToRemove;
+            }) synchronize(this, do);
+    
     shared actual String string => immutableSet.string;
 }
