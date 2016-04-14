@@ -1,6 +1,7 @@
 import ceylon.collection {
     HashSet,
-    ArrayList
+    ArrayList,
+    MutableSet
 }
 import ceylon.interop.java {
     CeylonIterable
@@ -66,21 +67,22 @@ import org.antlr.runtime {
 "Finds out which [[Declaration]] the 'Change Parameters' refactoring
  can work on."
 shared <Functional&Declaration>? getDeclarationForChangeParameters
-    (Node node, Tree.CompilationUnit rootNode) {
-    
-    value dec = nodes.getReferencedExplicitDeclaration(node, rootNode);
-    
-    if (is Functional&Declaration dec,
-        is Functional refDec = dec.refinedDeclaration,
+        (Node node, Tree.CompilationUnit rootNode) {
+    if (is Functional&Declaration dec 
+            = nodes.getReferencedExplicitDeclaration(node, rootNode),
+        is Functional refDec 
+            = dec.refinedDeclaration,
         exists pls = refDec.parameterLists,
         !pls.empty) {
-        
-        return if (is Class dec) 
-               then (dec.defaultConstructor else dec)
-               else dec;
+        return 
+            if (is Class dec, 
+                exists dc = dec.defaultConstructor) 
+            then dc
+            else dec;
     }
-    
-    return null;
+    else {
+        return null;
+    }
 }
 
 "Tries to parse a type expression, and returns the corresponding [[Type]] in
@@ -90,8 +92,8 @@ shared String|Type parseTypeExpression(String typeText, TypecheckerUnit unit, Sc
         value lexer = CeylonLexer(ANTLRStringStream(typeText));
         value ts = CommonTokenStream(lexer);
         ts.fill();
-        value lexErrors = lexer.errors;
         
+        value lexErrors = lexer.errors;
         if (!lexErrors.empty) {
             return lexErrors.get(0).message;
         }
@@ -123,9 +125,10 @@ shared String|Type parseTypeExpression(String typeText, TypecheckerUnit unit, Sc
         variable String? err = null;
         
         object extends ErrorVisitor() {
-            shared actual void handleMessage(Integer startOffset, Integer endOffset,
-                Integer startCol, Integer startLine, Message error) {
-                
+            shared actual void handleMessage(
+                Integer startOffset, Integer endOffset,
+                Integer startCol, Integer startLine, 
+                Message error) {
                 err = error.message; 
             }
         }.visit(staticType);
@@ -142,24 +145,21 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 & IndentsServicesConsumer<IDocument>
         given InsertEdit satisfies TextEdit {
     
-    class FindInvocationsVisitor(Declaration declaration) extends Visitor() {
+    class FindInvocationsVisitor(Declaration declaration) 
+            extends Visitor() {
         value posResults = HashSet<Tree.PositionalArgumentList>();
         value namedResults = HashSet<Tree.NamedArgumentList>();
 
-        shared Set<Tree.PositionalArgumentList> positionalArgLists => posResults;
-        
+        shared Set<Tree.PositionalArgumentList> positionalArgLists => posResults;        
         shared Set<Tree.NamedArgumentList> namedArgLists => namedResults;
          
         shared actual void visit(Tree.InvocationExpression that) {
             super.visit(that);
-            value primary = that.primary;
-            if (is Tree.MemberOrTypeExpression mte = primary) {
-                value dec = mte.declaration;
-                if (dec.refines(declaration)) {
+            if (is Tree.MemberOrTypeExpression mte = that.primary) {
+                if (mte.declaration.refines(declaration)) {
                     if (exists pal = that.positionalArgumentList) {
                         posResults.add(pal);
                     }
-                    
                     if (exists nal = that.namedArgumentList) {
                         namedResults.add(nal);
                     }
@@ -168,15 +168,15 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
     }
     
-    class FindArgumentsVisitor(Declaration declaration) extends Visitor() {
-        shared HashSet<Tree.MethodArgument> results = HashSet<Tree.MethodArgument>();
+    class FindArgumentsVisitor(Declaration declaration) 
+            extends Visitor() {
+        shared MutableSet<Tree.MethodArgument> results 
+                = HashSet<Tree.MethodArgument>();
         
         shared actual void visit(Tree.MethodArgument that) {
             super.visit(that);
-
             if (exists p = that.parameter,
                 p.model == declaration) {
-                
                 results.add(that);
             }
         }
@@ -211,9 +211,23 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         
         initMultiEditChange(tfc);
         
-        refactorArgumentLists(params, tfc, root, tokens);
-        refactorDeclarations(params, tfc, root, tokens);
-        refactorReferences(params, tfc, root);
+        refactorArgumentLists {
+            list = params;
+            tfc = tfc;
+            root = root;
+            tokens = tokens;
+        };
+        refactorDeclarations {
+            list = params;
+            tfc = tfc;
+            root = root;
+            tokens = tokens;
+        };
+        refactorReferences {
+            list = params;
+            tfc = tfc;
+            root = root;
+        };
         
         if (hasChildren(tfc)) {
             addChangeToChange(cc, tfc);
@@ -258,7 +272,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
         
         "Adds a parameter at the end of the list of parameters."
-        shared Param create(String name = "something", Type type = declaration.unit.anythingType) {
+        shared Param create(String name = "something", 
+                Type type = declaration.unit.anythingType) {
             value model = Value();
             model.type = type;
             model.name = name;
@@ -279,23 +294,23 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             return param;
         }
         
-        "Creates a preview of the function's new signature, based on the current
-         changes made to this object."
+        "Creates a preview of the function's new signature, 
+         based on the current changes made to this object."
         shared String previewSignature() {
             value decNode = nodes.getReferencedNode(declaration);
             
             Tree.ParameterList pl;
             Integer startIndex;
             
-            if (is Tree.AnyMethod decNode) {
-                value m = decNode;
-                pl = m.parameterLists.get(0);
-                startIndex = m.type.startIndex.intValue();
-            } else if (is Tree.AnyClass c = decNode) {
-                pl = c.parameterList;
-                assert(is CommonToken tok = c.mainToken);
+            switch (decNode)
+            case (is Tree.AnyMethod) {
+                pl = decNode.parameterLists.get(0);
+                startIndex = decNode.type.startIndex.intValue();
+            } case (is Tree.AnyClass) {
+                pl = decNode.parameterList;
+                assert(is CommonToken tok = decNode.mainToken);
                 startIndex = tok.startIndex;
-            } else if (is Tree.Constructor decNode) {
+            } case (is Tree.Constructor) {
                 value c = decNode;
                 pl = c.parameterList;
                 assert(is CommonToken tok = c.mainToken);
@@ -308,12 +323,23 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 is CeylonUnit ceylonUnit = declaration.unit,
                 exists tokens = ceylonUnit.phasedUnit?.tokens) {
                 
-                value edit = reorderDeclaration(this, pl, false, tokens);
-                value start = startIndex - decNode.startIndex.intValue();
-                value end = pl.startIndex.intValue() - decNode.startIndex.intValue();
+                value edit 
+                        = reorderDeclaration {
+                    list = this;
+                    pl = pl;
+                    actual = false;
+                    tokens = tokens;
+                };
+                value start 
+                        = startIndex 
+                        - decNode.startIndex.intValue();
+                value end 
+                        = pl.startIndex.intValue() 
+                        - decNode.startIndex.intValue();
                 
-                return nodes.text(tokens, decNode).substring(start, end)
-                        + getInsertedText(edit);
+                return nodes.text(tokens, decNode)
+                        .substring(start, end)
+                            + getInsertedText(edit);
             }
             
             return "<unknown>";
@@ -322,9 +348,11 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
 
     "Holds information related to a given parameter of the function being
      refactored."
-    shared class Param(position, model, name = model.name,
+    shared class Param(position, model, 
+            name = model.name,
             initDefaulted = model.defaulted,
-            initDefaultArgs = null, originalDefaultArgs = initDefaultArgs, 
+            initDefaultArgs = null, 
+            originalDefaultArgs = initDefaultArgs, 
             paramList = null) {
         
         Boolean initDefaulted;
@@ -339,11 +367,10 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         shared String? originalDefaultArgs;
         shared String? paramList;
         
-        shared Boolean defaultHasChanged => 
-                if (defaulted, 
-                    exists originalDefaultArgs,
-                    originalDefaultArgs != (defaultArgs else 1))
-                then true else false;
+        shared Boolean defaultHasChanged 
+                => if (defaulted, exists originalDefaultArgs)
+                then originalDefaultArgs != (defaultArgs else 1)
+                else false;
     }
     
     "Creates a new [[ParameterList]] that can be modified in the UI.
@@ -353,11 +380,12 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             is Functional refDec = decl.refinedDeclaration,
             exists pls = refDec.parameterLists) {
             
-            value pl = switch (decNode = nodes.getReferencedNode(refDec))
-            case (is Tree.AnyClass) decNode.parameterList
-            case (is Tree.Constructor) decNode.parameterList
-            case (is Tree.AnyMethod) decNode.parameterLists.get(0)
-            else null;
+            value pl 
+                    = switch (decNode = nodes.getReferencedNode(refDec))
+                    case (is Tree.AnyClass) decNode.parameterList
+                    case (is Tree.Constructor) decNode.parameterList
+                    case (is Tree.AnyMethod) decNode.parameterLists.get(0)
+                    else null;
             
             value info = ParameterList(decl);
             
@@ -369,13 +397,15 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             );
             
             for ([pModel, pTree] in params) {
-                value _defaultArgs = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
-                then nodes.text(editorData.tokens, sie.expression)
-                else null;
-                value _paramList = if (is Tree.FunctionalParameterDeclaration pTree,
-                    is Tree.MethodDeclaration pd = pTree.typedDeclaration)
-                then nodes.text(editorData.tokens, pd.parameterLists.get(0))
-                else null;
+                value _defaultArgs 
+                        = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
+                        then nodes.text(editorData.tokens, sie.expression)
+                        else null;
+                value _paramList 
+                        = if (is Tree.FunctionalParameterDeclaration pTree,
+                              is Tree.MethodDeclaration pd = pTree.typedDeclaration)
+                        then nodes.text(editorData.tokens, pd.parameterLists.get(0))
+                        else null;
                 
                 value p = Param( 
                     info.size,
@@ -434,13 +464,12 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                     //don't confuse a parameter declaration with
                     //a split declaration below
                     value td = that.typedDeclaration;
-                    if (is Tree.AttributeDeclaration ad = td,
-                        exists se = ad.specifierOrInitializerExpression) {
+                    if (is Tree.AttributeDeclaration td,
+                        exists se = td.specifierOrInitializerExpression) {
                         se.visit(this);
                     }
-                    
-                    if (is Tree.MethodDeclaration md = td,
-                        exists se = md.specifierExpression) {
+                    if (is Tree.MethodDeclaration td,
+                        exists se = td.specifierExpression) {
                         se.visit(this);
                     }
                 }
@@ -451,7 +480,6 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                     if (exists id = that.identifier,
                         isReference(that.declarationModel),
                         is JHashSet<Node> _nodes = nodeSet) {
-                        
                         _nodes.add(that);
                     }
                 }
@@ -459,23 +487,27 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 shared actual Boolean isReference(Parameter|Declaration? p) {
                     if (is Parameter p) {
                         return isSameParameter(param, p);
-                    } else if (is Declaration ref = p, ref.parameter) {
-                        assert (is FunctionOrValue fov = ref);
-                        return isSameParameter(param, fov.initializerParameter);
+                    } else if (is Declaration p, p.parameter) {
+                        assert (is FunctionOrValue p);
+                        return isSameParameter(param, p.initializerParameter);
                     }
-                    return false;
+                    else {
+                        return false;
+                    }
                 }
             };
             root.visit(fprv);
             
             for (ref in fprv.nodeSet) {
-                value idn = nodes.getIdentifyingNode(ref);
-                if (is Tree.Identifier idn) {
-                    value id = idn;
-                    if (!id.text.equals(newName)) {
-                        addEditToChange(tfc, 
-                            newReplaceEdit(id.startIndex.intValue(), 
-                                id.distance.intValue(), newName));
+                if (is Tree.Identifier id 
+                        = nodes.getIdentifyingNode(ref)) {
+                    if (!id.text==newName) {
+                        addEditToChange(tfc,
+                            newReplaceEdit {
+                                start = id.startIndex.intValue();
+                                length = id.distance.intValue();
+                                text = newName;
+                            });
                     }
                 }
             }
@@ -488,26 +520,22 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         value frv = FindRefinementsVisitor(list.declaration);
         root.visit(frv);
         for (decNode in frv.declarationNodes) {
-            variable Boolean actual;
-            variable Tree.ParameterList pl;
-            if (is Tree.AnyMethod decNode) {
-                value m = decNode;
-                pl = m.parameterLists.get(0);
-                actual = m.declarationModel.actual;
-            } else if (is Tree.AnyClass decNode) {
-                value c = decNode;
-                pl = c.parameterList;
-                actual = c.declarationModel.actual;
-            } else if (is Tree.Constructor decNode) {
-                value c = decNode;
-                pl = c.parameterList;
-                actual = c.declarationModel.actual;
-            } else if (is Tree.SpecifierStatement decNode) {
-                value ss = decNode;
-                value bme = ss.baseMemberExpression;
-                if (is Tree.ParameterizedExpression bme) {
-                    value pe = bme;
-                    pl = pe.parameterLists.get(0);
+            Boolean actual;
+            Tree.ParameterList pl;
+            switch (decNode)
+            case (is Tree.AnyMethod) {
+                pl = decNode.parameterLists.get(0);
+                actual = decNode.declarationModel.actual;
+            } case (is Tree.AnyClass) {
+                pl = decNode.parameterList;
+                actual = decNode.declarationModel.actual;
+            } case (is Tree.Constructor) {
+                pl = decNode.parameterList;
+                actual = decNode.declarationModel.actual;
+            } case (is Tree.SpecifierStatement) {
+                if (is Tree.ParameterizedExpression bme
+                        = decNode.baseMemberExpression) {
+                    pl = bme.parameterLists.get(0);
                     actual = true;
                 } else {
                     continue;
@@ -516,11 +544,18 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 continue;
             }
             
-            addEditToChange(tfc, reorderDeclaration(list, pl, actual, tokens));
+            addEditToChange(tfc, 
+                reorderDeclaration {
+                    list = list;
+                    pl = pl;
+                    actual = actual;
+                    tokens = tokens;
+                });
         }
     }
     
-    TextEdit reorderDeclaration(ParameterList list, Tree.ParameterList pl, 
+    TextEdit reorderDeclaration(ParameterList list, 
+        Tree.ParameterList pl, 
         Boolean actual, JList<CommonToken> tokens) {
         
         value sb = StringBuilder().append("(");
@@ -529,8 +564,15 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         for (p in list.parameters) {
             variable String paramString = "";
             
-            if (exists oldParam = params.find((oldP) => isSameParameter(oldP.parameterModel, p.model))) {
-                paramString = paramStringWithoutDefaultArg(oldParam, p.name, tokens);
+            if (exists oldParam 
+                    = params.find((op)
+                        => isSameParameter(op.parameterModel, p.model))) {
+                paramString 
+                        = paramStringWithoutDefaultArg {
+                    parameter = oldParam;
+                    newName = p.name;
+                    tokens = tokens;
+                };
                 
                 if (p.defaulted, !actual) {
                     // now add the new default arg
@@ -542,7 +584,6 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 }
             } else {
                 paramString = p.model.type.asString(pl.unit) + " " + p.name;
-                
                 if (p.defaulted, !actual) {
                     paramString += " = " + (p.defaultArgs else "nothing");
                 }
@@ -586,7 +627,12 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
 
         // Fix positional argument lists in callers
         for (pal in fiv.positionalArgLists) {
-            addEditToChange(tfc, reorderArguments(list, pal, tokens));
+            addEditToChange(tfc, 
+                reorderArguments {
+                    list = list;
+                    pal = pal;
+                    tokens = tokens;
+                });
         }
         
         // Fix named argument lists in callers
@@ -596,7 +642,9 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             // Remove args that don't exist anymore
             for (na in nal.namedArguments) {
                 if (exists nap = na.parameter, 
-                    !exists _ = list.parameters.find((p) => isSameParameter(p.model, nap))) {
+                    !list.parameters.find((p) 
+                        => isSameParameter(p.model, nap))
+                            exists) {
                     
                     value start = if (exists _last = last)
                                   then _last.endIndex.intValue()
@@ -612,15 +660,20 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 value nas = CeylonIterable(nal.namedArguments);
 
                 if (!p.defaulted || p.defaultHasChanged,
-                    !exists _ = nas.find((na) => isSameParameter(na.parameter, p.model))) {
+                    !nas.find((na) 
+                        => isSameParameter(na.parameter, p.model)) 
+                            exists) {
                     
-                    variable value argString = getInlinedNamedArg(p, p.defaultArgs);
+                    variable value argString 
+                            = getInlinedNamedArg(p, p.defaultArgs);
                     value startOffset = nal.startIndex.intValue();
                     value stopOffset = nal.stopIndex.intValue();
                     value doc = getDocumentForChange(tfc);
                     
-                    if (getLineOfOffset(doc, stopOffset) > getLineOfOffset(doc, startOffset)) {
-                        argString = indents.defaultIndent + argString + ";"
+                    if (getLineOfOffset(doc, stopOffset) 
+                            > getLineOfOffset(doc, startOffset)) {
+                        argString = 
+                                  indents.defaultIndent + argString + ";"
                                 + indents.getDefaultLineDelimiter(doc)
                                 + indents.getIndent(nal, doc);
                     } else if (startOffset == stopOffset-1) {
@@ -629,8 +682,12 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                         argString = argString + "; ";
                     }
                     
-                    addEditToChange(tfc, newInsertEdit(stopOffset, argString));
-                }
+                    addEditToChange(tfc, 
+                        newInsertEdit {
+                            position = stopOffset;
+                            text = argString;
+                        });
+                    }
             }
         }
         
@@ -638,19 +695,28 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         value fav = FindArgumentsVisitor(list.declaration);
         root.visit(fav);
         for (decNode in fav.results) {
-            value pl = decNode.parameterLists.get(0);
-            addEditToChange(tfc, reorderParameters(list, pl, tokens));
+            addEditToChange {
+                change = tfc;
+                edit = reorderParameters {
+                    list = list;
+                    pal = decNode.parameterLists.get(0);
+                    tokens = tokens;
+                };
+            };
         }
     }
     
-    TextEdit reorderArguments(ParameterList list, Tree.PositionalArgumentList pal,
+    TextEdit reorderArguments(ParameterList list, 
+        Tree.PositionalArgumentList pal,
         JList<CommonToken> tokens) {
         
         value oldArgs = CeylonIterable(pal.positionalArguments);
         value builder = StringBuilder().append("(");
         
         for (p in list.parameters) {
-            if (exists oldVal = oldArgs.find((oa) => isSameParameter(oa.parameter, p.model))) {
+            if (exists oldVal 
+                    = oldArgs.find((oa) 
+                        => isSameParameter(oa.parameter, p.model))) {
                 builder.append(nodes.text(tokens, oldVal));
             } else {
                 builder.append(getInlinedArg(p));
@@ -670,7 +736,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         );
     }
 
-    TextEdit reorderParameters(ParameterList list, Tree.ParameterList pal,
+    TextEdit reorderParameters(ParameterList list, 
+        Tree.ParameterList pal,
         JList<CommonToken> tokens) {
         
         value oldArgs = CeylonIterable(pal.parameters);
@@ -678,7 +745,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         
         for (p -> pTree in zipEntries(list.parameters, oldArgs)) {
             builder.append(paramString(pTree, p.name, tokens))
-                    .append(", ");
+                   .append(", ");
         }
         
         if (builder.endsWith(", ")) {
@@ -705,10 +772,13 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                  + newName + paramString.substring(end);
     }
     
-    String paramStringWithoutDefaultArg(Tree.Parameter parameter, String newName,
+    String paramStringWithoutDefaultArg(
+        Tree.Parameter parameter, 
+        String newName,
         JList<CommonToken> tokens) {
         
-        variable String paramString = nodes.text(tokens, parameter);
+        variable String paramString 
+                = nodes.text(tokens, parameter);
         // first remove the default arg
         value sie = nodes.getDefaultArgSpecifier(parameter);
         value loc = parameter.startIndex.intValue();
@@ -721,80 +791,63 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         value start = id.startIndex.intValue() - loc;
         value end = id.endIndex.intValue() - loc;
         return paramString.substring(0, start) 
-                + newName + paramString.substring(end);
+                + newName 
+                + paramString.substring(end);
     }
     
     Tree.Identifier getIdentifier(Tree.Parameter parameter) {
-        if (is Tree.InitializerParameter parameter) {
-            value ip = parameter;
-            return ip.identifier;
-        } else if (is Tree.ParameterDeclaration parameter) {
-            value pd = parameter;
-            return pd.typedDeclaration.identifier;
+        switch (parameter)
+        case (is Tree.InitializerParameter) {
+            return parameter.identifier;
+        } case (is Tree.ParameterDeclaration) {
+            return parameter.typedDeclaration.identifier;
         } else {
             throw Exception();
         }
     }
     
-    String getSpecifier(Tree.Parameter parameter) {
-        if (is Tree.FunctionalParameterDeclaration parameter) {
-            return " => ";
-        } else {
-            return " = ";
-        }
-    }
+    String getSpecifier(Tree.Parameter parameter) 
+            => if (is Tree.FunctionalParameterDeclaration parameter) 
+            then " => " else " = ";
     
     String getInlinedArg(Param p) {
         String val;
-        value argString = p.defaultArgs;
-        
-        if (exists argString, !argString.empty) {
+        if (exists argString = p.defaultArgs, 
+            !argString.empty) {
             val = argString;
+        } else if (exists defaultArg = p.originalDefaultArgs, 
+            !defaultArg.empty) {
+            val = defaultArg;
         } else {
-            value defaultArg = p.originalDefaultArgs;
-            if (exists defaultArg, !defaultArg.empty) {
-                val = defaultArg;
-            } else {
-                val = "nothing";
-            }
+            val = "nothing";
         }
         
-        if (exists params = p.paramList) {
-            return params + " => " + val;
-        }
-        
-        return val;
+        return 
+            if (exists params = p.paramList) 
+            then params + " => " + val 
+            else val;
     }
     
     String getInlinedNamedArg(Param p, String? argString) {
         String val;
-        if (exists argString, !argString.empty) {
+        if (exists argString, 
+            !argString.empty) {
             val = argString;
+        } else if (exists originalArg = p.originalDefaultArgs, 
+            !originalArg.empty) {
+            val = originalArg;
         } else {
-            value originalArg = p.originalDefaultArgs;
-            if (exists originalArg, !originalArg.empty) {
-                val = originalArg;
-            } else {
-                val = "nothing";
-            }
+            val = "nothing";
         }
         
-        value paramList = p.paramList;
-        if (!exists paramList) {
-            return p.name + " = " + val;
-        } else {
-            return "function " + p.name + paramList + " => " + val;
-        }
+        return if (exists paramList = p.paramList) 
+            then "function " + p.name + paramList + " => " + val 
+            else p.name + " = " + val;
     }
     
-    String getNewDefaultArg(Param p) {
-        String? argString = p.defaultArgs;
-        
-        if (exists argString, !argString.empty) {
-            return argString;
-        }
-        
-        return "nothing";
-    }
+    String getNewDefaultArg(Param p) 
+            => if (exists argString = p.defaultArgs, 
+                    !argString.empty) 
+            then argString else "nothing";
 
 }
