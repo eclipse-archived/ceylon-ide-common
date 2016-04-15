@@ -668,10 +668,10 @@ shared class ExtractFunctionRefactoring(
         
         value movingDecs = HashSet<Declaration>();
         for (s in statements) {
-            if (is Tree.Declaration s) {
-                value d = s;
-                movingDecs.add(d.declarationModel);
-            }
+            s.visit(object extends Visitor() {
+                visit(Tree.Declaration that)
+                    => movingDecs.add(that.declarationModel);
+            });
         }
         
         value imports = JHashSet<Declaration>();
@@ -1119,7 +1119,7 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
     
     variable Integer refs = 0;
     for (s in scope.statements) {
-        if (!statements.contains(s)) {
+        if (!s in statements) {
             s.visit(object extends Visitor() {
                     shared actual void visit(Tree.MemberOrTypeExpression that) {
                         super.visit(that);
