@@ -1168,9 +1168,9 @@ shared class FindReturnsVisitor()
 Boolean isLocalReference(Declaration currentDec,
     Scope scope, Scope targetScope)
         => (currentDec.isDefinedInScope(scope)
-                    || scope.isInherited(currentDec)) &&
-                !(currentDec.isDefinedInScope(targetScope)
-                    || targetScope.isInherited(currentDec));
+                || scope.isInherited(currentDec)) &&
+            !(currentDec.isDefinedInScope(targetScope)
+                || targetScope.isInherited(currentDec));
 
 class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
         extends Visitor() {

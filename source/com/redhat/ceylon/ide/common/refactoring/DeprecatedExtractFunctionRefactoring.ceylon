@@ -645,10 +645,10 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
         
         value movingDecs = HashSet<Declaration>();
         for (s in editorData.statements) {
-            if (is Tree.Declaration s) {
-                value d = s;
-                movingDecs.add(d.declarationModel);
-            }
+            s.visit(object extends Visitor() {
+                visit(Tree.Declaration that)
+                        => movingDecs.add(that.declarationModel);
+            });
         }
         
         value imports = JHashSet<Declaration>();
