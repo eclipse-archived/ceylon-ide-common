@@ -1074,11 +1074,10 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         value dec = that.declarationModel;
-        if (that.specifierOrInitializerExpression exists) {
-            if (hasOuterRefs(dec, scope, statements)) {
-                resultsList.add(that->dec);
-                all.add(dec);
-            }
+        if (that.specifierOrInitializerExpression exists, 
+            hasOuterRefs(dec, scope, statements)) {
+            resultsList.add(that->dec);
+            all.add(dec);
         }
         possibles.put(dec, that);
     }
@@ -1138,11 +1137,10 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
                     shared actual void visit(Tree.Type that) {
                         super.visit(that);
                         if (exists type = that.typeModel,
-                            type.classOrInterface) {
-                            if (exists td = type.declaration,
+                            type.classOrInterface, 
+                            exists td = type.declaration,
                                 d == td) {
-                                refs++;
-                            }
+                            refs++;
                         }
                     }
                 });
