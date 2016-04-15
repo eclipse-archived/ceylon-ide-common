@@ -1,15 +1,11 @@
 import ceylon.collection {
     ArrayList,
     MutableList,
-    HashMap,
     HashSet
 }
 
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
-}
-import com.redhat.ceylon.compiler.typechecker.io {
-    VirtualFile
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
@@ -20,14 +16,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.correct {
-    CommonDocument,
-    CommonImportProposals
+    DocumentChanges
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    TextChange,
-    InsertEdit,
-    ReplaceEdit
+    ImportProposalServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -58,25 +50,19 @@ import org.antlr.runtime {
     Token
 }
 
-shared ExtractFunctionRefactoring?
-createExtractFunctionRefactoring(
-    CommonDocument doc,
-    Integer selectionStart,
-    Integer selectionStop,
-    Tree.CompilationUnit rootNode,
-    JList<CommonToken> tokens,
-    String functionName,
-    Tree.Declaration? target,
-    {PhasedUnit*} allUnits,
-    VirtualFile vfile) {
+shared
+[Node?, List<Node->TypedDeclaration>, List<Tree.Return>, List<Tree.Statement>, Tree.Body?]
+prepareExtractFunction(Tree.CompilationUnit rootNode, JList<CommonToken> tokens,
+    Integer selectionStart, Integer selectionStop) {
     
     function selected(Node node)
             => node.startIndex.intValue() >= selectionStart
-                    && node.endIndex.intValue() <= selectionStop;
+            && node.endIndex.intValue() <= selectionStop;
     
     variable List<Node->TypedDeclaration> results = [];
     variable List<Tree.Return> returns = [];
     variable List<Tree.Statement> statements = [];
+    variable Tree.Body? body = null;
     
     value node = nodes.findNode {
         node = rootNode;
@@ -85,107 +71,90 @@ createExtractFunctionRefactoring(
         endOffset = selectionStop;
     };
     
+    value emptyResult = [node, results, returns, statements, body];
+    
     //additional initialization for extraction of statements
     //as opposed to extraction of an expression
     
-    variable Tree.Body? bodyNode = null;
+    Tree.Body bodyNode;
     switch (node)
     case (null) {
-        return null;
+        return emptyResult;
     }
     case (is Tree.Term) {
         //we're extracting a single expression
+        return emptyResult;
     }
     case (is Tree.Body) {
         //we're extracting multiple statements
-        statements = [for (s in node.statements)
-                        if (selected(s))
-                            s];
+        statements 
+                = [ for (s in node.statements) 
+        if (selected(s)) 
+        s ];
         bodyNode = node;
     }
     else {
-        value statement
+        value statement 
                 = nodes.findStatement(rootNode, node);
-        if (exists statement) {
-            //we're extracting a single statement
-            value fbv = FindBodyVisitor(statement);
-            fbv.visit(rootNode);
-            if (exists found = fbv.body) {
-                statements = [statement];
-                bodyNode = found;
-                //node = body;
-            }
+        if (!exists statement) {
+            return emptyResult;
+        }
+        //we're extracting a single statement
+        value fbv = FindBodyVisitor(statement);
+        fbv.visit(rootNode);
+        if (exists found = fbv.body) {
+            statements = [statement];
+            bodyNode = found;
+            //node = body;
+        }
+        else {
+            return emptyResult;
         }
     }
+    body = bodyNode;
     
-    if (exists body = bodyNode) {
-        value resultsVisitor = FindResultVisitor {
-            scope = body;
-            statements = statements;
-        };
-        for (s in statements) {
-            s.visit(resultsVisitor);
-        }
-        results = resultsVisitor.results;
-        
-        value returnsVisitor = FindReturnsVisitor();
-        for (s in statements) {
-            s.visit(returnsVisitor);
-        }
-        returns = returnsVisitor.returns;
+    value resultsVisitor = FindResultVisitor {
+        scope = bodyNode;
+        statements = statements;
+    };
+    for (s in statements) {
+        s.visit(resultsVisitor);
     }
+    results = resultsVisitor.results;
     
-    if (exists node) {
-        return ExtractFunctionRefactoring(
-            doc,
-            functionName,
-            rootNode,
-            tokens,
-            node,
-            results,
-            returns,
-            statements,
-            bodyNode,
-            target,
-            allUnits,
-            vfile
-        );
+    value returnsVisitor = FindReturnsVisitor();
+    for (s in statements) {
+        s.visit(returnsVisitor);
     }
-    return null;
+    returns = returnsVisitor.returns;
+    
+    return [node, results, returns, statements, body];
 }
 
-shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
-    shared Tree.Term unparenthesize(Tree.Term term) {
-        if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
-            return unparenthesize(term.term);
-        }
-        return term;
+shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change, IRegion=DefaultRegion>
+        satisfies ExtractInferrableTypedRefactoring<TextChange> & NewNameRefactoring & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange> & ExtractLinkedModeEnabled<IRegion> & ImportProposalServicesConsumer<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>
+        given InsertEdit satisfies TextEdit {
+    
+    value indents => importProposals.indents;
+    
+    initialNewName => nameProposals[0];
+    
+    affectsOtherFiles => false;
+    
+    shared interface ExtractFunctionData satisfies EditorData {
+        shared formal List<Tree.Statement> statements;
+        shared formal Tree.Declaration? target;
+        shared formal List<Node->TypedDeclaration> results;
+        shared formal List<Tree.Return> returns;
+        shared formal Tree.Body? body;
     }
     
-    shared variable Type? type = null;
-    shared variable Boolean canBeInferred = false;
-    shared Boolean affectsOtherFiles;
-    shared Boolean explicitType;
-}
-
-shared class ExtractFunctionRefactoring(
-    CommonDocument doc, String newName,
-    shared Tree.CompilationUnit rootNode, JList<CommonToken> tokens, shared Node node,
-    List<Node->TypedDeclaration> results, List<Tree.Return> returns,
-    shared List<Tree.Statement> statements, shared Tree.Body? body,
-    Tree.Declaration? target, {PhasedUnit*} allUnits,
-    VirtualFile? sourceVirtualFile)
-        extends NewAbstractRefactoring(false, false) {
+    shared formal actual ExtractFunctionData editorData;
     
-    value importProposals = CommonImportProposals(doc);
+    shared formal variable actual Type? type;
+    shared formal actual variable Boolean canBeInferred;
     
-    shared variable DefaultRegion? typeRegion = null;
-    shared variable DefaultRegion? decRegion = null;
-    shared variable DefaultRegion? refRegion = null;
-
-    value indents => platformServices.indents<CommonDocument>();
-    
-    shared JList<DefaultRegion> dupeRegions = JArrayList<DefaultRegion>();
+    shared formal JList<IRegion> dupeRegions;
     
     shared class CheckStatementsVisitor(Tree.Body scope,
         Collection<Tree.Statement> statements)
@@ -199,10 +168,10 @@ shared class ExtractFunctionRefactoring(
         }
         
         function notResult(Node that)
-                => !that in results.map(Entry.key);
+                => !that in editorData.results.map(Entry.key);
         
         function notResultRef(Declaration d)
-                => !d in results.map(Entry.item);
+                => !d in editorData.results.map(Entry.item);
         
         shared actual void visit(Tree.Declaration that) {
             super.visit(that);
@@ -249,14 +218,13 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
-    shared TextChange build() {
-        value tfc = platformServices.createTextChange(name, doc);
+    shared actual void build(TextChange tfc) {
+        value node = editorData.node;
         if (is Tree.Term node) {
             extractExpression(tfc, node);
         } else {
             extractStatements(tfc);
         }
-        return tfc;
     }
     
     function typeParameters(
@@ -312,16 +280,19 @@ shared class ExtractFunctionRefactoring(
         return tok;
     }
     
-    void extractExpression(TextChange tfc, Tree.Term term,
-        TextChange? change = null) {
-        tfc.initMultiEdit();
+    shared void extractExpression(TextChange tfc, Tree.Term term,
+        Change? change = null) {
+        initMultiEditChange(tfc);
+        value doc = getDocumentForChange(tfc);
         value unit = term.unit;
+        value tokens = editorData.tokens;
+        value rootNode = editorData.rootNode;
         
         value start = term.startIndex.intValue();
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        value decNode = getTargetNode(term, target, rootNode);
+        value decNode = getTargetNode(term, editorData.target, rootNode);
         if (!exists decNode) {
             return;
         }
@@ -468,12 +439,11 @@ shared class ExtractFunctionRefactoring(
                 };
         
         value decStart = decNode.startIndex.intValue();
-        tfc.addEdit(InsertEdit(decStart, definition));
-        tfc.addEdit(ReplaceEdit(start, length, invocation));
-        
-        typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
-        refRegion = DefaultRegion(refStart + shift + definition.size, newName.size);
+        addEditToChange(tfc, newInsertEdit(decStart, definition));
+        addEditToChange(tfc, newReplaceEdit(start, length, invocation));
+        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
+        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
+        refRegion = newRegion(refStart + shift + definition.size, newName.size);
         
         object extends Visitor() {
             variable value backshift = length - invocation.size;
@@ -496,12 +466,13 @@ shared class ExtractFunctionRefactoring(
                                 "(" +
                                 asArgList(args, localThisRefs, tokens) +
                                 ")";
-                    tfc.addEdit(ReplaceEdit {
+                    addEditToChange(tfc,
+                        newReplaceEdit {
                             start = tstart;
                             length = tlength;
                             text = invocation;
-                    });
-                    dupeRegions.add(DefaultRegion {
+                        });
+                    dupeRegions.add(newRegion {
                             start = tstart + shift + definition.size - backshift;
                             length = newName.size;
                         });
@@ -513,11 +484,11 @@ shared class ExtractFunctionRefactoring(
         }.visit(rootNode);
         
         if (exists change, dec.toplevel) {
-            for (pu in allUnits) {
+            for (pu in getAllUnits()) {
                 //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
-                    value tc = platformServices.createTextChange(name, pu);
-                    tc.initMultiEdit();
+                    value tc = newFileChange(pu);
+                    initMultiEditChange(tc);
                     variable value found = false;
                     object extends Visitor() {
                         shared actual void visit(Tree.Term t) {
@@ -536,29 +507,32 @@ shared class ExtractFunctionRefactoring(
                                             "(" +
                                             asArgList(args, localThisRefs, pu.tokens) +
                                             ")";
-                                tc.addEdit(ReplaceEdit {
+                                addEditToChange(tc,
+                                    newReplaceEdit {
                                         start = tstart;
                                         length = tlength;
                                         text = invocation;
-                                });
+                                    });
                                 found = true;
                             } else {
                                 super.visit(t);
                             }
                         }
                     }.visit(pu.compilationUnit);
-                    
                     if (found) {
-                        change.addChangesFrom(tc);
+                        addChangeToChange(change, tc);
                     }
                 }
             }
         }
     }
     
+    shared formal TextChange newFileChange(PhasedUnit pu);
+    shared formal void addChangeToChange(Change change, TextChange tc);
+    
     function targetDeclaration(Tree.Body body,
         Tree.CompilationUnit rootNode) {
-        if (exists target = target) {
+        if (exists target = editorData.target) {
             return target;
         } else {
             value fsv = FindContainerVisitor(body);
@@ -589,7 +563,7 @@ shared class ExtractFunctionRefactoring(
         JList<CommonToken> tokens) {
         value end = ss.last.endIndex.intValue();
         variable value endOfComments = end;
-        for (s in statements) {
+        for (s in editorData.statements) {
             definition
                 .append(bodyIndent)
                 .append(nodes.text(tokens, s));
@@ -620,19 +594,22 @@ shared class ExtractFunctionRefactoring(
     }
     
     void extractStatements(TextChange tfc) {
-        assert (exists body = body);
-        tfc.initMultiEdit();
+        assert (exists body = editorData.body);
+        initMultiEditChange(tfc);
+        value doc = getDocumentForChange(tfc);
         value unit = body.unit;
+        value tokens = editorData.tokens;
+        value rootNode = editorData.rootNode;
         
         assert (exists decNode = targetDeclaration(body, rootNode));
-        assert (nonempty ss = statements.sequence());
+        assert (nonempty ss = editorData.statements.sequence());
         
         value dec = decNode.declarationModel;
         value flrv = FindLocalReferencesVisitor {
             scope = body.scope;
             targetScope = dec.container;
         };
-        for (s in statements) {
+        for (s in editorData.statements) {
             s.visit(flrv);
         }
         
@@ -650,7 +627,7 @@ shared class ExtractFunctionRefactoring(
             };
         }
         
-        for (s in statements) {
+        for (s in editorData.statements) {
             object extends Visitor() {
                 shared actual void visit(Tree.TypeArgumentList that) {
                     for (pt in that.typeModels) {
@@ -667,7 +644,7 @@ shared class ExtractFunctionRefactoring(
         }
         
         value movingDecs = HashSet<Declaration>();
-        for (s in statements) {
+        for (s in editorData.statements) {
             if (is Tree.Declaration s) {
                 value d = s;
                 movingDecs.add(d.declarationModel);
@@ -696,7 +673,7 @@ shared class ExtractFunctionRefactoring(
                 if (is Value bmed)
                 then bmed.variable //TODO: wrong condition, check if initialized! 
                 else false;
-            value result = bmed in results.map(Entry.item);
+            value result = bmed in editorData.results.map(Entry.item);
             //ignore it if it is a result of the function 
             //and is not a variable
             if (variable || !result) {
@@ -741,23 +718,23 @@ shared class ExtractFunctionRefactoring(
                     imports = imports;
                 };
         
-        if (results.size == 1) {
-            assert (exists _->rdec = results.first);
+        if (editorData.results.size == 1) {
+            assert (exists _->rdec = editorData.results.first);
             if (!type exists) {
                 type = unit.denotableType(rdec.type);
             }
-        } else if (!results.empty) {
+        } else if (!editorData.results.empty) {
             value types = JArrayList<Type>();
-            for (_->rdec in results) {
+            for (_->rdec in editorData.results) {
                 types.add(rdec.type);
             }
             if (!type exists) {
                 type = unit.getTupleType(types, null, -1);
             }
-        } else if (!returns.empty) {
+        } else if (!editorData.returns.empty) {
             value ut = UnionType(unit);
             value list = JArrayList<Type>();
-            for (ret in returns) {
+            for (ret in editorData.returns) {
                 if (exists e = ret.expression) {
                     ModelUtil.addToUnion(list, e.typeModel);
                 }
@@ -771,7 +748,7 @@ shared class ExtractFunctionRefactoring(
         }
         
         String typeOrKeyword;
-        if (returns.empty && results.empty) {
+        if (editorData.returns.empty && editorData.results.empty) {
             //we're not assigning the result to anything,
             //so make a void function
             typeOrKeyword = "void";
@@ -798,7 +775,7 @@ shared class ExtractFunctionRefactoring(
             .append("(").append(params.string).append(")")
             .append(constraints.string)
             .append(" {");
-        for (result->rdec in results) {
+        for (result->rdec in editorData.results) {
             if (!result is Tree.Declaration &&
                         !rdec.variable) { //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
@@ -826,18 +803,18 @@ shared class ExtractFunctionRefactoring(
         };
         value length = end - start;
         
-        if (results.size == 1) {
-            assert (exists result->rdec = results.first);
+        if (editorData.results.size == 1) {
+            assert (exists result->rdec = editorData.results.first);
             definition
                 .append(bodyIndent)
                 .append("return ")
                 .append(rdec.name)
                 .append(";");
-        } else if (!results.empty) {
+        } else if (!editorData.results.empty) {
             definition
                 .append(bodyIndent)
                 .append("return [")
-                .append(", ".join { for (_->rdec in results) rdec.name })
+                .append(", ".join { for (_->rdec in editorData.results) rdec.name })
                 .append("];");
         }
         
@@ -849,10 +826,10 @@ shared class ExtractFunctionRefactoring(
         
         value call = newName + "(" + args.string + ");";
         value invocation = StringBuilder();
-        if (results.size == 1) {
+        if (editorData.results.size == 1) {
             //we're assigning the result of the extracted 
             //function to something
-            assert (exists result->rdec = results.first);
+            assert (exists result->rdec = editorData.results.first);
             invocation
                 .append(resultModifiers {
                     result = result;
@@ -863,13 +840,13 @@ shared class ExtractFunctionRefactoring(
                 .append(rdec.name)
                 .append(" = ")
                 .append(call);
-        } else if (!results.empty) {
+        } else if (!editorData.results.empty) {
             //we're assigning the result tuple of the extracted 
             //function to various things
-            if (results.every((e) => e.key is Tree.AttributeDeclaration && !e.item.shared)) {
+            if (editorData.results.every((e) => e.key is Tree.AttributeDeclaration && !e.item.shared)) {
                 invocation
                     .append("value [")
-                    .append(", ".join { for (_->rdec in results) rdec.name })
+                    .append(", ".join { for (_->rdec in editorData.results) rdec.name })
                     .append("] = ")
                     .append(call);
             } else {
@@ -880,7 +857,7 @@ shared class ExtractFunctionRefactoring(
                     indents.getDefaultLineDelimiter(doc) +
                             indents.getIndent(ss.last, doc);
                 variable value i = 0;
-                for (result->rdec in results) {
+                for (result->rdec in editorData.results) {
                     invocation
                         .append(ind)
                         .append(resultModifiers {
@@ -896,7 +873,7 @@ shared class ExtractFunctionRefactoring(
                     i++;
                 }
             }
-        } else if (!returns.empty) {
+        } else if (!editorData.returns.empty) {
             //we're returning the result of the extracted function
             invocation.append("return ").append(call);
         } else {
@@ -913,13 +890,12 @@ shared class ExtractFunctionRefactoring(
                 };
         
         value decStart = decNode.startIndex.intValue();
-        tfc.addEdit(InsertEdit(decStart, definition.string));
-        tfc.addEdit(ReplaceEdit(start, length, invocation.string));
-        
-        typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
+        addEditToChange(tfc, newInsertEdit(decStart, definition.string));
+        addEditToChange(tfc, newReplaceEdit(start, length, invocation.string));
+        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
+        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
         value callLoc = invocation.string.firstInclusion(call) else 0;
-        refRegion = DefaultRegion(start + definition.size + shift + callLoc, newName.size);
+        refRegion = newRegion(start + definition.size + shift + callLoc, newName.size);
     }
     
     void addLocalType(Scope scope, Scope targetScope, Type type,
@@ -981,12 +957,14 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
-    shared Boolean forceWizardMode {
+    shared actual Boolean forceWizardMode {
+        value node = editorData.node;
+        
         if (exists scope = node.scope) {
             if (is Tree.Body|Tree.Statement node,
-                exists body = body) {
-                for (s in statements) {
-                    value v = CheckStatementsVisitor(body, statements);
+                exists body = editorData.body) {
+                for (s in editorData.statements) {
+                    value v = CheckStatementsVisitor(body, editorData.statements);
                     s.visit(v);
                     if (v.problem exists) {
                         return true;
@@ -1011,26 +989,25 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
-    shared Boolean enabled
-            => if (exists sourceFile = sourceVirtualFile)
-               then editable(rootNode.unit) &&
-                    !descriptor(sourceFile) &&
-                    (node is Tree.Term ||
-                        !statements.empty &&
-                        !statements.any((statement) => statement is Tree.Constructor))
-                else false;
+    enabled => if (exists sourceFile = editorData.sourceVirtualFile)
+    then editable(editorData.rootNode.unit) &&
+                !descriptor(sourceFile) &&
+                (editorData.node is Tree.Term ||
+                    !editorData.statements.empty &&
+                    !editorData.statements.any((statement) => statement is Tree.Constructor))
+    else false;
     
-    shared [String+] nameProposals {
+    shared actual [String+] nameProposals {
         value proposals = nodes.nameProposals {
-            node = node;
-            rootNode = rootNode;
+            node = editorData.node;
+            rootNode = editorData.rootNode;
         }.collect((n) => n == "it" then "do" else n);
         
-        if (!results.empty) {
+        if (!editorData.results.empty) {
             value name =
                 "get" +
                         "And".join {
-                    for (_->rdec in results)
+                    for (_->rdec in editorData.results)
                         rdec.name[0..0].uppercased +
                                 rdec.name[1...] };
             return proposals.withLeading(name);
@@ -1039,201 +1016,6 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
-    shared String name => "Extract Function";
+    name => "Extract Function";
 }
 
-shared class FindBodyVisitor(Tree.Statement node) extends Visitor() {
-    shared variable Tree.Body? body = null;
-    shared actual void visit(Tree.Body that) {
-        super.visit(that);
-        if (node in that.statements) {
-            body = that;
-        }
-    }
-}
-
-shared class FindResultVisitor(Tree.Body scope,
-    Collection<Tree.Statement> statements)
-        extends Visitor() {
-    
-    value resultsList = ArrayList<Node->TypedDeclaration>();
-    shared List<Node->TypedDeclaration> results => resultsList;
-    
-    value possibles = HashMap<TypedDeclaration,Node>();
-    value all = HashSet<TypedDeclaration>();
-    
-    function isDefinedLocally(Declaration dec)
-            => !ModelUtil.contains(dec.scope, scope.scope.container);
-    
-    shared actual void visit(Tree.Body that) {
-        if (that is Tree.Block) {
-            super.visit(that);
-        }
-    }
-    
-    shared actual void visit(Tree.AttributeDeclaration that) {
-        super.visit(that);
-        value dec = that.declarationModel;
-        if (that.specifierOrInitializerExpression exists) {
-            if (hasOuterRefs(dec, scope, statements)) {
-                resultsList.add(that->dec);
-                all.add(dec);
-            }
-        }
-        possibles.put(dec, that);
-    }
-    
-    //TODO: Tree.AnyMethod!!!!
-    
-    shared actual void visit(Tree.AssignmentOp that) {
-        super.visit(that);
-        if (is Tree.StaticMemberOrTypeExpression leftTerm
-                    = that.leftTerm,
-            is TypedDeclaration dec = leftTerm.declaration,
-            hasOuterRefs(dec, scope, statements)
-                    && isDefinedLocally(dec)) {
-            resultsList.add(possibles.getOrDefault(dec, that) -> dec);
-            all.add(dec);
-        }
-    }
-    
-    shared actual void visit(Tree.SpecifierStatement that) {
-        super.visit(that);
-        if (is Tree.StaticMemberOrTypeExpression term
-                    = that.baseMemberExpression,
-            is TypedDeclaration dec = term.declaration,
-            hasOuterRefs(dec, scope, statements)
-                    && isDefinedLocally(dec) &&
-                    !dec in all) {
-            resultsList.add(possibles.getOrDefault(dec, that) -> dec);
-            all.add(dec);
-        }
-    }
-}
-
-Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
-    Collection<Tree.Statement> statements) {
-    if (!exists scope) {
-        return false;
-    }
-    
-    variable Integer refs = 0;
-    for (s in scope.statements) {
-        if (!statements.contains(s)) {
-            s.visit(object extends Visitor() {
-                    shared actual void visit(Tree.MemberOrTypeExpression that) {
-                        super.visit(that);
-                        if (exists dec = that.declaration,
-                            d == dec) {
-                            refs++;
-                        }
-                    }
-                    shared actual void visit(Tree.Declaration that) {
-                        super.visit(that);
-                        if (exists dec = that.declarationModel,
-                            d == dec) {
-                            refs++;
-                        }
-                    }
-                    shared actual void visit(Tree.Type that) {
-                        super.visit(that);
-                        if (exists type = that.typeModel,
-                            type.classOrInterface) {
-                            if (exists td = type.declaration,
-                                d == td) {
-                                refs++;
-                            }
-                        }
-                    }
-                });
-        }
-    }
-    return refs > 0;
-}
-
-shared class FindReturnsVisitor()
-        extends Visitor() {
-    value returnsList = ArrayList<Tree.Return>();
-    shared List<Tree.Return> returns => returnsList;
-    shared actual void visit(Tree.Declaration that) {}
-    shared actual void visit(Tree.Return that) {
-        super.visit(that);
-        if (that.expression exists) {
-            returnsList.add(that);
-        }
-    }
-}
-
-"Is the given [[declaration|currentDec]] in scope in the
- first given [[scope]], but out of scope in the second
- given [[target scope|targetScope]]?"
-Boolean isLocalReference(Declaration currentDec,
-    Scope scope, Scope targetScope)
-        => (currentDec.isDefinedInScope(scope)
-                    || scope.isInherited(currentDec)) &&
-                !(currentDec.isDefinedInScope(targetScope)
-                    || targetScope.isInherited(currentDec));
-
-class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
-        extends Visitor() {
-    
-    value results = ArrayList<Tree.BaseMemberExpression>();
-    value thisResults = ArrayList<Tree.This>();
-    
-    shared List<Tree.BaseMemberExpression> localReferences => results;
-    shared List<Tree.This> localThisReferences => thisResults;
-    
-    shared actual void visit(Tree.This that) {
-        super.visit(that);
-        if (!ModelUtil.contains(that.declarationModel, targetScope)) {
-            thisResults.add(that);
-        }
-    }
-    
-    shared actual void visit(Tree.BaseMemberExpression that) {
-        super.visit(that);
-        value currentDec = that.declaration;
-        for (bme in results) {
-            if (exists dec = bme.declaration) {
-                if (dec == currentDec) {
-                    return;
-                }
-                if (is TypedDeclaration currentDec,
-                    exists od = currentDec.originalDeclaration,
-                    od == dec) {
-                    return;
-                }
-            }
-        }
-        
-        if (isLocalReference(currentDec, scope, targetScope)) {
-            results.add(that);
-        }
-    }
-}
-
-shared Tree.Declaration? getTargetNode(Tree.Term term,
-    Tree.Declaration? target,
-    Tree.CompilationUnit rootNode) {
-    if (exists target) {
-        return target;
-    } else {
-        value fsv = FindContainerVisitor(term);
-        rootNode.visit(fsv);
-        if (exists dec = fsv.declaration) {
-            if (is Tree.AttributeDeclaration dec) {
-                if (exists container
-                            = nodes.getContainer(rootNode,
-                                dec.declarationModel)) {
-                    return container;
-                } else {
-                    return dec;
-                }
-            } else {
-                return dec;
-            }
-        } else {
-            return null;
-        }
-    }
-}

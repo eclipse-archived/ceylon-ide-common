@@ -1,8 +1,12 @@
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals
+    ImportProposals,
+    CommonDocument
 }
 import com.redhat.ceylon.ide.common.util {
     Indents
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
 }
 
 shared interface PlatformServices {
@@ -16,6 +20,8 @@ shared interface PlatformServices {
     importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal Indents<IDocument> indents<IDocument>();
+    
+    shared formal TextChange createTextChange(String desc, CommonDocument|PhasedUnit input);
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -24,8 +30,9 @@ variable PlatformServices _platformServices = object satisfies PlatformServices 
     shared actual IdeUtils utils() => DefaultIdeUtils();
     shared actual ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>() => nothing;
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
-    shared actual Indents<IDocument> indents<IDocument>() => nothing;   
+    shared actual Indents<IDocument> indents<IDocument>() => nothing;
+    shared actual TextChange createTextChange(String desc, CommonDocument|PhasedUnit input) => nothing;
 };
 
-PlatformServices platformServices => _platformServices;
+shared PlatformServices platformServices => _platformServices;
 shared IdeUtils platformUtils => platformServices.utils();

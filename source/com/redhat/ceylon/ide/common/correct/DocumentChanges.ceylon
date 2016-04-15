@@ -29,4 +29,11 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
 
 shared interface CommonDocument {
     shared formal Integer getLineOfOffset(Integer offset);
+    shared formal Integer getLineStartOffset(Integer line);
+    shared formal Integer getLineEndOffset(Integer line);
+    
+    shared formal String getText(Integer offset, Integer length);
+    
+    shared formal String getLineContent(Integer line);
+   
 }

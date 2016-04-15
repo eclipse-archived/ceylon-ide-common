@@ -47,6 +47,17 @@ import java.util {
     JSet=Set,
     Collections
 }
+import com.redhat.ceylon.ide.common.platform {
+    InsertEdit,
+    TextChange,
+    TextEdit,
+    platformServices,
+    DeleteEdit,
+    ReplaceEdit
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 
 
 shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>
@@ -449,4 +460,48 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
             }
         }
     }
+}
+
+shared class CommonImportProposals(CommonDocument doc) 
+        satisfies ImportProposals<PhasedUnit,Nothing,CommonDocument,InsertEdit,TextEdit,TextChange> {
+    
+    addEditToChange(TextChange change, TextEdit edit) => change.addEdit(edit);
+    
+    createImportChange(PhasedUnit file) 
+            => platformServices.createTextChange("", file);
+    
+    getDocContent(CommonDocument doc, Integer start, Integer length) 
+            => doc.getText(start, length);
+    
+    getDocumentForChange(TextChange change) => change.document;
+    
+    getInsertedText(TextEdit edit) 
+            => if (is InsertEdit edit) then edit.text else "";
+    
+    getLineContent(CommonDocument doc, Integer line) 
+            => doc.getLineContent(line);
+    
+    getLineOfOffset(CommonDocument doc, Integer offset) 
+            => doc.getLineOfOffset(offset);
+    
+    getLineStartOffset(CommonDocument doc, Integer line) 
+            => doc.getLineStartOffset(line);
+    
+    hasChildren(TextChange change) => change.hasEdits;
+    
+    indents => nothing;
+    
+    initMultiEditChange(TextChange change) => change.initMultiEdit();
+    
+    newDeleteEdit(Integer start, Integer length) 
+            => DeleteEdit(start, length);
+    
+    newImportProposal(String description, TextChange correctionChange) => nothing;
+    
+    newInsertEdit(Integer position, String text)
+            => InsertEdit(position, text);
+    
+    newReplaceEdit(Integer start, Integer length, String text)
+            => ReplaceEdit(start, length, text);
+
 }
