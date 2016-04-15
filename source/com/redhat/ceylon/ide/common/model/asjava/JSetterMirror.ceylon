@@ -25,7 +25,7 @@ shared class JSetterMirror(Value decl) extends AbstractMethodMirror(decl) {
     shared actual List<VariableMirror> parameters
             => Collections.singletonList<VariableMirror>(JVariableMirror(decl));
     
-    shared actual TypeMirror returnType => nothing;
+    shared actual TypeMirror returnType => JTypeMirror(decl.type);
     
     shared actual List<TypeParameterMirror> typeParameters
             => Collections.emptyList<TypeParameterMirror>();
