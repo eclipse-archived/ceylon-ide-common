@@ -53,7 +53,8 @@ import com.redhat.ceylon.ide.common.platform {
     TextEdit,
     platformServices,
     DeleteEdit,
-    ReplaceEdit
+    ReplaceEdit,
+    commonIndents
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
@@ -489,7 +490,7 @@ shared class CommonImportProposals(CommonDocument doc)
     
     hasChildren(TextChange change) => change.hasEdits;
     
-    indents => nothing;
+    indents => commonIndents;
     
     initMultiEditChange(TextChange change) => change.initMultiEdit();
     

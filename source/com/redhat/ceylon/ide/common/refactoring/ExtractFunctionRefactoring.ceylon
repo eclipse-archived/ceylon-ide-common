@@ -27,7 +27,8 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     TextChange,
     InsertEdit,
-    ReplaceEdit
+    ReplaceEdit,
+    indents=commonIndents
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -65,7 +66,6 @@ createExtractFunctionRefactoring(
     Integer selectionStop,
     Tree.CompilationUnit rootNode,
     JList<CommonToken> tokens,
-    String functionName,
     Tree.Declaration? target,
     {PhasedUnit*} allUnits,
     VirtualFile vfile) {
@@ -135,6 +135,8 @@ createExtractFunctionRefactoring(
         returns = returnsVisitor.returns;
     }
     
+    value functionName = nodes.nameProposals(node).first;
+
     if (exists node) {
         return ExtractFunctionRefactoring(
             doc,
@@ -183,8 +185,6 @@ shared class ExtractFunctionRefactoring(
     shared variable DefaultRegion? decRegion = null;
     shared variable DefaultRegion? refRegion = null;
 
-    value indents => platformServices.indents<CommonDocument>();
-    
     shared JList<DefaultRegion> dupeRegions = JArrayList<DefaultRegion>();
     
     shared class CheckStatementsVisitor(Tree.Body scope,
@@ -377,7 +377,7 @@ shared class ExtractFunctionRefactoring(
         };
         
         value indent =
-            indents.getDefaultLineDelimiter(doc) +
+            doc.getDefaultLineDelimiter() +
                     indents.getIndent(decNode, doc);
         value extraIndent =
             indent +
@@ -727,7 +727,7 @@ shared class ExtractFunctionRefactoring(
         }
         
         value indent =
-            indents.getDefaultLineDelimiter(doc) +
+            doc.getDefaultLineDelimiter() +
                     indents.getIndent(decNode, doc);
         value extraIndent =
             indent +
@@ -877,7 +877,7 @@ shared class ExtractFunctionRefactoring(
                     .append("value tuple = ")
                     .append(call);
                 value ind =
-                    indents.getDefaultLineDelimiter(doc) +
+                    doc.getDefaultLineDelimiter() +
                             indents.getIndent(ss.last, doc);
                 variable value i = 0;
                 for (result->rdec in results) {

@@ -1,3 +1,4 @@
+
 shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {
 
@@ -35,5 +36,6 @@ shared interface CommonDocument {
     shared formal String getText(Integer offset, Integer length);
     
     shared formal String getLineContent(Integer line);
-   
+    
+    shared formal String getDefaultLineDelimiter();
 }
