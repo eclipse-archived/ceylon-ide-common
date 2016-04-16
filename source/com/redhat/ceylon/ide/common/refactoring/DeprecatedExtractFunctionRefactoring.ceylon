@@ -187,28 +187,25 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
         
         shared actual void visit(Tree.SpecifierStatement that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term
-                            = that.baseMemberExpression) {
-                    if (exists d = term.declaration,
-                        notResultRef(d),
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "a specification statement for a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term
+                        = that.baseMemberExpression, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "a specification statement for a declaration used or defined elsewhere";
             }
         }
         
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term = that.leftTerm) {
-                    if (exists d = term.declaration,
-                        notResultRef(d),
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "an assignment to a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term 
+                        = that.leftTerm, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "an assignment to a declaration used or defined elsewhere";
             }
         }
         
@@ -292,7 +289,11 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        value decNode = getTargetNode(term, editorData.target, rootNode);
+        value decNode = getTargetNode {
+            term = term;
+            target = editorData.target;
+            rootNode = rootNode;
+        };
         if (!exists decNode) {
             return;
         }
@@ -348,12 +349,12 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
         };
         
         value indent =
-            indents.getDefaultLineDelimiter(doc) +
-                    indents.getIndent(decNode, doc);
+                indents.getDefaultLineDelimiter(doc) +
+                indents.getIndent(decNode, doc);
         value extraIndent =
-            indent +
-                    indents.defaultIndent +
-                    indents.defaultIndent;
+                indent +
+                indents.defaultIndent +
+                indents.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -439,11 +440,29 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
                 };
         
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, definition));
-        addEditToChange(tfc, newReplaceEdit(start, length, invocation));
-        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
-        refRegion = newRegion(refStart + shift + definition.size, newName.size);
+        addEditToChange(tfc, 
+            newInsertEdit {
+                position = decStart;
+                text = definition;
+            });
+        addEditToChange(tfc, 
+            newReplaceEdit {
+                start = start;
+                length = length;
+                text = invocation;
+            });
+        typeRegion = newRegion {
+            start = decStart + shift;
+            length = typeOrKeyword.size;
+        };
+        decRegion = newRegion {
+            start = decStart + shift + typeOrKeyword.size + 1;
+            length = newName.size;
+        };
+        refRegion = newRegion {
+            start = refStart + shift + definition.size;
+            length = newName.size;
+        };
         
         object extends Visitor() {
             variable value backshift = length - invocation.size;
@@ -463,9 +482,13 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
                     }) {
                     value invocation =
                         newName +
-                                "(" +
-                                asArgList(args, localThisRefs, tokens) +
-                                ")";
+                        "(" +
+                        asArgList {
+                            localRefs = args;
+                            localThisRefs = localThisRefs;
+                            tokens = tokens;
+                        } +
+                        ")";
                     addEditToChange(tfc,
                         newReplaceEdit {
                             start = tstart;
@@ -504,9 +527,13 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
                                 }) {
                                 value invocation =
                                     newName +
-                                            "(" +
-                                            asArgList(args, localThisRefs, pu.tokens) +
-                                            ")";
+                                    "(" +
+                                    asArgList {
+                                        localRefs = args;
+                                        localThisRefs = localThisRefs;
+                                        tokens = pu.tokens;
+                                    } +
+                                    ")";
                                 addEditToChange(tc,
                                     newReplaceEdit {
                                         start = tstart;
@@ -676,30 +703,28 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
             value result = bmed in editorData.results.map(Entry.item);
             //ignore it if it is a result of the function 
             //and is not a variable
-            if (variable || !result) {
-                if (done.add(bmed)) {
-                    if (!params.empty) {
-                        params.append(", ");
-                        args.append(", ");
-                    }
-                    
-                    if (is Value bmed, bmed.variable) {
-                        params.append("variable ");
-                    }
-                    
-                    if (is TypedDeclaration bmed,
-                        bmed.dynamicallyTyped) {
-                        params.append("dynamic");
-                    } else {
-                        value paramType = unit.denotableType(bme.typeModel);
-                        importProposals.importType(imports, paramType, rootNode);
-                        params.append(paramType.asSourceCodeString(unit));
-                    }
-                    
-                    value id = bme.identifier;
-                    params.append(" ").append(id.text);
-                    args.append(id.text);
+            if (variable || !result, done.add(bmed)) {
+                if (!params.empty) {
+                    params.append(", ");
+                    args.append(", ");
                 }
+                
+                if (is Value bmed, bmed.variable) {
+                    params.append("variable ");
+                }
+                
+                if (is TypedDeclaration bmed,
+                    bmed.dynamicallyTyped) {
+                    params.append("dynamic");
+                } else {
+                    value paramType = unit.denotableType(bme.typeModel);
+                    importProposals.importType(imports, paramType, rootNode);
+                    params.append(paramType.asSourceCodeString(unit));
+                }
+                
+                value id = bme.identifier;
+                params.append(" ").append(id.text);
+                args.append(id.text);
             }
         }
         
@@ -890,18 +915,37 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
                 };
         
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, definition.string));
-        addEditToChange(tfc, newReplaceEdit(start, length, invocation.string));
-        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
+        addEditToChange(tfc,
+            newInsertEdit {
+                position = decStart;
+                text = definition.string;
+            });
+        addEditToChange(tfc, 
+            newReplaceEdit {
+                start = start;
+                length = length;
+                text = invocation.string;
+            });
+        typeRegion = newRegion {
+            start = decStart + shift;
+            length = typeOrKeyword.size;
+        };
+        decRegion = newRegion {
+            start = decStart + shift + typeOrKeyword.size + 1;
+            length = newName.size;
+        };
         value callLoc = invocation.string.firstInclusion(call) else 0;
-        refRegion = newRegion(start + definition.size + shift + callLoc, newName.size);
+        refRegion = newRegion {
+            start = start + definition.size + shift + callLoc;
+            length = newName.size;
+        };
     }
     
     void addLocalType(Scope scope, Scope targetScope, Type type,
         MutableList<TypeDeclaration> localTypes,
         MutableList<Type> visited) {
-        if (!type.unknown, exists typeDec = type.declaration) {
+        if (!type.unknown, 
+            exists typeDec = type.declaration) {
             switch (typeDec)
             case (is UnionType) {
                 for (ct in type.caseTypes) {
@@ -928,8 +972,8 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
             else if (!type in visited) {
                 visited.add(type);
                 
-                if (isLocalReference(typeDec, scope, targetScope) &&
-                            !typeDec in localTypes) {
+                if (isLocalReference(typeDec, scope, targetScope) 
+                        && !typeDec in localTypes) {
                     localTypes.add(typeDec);
                 }
                 
@@ -959,7 +1003,6 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
     
     shared actual Boolean forceWizardMode {
         value node = editorData.node;
-        
         if (exists scope = node.scope) {
             if (is Tree.Body|Tree.Statement node,
                 exists body = editorData.body) {
@@ -973,12 +1016,12 @@ shared interface DeprecatedExtractFunctionRefactoring<IFile, ICompletionProposal
             } else if (is Tree.Term node) {
                 variable value problem = false;
                 node.visit(object extends Visitor() {
-                        shared actual void visit(Tree.Body that) {}
-                        shared actual void visit(Tree.AssignmentOp that) {
-                            problem = true;
-                            super.visit(that);
-                        }
-                    });
+                    shared actual void visit(Tree.Body that) {}
+                    shared actual void visit(Tree.AssignmentOp that) {
+                        problem = true;
+                        super.visit(that);
+                    }
+                });
                 if (problem) {
                     return true;
                 }
