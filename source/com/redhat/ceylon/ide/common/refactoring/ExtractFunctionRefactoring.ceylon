@@ -63,7 +63,7 @@ shared ExtractFunctionRefactoring?
 createExtractFunctionRefactoring(
     CommonDocument doc,
     Integer selectionStart,
-    Integer selectionStop,
+    Integer selectionEnd,
     Tree.CompilationUnit rootNode,
     JList<CommonToken> tokens,
     Tree.Declaration? target,
@@ -72,7 +72,7 @@ createExtractFunctionRefactoring(
     
     function selected(Node node)
             => node.startIndex.intValue() >= selectionStart
-                    && node.endIndex.intValue() <= selectionStop;
+            && node.endIndex.intValue() <= selectionEnd;
     
     variable List<Node->TypedDeclaration> results = [];
     variable List<Tree.Return> returns = [];
@@ -82,7 +82,7 @@ createExtractFunctionRefactoring(
         node = rootNode;
         tokens = tokens;
         startOffset = selectionStart;
-        endOffset = selectionStop;
+        endOffset = selectionEnd;
     };
     
     //additional initialization for extraction of statements
@@ -138,22 +138,24 @@ createExtractFunctionRefactoring(
     value functionName = nodes.nameProposals(node).first;
 
     if (exists node) {
-        return ExtractFunctionRefactoring(
-            doc,
-            functionName,
-            rootNode,
-            tokens,
-            node,
-            results,
-            returns,
-            statements,
-            bodyNode,
-            target,
-            allUnits,
-            vfile
-        );
+        return ExtractFunctionRefactoring {
+            doc = doc;
+            newName = functionName;
+            rootNode = rootNode;
+            tokens = tokens;
+            node = node;
+            results = results;
+            returns = returns;
+            statements = statements;
+            body = bodyNode;
+            target = target;
+            allUnits = allUnits;
+            sourceVirtualFile = vfile;
+        };
     }
-    return null;
+    else {
+        return null;
+    }
 }
 
 shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
@@ -172,10 +174,15 @@ shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
 
 shared class ExtractFunctionRefactoring(
     CommonDocument doc, String newName,
-    shared Tree.CompilationUnit rootNode, JList<CommonToken> tokens, shared Node node,
-    List<Node->TypedDeclaration> results, List<Tree.Return> returns,
-    shared List<Tree.Statement> statements, shared Tree.Body? body,
-    Tree.Declaration? target, {PhasedUnit*} allUnits,
+    shared Tree.CompilationUnit rootNode, 
+    JList<CommonToken> tokens, 
+    shared Node node,
+    List<Node->TypedDeclaration> results, 
+    List<Tree.Return> returns,
+    shared List<Tree.Statement> statements, 
+    shared Tree.Body? body,
+    Tree.Declaration? target, 
+    {PhasedUnit*} allUnits,
     VirtualFile? sourceVirtualFile)
         extends NewAbstractRefactoring(false, false) {
     
@@ -185,13 +192,15 @@ shared class ExtractFunctionRefactoring(
     shared variable DefaultRegion? decRegion = null;
     shared variable DefaultRegion? refRegion = null;
 
-    shared JList<DefaultRegion> dupeRegions = JArrayList<DefaultRegion>();
+    shared JList<DefaultRegion> dupeRegions 
+            = JArrayList<DefaultRegion>();
     
     shared class CheckStatementsVisitor(Tree.Body scope,
         Collection<Tree.Statement> statements)
             extends Visitor() {
         
         variable shared String? problem = null;
+        
         shared actual void visit(Tree.Body that) {
             if (that == scope) {
                 super.visit(that);
@@ -218,28 +227,25 @@ shared class ExtractFunctionRefactoring(
         
         shared actual void visit(Tree.SpecifierStatement that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term
-                            = that.baseMemberExpression) {
-                    if (exists d = term.declaration,
-                        notResultRef(d),
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "a specification statement for a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term
+                    = that.baseMemberExpression, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "a specification statement for a declaration used or defined elsewhere";
             }
         }
         
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term = that.leftTerm) {
-                    if (exists d = term.declaration,
-                        notResultRef(d),
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "an assignment to a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term 
+                    = that.leftTerm, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "an assignment to a declaration used or defined elsewhere";
             }
         }
         
@@ -261,7 +267,8 @@ shared class ExtractFunctionRefactoring(
     
     function typeParameters(
         ArrayList<TypeDeclaration> localTypes,
-        String extraIndent, Unit unit,
+        String extraIndent, 
+        Unit unit,
         JSet<Declaration> imports) {
         value typeParams = StringBuilder();
         value constraints = StringBuilder();
@@ -533,9 +540,9 @@ shared class ExtractFunctionRefactoring(
                                 }) {
                                 value invocation =
                                     newName +
-                                            "(" +
-                                            asArgList(args, localThisRefs, pu.tokens) +
-                                            ")";
+                                    "(" +
+                                    asArgList(args, localThisRefs, pu.tokens) +
+                                    ")";
                                 tc.addEdit(ReplaceEdit {
                                         start = tstart;
                                         length = tlength;
@@ -925,7 +932,8 @@ shared class ExtractFunctionRefactoring(
     void addLocalType(Scope scope, Scope targetScope, Type type,
         MutableList<TypeDeclaration> localTypes,
         MutableList<Type> visited) {
-        if (!type.unknown, exists typeDec = type.declaration) {
+        if (!type.unknown, 
+            exists typeDec = type.declaration) {
             switch (typeDec)
             case (is UnionType) {
                 for (ct in type.caseTypes) {
@@ -952,8 +960,8 @@ shared class ExtractFunctionRefactoring(
             else if (!type in visited) {
                 visited.add(type);
                 
-                if (isLocalReference(typeDec, scope, targetScope) &&
-                            !typeDec in localTypes) {
+                if (isLocalReference(typeDec, scope, targetScope) 
+                        && !typeDec in localTypes) {
                     localTypes.add(typeDec);
                 }
                 
