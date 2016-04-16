@@ -1128,30 +1128,30 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
     for (s in scope.statements) {
         if (!s in statements) {
             s.visit(object extends Visitor() {
-                    shared actual void visit(Tree.MemberOrTypeExpression that) {
-                        super.visit(that);
-                        if (exists dec = that.declaration,
-                            d == dec) {
-                            refs++;
-                        }
+                shared actual void visit(Tree.MemberOrTypeExpression that) {
+                    super.visit(that);
+                    if (exists dec = that.declaration,
+                        d == dec) {
+                        refs++;
                     }
-                    shared actual void visit(Tree.Declaration that) {
-                        super.visit(that);
-                        if (exists dec = that.declarationModel,
-                            d == dec) {
-                            refs++;
-                        }
+                }
+                shared actual void visit(Tree.Declaration that) {
+                    super.visit(that);
+                    if (exists dec = that.declarationModel,
+                        d == dec) {
+                        refs++;
                     }
-                    shared actual void visit(Tree.Type that) {
-                        super.visit(that);
-                        if (exists type = that.typeModel,
-                            type.classOrInterface, 
-                            exists td = type.declaration,
-                                d == td) {
-                            refs++;
-                        }
+                }
+                shared actual void visit(Tree.Type that) {
+                    super.visit(that);
+                    if (exists type = that.typeModel,
+                        type.classOrInterface, 
+                        exists td = type.declaration,
+                        d == td) {
+                        refs++;
                     }
-                });
+                }
+            });
         }
     }
     return refs > 0;
