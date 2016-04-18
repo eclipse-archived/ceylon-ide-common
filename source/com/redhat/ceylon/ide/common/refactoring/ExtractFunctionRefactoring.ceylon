@@ -28,7 +28,8 @@ import com.redhat.ceylon.ide.common.platform {
     TextChange,
     InsertEdit,
     ReplaceEdit,
-    indents=commonIndents
+    indents=commonIndents,
+    CompositeChange
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -68,7 +69,8 @@ createExtractFunctionRefactoring(
     JList<CommonToken> tokens,
     Tree.Declaration? target,
     {PhasedUnit*} allUnits,
-    VirtualFile vfile) {
+    VirtualFile vfile,
+    String? functionName = null) {
     
     function selected(Node node)
             => node.startIndex.intValue() >= selectionStart
@@ -135,12 +137,10 @@ createExtractFunctionRefactoring(
         returns = returnsVisitor.returns;
     }
     
-    value functionName = nodes.nameProposals(node).first;
-
     if (exists node) {
         return ExtractFunctionRefactoring {
             doc = doc;
-            newName = functionName;
+            newName = functionName else nodes.nameProposals(node).first;
             rootNode = rootNode;
             tokens = tokens;
             node = node;
@@ -173,7 +173,7 @@ shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
 }
 
 shared class ExtractFunctionRefactoring(
-    CommonDocument doc, String newName,
+    CommonDocument doc, shared variable String newName,
     shared Tree.CompilationUnit rootNode, 
     JList<CommonToken> tokens, 
     shared Node node,
@@ -195,6 +195,18 @@ shared class ExtractFunctionRefactoring(
     shared JList<DefaultRegion> dupeRegions 
             = JArrayList<DefaultRegion>();
     
+    class CheckExpressionVisitor() extends Visitor() {
+        shared variable String? problem = null;
+        
+        shared actual void visit(Tree.Body that) {
+        }
+        
+        shared actual void visit(Tree.AssignmentOp that) {
+            super.visit(that);
+            problem = "an assignment";
+        }
+    }
+
     shared class CheckStatementsVisitor(Tree.Body scope,
         Collection<Tree.Statement> statements)
             extends Visitor() {
@@ -255,13 +267,30 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
-    shared TextChange build() {
+    shared CompositeChange|TextChange build() {
+        "The changes applied to the current editor"
         value tfc = platformServices.createTextChange(name, doc);
-        if (is Tree.Term node) {
+        
+        if (is Tree.Term term = node,
+            exists tn = getTargetNode(term, target, rootNode), 
+            tn.declarationModel.toplevel) {
+            
+            value cc = platformServices.createCompositeChange(name);
+
+            //if we're extracting a toplevel function, look for
+            //replacements in other files in the same package
+            extractExpression(tfc, term, cc);
+            
+            if (cc.hasChildren) {
+                cc.addTextChange(tfc);
+                return cc;
+            }
+        } else if (is Tree.Term node) {
             extractExpression(tfc, node);
         } else {
             extractStatements(tfc);
         }
+
         return tfc;
     }
     
@@ -320,7 +349,7 @@ shared class ExtractFunctionRefactoring(
     }
     
     void extractExpression(TextChange tfc, Tree.Term term,
-        TextChange? change = null) {
+        CompositeChange? cc = null) {
         tfc.initMultiEdit();
         value unit = term.unit;
         
@@ -519,7 +548,7 @@ shared class ExtractFunctionRefactoring(
             }
         }.visit(rootNode);
         
-        if (exists change, dec.toplevel) {
+        if (exists cc, dec.toplevel) {
             for (pu in allUnits) {
                 //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
@@ -556,7 +585,7 @@ shared class ExtractFunctionRefactoring(
                     }.visit(pu.compilationUnit);
                     
                     if (found) {
-                        change.addChangesFrom(tc);
+                        cc.addTextChange(tc);
                     }
                 }
             }
@@ -989,6 +1018,28 @@ shared class ExtractFunctionRefactoring(
         }
     }
     
+    shared String? checkInitialConditions() {
+        if (is Tree.Body node) {
+            value body = node;
+            for (s in statements) {
+                value v = CheckStatementsVisitor(body, statements);
+                s.visit(v);
+                if (exists prob = v.problem) {
+                    return "Selected statements contain " + prob
+                            + " at  " + s.location;
+                }
+            }
+        } else if (is Tree.Term node) {
+            value v = CheckExpressionVisitor();
+            node.visit(v);
+            if (exists prob = v.problem) {
+                return "Selected expression contains " + prob;
+            }
+        }
+        
+        return null;
+    }
+
     shared Boolean forceWizardMode {
         if (exists scope = node.scope) {
             if (is Tree.Body|Tree.Statement node,

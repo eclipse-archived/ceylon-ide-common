@@ -29,11 +29,14 @@ shared class ReplaceEdit(start, length, text) satisfies TextEdit {
 shared interface TextChange {
     shared formal void addEdit(TextEdit edit);
     
-    shared formal void addChangesFrom(TextChange other);
- 
     shared formal void initMultiEdit();
  
     shared formal Boolean hasEdits;
  
     shared formal CommonDocument document;
+}
+
+shared interface CompositeChange {
+    shared formal void addTextChange(TextChange change);
+    shared formal Boolean hasChildren;    
 }

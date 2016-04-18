@@ -24,6 +24,7 @@ shared interface PlatformServices {
     shared formal Indents<IDocument> indents<IDocument>();
 
     shared formal TextChange createTextChange(String desc, CommonDocument|PhasedUnit input);
+    shared formal CompositeChange createCompositeChange(String desc);
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -34,6 +35,7 @@ variable PlatformServices _platformServices = object satisfies PlatformServices 
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
     shared actual Indents<IDocument> indents<IDocument>() => nothing;
     shared actual TextChange createTextChange(String desc, CommonDocument|PhasedUnit input) => nothing;
+    createCompositeChange(String desc) => nothing;
 };
 
 shared PlatformServices platformServices => _platformServices;
