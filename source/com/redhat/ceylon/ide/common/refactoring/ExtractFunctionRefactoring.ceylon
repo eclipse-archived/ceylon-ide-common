@@ -279,30 +279,31 @@ shared class ExtractFunctionRefactoring(
         "The changes applied to the current editor"
         value tfc = platformServices.createTextChange(name, doc);
         
-        if (is Tree.Term node,
-            exists tn = getTargetNode {
-                term = node;
-                target = target;
-                rootNode = rootNode;
-            }, 
-            tn.declarationModel.toplevel) {
-            
-            value cc = platformServices.createCompositeChange(name);
-
-            //if we're extracting a toplevel function, look for
-            //replacements in other files in the same package
-            extractExpression(tfc, node, cc);
-            
-            if (cc.hasChildren) {
-                cc.addTextChange(tfc);
-                return cc;
+        if (is Tree.Term node) {
+            if (exists tn = getTargetNode {
+                    term = node;
+                    target = target;
+                    rootNode = rootNode;
+                }, 
+                tn.declarationModel.toplevel) {
+                
+                value cc = platformServices.createCompositeChange(name);
+    
+                //if we're extracting a toplevel function, look for
+                //replacements in other files in the same package
+                extractExpression(tfc, node, cc);
+                
+                if (cc.hasChildren) {
+                    cc.addTextChange(tfc);
+                    return cc;
+                }
+            } else {
+                extractExpression(tfc, node);
             }
-        } else if (is Tree.Term node) {
-            extractExpression(tfc, node);
         } else {
             extractStatements(tfc);
         }
-
+        
         return tfc;
     }
     
