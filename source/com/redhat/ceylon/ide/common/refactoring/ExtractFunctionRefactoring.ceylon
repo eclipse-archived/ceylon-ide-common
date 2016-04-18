@@ -80,11 +80,12 @@ createExtractFunctionRefactoring(
                 }) 
         then ExtractFunctionRefactoring {
             doc = doc;
-            newName = functionName else nodes.nameProposals(node).first;
+            newName = 
+                    functionName 
+                    else nodes.nameProposals(node).first;
             rootNode = rootNode;
             tokens = tokens;
-            selectionStart = selectionStart;
-            selectionEnd = selectionEnd;
+            selection = [selectionStart, selectionEnd];
             node = node;
             target = target;
             moduleUnits = moduleUnits;
@@ -110,17 +111,19 @@ shared class ExtractFunctionRefactoring(
     shared variable String newName,
     shared Tree.CompilationUnit rootNode, 
     JList<CommonToken> tokens, 
-    Integer selectionStart,
-    Integer selectionEnd,
+    Integer[2] selection,
     shared Node node,
     Tree.Declaration? target,
     {PhasedUnit*} moduleUnits,
     VirtualFile sourceVirtualFile)
         extends NewAbstractRefactoring(false, false) {
     
+    function selected(Node node)
+            => node.startIndex.intValue() >= selection[0]
+            && node.endIndex.intValue() <= selection[1];
+    
     function bodyAndStatements(Node node, 
-            Tree.CompilationUnit rootNode, 
-            Boolean(Node) selected) {
+            Tree.CompilationUnit rootNode) {
         switch (node)
         case (is Tree.Term) {
             //we're extracting a single expression
@@ -128,9 +131,8 @@ shared class ExtractFunctionRefactoring(
         case (is Tree.Body) {        
             //we're extracting multiple statements
             return [node, 
-                [for (s in node.statements)
-                 if (selected(s))
-                 s]];
+                [ for (s in node.statements)
+                  if (selected(s)) s ]];
         }
         else {
             value statement
@@ -179,9 +181,6 @@ shared class ExtractFunctionRefactoring(
             = bodyAndStatements {
         node = node;
         rootNode = rootNode;
-        function selected(Node node)
-                => node.startIndex.intValue() >= selectionStart
-                && node.endIndex.intValue() <= selectionEnd;
     };
     //TODO: work around compiler bug in destructuring!
     value body = bs[0];
