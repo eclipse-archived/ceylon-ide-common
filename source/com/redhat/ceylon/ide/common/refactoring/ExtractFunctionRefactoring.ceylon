@@ -68,103 +68,36 @@ createExtractFunctionRefactoring(
     Tree.CompilationUnit rootNode,
     JList<CommonToken> tokens,
     Tree.Declaration? target,
-    {PhasedUnit*} allUnits,
+    {PhasedUnit*} moduleUnits,
     VirtualFile vfile,
-    String? functionName = null) {
-    
-    function selected(Node node)
-            => node.startIndex.intValue() >= selectionStart
-            && node.endIndex.intValue() <= selectionEnd;
-    
-    variable List<Node->TypedDeclaration> results = [];
-    variable List<Tree.Return> returns = [];
-    variable List<Tree.Statement> statements = [];
-    
-    value node = nodes.findNode {
-        node = rootNode;
-        tokens = tokens;
-        startOffset = selectionStart;
-        endOffset = selectionEnd;
-    };
-    
-    //additional initialization for extraction of statements
-    //as opposed to extraction of an expression
-    
-    variable Tree.Body? bodyNode = null;
-    switch (node)
-    case (null) {
-        return null;
-    }
-    case (is Tree.Term) {
-        //we're extracting a single expression
-    }
-    case (is Tree.Body) {
-        //we're extracting multiple statements
-        statements = [for (s in node.statements)
-                        if (selected(s))
-                            s];
-        bodyNode = node;
-    }
-    else {
-        value statement
-                = nodes.findStatement(rootNode, node);
-        if (exists statement) {
-            //we're extracting a single statement
-            value fbv = FindBodyVisitor(statement);
-            fbv.visit(rootNode);
-            if (exists found = fbv.body) {
-                statements = [statement];
-                bodyNode = found;
-                //node = body;
-            }
-        }
-    }
-    
-    if (exists body = bodyNode) {
-        value resultsVisitor = FindResultVisitor {
-            scope = body;
-            statements = statements;
-        };
-        for (s in statements) {
-            s.visit(resultsVisitor);
-        }
-        results = resultsVisitor.results;
-        
-        value returnsVisitor = FindReturnsVisitor();
-        for (s in statements) {
-            s.visit(returnsVisitor);
-        }
-        returns = returnsVisitor.returns;
-    }
-    
-    if (exists node) {
-        return ExtractFunctionRefactoring {
+    String? functionName = null) 
+        => if (exists node 
+                = nodes.findNode {
+                    node = rootNode;
+                    tokens = tokens;
+                    startOffset = selectionStart;
+                    endOffset = selectionEnd;
+                }) 
+        then ExtractFunctionRefactoring {
             doc = doc;
             newName = functionName else nodes.nameProposals(node).first;
             rootNode = rootNode;
             tokens = tokens;
+            selectionStart = selectionStart;
+            selectionEnd = selectionEnd;
             node = node;
-            results = results;
-            returns = returns;
-            statements = statements;
-            body = bodyNode;
             target = target;
-            allUnits = allUnits;
+            moduleUnits = moduleUnits;
             sourceVirtualFile = vfile;
-        };
-    }
-    else {
-        return null;
-    }
-}
+        }
+        else null;
 
 shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
-    shared Tree.Term unparenthesize(Tree.Term term) {
-        if (is Tree.Expression term, !is Tree.Tuple t = term.term) {
-            return unparenthesize(term.term);
-        }
-        return term;
-    }
+    shared Tree.Term unparenthesize(Tree.Term term) 
+            => if (is Tree.Expression term, 
+                  !is Tree.Tuple t = term.term) 
+            then unparenthesize(term.term) 
+            else term;
     
     shared variable Type? type = null;
     shared variable Boolean canBeInferred = false;
@@ -173,33 +106,109 @@ shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
 }
 
 shared class ExtractFunctionRefactoring(
-    CommonDocument doc, shared variable String newName,
+    CommonDocument doc, 
+    shared variable String newName,
     shared Tree.CompilationUnit rootNode, 
     JList<CommonToken> tokens, 
+    Integer selectionStart,
+    Integer selectionEnd,
     shared Node node,
-    List<Node->TypedDeclaration> results, 
-    List<Tree.Return> returns,
-    shared List<Tree.Statement> statements, 
-    shared Tree.Body? body,
-    Tree.Declaration? target, 
-    {PhasedUnit*} allUnits,
-    VirtualFile? sourceVirtualFile)
+    Tree.Declaration? target,
+    {PhasedUnit*} moduleUnits,
+    VirtualFile sourceVirtualFile)
         extends NewAbstractRefactoring(false, false) {
+    
+    function bodyAndStatements(Node node, 
+            Tree.CompilationUnit rootNode, 
+            Boolean(Node) selected) {
+        switch (node)
+        case (is Tree.Term) {
+            //we're extracting a single expression
+        }
+        case (is Tree.Body) {        
+            //we're extracting multiple statements
+            return [node, 
+                [for (s in node.statements)
+                 if (selected(s))
+                 s]];
+        }
+        else {
+            value statement
+                    = nodes.findStatement(rootNode, node);
+            if (exists statement) {
+                //we're extracting a single statement
+                value fbv = FindBodyVisitor(statement);
+                fbv.visit(rootNode);
+                if (exists found = fbv.body) {
+                    return [found, [statement]];
+                }
+            }
+        }
+        return [null, []];
+    }
+    
+    function resultsAndReturns(Tree.Body? body, 
+            {Tree.Statement*} statements) {
+        if (exists body) {
+            
+            value resultsVisitor 
+                    = FindResultVisitor {
+                scope = body;
+                statements = statements;
+            };
+            value returnsVisitor 
+                    = FindReturnsVisitor();
+            
+            for (s in statements) {
+                s.visit(resultsVisitor);
+                s.visit(returnsVisitor);
+            }
+            
+            return [resultsVisitor.results, 
+                    returnsVisitor.returns];
+        }
+        else {
+            return [[], []];       
+        }
+    }
+    
+    //additional initialization for extraction of statements
+    //as opposed to extraction of an expression
+    
+    value bs
+            = bodyAndStatements {
+        node = node;
+        rootNode = rootNode;
+        function selected(Node node)
+                => node.startIndex.intValue() >= selectionStart
+                && node.endIndex.intValue() <= selectionEnd;
+    };
+    //TODO: work around compiler bug in destructuring!
+    value body = bs[0];
+    value statements = bs[1];
+    
+    value rr
+            = resultsAndReturns {
+        body = body;
+        statements = statements;
+    };
+    //TODO: work around compiler bug in destructuring!
+    value results = rr[0];
+    value returns = rr[1];
     
     value importProposals = CommonImportProposals(doc);
     
     shared variable DefaultRegion? typeRegion = null;
     shared variable DefaultRegion? decRegion = null;
     shared variable DefaultRegion? refRegion = null;
-
-    shared JList<DefaultRegion> dupeRegions 
-            = JArrayList<DefaultRegion>();
+    
+    value dupeRegionList = ArrayList<DefaultRegion>();
+    shared List<DefaultRegion> dupeRegions => dupeRegionList;
     
     class CheckExpressionVisitor() extends Visitor() {
         shared variable String? problem = null;
         
-        shared actual void visit(Tree.Body that) {
-        }
+        shared actual void visit(Tree.Body that) {}
         
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
@@ -271,15 +280,19 @@ shared class ExtractFunctionRefactoring(
         "The changes applied to the current editor"
         value tfc = platformServices.createTextChange(name, doc);
         
-        if (is Tree.Term term = node,
-            exists tn = getTargetNode(term, target, rootNode), 
+        if (is Tree.Term node,
+            exists tn = getTargetNode {
+                term = node;
+                target = target;
+                rootNode = rootNode;
+            }, 
             tn.declarationModel.toplevel) {
             
             value cc = platformServices.createCompositeChange(name);
 
             //if we're extracting a toplevel function, look for
             //replacements in other files in the same package
-            extractExpression(tfc, term, cc);
+            extractExpression(tfc, node, cc);
             
             if (cc.hasChildren) {
                 cc.addTextChange(tfc);
@@ -357,7 +370,11 @@ shared class ExtractFunctionRefactoring(
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        value decNode = getTargetNode(term, target, rootNode);
+        value decNode = getTargetNode {
+            term = term;
+            target = target;
+            rootNode = rootNode;
+        };
         if (!exists decNode) {
             return;
         }
@@ -413,8 +430,8 @@ shared class ExtractFunctionRefactoring(
         };
         
         value indent =
-            doc.getDefaultLineDelimiter() +
-                    indents.getIndent(decNode, doc);
+                indents.getDefaultLineDelimiter(doc) +
+                indents.getIndent(decNode, doc);
         value extraIndent =
             indent +
                     indents.defaultIndent +
@@ -537,7 +554,7 @@ shared class ExtractFunctionRefactoring(
                             length = tlength;
                             text = invocation;
                     });
-                    dupeRegions.add(DefaultRegion {
+                    dupeRegionList.add(DefaultRegion {
                             start = tstart + shift + definition.size - backshift;
                             length = newName.size;
                         });
@@ -549,7 +566,7 @@ shared class ExtractFunctionRefactoring(
         }.visit(rootNode);
         
         if (exists cc, dec.toplevel) {
-            for (pu in allUnits) {
+            for (pu in moduleUnits) {
                 //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
                     value tc = platformServices.createTextChange(name, pu);
@@ -763,8 +780,8 @@ shared class ExtractFunctionRefactoring(
         }
         
         value indent =
-            doc.getDefaultLineDelimiter() +
-                    indents.getIndent(decNode, doc);
+                indents.getDefaultLineDelimiter(doc) +
+                indents.getIndent(decNode, doc);
         value extraIndent =
             indent +
                     indents.defaultIndent +
@@ -913,8 +930,8 @@ shared class ExtractFunctionRefactoring(
                     .append("value tuple = ")
                     .append(call);
                 value ind =
-                    doc.getDefaultLineDelimiter() +
-                            indents.getIndent(ss.last, doc);
+                        indents.getDefaultLineDelimiter(doc) +
+                        indents.getIndent(ss.last, doc);
                 variable value i = 0;
                 for (result->rdec in results) {
                     invocation
@@ -1019,7 +1036,8 @@ shared class ExtractFunctionRefactoring(
     }
     
     shared String? checkInitialConditions() {
-        if (is Tree.Body node) {
+        switch (node)
+        case (is Tree.Body) {
             value body = node;
             for (s in statements) {
                 value v = CheckStatementsVisitor(body, statements);
@@ -1029,14 +1047,15 @@ shared class ExtractFunctionRefactoring(
                             + " at  " + s.location;
                 }
             }
-        } else if (is Tree.Term node) {
+        } 
+        case (is Tree.Term) {
             value v = CheckExpressionVisitor();
             node.visit(v);
             if (exists prob = v.problem) {
                 return "Selected expression contains " + prob;
             }
         }
-        
+        else {}
         return null;
     }
 
@@ -1071,13 +1090,11 @@ shared class ExtractFunctionRefactoring(
     }
     
     shared Boolean enabled
-            => if (exists sourceFile = sourceVirtualFile)
-               then editable(rootNode.unit) &&
-                    !descriptor(sourceFile) &&
-                    (node is Tree.Term ||
-                        !statements.empty &&
-                        !statements.any((statement) => statement is Tree.Constructor))
-                else false;
+            => editable(rootNode.unit) &&
+            !descriptor(sourceVirtualFile) &&
+            (node is Tree.Term ||
+                !statements.empty &&
+                !statements.any((statement) => statement is Tree.Constructor));
     
     shared [String+] nameProposals {
         value proposals = nodes.nameProposals {
@@ -1101,7 +1118,8 @@ shared class ExtractFunctionRefactoring(
     shared String name => "Extract Function";
 }
 
-shared class FindBodyVisitor(Tree.Statement node) extends Visitor() {
+shared class FindBodyVisitor(Tree.Statement node) 
+        extends Visitor() {
     shared variable Tree.Body? body = null;
     shared actual void visit(Tree.Body that) {
         super.visit(that);
@@ -1112,17 +1130,19 @@ shared class FindBodyVisitor(Tree.Statement node) extends Visitor() {
 }
 
 shared class FindResultVisitor(Tree.Body scope,
-    Collection<Tree.Statement> statements)
+    {Tree.Statement*} statements)
         extends Visitor() {
     
     value resultsList = ArrayList<Node->TypedDeclaration>();
-    shared List<Node->TypedDeclaration> results => resultsList;
+    shared <Node->TypedDeclaration>[] results 
+            => resultsList.sequence();
     
     value possibles = HashMap<TypedDeclaration,Node>();
     value all = HashSet<TypedDeclaration>();
     
     function isDefinedLocally(Declaration dec)
-            => !ModelUtil.contains(dec.scope, scope.scope.container);
+            => !ModelUtil.contains(dec.scope, 
+                    scope.scope.container);
     
     shared actual void visit(Tree.Body that) {
         if (that is Tree.Block) {
@@ -1170,7 +1190,7 @@ shared class FindResultVisitor(Tree.Body scope,
 }
 
 Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
-    Collection<Tree.Statement> statements) {
+    {Tree.Statement*} statements) {
     if (!exists scope) {
         return false;
     }
@@ -1211,7 +1231,8 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
 shared class FindReturnsVisitor()
         extends Visitor() {
     value returnsList = ArrayList<Tree.Return>();
-    shared List<Tree.Return> returns => returnsList;
+    shared Tree.Return[] returns 
+            => returnsList.sequence();
     shared actual void visit(Tree.Declaration that) {}
     shared actual void visit(Tree.Return that) {
         super.visit(that);
