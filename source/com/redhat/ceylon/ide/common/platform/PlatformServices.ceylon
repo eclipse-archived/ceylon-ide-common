@@ -19,8 +19,10 @@ shared interface PlatformServices {
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>
     importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
+
+    deprecated("Prefer [[commonIndents]] and [[com.redhat.ceylon.ide.common.correct::CommonDocument]] instead.")
     shared formal Indents<IDocument> indents<IDocument>();
-    
+
     shared formal TextChange createTextChange(String desc, CommonDocument|PhasedUnit input);
 }
 

@@ -8,17 +8,22 @@ shared interface TextEdit of InsertEdit|DeleteEdit|ReplaceEdit {
     shared formal String text;
 }
 
-shared class InsertEdit(shared actual Integer start, shared actual String text) satisfies TextEdit {
+shared class InsertEdit(start, text) satisfies TextEdit {
+    shared actual Integer start;
     length => 0;
+    shared actual String text;
 }
 
-shared class DeleteEdit(shared actual Integer start, shared actual Integer length) satisfies TextEdit {
+shared class DeleteEdit(start, length) satisfies TextEdit {
+    shared actual Integer start;
+    shared actual Integer length;
     text => "";
 }
 
-shared class ReplaceEdit(shared actual Integer start, 
-    shared actual Integer length, shared actual String text) satisfies TextEdit {
-
+shared class ReplaceEdit(start, length, text) satisfies TextEdit {
+    shared actual Integer start;
+    shared actual Integer length;
+    shared actual String text;
 }
 
 shared interface TextChange {

@@ -8,6 +8,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 
+deprecated("Use [[commonIndents]] and [[CommonDocument]] instead.")
 shared interface IndentsServicesConsumer<Document> {
     shared Indents<Document> indents => platformServices.indents<Document>();
 }
@@ -20,6 +21,7 @@ shared object commonIndents satisfies Indents<CommonDocument> {
     getLine(Node node, CommonDocument doc)
             => doc.getLineContent(node.token.line - 1);
     
+    // TODO maybe put those two properties in PlatformServices
     indentSpaces => platformServices.indents<Anything>().indentSpaces;
     
     indentWithSpaces => platformServices.indents<Anything>().indentWithSpaces;

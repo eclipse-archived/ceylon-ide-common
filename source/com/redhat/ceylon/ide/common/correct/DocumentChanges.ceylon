@@ -1,4 +1,4 @@
-
+deprecated("Use [[CommonDocument]] instead.")
 shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {
 
