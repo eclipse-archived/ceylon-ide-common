@@ -41,7 +41,8 @@ class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, Commo
     }
     shared actual void visit(Tree.Import that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
             completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result,
                 nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);

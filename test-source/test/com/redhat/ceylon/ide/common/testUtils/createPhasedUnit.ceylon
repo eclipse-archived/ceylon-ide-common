@@ -30,7 +30,8 @@ import com.redhat.ceylon.compiler.typechecker.io {
     VirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Module
+    Module,
+    Unit
 }
 import com.redhat.ceylon.ide.common.model.delta {
     ...
@@ -118,6 +119,11 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
     phasedUnits.visitModules();
     phasedUnits.moduleManager.modulesVisited();
 
+    value defaultUnit = Unit();
+    context.modules.defaultModule.unit = defaultUnit;
+    context.modules.defaultModule.packages.get(0).unit = defaultUnit;
+    defaultUnit.\ipackage = context.modules.defaultModule.packages.get(0);
+    
     //By now the language module version should be known (as local)
     //or we should use the default one.
     Module languageModule = context.modules.languageModule;

@@ -25,7 +25,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    BaseProgressMonitor,
     Indents,
     BaseProgressMonitorChild
 }
@@ -157,7 +156,11 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result
         String desc, String text, Declaration dec, Reference? pr, Scope scope, CompletionData data,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
-            => Result("newNamedInvocationCompletion", text, desc);
+            => let (name = if (namedInvocation) then "newNamedInvocationCompletion"
+                           else if (positionalInvocation) then "newPositionalInvocationCompletion"
+                           else "newReferenceCompletion"
+               )
+               Result(name, text, desc);
     
     shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text)
             => Result("newPackageDescriptorProposal", text, desc);

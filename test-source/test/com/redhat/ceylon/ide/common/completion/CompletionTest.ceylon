@@ -55,8 +55,8 @@ test shared void testReferenceAndPositionalInvocation() {
     value result = callCompletion("basic.ceylon", 24, 2);
     
     // suggest the current function
-    assertEquals(result.first, Result("newPositionalInvocationCompletion", "run();", "run()"));
-    assertEquals(result.get(1), Result("newReferenceCompletion", "run"));
+    assertContains(result, Result("newPositionalInvocationCompletion", "run();", "run()"));
+    assertContains(result, Result("newReferenceCompletion", "run"));
     
     // suggest something from ceylon.lang
     assertContains(result, Result("newReferenceCompletion", "print"));
@@ -108,8 +108,8 @@ test shared void testNamedInvocation() {
         "any { Boolean selecting(Character element); }"));
     
     result = callCompletion("namedInvocation.ceylon", 58, 4);
-    assertContains(result, Result("newNamedArgumentProposal", "selecting = nothing;", "selecting"));
-    assertContains(result, Result("newInlineFunctionProposal", "function selecting(Character element) => nothing;",
+    assertContains(result, Result("newRefinementCompletionProposal", "selecting = nothing;", "selecting"));
+    assertContains(result, Result("newRefinementCompletionProposal", "function selecting(Character element) => nothing;",
         "function selecting(Character element)"));
 }
 
