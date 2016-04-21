@@ -177,23 +177,17 @@ shared class ExtractFunctionRefactoring(
     //additional initialization for extraction of statements
     //as opposed to extraction of an expression
     
-    value bs
+    value [body, statements]
             = bodyAndStatements {
         node = node;
         rootNode = rootNode;
     };
-    //TODO: work around compiler bug in destructuring!
-    value body = bs[0];
-    value statements = bs[1];
     
-    value rr
+    value [results, returns]
             = resultsAndReturns {
         body = body;
         statements = statements;
     };
-    //TODO: work around compiler bug in destructuring!
-    value results = rr[0];
-    value returns = rr[1];
     
     value importProposals = CommonImportProposals(doc);
     
