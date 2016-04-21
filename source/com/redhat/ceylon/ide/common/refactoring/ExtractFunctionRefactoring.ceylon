@@ -20,7 +20,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.correct {
-    CommonDocument,
     CommonImportProposals
 }
 import com.redhat.ceylon.ide.common.platform {
@@ -29,7 +28,8 @@ import com.redhat.ceylon.ide.common.platform {
     InsertEdit,
     ReplaceEdit,
     indents=commonIndents,
-    CompositeChange
+    CompositeChange,
+    CommonDocument
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,

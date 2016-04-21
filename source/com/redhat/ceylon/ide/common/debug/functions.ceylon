@@ -1,3 +1,6 @@
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node,
@@ -6,9 +9,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import ceylon.collection {
     TreeMap
 }
-import com.redhat.ceylon.ide.common.correct {
-    CommonDocument
-}
+
 
 shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
     CommonDocument document, Integer requestedLine) {

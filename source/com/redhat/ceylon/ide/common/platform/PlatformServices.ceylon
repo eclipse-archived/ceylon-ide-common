@@ -1,6 +1,5 @@
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    CommonDocument
+    ImportProposals
 }
 import com.redhat.ceylon.ide.common.util {
     Indents
@@ -20,7 +19,7 @@ shared interface PlatformServices {
     importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
 
-    deprecated("Prefer [[commonIndents]] and [[com.redhat.ceylon.ide.common.correct::CommonDocument]] instead.")
+    deprecated("Prefer [[commonIndents]] and [[CommonDocument]] instead.")
     shared formal Indents<IDocument> indents<IDocument>();
 
     shared formal TextChange createTextChange(String desc, CommonDocument|PhasedUnit input);

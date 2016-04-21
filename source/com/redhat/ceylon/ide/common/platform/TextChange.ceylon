@@ -1,5 +1,5 @@
-import com.redhat.ceylon.ide.common.correct {
-    CommonDocument
+import ceylon.collection {
+    ArrayList
 }
 
 shared interface TextEdit of InsertEdit|DeleteEdit|ReplaceEdit {
@@ -37,7 +37,68 @@ shared interface TextChange {
     shared formal CommonDocument document;
 }
 
+shared class DefaultTextChange(shared actual DefaultDocument document) satisfies TextChange {
+    
+    value edits = ArrayList<TextEdit>();
+    
+    shared void addChange(TextEdit change) {
+        print("add change");
+        edits.add(change);
+    }
+    
+    shared void applyChanges() {
+        Integer len = document.text.size;
+        String text = document.text.spanTo(len - 1);
+        document.text = mergeToCharArray(text, len, edits);
+    }
+    
+    String mergeToCharArray(String text, Integer textLength, List<TextEdit> changes) {
+        variable Integer newLength = textLength;
+        
+        for (change in changes) {
+            newLength += change.text.size - (change.end - change.start);
+        }
+        value data = Array<Character>.ofSize(newLength, ' ');
+        variable Integer oldEndOffset = textLength;
+        variable Integer newEndOffset = data.size;
+        variable Integer i = changes.size - 1;
+        while (i >= 0) {
+            assert(exists change = changes.get(i));
+            Integer symbolsToMoveNumber = oldEndOffset - change.end;
+            text.copyTo(data, change.end, newEndOffset - symbolsToMoveNumber, symbolsToMoveNumber);
+            newEndOffset -= symbolsToMoveNumber;
+            String changeSymbols = change.text;
+            newEndOffset -= changeSymbols.size;
+            changeSymbols.copyTo(data, 0, newEndOffset, changeSymbols.size);
+            oldEndOffset = change.start;
+            i--;
+        }
+        
+        if (oldEndOffset > 0) {
+            text.copyTo(data, 0, 0, oldEndOffset);
+        }
+        return String(data);
+    }
+    
+    addEdit(TextEdit edit) => edits.add(edit);
+    
+    hasEdits => !edits.empty;
+    
+    shared actual void initMultiEdit() {}
+}
+
 shared interface CompositeChange {
     shared formal void addTextChange(TextChange change);
     shared formal Boolean hasChildren;    
+}
+
+shared class DefaultCompositeChange(shared String desc) satisfies CompositeChange {
+    
+    value _changes = ArrayList<TextChange>();
+    
+    shared TextChange[] changes => _changes.sequence();
+    
+    addTextChange(TextChange change) => _changes.add(change);
+    
+    hasChildren => !_changes.empty;
 }

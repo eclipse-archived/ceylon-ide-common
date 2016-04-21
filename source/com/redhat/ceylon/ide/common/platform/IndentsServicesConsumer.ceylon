@@ -1,9 +1,7 @@
 import com.redhat.ceylon.ide.common.util {
     Indents
 }
-import com.redhat.ceylon.ide.common.correct {
-    CommonDocument
-}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }

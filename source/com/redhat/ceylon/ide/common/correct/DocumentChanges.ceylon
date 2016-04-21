@@ -1,4 +1,4 @@
-deprecated("Use [[CommonDocument]] instead.")
+deprecated("Use [[com.redhat.ceylon.ide.common.platform::CommonDocument]] instead.")
 shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {
 
@@ -28,14 +28,4 @@ shared interface DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
     shared formal String getLineContent(IDocument doc, Integer line);
 }
 
-shared interface CommonDocument {
-    shared formal Integer getLineOfOffset(Integer offset);
-    shared formal Integer getLineStartOffset(Integer line);
-    shared formal Integer getLineEndOffset(Integer line);
-    
-    shared formal String getText(Integer offset, Integer length);
-    
-    shared formal String getLineContent(Integer line);
-    
-    shared formal String getDefaultLineDelimiter();
-}
+

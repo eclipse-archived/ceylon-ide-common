@@ -54,7 +54,8 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     DeleteEdit,
     ReplaceEdit,
-    commonIndents
+    commonIndents,
+    CommonDocument
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
