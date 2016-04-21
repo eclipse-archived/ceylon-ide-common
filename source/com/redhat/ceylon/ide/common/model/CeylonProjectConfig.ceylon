@@ -84,11 +84,13 @@ shared class CeylonProjectConfig(project) {
     variable Boolean isOfflineChanged = false;
     variable Boolean isEncodingChanged = false;
     variable Boolean isOverridesChanged = false;
+    variable Boolean isJdkProviderChanged = false;
     variable Boolean isFlatClasspathChanged = false;
     variable Boolean isAutoExportMavenDependenciesChanged = false;
     variable Boolean? transientOffline = null;
     variable String? transientEncoding = null;
     variable String? transientOverrides = null;
+    variable String? transientJdkProvider = null;
     variable Boolean? transientFlatClasspath = null;
     variable Boolean? transientAutoExportMavenDependencies = null;
 
@@ -174,6 +176,13 @@ shared class CeylonProjectConfig(project) {
     assign projectOverrides {
         this.isOverridesChanged = true;
         this.transientOverrides = projectOverrides;
+    }
+
+    shared String? jdkProvider => DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
+    shared String? projectJdkProvider => DefaultToolOptions.getCompilerJdkProvider(projectConfig);
+    assign projectJdkProvider {
+        this.isJdkProviderChanged = true;
+        this.transientJdkProvider = projectJdkProvider;
     }
 
     shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
@@ -271,12 +280,14 @@ shared class CeylonProjectConfig(project) {
         isOfflineChanged = false;
         isEncodingChanged = false;
         isOverridesChanged = false;
+        isJdkProviderChanged = false;
         isFlatClasspathChanged = false;
         isAutoExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
         transientEncoding = null;
         transientOffline = null;
         transientOverrides = null;
+        transientJdkProvider = null;
         transientFlatClasspath = null;
         transientAutoExportMavenDependencies = null;
         transientOutputRepo = null;
@@ -322,6 +333,7 @@ shared class CeylonProjectConfig(project) {
                 || isOfflineChanged
                 || isEncodingChanged
                 || isOverridesChanged
+                || isJdkProviderChanged
                 || isFlatClasspathChanged
                 || isAutoExportMavenDependenciesChanged
                 || isSuppressWarningsChanged;
@@ -351,6 +363,9 @@ shared class CeylonProjectConfig(project) {
                 }
                 if (isOverridesChanged) {
                     projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OVERRIDES, transientOverrides);
+                }
+                if (isJdkProviderChanged) {
+                    projectConfig.setOption(DefaultToolOptions.\iCOMPILER_JDKPROVIDER, transientJdkProvider);
                 }
                 if (isFlatClasspathChanged) {
                     if (exists nonNullFlatClasspath = transientFlatClasspath) {
