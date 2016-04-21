@@ -6,6 +6,7 @@ shared interface TextEdit of InsertEdit|DeleteEdit|ReplaceEdit {
     shared formal Integer start;
     shared formal Integer length;
     shared formal String text;
+    shared Integer end => start + length;
 }
 
 shared class InsertEdit(start, text) satisfies TextEdit {
