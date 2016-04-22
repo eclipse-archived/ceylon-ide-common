@@ -6,8 +6,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    TextChange,
+    InsertEdit,
+    DefaultDocument
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -25,23 +29,14 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared interface AbstractTerminateStatementAction
-        <IDocument, InsertEdit, TextEdit, TextChange>
-        satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
+shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
+        given Document satisfies CommonDocument {
     
-    shared formal [Tree.CompilationUnit, List<CommonToken>] parse(IDocument doc);
+    shared formal [Tree.CompilationUnit, List<CommonToken>] parse(Document doc);
 
-    shared formal TextChange newChange(String desc, IDocument doc);
-    
     shared formal void applyChange(TextChange change);
     
-    shared formal [DefaultRegion, String] getLineInfo(IDocument doc, Integer line);
-
-    shared formal Character getChar(IDocument doc, Integer offset);
-    
-    shared void terminateStatement(IDocument doc, Integer line) {
-        
+    shared void terminateStatement(Document doc, Integer line) {
         terminateWithSemicolon(doc, line);
         variable Boolean changed = true;
         variable Integer count = 0;
@@ -52,42 +47,38 @@ shared interface AbstractTerminateStatementAction
         }
     }
     
-    Boolean terminateWithBrace(IDocument doc, Integer line) {
-        
-        value change = newChange("Terminate Statement", doc);
-        initMultiEditChange(change);
-        value parsed = parse(doc);
-        value rootNode = parsed[0];
-        value tokens = parsed[1];
-        value info = getLineInfo(doc, line);
-        value startOfCodeInLine = getCodeStart(info[0], info[1], tokens);
-        value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
+    Boolean terminateWithBrace(Document doc, Integer line) {
+        value change = platformServices.createTextChange("Terminate Statement", doc);
+        change.initMultiEdit();
+        value [rootNode, tokens] = parse(doc);
+        value lineRegion = doc.getLineRegion(line);
+        value lineText = doc.getLineContent(line);
+        value startOfCodeInLine = getCodeStart(lineRegion, lineText, tokens);
+        value endOfCodeInLine = getCodeEnd(lineRegion, lineText, tokens);
         
         TerminateWithBraceProcessor(startOfCodeInLine,
             endOfCodeInLine, change).visit(rootNode);
             
-        if (hasChildren(change)) {
+        if (change.hasEdits) {
             applyChange(change);
             return true;
         }
         return false;
     }
 
-    Boolean terminateWithSemicolon(IDocument doc, Integer line) {
-        
-        value change = newChange("Terminate Statement", doc);
-        initMultiEditChange(change);
-        value parsed = parse(doc);
-        value rootNode = parsed[0];
-        value tokens = parsed[1];
-        value info = getLineInfo(doc, line);
-        value endOfCodeInLine = getCodeEnd(info[0], info[1], tokens);
+    Boolean terminateWithSemicolon(Document doc, Integer line) {
+        value change = platformServices.createTextChange("Terminate Statement", doc);
+        change.initMultiEdit();
+        value [rootNode, tokens] = parse(doc);
+        value lineRegion = doc.getLineRegion(line);
+        value lineText = doc.getLineContent(line);
+        value endOfCodeInLine = getCodeEnd(lineRegion, lineText, tokens);
 
-        if (!getChar(doc, endOfCodeInLine) == ';') {
+        if (doc.getChar(endOfCodeInLine) != ';') {
             TerminateWithSemicolonProcessor(
                 endOfCodeInLine, change).visit(rootNode);
             
-            if (hasChildren(change)) {
+            if (change.hasEdits) {
                 applyChange(change);
                 return true;
             }
@@ -252,9 +243,9 @@ shared interface AbstractTerminateStatementAction
                     value startIndex = subnode?.startIndex?.intValue()
                             else endOfCodeInLine + 1;
                     if (startIndex > endOfCodeInLine) {
-                        if (!hasChildren(change)) {
-                            value edit = newInsertEdit(endOfCodeInLine + 1, "() {}");
-                            addEditToChange(change, edit);
+                        if (!change.hasEdits) {
+                            change.addEdit(
+                                InsertEdit(endOfCodeInLine + 1, "() {}"));
                         }
                     } else {
                         assert(exists subnode);
@@ -264,17 +255,17 @@ shared interface AbstractTerminateStatementAction
                             || (set?.type else 0) !=CeylonLexer.\iRPAREN
                             || subnode.stopIndex.intValue() > endOfCodeInLine) {
                             
-                            if (!hasChildren(change)) {
-                                value edit = newInsertEdit(endOfCodeInLine + 1, ") {}");
-                                addEditToChange(change, edit);
+                            if (!change.hasEdits) {
+                                value edit = InsertEdit(endOfCodeInLine + 1, ") {}");
+                                change.addEdit(edit);
                             }
                         } else if (!et exists
                             || (et?.type else 0)!=CeylonLexer.\iRBRACE
                             || that.stopIndex.intValue() > endOfCodeInLine) {
                             
-                            if (!hasChildren(change)) {
-                                value edit = newInsertEdit(endOfCodeInLine + 1, " {}");
-                                addEditToChange(change, edit);
+                            if (!change.hasEdits) {
+                                value edit = InsertEdit(endOfCodeInLine + 1, " {}");
+                                change.addEdit(edit);
                             }
                         }
                     }
@@ -293,9 +284,9 @@ shared interface AbstractTerminateStatementAction
                         && (et?.type else 0) !=CeylonLexer.\iRBRACE
                         || that.stopIndex.intValue() > endOfCodeInLine) {
                         
-                        if (!hasChildren(change)) {
-                            value edit = newInsertEdit(endOfCodeInLine + 1, " {}");
-                            addEditToChange(change, edit);
+                        if (!change.hasEdits) {
+                            value edit = InsertEdit(endOfCodeInLine + 1, " {}");
+                            change.addEdit(edit);
                         }
                     }
                 }
@@ -312,9 +303,9 @@ shared interface AbstractTerminateStatementAction
                         || (et?.type else 0) !=CeylonLexer.\iSEMICOLON
                         || that.stopIndex.intValue() > endOfCodeInLine) {
                         
-                        if (!hasChildren(change)) {
-                            value edit = newInsertEdit(endOfCodeInLine + 1, ";");
-                            addEditToChange(change, edit);
+                        if (!change.hasEdits) {
+                            value edit = InsertEdit(endOfCodeInLine + 1, ";");
+                            change.addEdit(edit);
                         }
                     }
                 }
@@ -354,10 +345,10 @@ shared interface AbstractTerminateStatementAction
                 exists st = that.mainToken,
                 st.type == CeylonLexer.\iLPAREN,
                 ((that.mainEndToken?.type else -1) !=CeylonLexer.\iRPAREN),
-                !hasChildren(change)) {
+                !change.hasEdits) {
 
-                value edit = newInsertEdit(that.endIndex.intValue(), ")");
-                addEditToChange(change, edit);
+                value edit = InsertEdit(that.endIndex.intValue(), ")");
+                change.addEdit(edit);
             }
         }
         
@@ -436,13 +427,12 @@ shared interface AbstractTerminateStatementAction
         
         shared actual void visit(Tree.Import that) {
             if (!that.importMemberOrTypeList exists || that.importMemberOrTypeList.mainToken.text.startsWith("<missing ")) {
-                if (!hasChildren(change),
+                if (!change.hasEdits,
                     exists ip = that.importPath,
                     ip.stopIndex.intValue() <= endOfCodeInLine) {
                         
-                    value edit = newInsertEdit(
-                        ip.endIndex.intValue(), " { ... }");
-                    addEditToChange(change, edit);
+                    value edit = InsertEdit(ip.endIndex.intValue(), " { ... }");
+                    change.addEdit(edit);
                 }
             }
             
@@ -456,12 +446,12 @@ shared interface AbstractTerminateStatementAction
             }
             
             if (!that.version exists,
-                !hasChildren(change),
+                !change.hasEdits,
                 exists ip = that.importPath,
                 ip.stopIndex.intValue() <= endOfCodeInLine) {
                     
-                value edit = newInsertEdit(ip.endIndex.intValue(), " \"1.0.0\"");
-                addEditToChange(change, edit);
+                value edit = InsertEdit(ip.endIndex.intValue(), " \"1.0.0\"");
+                change.addEdit(edit);
             }
         }
         
@@ -509,11 +499,11 @@ shared interface AbstractTerminateStatementAction
                 if ((et?.type else -1) != tokenType
                     || that.stopIndex.intValue() > endOfCodeInLine) {
                     
-                    if (!hasChildren(change)) {
-                        value edit = newInsertEdit(
+                    if (!change.hasEdits) {
+                        value edit = InsertEdit(
                             min({endOfCodeInLine, that.stopIndex.intValue()}) + 1,
                             ch);
-                        addEditToChange(change, edit);
+                        change.addEdit(edit);
                     }
                 }
             }
@@ -523,10 +513,9 @@ shared interface AbstractTerminateStatementAction
             super.visit(that);
             if (inLine(that),
                 !that.parameterList exists,
-                !hasChildren(change)) {
+                !change.hasEdits) {
 
-                addEditToChange(change, 
-                    newInsertEdit(that.identifier.endIndex.intValue(), "()"));
+                change.addEdit(InsertEdit(that.identifier.endIndex.intValue(), "()"));
             }
         }
         
@@ -535,10 +524,9 @@ shared interface AbstractTerminateStatementAction
             if (inLine(that),
                 !that.parameterList exists,
                 that.classBody exists,
-                !hasChildren(change)) {
+                !change.hasEdits) {
                 
-                addEditToChange(change, 
-                    newInsertEdit(that.identifier.endIndex.intValue(), "()"));
+                change.addEdit(InsertEdit(that.identifier.endIndex.intValue(), "()"));
             }
         }
         
@@ -547,13 +535,13 @@ shared interface AbstractTerminateStatementAction
             if (inLine(that),
                 !that.parameterList exists,
                 that.block exists,
-                !hasChildren(change)) {
+                !change.hasEdits) {
 
                 Tree.Identifier? id = that.identifier;
                 assert (is CommonToken tok = (if (!exists id)
                     then that.mainToken else id.token));
                 
-                addEditToChange(change, newInsertEdit(tok.stopIndex + 1, "()"));
+                change.addEdit(InsertEdit(tok.stopIndex + 1, "()"));
             }
         }
         
@@ -561,10 +549,9 @@ shared interface AbstractTerminateStatementAction
             super.visit(that);
             if (inLine(that),
                 that.parameterLists.empty,
-                !hasChildren(change)) {
+                !change.hasEdits) {
                 
-                addEditToChange(change, 
-                    newInsertEdit(that.identifier.endIndex.intValue(), "()"));
+                change.addEdit(InsertEdit(that.identifier.endIndex.intValue(), "()"));
             }
         }
     }
