@@ -50,7 +50,7 @@ void testRefactoring(String unitName, Integer selectionStart, Integer selectionE
     assert (exists refactoring);
     switch (change = refactoring.build())
     case (is DefaultTextChange) {
-        change.applyChanges();
+        change.apply();
     } else {
         fail("Can't apply changes to ``className(change)``");
     }

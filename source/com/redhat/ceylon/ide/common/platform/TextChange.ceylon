@@ -35,6 +35,8 @@ shared interface TextChange {
     shared formal Boolean hasEdits;
  
     shared formal CommonDocument document;
+ 
+    shared formal void apply();
 }
 
 shared class DefaultTextChange(shared actual DefaultDocument document) satisfies TextChange {
@@ -46,7 +48,7 @@ shared class DefaultTextChange(shared actual DefaultDocument document) satisfies
         edits.add(change);
     }
     
-    shared void applyChanges() {
+    shared actual void apply() {
         Integer len = document.text.size;
         String text = document.text.spanTo(len - 1);
         document.text = mergeToCharArray(text, len, edits);

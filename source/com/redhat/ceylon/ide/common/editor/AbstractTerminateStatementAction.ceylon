@@ -34,8 +34,6 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
     
     shared formal [Tree.CompilationUnit, List<CommonToken>] parse(Document doc);
 
-    shared formal void applyChange(TextChange change);
-    
     shared void terminateStatement(Document doc, Integer line) {
         terminateWithSemicolon(doc, line);
         variable Boolean changed = true;
@@ -60,7 +58,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
             endOfCodeInLine, change).visit(rootNode);
             
         if (change.hasEdits) {
-            applyChange(change);
+            change.apply();
             return true;
         }
         return false;
@@ -79,7 +77,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                 endOfCodeInLine, change).visit(rootNode);
             
             if (change.hasEdits) {
-                applyChange(change);
+                change.apply();
                 return true;
             }
         }

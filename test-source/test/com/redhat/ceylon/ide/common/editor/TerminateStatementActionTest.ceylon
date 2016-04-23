@@ -14,8 +14,6 @@ import com.redhat.ceylon.ide.common.editor {
     AbstractTerminateStatementAction
 }
 import com.redhat.ceylon.ide.common.platform {
-    TextChange,
-    DefaultTextChange,
     DefaultDocument
 }
 import com.redhat.ceylon.ide.common.util {
@@ -31,6 +29,7 @@ import org.antlr.runtime {
     ANTLRStringStream,
     CommonTokenStream
 }
+
 import test.com.redhat.ceylon.ide.common.platform {
     testPlatform
 }
@@ -58,12 +57,6 @@ void testAndAssert(String code, Integer line, String expected) {
 
 class TerminateStatementActionTest()
         satisfies AbstractTerminateStatementAction<DefaultDocument> {
-    
-    shared actual void applyChange(TextChange change) {
-        if (is DefaultTextChange change) {
-            change.applyChanges();
-        }
-    }
     
     shared actual [Tree.CompilationUnit, List<CommonToken>] parse(DefaultDocument doc) {
         value stream = ANTLRStringStream(doc.text);
