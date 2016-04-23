@@ -298,8 +298,16 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                return invertTerm(doc, term);
            }
        }
-       case (is Tree.ExistsCondition|Tree.NonemptyCondition|Tree.IsCondition) {
-           return "!" + text(doc, ifCondition);
+       case (is Tree.ExistsOrNonemptyCondition|Tree.IsCondition) {
+           value negated =
+               switch (ifCondition)
+               case (is Tree.ExistsOrNonemptyCondition) 
+                    ifCondition.not
+               case (is Tree.IsCondition) 
+                    ifCondition.not;
+           return negated
+               then text(doc, ifCondition)[1...].trimmed 
+               else "!" + text(doc, ifCondition).trimmed;
        }
        else {
            return "";
