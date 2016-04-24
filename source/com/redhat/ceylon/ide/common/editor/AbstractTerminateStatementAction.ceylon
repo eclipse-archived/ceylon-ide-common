@@ -29,12 +29,14 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
+shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>()
         given Document satisfies CommonDocument {
     
     shared formal [Tree.CompilationUnit, List<CommonToken>] parse(Document doc);
 
-    shared void terminateStatement(Document doc, Integer line) {
+    variable Integer? newCursorPosition = null;
+    
+    shared DefaultRegion? terminateStatement(Document doc, Integer line) {
         terminateWithSemicolon(doc, line);
         variable Boolean changed = true;
         variable Integer count = 0;
@@ -43,6 +45,10 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
             changed = terminateWithBrace(doc, line);
             count++;
         }
+        
+        return if (exists pos = newCursorPosition)
+               then DefaultRegion(pos, 0)
+               else null;
     }
     
     Boolean terminateWithBrace(Document doc, Integer line) {
@@ -244,6 +250,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                         if (!change.hasEdits) {
                             change.addEdit(
                                 InsertEdit(endOfCodeInLine + 1, "() {}"));
+                            newCursorPosition = endOfCodeInLine + 1 + 4;
                         }
                     } else {
                         assert(exists subnode);
@@ -256,6 +263,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                             if (!change.hasEdits) {
                                 value edit = InsertEdit(endOfCodeInLine + 1, ") {}");
                                 change.addEdit(edit);
+                                newCursorPosition = endOfCodeInLine + 1 + 3;
                             }
                         } else if (!et exists
                             || (et?.type else 0)!=CeylonLexer.\iRBRACE
@@ -264,6 +272,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                             if (!change.hasEdits) {
                                 value edit = InsertEdit(endOfCodeInLine + 1, " {}");
                                 change.addEdit(edit);
+                                newCursorPosition = endOfCodeInLine + 1 + 2;
                             }
                         }
                     }
@@ -285,6 +294,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                         if (!change.hasEdits) {
                             value edit = InsertEdit(endOfCodeInLine + 1, " {}");
                             change.addEdit(edit);
+                            newCursorPosition = endOfCodeInLine + 1 + 2;
                         }
                     }
                 }
@@ -304,6 +314,7 @@ shared interface AbstractTerminateStatementAction<Document=DefaultDocument>
                         if (!change.hasEdits) {
                             value edit = InsertEdit(endOfCodeInLine + 1, ";");
                             change.addEdit(edit);
+                            newCursorPosition = endOfCodeInLine + 2;
                         }
                     }
                 }

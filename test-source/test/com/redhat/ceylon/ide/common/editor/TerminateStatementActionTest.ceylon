@@ -35,28 +35,48 @@ import test.com.redhat.ceylon.ide.common.platform {
 }
 
 shared test void missingBraceInFunction()
-        => testAndAssert("shared void run() {", 1, "shared void run() { }");
+        => testAndAssert {
+                code = "shared void run() {";
+                line = 1;
+                expected = "shared void run() { }";
+                // newSelectionStart = 21;
+            };
 
 shared test void missingSemi()
-        => testAndAssert("shared void run() {
+        => testAndAssert {
+                code = "shared void run() {
                             print(1)
-                          }",
-    2,
-    "shared void run() {
-       print(1);
-     }");
+                        }";
+                line = 2;
+                expected = "shared void run() {
+                                print(1);
+                            }";
+                newSelectionStart = 33;
+            };
 
-void testAndAssert(String code, Integer line, String expected) {
+shared test void missingFunctionBody()
+        => testAndAssert {
+                code = "shared void run()";
+                line = 2;
+                expected = "shared void run() {}";
+                newSelectionStart = 19;
+            };
+
+void testAndAssert(String code, Integer line, String expected, Integer? newSelectionStart = null) {
     testPlatform.register();
     value doc = DefaultDocument(code);
     
-    TerminateStatementActionTest().terminateStatement(doc, line);
+    value reg = TerminateStatementActionTest().terminateStatement(doc, line);
     
     assertEquals(doc.text, expected);
+    
+    if (exists newSelectionStart) {
+        assertEquals(reg?.start, newSelectionStart);
+    }
 }
 
 class TerminateStatementActionTest()
-        satisfies AbstractTerminateStatementAction<DefaultDocument> {
+        extends AbstractTerminateStatementAction<DefaultDocument>() {
     
     shared actual [Tree.CompilationUnit, List<CommonToken>] parse(DefaultDocument doc) {
         value stream = ANTLRStringStream(doc.text);
