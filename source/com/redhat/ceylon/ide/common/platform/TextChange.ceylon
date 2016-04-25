@@ -49,8 +49,9 @@ shared class DefaultTextChange(shared actual DefaultDocument document) satisfies
     }
     
     shared actual void apply() {
+        edits.sortInPlace((x, y) => x.start.compare(y.start));
         Integer len = document.text.size;
-        String text = document.text.spanTo(len - 1);
+        String text = document.text;
         document.text = mergeToCharArray(text, len, edits);
     }
     

@@ -28,7 +28,7 @@ import test.com.redhat.ceylon.ide.common.testUtils {
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
 
-void testRefactoring(String unitName, Integer selectionStart, Integer selectionEnd) {
+void testExtractFunctionRefactoring(String unitName, Integer selectionStart, Integer selectionEnd) {
     testPlatform.register();
     
     value fileName = "extractFunction/" + unitName + "Before.ceylon";
@@ -57,11 +57,11 @@ void testRefactoring(String unitName, Integer selectionStart, Integer selectionE
     
     assert(is File expected=resourcesRoot.childResource(
         "extractFunction/" + unitName + "After.ceylon"));
-    assertEquals("\n".join(lines(expected)), doc.text);
+    assertEquals(doc.text, "\n".join(lines(expected)));
 }
 
 test void testExtractSimpleFunction()
-        => testRefactoring("simple", 23, 29);
+        => testExtractFunctionRefactoring("simple", 23, 29);
 
 test void testExtractFunctionWithParameters()
-        => testRefactoring("simpleWithParam", 48, 91);
+        => testExtractFunctionRefactoring("simpleWithParam", 48, 91);

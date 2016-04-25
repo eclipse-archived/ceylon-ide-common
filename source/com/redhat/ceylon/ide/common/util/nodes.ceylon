@@ -364,9 +364,12 @@ shared object nodes {
     
     "Get the Node referenced by the given model, searching
      in all relevant compilation units."
-    shared Node? getReferencedNode(Referenceable? model) {
-        if (exists model, is CeylonUnit unit = model.unit) {
-            return getReferencedNodeInUnit(model, unit.compilationUnit);
+    shared Node? getReferencedNode(Referenceable? model, Tree.CompilationUnit? cu = null) {
+        if (exists model,
+            exists rn = cu else (if (is CeylonUnit unit = model.unit)
+                                 then unit.compilationUnit
+                                 else null)) {
+            return getReferencedNodeInUnit(model, rn);
         }
         return null;
     }

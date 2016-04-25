@@ -184,8 +184,9 @@ class FindArgumentsVisitor(Declaration declaration)
 }
 
 shared abstract class ChangeParametersRefactoring(
-    Node node,
     Tree.CompilationUnit rootNode,
+    Integer selectionStart,
+    Integer selectionEnd,
     JList<CommonToken> tokens,
     CommonDocument doc,
     PhasedUnit phasedUnit,
@@ -197,7 +198,10 @@ shared abstract class ChangeParametersRefactoring(
     shared formal Boolean searchInEditor();
     shared formal Boolean inSameProject(Functional&Declaration declaration);
     
-    value declaration = getDeclarationForChangeParameters(node, rootNode);
+    value node = nodes.findNode(rootNode, tokens, selectionStart, selectionEnd);
+    value declaration = if (exists node)
+                        then getDeclarationForChangeParameters(node, rootNode)
+                        else null;
     
     enabled => if (is Functional declaration)
                then inSameProject(declaration)
@@ -349,7 +353,7 @@ shared abstract class ChangeParametersRefactoring(
         "Creates a preview of the function's new signature, 
          based on the current changes made to this object."
         shared String previewSignature() {
-            value decNode = nodes.getReferencedNode(declaration);
+            value decNode = nodes.getReferencedNode(declaration, rootNode);
             
             Tree.ParameterList pl;
             Integer startIndex;
@@ -427,18 +431,19 @@ shared abstract class ChangeParametersRefactoring(
     "Creates a new [[ParameterList]] that can be modified in the UI.
      Call [[ChangeParametersRefactoring.build]] to apply changes."
     shared ParameterList? computeParameters() {
-        if (exists decl = getDeclarationForChangeParameters(node, rootNode),
-            is Functional refDec = decl.refinedDeclaration,
+        assert(exists node);
+        if (exists declaration,
+            is Functional refDec = declaration.refinedDeclaration,
             exists pls = refDec.parameterLists) {
             
             value pl 
-                    = switch (decNode = nodes.getReferencedNode(refDec))
+                    = switch (decNode = nodes.getReferencedNode(refDec, rootNode))
                     case (is Tree.AnyClass) decNode.parameterList
                     case (is Tree.Constructor) decNode.parameterList
                     case (is Tree.AnyMethod) decNode.parameterLists.get(0)
                     else null;
             
-            value info = ParameterList(decl);
+            value info = ParameterList(declaration);
             
             assert(exists pl);
             
