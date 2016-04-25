@@ -25,14 +25,19 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Message
 }
-import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
-}
 import com.redhat.ceylon.ide.common.model {
     CeylonUnit
 }
 import com.redhat.ceylon.ide.common.platform {
-    IndentsServicesConsumer
+    CompositeChange,
+    platformServices,
+    TextChange,
+    CommonDocument,
+    TextEdit,
+    ReplaceEdit,
+    DeleteEdit,
+    commonIndents,
+    InsertEdit
 }
 import com.redhat.ceylon.ide.common.typechecker {
     AnyProjectPhasedUnit,
@@ -178,20 +183,28 @@ class FindArgumentsVisitor(Declaration declaration)
     }
 }
 
-shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, TextChange, Change>
-        satisfies AbstractRefactoring<[Change, ParameterList]>
-                & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-                & IndentsServicesConsumer<IDocument>
-        given InsertEdit satisfies TextEdit {
+shared abstract class ChangeParametersRefactoring(
+    Node node,
+    Tree.CompilationUnit rootNode,
+    JList<CommonToken> tokens,
+    CommonDocument doc,
+    PhasedUnit phasedUnit,
+    {PhasedUnit*} allUnits
+)
+        satisfies Refactoring {
+
+    shared formal Boolean searchInFile(PhasedUnit pu);
+    shared formal Boolean searchInEditor();
+    shared formal Boolean inSameProject(Functional&Declaration declaration);
     
-    // TODO move up, shared with InlineRefacto and probably others
-    shared formal TextChange newFileChange(PhasedUnit pu);
-    shared formal TextChange newDocChange();
-    shared formal void addChangeToChange(Change change, TextChange tc);
+    value declaration = getDeclarationForChangeParameters(node, rootNode);
     
-    shared actual Boolean affectsOtherFiles {
-        if (exists declaration 
-            = getDeclarationForChangeParameters(editorData.node, rootNode)) {
+    enabled => if (is Functional declaration)
+               then inSameProject(declaration)
+               else false;
+    
+    shared Boolean affectsOtherFiles {
+        if (exists declaration) {
             return declaration.toplevel || declaration.shared;
         }
         else {
@@ -200,18 +213,18 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     }
     
     "Applies the changes made in the `ParameterList`."
-    shared actual void build([Change, ParameterList] data) {
+    shared CompositeChange build(ParameterList params) {
         
-        value [change, params] = data;
+        value change = platformServices.createCompositeChange(name);
         
         // TODO progress reporting!
         if (affectsOtherFiles) {
-            for (phasedUnit in getAllUnits()) {
+            for (phasedUnit in allUnits) {
                 if (searchInFile(phasedUnit)) {
                     assert (is AnyProjectPhasedUnit phasedUnit);
                     refactorInFile {
                         params = params;
-                        tfc = newFileChange(phasedUnit);
+                        tfc = platformServices.createTextChange(name, phasedUnit);
                         cc = change;
                         root = phasedUnit.compilationUnit;
                         tokens = phasedUnit.tokens;
@@ -220,12 +233,11 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             }
         }
         else {
-            value phasedUnit = editorPhasedUnit;
             if (searchInFile(phasedUnit)) {
                 assert (is AnyEditedPhasedUnit phasedUnit);
                 refactorInFile {
                     params = params;
-                    tfc = newFileChange(phasedUnit);
+                    tfc = platformServices.createTextChange(name, phasedUnit);
                     cc = change;
                     root = phasedUnit.compilationUnit;
                     tokens = phasedUnit.tokens;
@@ -236,18 +248,20 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         if (searchInEditor()) {
             refactorInFile {
                 params = params;
-                tfc = newDocChange();
+                tfc = platformServices.createTextChange(name, doc);
                 cc = change;
-                root = editorData.rootNode;
-                tokens = editorData.tokens;
+                root = rootNode;
+                tokens = tokens;
             };
         }
+        
+        return change;
     }
 
-    void refactorInFile(ParameterList params, TextChange tfc, Change cc, 
+    void refactorInFile(ParameterList params, TextChange tfc, CompositeChange cc, 
         Tree.CompilationUnit root, JList<CommonToken> tokens) {
         
-        initMultiEditChange(tfc);
+        tfc.initMultiEdit();
         
         refactorArgumentLists {
             list = params;
@@ -267,8 +281,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             root = root;
         };
         
-        if (hasChildren(tfc)) {
-            addChangeToChange(cc, tfc);
+        if (tfc.hasEdits) {
+            cc.addTextChange(tfc);
         }
     }
 
@@ -361,8 +375,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 is CeylonUnit ceylonUnit = declaration.unit,
                 exists tokens = ceylonUnit.phasedUnit?.tokens) {
                 
-                value edit 
-                        = reorderDeclaration {
+                value edit = reorderDeclaration {
                     list = this;
                     pl = pl;
                     actual = false;
@@ -377,7 +390,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 
                 return nodes.text(tokens, decNode)
                         .substring(start, end)
-                            + getInsertedText(edit);
+                            + edit.text;
             }
             
             return "<unknown>";
@@ -414,7 +427,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
     "Creates a new [[ParameterList]] that can be modified in the UI.
      Call [[ChangeParametersRefactoring.build]] to apply changes."
     shared ParameterList? computeParameters() {
-        if (exists decl = getDeclarationForChangeParameters(editorData.node, rootNode),
+        if (exists decl = getDeclarationForChangeParameters(node, rootNode),
             is Functional refDec = decl.refinedDeclaration,
             exists pls = refDec.parameterLists) {
             
@@ -437,12 +450,12 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
             for ([pModel, pTree] in params) {
                 value _defaultArgs 
                         = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
-                        then nodes.text(editorData.tokens, sie.expression)
+                        then nodes.text(tokens, sie.expression)
                         else null;
                 value _paramList 
                         = if (is Tree.FunctionalParameterDeclaration pTree,
                               is Tree.MethodDeclaration pd = pTree.typedDeclaration)
-                        then nodes.text(editorData.tokens, pd.parameterLists.get(0))
+                        then nodes.text(tokens, pd.parameterLists.get(0))
                         else null;
                 
                 value p = Param( 
@@ -539,12 +552,13 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 if (is Tree.Identifier id 
                         = nodes.getIdentifyingNode(ref)) {
                     if (!id.text==newName) {
-                        addEditToChange(tfc,
-                            newReplaceEdit {
+                        tfc.addEdit(
+                            ReplaceEdit {
                                 start = id.startIndex.intValue();
                                 length = id.distance.intValue();
                                 text = newName;
-                            });
+                            }
+                        );
                     }
                 }
             }
@@ -581,13 +595,14 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                 continue;
             }
             
-            addEditToChange(tfc, 
+            tfc.addEdit( 
                 reorderDeclaration {
                     list = list;
                     pl = pl;
                     actual = actual;
                     tokens = tokens;
-                });
+                }
+            );
         }
     }
     
@@ -635,7 +650,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         
         sb.append(")");
         
-        return newReplaceEdit(pl.startIndex.intValue(), 
+        return ReplaceEdit(pl.startIndex.intValue(), 
             pl.distance.intValue(), sb.string);
 
     }
@@ -656,6 +671,8 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         return false;
     }
 
+    value indents => commonIndents;
+    
     void refactorArgumentLists(ParameterList list, TextChange tfc, 
         Tree.CompilationUnit root, JList<CommonToken> tokens) {
         
@@ -664,12 +681,13 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
 
         // Fix positional argument lists in callers
         for (pal in fiv.positionalArgLists) {
-            addEditToChange(tfc, 
+            tfc.addEdit( 
                 reorderArguments {
                     list = list;
                     pal = pal;
                     tokens = tokens;
-                });
+                }
+            );
         }
         
         // Fix named argument lists in callers
@@ -686,8 +704,9 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                     value start = if (exists _last = last)
                                   then _last.endIndex.intValue()
                                   else nal.startIndex.intValue() + 1;
-                    addEditToChange(tfc, newDeleteEdit(start, 
-                            na.endIndex.intValue() - start));
+                    tfc.addEdit(
+                        DeleteEdit(start, na.endIndex.intValue() - start)
+                    );
                 }
                 last = na;
             }
@@ -705,10 +724,9 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                             = getInlinedNamedArg(p, p.defaultArgs);
                     value startOffset = nal.startIndex.intValue();
                     value stopOffset = nal.stopIndex.intValue();
-                    value doc = getDocumentForChange(tfc);
                     
-                    if (getLineOfOffset(doc, stopOffset) 
-                            > getLineOfOffset(doc, startOffset)) {
+                    if (doc.getLineOfOffset(stopOffset) 
+                            > doc.getLineOfOffset(startOffset)) {
                         argString = 
                                   indents.defaultIndent + argString + ";"
                                 + indents.getDefaultLineDelimiter(doc)
@@ -719,12 +737,10 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
                         argString = argString + "; ";
                     }
                     
-                    addEditToChange(tfc, 
-                        newInsertEdit {
-                            position = stopOffset;
-                            text = argString;
-                        });
-                    }
+                    tfc.addEdit( 
+                        InsertEdit(stopOffset, argString)
+                    );
+                }
             }
         }
         
@@ -732,14 +748,13 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         value fav = FindArgumentsVisitor(list.declaration);
         root.visit(fav);
         for (decNode in fav.results) {
-            addEditToChange {
-                change = tfc;
-                edit = reorderParameters {
+             tfc.addEdit(
+                reorderParameters {
                     list = list;
                     pal = decNode.parameterLists.get(0);
                     tokens = tokens;
-                };
-            };
+                }
+            );
         }
     }
     
@@ -766,7 +781,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
         builder.append(")");
         
-        return newReplaceEdit(
+        return ReplaceEdit(
             pal.startIndex.intValue(), 
             pal.distance.intValue(),
             builder.string
@@ -790,7 +805,7 @@ shared interface ChangeParametersRefactoring<IDocument, InsertEdit, TextEdit, Te
         }
         builder.append(")");
         
-        return newReplaceEdit(
+        return ReplaceEdit(
             pal.startIndex.intValue(), 
             pal.distance.intValue(),
             builder.string
