@@ -203,7 +203,12 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         }
         
         shared actual void visit(Tree.StatementOrArgument that) {
-            if (that is Tree.ExecutableStatement && !(that is Tree.ControlStatement) || that is Tree.AttributeDeclaration || that is Tree.ImportModule || that is Tree.TypeAliasDeclaration || that is Tree.SpecifiedArgument) {
+            if (that is Tree.ExecutableStatement
+                    && !(that is Tree.ControlStatement)
+                    || that is Tree.AttributeDeclaration
+                    || that is Tree.ImportModule
+                    || that is Tree.TypeAliasDeclaration
+                    || that is Tree.SpecifiedArgument) {
                 terminateWithSemicolon(that);
             }
             
@@ -435,15 +440,15 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         }
         
         shared actual void visit(Tree.Import that) {
-            if (!that.importMemberOrTypeList exists || that.importMemberOrTypeList.mainToken.text.startsWith("<missing ")) {
-                if (!change.hasEdits,
+            if (!that.importMemberOrTypeList exists
+                || that.importMemberOrTypeList.mainToken.text.startsWith("<missing "),
+                !change.hasEdits,
                     exists ip = that.importPath,
                     ip.stopIndex.intValue() <= endOfCodeInLine) {
                         
                     value edit = InsertEdit(ip.endIndex.intValue(), " { ... }");
                     change.addEdit(edit);
                 }
-            }
             
             super.visit(that);
         }
@@ -578,4 +583,3 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
     }
 
 }
-
