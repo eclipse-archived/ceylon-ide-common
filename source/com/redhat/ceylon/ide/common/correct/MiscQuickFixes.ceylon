@@ -116,8 +116,7 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
 
     shared void addArgumentBlockProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
         if (is Tree.MethodArgument node) {
-            value se = node.specifierExpression;
-            if (is Tree.LazySpecifierExpression se) {
+            if (is Tree.LazySpecifierExpression se = node.specifierExpression) {
                 convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
             }
             
@@ -127,8 +126,7 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
         }
         
         if (is Tree.AttributeArgument node) {
-            value se = node.specifierExpression;
-            if (is Tree.LazySpecifierExpression se) {
+            if (is Tree.LazySpecifierExpression se = node.specifierExpression) {
                 convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
             }
             
