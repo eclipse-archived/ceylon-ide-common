@@ -281,7 +281,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             for (phasedUnit in getAllUnits()) {
                 if (searchInFile(phasedUnit)
                         && affectsUnit(phasedUnit.unit)) {
-                    assert (is AnyProjectPhasedUnit phasedUnit);
                     inlineInFile {
                         textChange = newFileChange(phasedUnit);
                         parentChange = change;
@@ -299,7 +298,6 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             value phasedUnit = editorPhasedUnit;
             if (searchInFile(phasedUnit)
                     && affectsUnit(phasedUnit.unit)) {
-                assert (is AnyEditedPhasedUnit phasedUnit);
                 inlineInFile {
                     textChange = newFileChange(phasedUnit);
                     parentChange = change;
