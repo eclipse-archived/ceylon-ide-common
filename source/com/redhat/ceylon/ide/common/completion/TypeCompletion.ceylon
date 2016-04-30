@@ -105,7 +105,7 @@ shared abstract class TypeProposal<IFile, CompletionResult, Document, InsertEdit
         variable value length = 0;
         variable value i = offset;
         while (i < getDocLength(document)) {
-            if (Character.isWhitespace(getDocChar(document, i).charValue())) {
+            if (Character.isWhitespace(getDocChar(document, i))) {
                 break;
             }
             length++;

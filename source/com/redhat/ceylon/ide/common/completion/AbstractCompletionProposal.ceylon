@@ -51,7 +51,7 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
             variable value i = offset;
             value doclen = getDocLength(document);
             while (i < doclen
-                && Character.isJavaIdentifierPart(getDocChar(document, i).charValue())) {
+                && Character.isJavaIdentifierPart(getDocChar(document, i))) {
                 length++;
                 i++;
             }

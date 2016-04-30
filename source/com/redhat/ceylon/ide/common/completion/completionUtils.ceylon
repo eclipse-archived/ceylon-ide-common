@@ -37,9 +37,6 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeParameter
 }
 
-import java.lang {
-    JCharacter=Character
-}
 import java.util {
     List,
     ArrayList,
@@ -364,7 +361,7 @@ Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
 }
 
 Integer findCharCount<Document>(Integer count, Document document, Integer start, Integer end,
-    String increments, String decrements, Boolean considerNesting, JCharacter(Document,Integer) getChar) {
+    String increments, String decrements, Boolean considerNesting, Character(Document,Integer) getChar) {
 
     assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
 
@@ -387,7 +384,7 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                 return offset - 1;
             }
         }
-        value curr = getChar(document, offset++).charValue();
+        value curr = getChar(document, offset++);
         switch (curr)
         case ('/') {
             if (offset < end) {

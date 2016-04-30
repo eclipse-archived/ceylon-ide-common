@@ -1,6 +1,3 @@
-import java.lang {
-    Character
-}
 shared interface CommonCompletionProposal<Document,Region> {
     
     shared formal String withoutDupeSemi(Document document);
