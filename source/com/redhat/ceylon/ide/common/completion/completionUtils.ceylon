@@ -360,8 +360,10 @@ Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
             && !td.boolean;
 }
 
-Integer findCharCount<Document>(Integer count, Document document, Integer start, Integer end,
-    String increments, String decrements, Boolean considerNesting, Character(Document,Integer) getChar) {
+Integer findCharCount<Document>(Integer count, Document document, 
+    Integer start, Integer end,
+    String increments, String decrements, Boolean considerNesting, 
+    Character getChar(Document doc,Integer offset)) {
 
     assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
 
