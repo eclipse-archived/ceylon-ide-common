@@ -1,11 +1,10 @@
-import com.redhat.ceylon.ide.common.platform {
-    DefaultDocument,
-    CommonDocument
-}
-
 import ceylon.test {
     test,
     assertEquals
+}
+
+import com.redhat.ceylon.ide.common.platform {
+    DefaultDocument
 }
 
 
