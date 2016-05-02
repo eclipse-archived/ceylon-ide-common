@@ -2,7 +2,8 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    CeylonIterable
+    CeylonIterable,
+    javaClass
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -26,7 +27,8 @@ import com.redhat.ceylon.compiler.typechecker {
     TypeCheckerBuilder
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleValidator
+    ModuleValidator,
+    Warning
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
@@ -100,7 +102,8 @@ import java.net {
     URI
 }
 import java.util {
-    WeakHashMap
+    WeakHashMap,
+    EnumSet
 }
 import java.util.concurrent {
     TimeUnit
@@ -268,6 +271,12 @@ shared abstract class BaseCeylonProject() {
             then CeylonIterable(units)
             else {};
     
+    shared default PhasedUnit? getParsedUnit(BaseFileVirtualFile virtualFile) =>
+            if (parsed,
+            exists phasedUnits=typechecker?.phasedUnits)
+            then phasedUnits.getPhasedUnit(virtualFile)
+            else null;
+
     shared CeylonProjectConfig configuration {
         if (exists config = ceylonConfig) {
             return config;
@@ -288,7 +297,8 @@ shared abstract class BaseCeylonProject() {
         }
     }
     
-    
+    shared Boolean showWarnings => 
+            configuration.suppressWarningsEnum != EnumSet.allOf(javaClass<Warning>());
 
     "Returns:
      - [[true]] if no error occured while creating the ceylon bootstrap files,
@@ -571,6 +581,9 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
 
     shared actual {ProjectPhasedUnitAlias*} parsedUnits =>
             super.parsedUnits.map((pu) => unsafeCast<ProjectPhasedUnitAlias>(pu));
+    
+    shared actual ProjectPhasedUnitAlias? getParsedUnit(BaseFileVirtualFile virtualFile) =>
+            unsafeCast<ProjectPhasedUnitAlias?>(super.getParsedUnit(virtualFile));
     
     "Returns the [[FileVirtualFileAlias]] added to the model,
      or [[null]] if it could not be added"

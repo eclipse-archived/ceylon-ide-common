@@ -58,6 +58,7 @@ shared interface BaseResourceVirtualFile
     shared formal actual JList<out BaseResourceVirtualFile> children;
     shared actual formal BaseFolderVirtualFile? parent;
     shared default {BaseResourceVirtualFile*} childrenIterable => CeylonIterable(children);
+    shared Boolean existsOnDisk => \iexists();
 }
 
 shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
@@ -93,6 +94,11 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     
     shared formal FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder;
     
+    shared Path? rootRelativePath => 
+            if (exists theRootFolder = rootFolder)
+            then Path(path).makeRelativeTo(Path(theRootFolder.path))
+            else null;
+    
     shared default Boolean? isSource => 
             let (root = rootFolder) 
             if (exists root,
@@ -102,7 +108,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
                 then vfsServices.getRootIsSourceProperty(existingProject, unsafeCast<NativeFolder>(nativeResource))
                 else root.isSource
             else null;
-    
+
     shared formal Package? ceylonPackage;
     
     shared actual default Boolean equals(Object that) => 
@@ -164,9 +170,8 @@ shared interface FolderVirtualFile<NativeProject, NativeResource, NativeFolder, 
     shared actual default Package? ceylonPackage {
         if (exists existingProject=ceylonProject) {
             if (! vfsServices.existsOnDisk(nativeResource)) {
-                if (exists theRootFolder = rootFolder) {
-                    Path rootRelativePath = Path(path).makeRelativeTo(Path(theRootFolder.path));
-                    return existingProject.modelLoader?.findPackage(".".join(rootRelativePath.segments));
+                if (exists theRootRelativePath = rootRelativePath) {
+                    return existingProject.modelLoader?.findPackage(".".join(theRootRelativePath.segments));
                 }
                 return null;
             }
@@ -207,6 +212,15 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
 
     shared actual Package? ceylonPackage =>
             parent?.ceylonPackage;
+    
+    shared Boolean sourceFile => 
+            (isSource else false) 
+            && (ceylonProject?.isCompilable(nativeResource) else false);
+    
+    shared Boolean resourceFile => 
+            if (exists isInSourceFolder=isSource) 
+            then !isInSourceFolder 
+            else false;
     
     shared <ModifiableSourceFileAlias | BaseJavaUnitAlias>? unit =>
             ifExists(ceylonPackage?.units, CeylonIterable<Unit>)

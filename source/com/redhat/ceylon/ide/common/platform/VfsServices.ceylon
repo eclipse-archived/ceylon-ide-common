@@ -41,15 +41,15 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
     
     shared formal NativeFolder? getParent(NativeResource resource);
     shared formal NativeFile? findFile(NativeFolder resource, String fileName);
-    shared formal NativeResource? findChild(NativeFolder parent, Path path);
+    shared formal NativeResource? findChild(NativeFolder|NativeProject parent, Path path);
     shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
     shared formal Boolean isFolder(NativeResource resource);
     shared formal Boolean existsOnDisk(NativeResource resource);
     shared formal String getShortName(NativeResource resource);
     shared formal Path getVirtualFilePath(NativeResource resource);
     shared formal String getVirtualFilePathString(NativeResource resource);
-    shared formal Path? getProjectRelativePath(NativeResource resource, CeylonProjectAlias project);
-    shared formal String? getProjectRelativePathString(NativeResource resource, CeylonProjectAlias project);
+    shared formal Path? getProjectRelativePath(NativeResource resource, CeylonProjectAlias|NativeProject project);
+    shared formal String? getProjectRelativePathString(NativeResource resource, CeylonProjectAlias|NativeProject project);
     shared formal File? getJavaFile(NativeResource resource);
     shared formal NativeResource? fromJavaFile(File javaFile, NativeProject project);
 

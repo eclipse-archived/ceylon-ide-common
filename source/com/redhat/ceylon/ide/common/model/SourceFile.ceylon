@@ -16,49 +16,52 @@ import java.lang.ref {
 }
 
 shared abstract class SourceFile(
-    IdePhasedUnit phasedUnit) 
-        extends CeylonUnit(phasedUnit.moduleSourceMapper) {
+    IdePhasedUnit phasedUnit)
+        extends CeylonUnit(phasedUnit.moduleSourceMapper)
+        satisfies Source {
     
-    shared formal Boolean modifiable; 
+    language = Language.ceylon;
     
-    shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef = 
-            WeakReference<IdePhasedUnit>(phasedUnit);
-
+    shared formal Boolean modifiable;
+    
+    shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef =
+        WeakReference<IdePhasedUnit>(phasedUnit);
+    
     shared actual Package \ipackage => super.\ipackage;
     
     assign \ipackage {
         value p = \ipackage;
         super.\ipackage = \ipackage;
         if (is SingleSourceUnitPackage p,
-            ! p.unit exists,
+            !p.unit exists,
             filename.equals(ModuleManager.\iPACKAGE_FILE)) {
             if (p.fullPathOfSourceUnitToTypecheck.equals(fullPath)) {
                 p.unit = this;
             }
         }
     }
-
+    
     shared actual default BaseIdeModuleSourceMapper moduleSourceMapper =>
-            unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
+        unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
     
     shared actual IdePhasedUnit? setPhasedUnitIfNecessary() =>
-            phasedUnitRef?.get();
+        phasedUnitRef?.get();
     
-    shared actual String sourceFileName => 
-            filename;
+    shared actual String sourceFileName =>
+        filename;
     
-    shared actual String sourceRelativePath => 
-            relativePath;
+    shared actual String sourceRelativePath =>
+        relativePath;
     
-    shared actual String sourceFullPath => 
-            fullPath;
+    shared actual String sourceFullPath =>
+        fullPath;
     
-    shared actual String ceylonSourceRelativePath => 
-            relativePath;
+    shared actual String ceylonSourceRelativePath =>
+        relativePath;
     
-    shared actual String ceylonSourceFullPath => 
-            sourceFullPath;
+    shared actual String ceylonSourceFullPath =>
+        sourceFullPath;
     
-    shared actual String ceylonFileName => 
-            filename;
+    shared actual String ceylonFileName =>
+        filename;
 }
