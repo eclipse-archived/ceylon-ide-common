@@ -9,15 +9,15 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 
 shared interface PlatformServices {
-    shared void register() {
-        _platformServices = this;
-    }
+    shared void register() => _platformServices = this;
     
-    shared formal ModelServices<NativeProject, NativeResource, NativeFolder, NativeFile> model<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal IdeUtils utils();
+    shared formal ModelServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
+            model<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>
-    importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
-    shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
+            importProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
+    shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
+            vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
 
     deprecated("Prefer [[commonIndents]] and [[CommonDocument]] instead.")
     shared formal Indents<IDocument> indents<IDocument>();
@@ -27,14 +27,24 @@ shared interface PlatformServices {
 }
 
 suppressWarnings("expressionTypeNothing")
-variable PlatformServices _platformServices = object satisfies PlatformServices {
-    shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> model<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
+variable PlatformServices _platformServices 
+        = object satisfies PlatformServices {
+    shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> 
+            model<NativeProject, NativeResource, NativeFolder, NativeFile>() 
+            => nothing;
     shared actual IdeUtils utils() => DefaultIdeUtils();
-    shared actual ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>() => nothing;
-    shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
-    shared actual Indents<IDocument> indents<IDocument>() => nothing;
-    shared actual TextChange createTextChange(String desc, CommonDocument|PhasedUnit input) => nothing;
-    createCompositeChange(String desc) => nothing;
+    shared actual ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> 
+            importProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>() 
+            => nothing;
+    shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> 
+            vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() 
+            => nothing;
+    shared actual Indents<IDocument> indents<IDocument>() 
+            => nothing;
+    shared actual TextChange createTextChange(String desc, CommonDocument|PhasedUnit input) 
+            => nothing;
+    createCompositeChange(String desc) 
+            => nothing;
 };
 
 shared PlatformServices platformServices => _platformServices;
