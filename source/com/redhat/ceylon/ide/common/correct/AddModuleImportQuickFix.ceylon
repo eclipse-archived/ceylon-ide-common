@@ -51,7 +51,7 @@ shared interface AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
         variable value node = data.node;
         value unit = node.unit;
         
-        if (unit.\ipackage.\imodule.default) {
+        if (unit.\ipackage.\imodule.defaultModule) {
             return;
         }
         

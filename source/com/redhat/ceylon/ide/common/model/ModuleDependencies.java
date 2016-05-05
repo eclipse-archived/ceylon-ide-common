@@ -279,10 +279,7 @@ public class ModuleDependencies {
     }
     
     public synchronized void addModuleWithDependencies(Module module) {
-        if (module.isDefault()) {
-            return;
-        }
-        if (module.equals(module.getLanguageModule())) {
+        if (module.isDefaultModule() || module.isLanguageModule()) {
             return;
         }
         checkModuleIsComplete(module);

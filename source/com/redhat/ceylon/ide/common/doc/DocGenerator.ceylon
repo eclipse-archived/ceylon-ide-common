@@ -656,7 +656,7 @@ shared interface DocGenerator<Document> {
         if (mod.java) {
             buffer.append("<p>This module is implemented in Java.</p>");
         }
-        if (mod.default) {
+        if (mod.defaultModule) {
             buffer.append("<p>The default module for packages which do not
                            belong to explicit module.</p>");
         }

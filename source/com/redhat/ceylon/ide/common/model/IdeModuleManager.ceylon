@@ -102,7 +102,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         if (!exists m = modules.languageModule) {
             value defaultModuleName = Collections.singletonList(javaString(Module.\iDEFAULT_MODULE_NAME));
             BaseIdeModule defaultModule = createModule(defaultModuleName, "unversioned");
-            defaultModule.default = true;
+            //defaultModule.default = true;
             defaultModule.available = true;
             defaultModule.isProjectModule=true;
             modules.listOfModules.add(defaultModule);
