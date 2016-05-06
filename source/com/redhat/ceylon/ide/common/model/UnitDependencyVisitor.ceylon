@@ -65,7 +65,7 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
         }
     }
     
-    void storeDeclarationDependency(Declaration dec) {
+    void storeDeclarationDependency(Declaration? dec) {
         if (is TypeDeclaration dec) {
             storeTypeDeclarationDependency(dec); 
         }
@@ -224,8 +224,8 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
     }
     
     shared actual void visit(Tree.Declaration that) {
-        Declaration decl = that.declarationModel;
-        if (decl.native) {
+        if (exists decl = that.declarationModel,
+            decl.native) {
             if (exists headerDeclaration = ModelUtil.getNativeHeader(decl)) {
                 MutableList<Declaration> declarationsDependingOn = ArrayList<Declaration>();
                 if (! (headerDeclaration === decl)) {

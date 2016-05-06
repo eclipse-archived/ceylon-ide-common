@@ -23,6 +23,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
+}
 
 shared abstract class AbstractNavigation<Target,NativeFile>() {
     
@@ -59,7 +62,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
     }
     
     shared Target? gotoNode(Node node, Tree.CompilationUnit? rootNode) {
-        value unit = node.unit;
+        TypecheckerUnit? unit = node.unit;
         value identifyingNode = nodes.getIdentifyingNode(node);
         
         if (!exists identifyingNode) {
@@ -67,7 +70,10 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         }
         value length = identifyingNode.distance;
         value startOffset = identifyingNode.startIndex;
-        if (exists rootNode, unit.equals(rootNode.unit)) {
+        if (exists rootNode,
+            exists unit,
+            exists rootNodeUnit = rootNode.unit,
+            unit == rootNodeUnit) {
             // TODO
             //editor.selectAndReveal(startOffset, length);
             //return editor;
@@ -87,7 +93,11 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         return getUnitPath(node.unit);
     }
 
-    shared Path? getUnitPath(Unit unit) {
+    shared Path? getUnitPath(Unit? unit) {
+        if (!exists unit) {
+            return null;
+        }
+        
         if (is IResourceAware<out Anything,out Anything,NativeFile> unit) {
             value fileResource = unit.resourceFile;
             return if (exists fileResource)
