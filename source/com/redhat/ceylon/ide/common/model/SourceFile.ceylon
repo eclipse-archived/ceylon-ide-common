@@ -1,16 +1,16 @@
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package
-}
 import com.redhat.ceylon.ide.common.typechecker {
     IdePhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
-    SingleSourceUnitPackage,
-    unsafeCast
+    SingleSourceUnitPackage
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
+}
+
 import java.lang.ref {
     WeakReference
 }
@@ -40,9 +40,6 @@ shared abstract class SourceFile(
             }
         }
     }
-    
-    shared actual default BaseIdeModuleSourceMapper moduleSourceMapper =>
-        unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
     
     shared actual IdePhasedUnit? setPhasedUnitIfNecessary() =>
         phasedUnitRef?.get();

@@ -1,3 +1,6 @@
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
+}
 import com.redhat.ceylon.ide.common.util {
     unsafeCast
 }
@@ -23,9 +26,6 @@ shared abstract class IdeUnit
     shared actual Package? javaLangPackage => 
             ceylonModule.ceylonProject?.modules?.javaLangPackage 
                 else super.javaLangPackage;
-    
-    shared actual default BaseIdeModuleSourceMapper? moduleSourceMapper =>
-            unsafeCast<BaseIdeModuleSourceMapper?>(super.moduleSourceMapper);
     
     shared actual formal String? sourceFileName;
     shared actual formal String? sourceRelativePath;

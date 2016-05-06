@@ -24,8 +24,6 @@ shared abstract class ModifiableSourceFile<NativeProject, NativeResource, Native
     shared actual default ModifiablePhasedUnitAlias? phasedUnit =>
             unsafeCast<ModifiablePhasedUnitAlias?>(super.phasedUnit);
 
-    shared actual default IdeModuleSourceMapperAlias moduleSourceMapper =>
-            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
 }
 
 shared alias AnyModifiableSourceFile 
