@@ -22,14 +22,14 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit,
-    TypecheckerUnit
+    PhasedUnit
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelDeclaration=Declaration,
     Function,
     ModuleImport,
-    Module
+    Module,
+    Unit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Ast=Tree,
@@ -285,12 +285,15 @@ shared class DeltaBuilderFactory(
             => empty;
     }
 
-    function sameBackend([Ast.AnnotationList, TypecheckerUnit?] oldNode, [Ast.AnnotationList, TypecheckerUnit?] newNode)
+    function sameBackend([Ast.AnnotationList, Unit?] oldNode, 
+                         [Ast.AnnotationList, Unit?] newNode)
             => let (Backends oldNative = getNativeBackend(*oldNode),
                     Backends newNative = getNativeBackend(*newNode))
                         oldNative == newNative;
 
-    class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, Ast.ModuleDescriptor? newNode, NodeComparisonListener? nodeComparisonListener)
+    class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, 
+                                       Ast.ModuleDescriptor? newNode, 
+                                       NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder(oldNode, newNode) {
         variable value changes = ArrayList<ModuleDescriptorDelta.PossibleChange>();
         variable value childrenDeltas = ArrayList<ModuleImportDelta>();

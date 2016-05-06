@@ -1041,8 +1041,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             for (phasedUnit in ceylonProject.parsedUnits) {
                 value unit = phasedUnit.unit;
-                if (!unit.unresolvedReferences.empty ||
-                    !unit.missingNativeImplementations.empty) {
+                if (unit.unresolvedReferences) {
                     value fileToAdd = phasedUnit.unitFile;
                     if (fileToAdd.existsOnDisk) {
                         filesToAddInTypecheck.add(fileToAdd);

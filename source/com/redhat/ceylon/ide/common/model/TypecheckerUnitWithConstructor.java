@@ -13,7 +13,7 @@ public class TypecheckerUnitWithConstructor extends TypecheckerUnit {
             String theRelativePath,
             String theFullPath,
             Package thePackage) {
-        super();
+        super(null, null);
         setFilename(theFilename);
         setRelativePath(theRelativePath);
         setFullPath(theFullPath);
