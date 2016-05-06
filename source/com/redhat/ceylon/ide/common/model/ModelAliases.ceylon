@@ -7,6 +7,8 @@ shared interface ModelAliases<NativeProject, NativeResource, NativeFolder, Nativ
     shared alias CeylonProjectBuildAlias => CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias BuildHookAlias => BuildHook<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias CeylonProjectsAlias => CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>;
+    shared alias ModelListenerAlias => ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>;
+    shared alias ModelListenerAdapterAlias => ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>;
 
     shared alias IdeModuleAlias => IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>;
 

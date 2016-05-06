@@ -117,7 +117,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     
-    CeylonProjectAlias ceylonProject;
+    shared CeylonProjectAlias ceylonProject;
     
     shared class State() {
         "Unanalyzed changes added since the last time [[analyzeChanges]] was called.
@@ -189,6 +189,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     _classpathResolutionRequired = false; 
                 }
             });
+            
+            shared Boolean fullBuildRequested =>
+                    _fullBuildRequested;
+            
+            shared Boolean classpathResolutionRequested =>
+                    _classpathResolutionRequested;
             
             shared Boolean fullBuildRequired =>
                     _fullBuildRequired;
@@ -359,6 +365,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     shared Map<NativeFile,Set<String>> missingClasses => state.missingClasses.immutable;
     
+    shared Boolean somethingToDo => 
+            state.buildType.fullBuildRequested 
+            || state.buildType.classpathResolutionRequested
+            || ! state.fileChangesToAnalyze.empty;
+    
     shared void classPathChanged() {
         state.buildType.requestFullBuild();
     }
@@ -514,6 +525,15 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 }
             };
     
+    void resolveClasspath(BaseProgressMonitor monitor) {
+        try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
+            ceylonProject.buildHooks.each((hook) => hook.beforeClasspathResolution(this, state));
+            ceylonProject.parseCeylonModel(progress.newChild(100));
+            ceylonProject.buildHooks.each((hook) => hook.afterClasspathResolution(this, state));
+            state.buildType.resetClasspathResolution();
+        }
+    }
+    
     shared Boolean performBuild(BaseProgressMonitor monitor) {
         variable Boolean finished = false;
         try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
@@ -523,11 +543,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             }
             
             if (state.buildType.classpathResolutionPlanned || state.buildType.fullBuildPlanned) {
-                // TODO this should be factorized in a dedicated method called resolveClasspath
-                // that would be decorated with before and after hooks (tomanage the case of 
-                // Eclipe classpath container resolving
-                ceylonProject.parseCeylonModel(progress.newChild(100));
-                state.buildType.resetClasspathResolution();
+                resolveClasspath(progress.newChild(100));
             }
             
             progress.updateRemainingWork(800);
@@ -809,6 +825,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     if (state.buildType.fullBuildPlanned) {
                         // Full Build
                         
+                        ceylonProject.state = ProjectState.typechecking;
+
                         phasedUnitsToTypecheck = ceylonProject.parsedUnits;
                         
                         // First typecheck PhasedUnits of dependencies (source archives)
@@ -836,6 +854,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     progress.updateRemainingWork(800);
                     typecheck(progress.newChild(800), phasedUnitsToTypecheck);
                     state.buildType.resetFullBuild();
+                    ceylonProject.state = ProjectState.typechecked;
                 }
             });
         });
@@ -1204,7 +1223,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         return changeDependents;
     }
     
-    
+    string => "Ceylon Build for project `` ceylonProject ``";
     
     // TODO : au démarrage : charger le buildState + erreurs depuis le disque et effacer le build state du disque
     // TODO :  A la fin : flusher le buildState + erreurs  sur le disque

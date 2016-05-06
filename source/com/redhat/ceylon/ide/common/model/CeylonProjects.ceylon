@@ -8,8 +8,6 @@ import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status,
     ModelServicesConsumer,
     VfsServicesConsumer
 }
@@ -29,6 +27,15 @@ import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
 }
+import org.jgrapht.experimental.dag {
+    DirectedAcyclicGraph
+}
+import org.jgrapht {
+    EdgeFactory
+}
+import ceylon.interop.java {
+    CeylonIterator
+}
 
 shared abstract class BaseCeylonProjects() {
     
@@ -45,7 +52,7 @@ shared T withCeylonModelCaching<T>(T() do) {
 
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
-        satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelListenerDispatcher<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -55,34 +62,22 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    alias ListenerAlias => ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>;
-    value modelListeners = HashSet<ListenerAlias>(unlinked);
+    value _modelListeners = HashSet<ModelListenerAlias>(unlinked);
     value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
     value lock = ReentrantReadWriteLock(true);
 
     shared VirtualFileSystem vfs = VirtualFileSystem();
 
     TypeCache.setEnabledByDefault(false);
+
+    shared actual {ModelListenerAlias*} modelListeners => _modelListeners;
     
     shared void addModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
-            modelListeners.add(listener);
+            _modelListeners.add(listener);
     
     shared void removeModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
-            modelListeners.remove(listener);
+            _modelListeners.remove(listener);
 
-    void runListenerFunction(void fun(ListenerAlias listener)) {
-        modelListeners.each((listener) {
-            try {
-                fun(listener);
-            } catch(Exception e) {
-                platformUtils.log(Status._ERROR, "A Ceylon Model listener (``listener``) has triggered the following exception:", e);
-            }
-        });
-    }
-    
-    shared actual void modelParsed(CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> project) =>
-            runListenerFunction((listener)=>listener.modelParsed(project));
-            
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
         try {
@@ -99,6 +94,13 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
 
     shared formal CeylonProjectAlias newNativeProject(NativeProject nativeProject);
 
+    shared Integer ceylonProjectNumber
+            => withLocking {
+        write=false;
+        do() => projectMap.size;
+        interrupted() => 0;
+    };
+    
     shared {CeylonProjectAlias*} ceylonProjects
         => withLocking {
             write=false;
@@ -120,43 +122,63 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             interrupted() => null;
         };
 
-    shared Boolean removeProject(NativeProject nativeProject)
-        => withLocking {
+    shared Boolean removeProject(NativeProject nativeProject) {
+        if (exists existingCeylonProject = withLocking {
             write=true;
-            do() => projectMap.remove(nativeProject) exists;
+            function do() => 
+                projectMap.remove(nativeProject);
+
             function interrupted() {
                 throw InterruptedException();
             }
-        };
+        }) {
+            ceylonProjectRemoved(existingCeylonProject);
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-    shared Boolean addProject(NativeProject nativeProject)
-        => withLocking {
+    shared Boolean addProject(NativeProject nativeProject) {
+        if (exists newCeylonProject = withLocking {
             write=true;
             function do() {
                  if (projectMap[nativeProject] exists) {
-                     return false;
+                     return null;
                  } else {
-                     projectMap.put(nativeProject, newNativeProject(nativeProject));
-                     return true;
+                     value newProject = newNativeProject(nativeProject);
+                     projectMap.put(nativeProject, newProject);
+                     return newProject;
                  }
             }
             function interrupted() {
                  throw InterruptedException();
             }
-        };
+        }) {
+            ceylonProjectAdded(newCeylonProject);
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-    shared void clearProjects()
-        => withLocking {
+    shared void clearProjects() {
+        value projects = withLocking {
             write=true;
-            do() => projectMap.clear();
+            function do() {
+                value projects = projectMap.items.sequence();
+                projectMap.clear();
+                return projects;
+            }
             function interrupted() {
                 throw InterruptedException();
             }
         };
+        projects.each(ceylonProjectRemoved);
+    }
 
     shared {PhasedUnit*} parsedUnits
         => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
-    
     
     "Dispatch the changes to the projects that might be interested
      (have the corresponding native resource in the project contents)"
@@ -170,5 +192,31 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
                 ceylonProject.projectFileTreeChanged({first, *changesForProject.rest});
             }
         }
-    }       
+    }
+    
+    shared {CeylonProjectAlias*} ceylonProjectsInTopologicalOrder {
+       value theCeylonProjects = ceylonProjects.sequence();
+       class Dependency(shared CeylonProjectAlias requiring, shared CeylonProjectAlias required) {}
+       value dag = DirectedAcyclicGraph<CeylonProjectAlias, Dependency>(
+            object satisfies EdgeFactory<CeylonProjectAlias, Dependency> {
+               createEdge(CeylonProjectAlias sourceVertex, CeylonProjectAlias targetVertex) =>
+                       Dependency(sourceVertex, targetVertex);
+           }
+       );
+       for (ceylonProject in theCeylonProjects) {
+           dag.addVertex(ceylonProject);
+       }
+       
+       for (ceylonProject in theCeylonProjects) {
+           for (required in ceylonProject.referencedCeylonProjects) {
+               dag.addDagEdge(ceylonProject, required); 
+           }
+           for (requiring in ceylonProject.referencingCeylonProjects) {
+               dag.addDagEdge(requiring, ceylonProject); 
+           }
+       }
+       return object satisfies {CeylonProjectAlias*} {
+           iterator() => CeylonIterator(dag.iterator());
+       };
+    }
 }

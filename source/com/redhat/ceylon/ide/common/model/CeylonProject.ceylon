@@ -174,7 +174,7 @@ shared abstract class BaseCeylonProject() {
     //            
     //      The only interesting data contained in the [[TypeChecker]] is the
     //      [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. 
-    //      But new they should be managed in a modular way in each [[IdeModule]] 
+    //      But now they should be managed in a modular way in each [[IdeModule]] 
     //      object accessible from the [[PhasedUnits]]")
     shared variable TypeChecker? typechecker=null;
     
@@ -255,7 +255,7 @@ shared abstract class BaseCeylonProject() {
         
     }
 
-    shared void resetRepositoryManager() {
+    shared default void resetRepositoryManager() {
         try {
             repositoryManagerLock.lock();
             _repositoryManager = null;
@@ -456,22 +456,6 @@ shared abstract class BaseCeylonProject() {
 }
 
 
-shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
-    "Returns [[true]] if the analysis has been correctly done by the hook,
-     or [[false]] if the hook analysis has been cancelled due to
-     critical errors that would make the upcoming build impossible or pointless."
-    shared default Boolean analyzingChanges(
-        {ChangeToAnalyze*} changes,  
-        CeylonProjectBuildAlias build, 
-        CeylonProjectBuildAlias.State state) => true;
-}
-
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -505,6 +489,11 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         value build = CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(this);
         build_ = build;
         return build;
+    }
+
+    shared actual default void resetRepositoryManager() {
+        super.resetRepositoryManager();
+        buildHooks.each((hook) => hook.repositoryManagerReset(this));
     }
 
     shared actual Boolean nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
@@ -947,7 +936,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 
                 completeCeylonModelParsing(progress.newChild(10));
                 
-                model.modelParsed(this);
+                model.ceylonModelParsed(this);
             }
         });
     };
@@ -1093,5 +1082,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
     
     shared default {BuildHookAlias*} buildHooks => {};
+    
+    string => ideArtifact.string;
 }
 
