@@ -11,8 +11,7 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     }
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnits,
-    TypecheckerUnit
+    PhasedUnits
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -32,7 +31,8 @@ import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Package,
+    Unit
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -90,7 +90,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     shared CeylonProjectAlias ceylonProject => 
             ceylonProjectRef.get();
 
-    shared actual TypecheckerUnit newUnit() => 
+    shared actual Unit newUnit() => 
             object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
             }.modelServices.newProjectSourceFile(this);
 

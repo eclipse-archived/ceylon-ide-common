@@ -4,9 +4,6 @@ import com.redhat.ceylon.compiler.typechecker {
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -24,7 +21,8 @@ import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Package,
+    Unit
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -92,7 +90,7 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
     shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
             unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
     
-    shared actual TypecheckerUnit newUnit()  => 
+    shared actual Unit newUnit()  => 
             object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
             }.modelServices.newCrossProjectSourceFile(this);
     

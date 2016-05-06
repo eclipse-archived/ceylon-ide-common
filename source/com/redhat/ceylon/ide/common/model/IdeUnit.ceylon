@@ -6,13 +6,13 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared abstract class IdeUnit 
-        extends TypecheckerUnitWithConstructor 
+        extends TypecheckerUnit
         satisfies IUnit & SourceAware  {
     shared new(BaseIdeModuleSourceMapper moduleSourceMapper) 
-            extends TypecheckerUnitWithConstructor(moduleSourceMapper) {}
+            extends TypecheckerUnit(moduleSourceMapper) {}
 
     shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
-            extends TypecheckerUnitWithConstructor(theFilename, theRelativePath, theFullPath, thePackage) {}
+            extends TypecheckerUnit(theFilename, theRelativePath, theFullPath, thePackage) {}
     
     shared actual BaseIdeModule ceylonModule =>
             unsafeCast<BaseIdeModule>(\ipackage.\imodule);

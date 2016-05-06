@@ -4,9 +4,6 @@ import com.redhat.ceylon.compiler.typechecker {
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     ModuleSourceMapper
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -23,7 +20,8 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package,
-    Declaration
+    Declaration,
+    Unit
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -86,7 +84,7 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
         //}
     }
     
-    shared actual TypecheckerUnit newUnit() => 
+    shared actual Unit newUnit() => 
             object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
             }.modelServices.newEditedSourceFile(this);
     

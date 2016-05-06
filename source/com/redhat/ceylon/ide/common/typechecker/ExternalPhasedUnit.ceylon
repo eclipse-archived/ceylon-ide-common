@@ -9,7 +9,6 @@ import java.util {
     JList=List
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit,
     PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
@@ -28,7 +27,8 @@ import org.antlr.runtime {
     CommonToken
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Package,
+    Unit
 }
 import com.redhat.ceylon.ide.common.util {
     unsafeCast
@@ -55,7 +55,7 @@ shared class ExternalPhasedUnit
             extends IdePhasedUnit.clone(other) {
     }
     
-    shared actual default TypecheckerUnit newUnit() =>
+    shared actual default Unit newUnit() =>
             ExternalSourceFile(this);
     
     shared actual default ExternalSourceFile unit =>

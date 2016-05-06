@@ -12,7 +12,6 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     ExpressionVisitor
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit,
     PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -57,7 +56,8 @@ import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue,
     Type,
     Value,
-    Scope
+    Scope,
+    Unit
 }
 
 import java.util {
@@ -94,7 +94,7 @@ shared <Functional&Declaration>? getDeclarationForChangeParameters
 
 "Tries to parse a type expression, and returns the corresponding [[Type]] in
  case of success, or a [[String]] indicating a parse/lex error."
-shared String|Type parseTypeExpression(String typeText, TypecheckerUnit unit, Scope scope) {
+shared String|Type parseTypeExpression(String typeText, Unit unit, Scope scope) {
     try {
         value lexer = CeylonLexer(ANTLRStringStream(typeText));
         value ts = CommonTokenStream(lexer);

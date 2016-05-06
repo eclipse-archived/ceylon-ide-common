@@ -6,7 +6,6 @@ import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit,
     PhasedUnit
 }
 import java.lang.ref {
@@ -74,7 +73,7 @@ shared abstract class IdePhasedUnit
         return typeCheckerRef?.get();
     }
 
-    shared actual default TypecheckerUnit createUnit() {
+    shared actual default Unit createUnit() {
         Unit? oldUnit = super.unit;
         value theNewUnit = newUnit();
         if (exists oldUnit) {
@@ -87,5 +86,5 @@ shared abstract class IdePhasedUnit
         return theNewUnit;
     }
 
-    shared formal TypecheckerUnit newUnit();
+    shared formal Unit newUnit();
 }

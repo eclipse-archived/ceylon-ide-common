@@ -96,8 +96,10 @@ test void testAddOneParameter() {
         8,
         (ChangeParametersRefactoring.ParameterList params) {
             assert(
-                is TypecheckerUnit u = params.declaration.unit,
-                is Type type = parseTypeExpression("String", u, params.declaration.scope) 
+                is Type type 
+                        = parseTypeExpression("String", 
+                            params.declaration.unit, 
+                            params.declaration.scope) 
             );
             
             value p = params.create("myStr", type);
