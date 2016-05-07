@@ -23,9 +23,6 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit
-}
 
 shared abstract class AbstractNavigation<Target,NativeFile>() {
     
@@ -62,7 +59,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
     }
     
     shared Target? gotoNode(Node node, Tree.CompilationUnit? rootNode) {
-        TypecheckerUnit? unit = node.unit;
+        Unit? unit = node.unit;
         value identifyingNode = nodes.getIdentifyingNode(node);
         
         if (!exists identifyingNode) {
