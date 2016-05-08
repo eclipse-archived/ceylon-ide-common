@@ -47,9 +47,10 @@ shared class ObjectClassDefinitionGenerator(
     
     shared actual String description {
         if (exists parameters) {
-            value supertype = 
-                    supertypeDeclaration(returnType) else "";
-            return "'class " + brokenName + supertype + "'";
+            value params = StringBuilder();
+            appendParameters(parameters, params, defaultedSupertype);
+            value supertype = supertypeDeclaration(returnType) else "";
+            return "'class " + brokenName + params.string + supertype + "'";
         } else {
             return "'object " + brokenName + "'";
         }

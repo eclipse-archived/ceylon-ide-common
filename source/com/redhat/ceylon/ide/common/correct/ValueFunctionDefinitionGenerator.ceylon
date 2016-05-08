@@ -51,10 +51,15 @@ shared class ValueFunctionDefinitionGenerator(
     
     shared actual Boolean isFormalSupported => true;
     
-    shared actual String description 
-            => if (isNew) then "constructor 'new " + brokenName + "'"
-            else if (exists parameters) then "'function " + brokenName + "'"
+    shared actual String description {
+        value params = StringBuilder();
+        if (exists parameters) {
+            appendParameters(parameters, params);
+        }
+        return if (isNew) then "constructor 'new " + brokenName + params.string + "'"
+            else if (exists parameters) then "'function " + brokenName + params.string + "'"
             else "'value " + brokenName + "'";
+    }
     
     String generateInternal(String indent, String delim, Boolean isFormal) {
         value def = StringBuilder();
@@ -63,8 +68,12 @@ shared class ValueFunctionDefinitionGenerator(
             value typeParams = ArrayList<TypeParameter>();
             value typeParamDef = StringBuilder();
             value typeParamConstDef = StringBuilder();
-            appendTypeParams2(typeParams, typeParamDef, typeParamConstDef, returnType);
-            appendTypeParams3(typeParams, typeParamDef, typeParamConstDef, parameters.values());
+            appendTypeParams2(typeParams, 
+                typeParamDef, typeParamConstDef, 
+                returnType);
+            appendTypeParams3(typeParams, 
+                typeParamDef, typeParamConstDef, 
+                parameters.values());
             if (typeParamDef.size > 0) {
                 typeParamDef.insert(0, "<");
                 typeParamDef.deleteTerminal(1);
@@ -86,7 +95,7 @@ shared class ValueFunctionDefinitionGenerator(
             def.append(" ")
                 .append(brokenName)
                 .append(typeParamDef.string);
-            appendParameters(parameters, def, unit.anythingDeclaration);
+            appendParameters(parameters, def);
             def.append(typeParamConstDef.string);
             if (isFormal) {
                 def.append(";");
