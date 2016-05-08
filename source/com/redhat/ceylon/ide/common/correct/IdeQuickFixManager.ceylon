@@ -98,8 +98,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
                 changeReferenceQuickFix.addChangeArgumentReferenceProposals(data, file);
             }
         }
-        case (200) {
-            assert(is Tree.Type node);
+        case (200|210) {
             specifyTypeQuickFix.addSpecifyTypeProposal(node, data);
         }
         case (300) {
