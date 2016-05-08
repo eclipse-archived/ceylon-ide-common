@@ -21,16 +21,18 @@ import com.redhat.ceylon.ide.common.doc {
 }
 
 shared class ValueFunctionDefinitionGenerator(
-    shared actual String brokenName, 
-    shared actual Tree.MemberOrTypeExpression node,
-    shared actual Tree.CompilationUnit rootNode,
-    shared actual Icons image, 
-    shared actual Type? returnType, 
-    shared actual LinkedHashMap<String,Type>? parameters, 
-    Boolean? isVariable,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
-            importProposals)
+    brokenName, node, rootNode, image, returnType, parameters, 
+    isVariable, importProposals)
         extends DefinitionGenerator() {
+    
+    shared actual String brokenName;
+    shared actual Tree.MemberOrTypeExpression node;
+    shared actual Tree.CompilationUnit rootNode;
+    shared actual Icons image;
+    shared actual Type? returnType;
+    shared actual LinkedHashMap<String,Type>? parameters;
+    Boolean isVariable;
+    ImpProposals importProposals;
     
     value isVoid = !returnType exists;
     value isNew 
@@ -39,15 +41,6 @@ shared class ValueFunctionDefinitionGenerator(
                 is Tree.BaseTypeExpression |
                    Tree.QualifiedTypeExpression
             else false;
-    
-    shared actual String generateShared(String indent, String delim) 
-            => "shared " + generateInternal(indent, delim, false);
-    
-    shared actual String generate(String indent, String delim) 
-            => generateInternal(indent, delim, false);
-    
-    shared actual String generateSharedFormal(String indent, String delim) 
-            => "shared formal " + generateInternal(indent, delim, true);
     
     shared actual Boolean isFormalSupported => true;
     
@@ -61,7 +54,8 @@ shared class ValueFunctionDefinitionGenerator(
             else "'value " + brokenName + "'";
     }
     
-    String generateInternal(String indent, String delim, Boolean isFormal) {
+    shared actual String generateInternal(String indent, 
+        String delim, Boolean isFormal) {
         value def = StringBuilder();
         value unit = node.unit;
         if (exists parameters) {
@@ -107,7 +101,7 @@ shared class ValueFunctionDefinitionGenerator(
                     .append(";");
             }
         } else {
-            if (isVariable else false) {
+            if (isVariable) {
                 def.append("variable ");
             }
             if (isVoid) {
@@ -170,11 +164,12 @@ class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte)
 }
 
 ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
-    String brokenName, 
-    Tree.MemberOrTypeExpression node, 
-    Tree.CompilationUnit rootNode,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
-            importProposals) {
+    brokenName, node, rootNode, importProposals) {
+    
+    String brokenName;
+    Tree.MemberOrTypeExpression node;
+    Tree.CompilationUnit rootNode;
+    DefinitionGenerator.ImpProposals importProposals;
     
     value isUpperCase 
             = brokenName.first?.uppercase else false;
@@ -192,7 +187,7 @@ ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
     
     return if (exists paramTypes) 
     then ValueFunctionDefinitionGenerator(brokenName, node, rootNode,  
-            Icons.localMethod, returnType, paramTypes, null, 
+            Icons.localMethod, returnType, paramTypes, false, 
             importProposals) 
     else ValueFunctionDefinitionGenerator(brokenName, node, rootNode,
             Icons.localAttribute, returnType, null, fav.isVariable, 

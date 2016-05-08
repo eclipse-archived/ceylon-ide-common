@@ -28,18 +28,21 @@ import java.util {
 }
 
 shared class ObjectClassDefinitionGenerator(
-    shared actual String brokenName,
-    shared actual Tree.MemberOrTypeExpression node, 
-    shared actual Tree.CompilationUnit rootNode,
-    shared actual Icons image, 
-    shared actual Type? returnType,
-    shared actual LinkedHashMap<String,Type>? parameters,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
-            importProposals,
-    Indents<out Anything> indents,
-    IdeCompletionManager<out Anything,out Anything,out Anything> 
-            completionManager)
+    brokenName, node, rootNode, image, returnType, parameters,
+    importProposals, indents, completionManager)
         extends DefinitionGenerator() {
+    
+    shared actual String brokenName;
+    shared actual Tree.MemberOrTypeExpression node;
+    shared actual Tree.CompilationUnit rootNode;
+    shared actual Icons image;
+    shared actual Type? returnType;
+    shared actual LinkedHashMap<String,Type>? parameters;
+    
+    Indents<out Anything> indents;
+    ImpProposals importProposals;    
+    IdeCompletionManager<out Anything,out Anything,out Anything> 
+            completionManager;
     
     shared actual Boolean isFormalSupported => classGenerator;
     
@@ -56,25 +59,21 @@ shared class ObjectClassDefinitionGenerator(
         }
     }
     
-    shared actual String generateShared(String indent, String delim) 
-            => "shared " + generateInternal(indent, delim, false);
-    
-    shared actual String generate(String indent, String delim) 
-            => generateInternal(indent, delim, false);
-    
-    shared actual String generateSharedFormal(String indent, String delim) 
-            => "shared formal " + generateInternal(indent, delim, true);
-    
-    String generateInternal(String indent, String delim, Boolean isFormal) {
+    shared actual String generateInternal(String indent, 
+        String delim, Boolean isFormal) {
         value def = StringBuilder();
         value isVoid = !(returnType exists);
         if (classGenerator) {
             value typeParams = ArrayList<TypeParameter>();
             value typeParamDef = StringBuilder();
             value typeParamConstDef = StringBuilder();
-            appendTypeParams2(typeParams, typeParamDef, typeParamConstDef, returnType);
+            appendTypeParams2(typeParams, 
+                typeParamDef, typeParamConstDef, 
+                returnType);
             if (exists parameters) {
-                appendTypeParams3(typeParams, typeParamDef, typeParamConstDef, parameters.values());
+                appendTypeParams3(typeParams, 
+                    typeParamDef, typeParamConstDef, 
+                    parameters.values());
             }
             if (typeParamDef.size > 0) {
                 typeParamDef.insert(0, "<");
@@ -89,7 +88,8 @@ shared class ObjectClassDefinitionGenerator(
                 .append(brokenName)
                 .append(typeParamDef.string);
             assert (exists parameters);
-            appendParameters(parameters, def, defaultedSupertype);
+            appendParameters(parameters, def, 
+                defaultedSupertype);
             if (exists supertype) {
                 def.append(delim)
                    .append(indent)
@@ -138,7 +138,11 @@ shared class ObjectClassDefinitionGenerator(
     
     shared actual Set<Declaration> getImports() {
         value imports = HashSet<Declaration>();
-        importProposals.importType(imports, returnType, rootNode);
+        importProposals.importType {
+            declarations = imports;
+            type = returnType;
+            rootNode = rootNode;
+        };
         if (exists parameters) {
             importProposals.importTypes {
                 declarations = imports;
@@ -162,7 +166,11 @@ shared class ObjectClassDefinitionGenerator(
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
                 if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
-                    importProposals.importSignatureTypes(d, rootNode, imports);
+                    importProposals.importSignatureTypes {
+                        declaration = d;
+                        rootNode = rootNode;
+                        declarations = imports;
+                    };
                     ambiguousNames.add(d.name);
                 }
             }
@@ -189,13 +197,21 @@ shared class ObjectClassDefinitionGenerator(
         value td = defaultedSupertype;
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
-        value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
+        value members = 
+                td.getMatchingMemberDeclarations(unit, null, "", 0)
+                    .values();
         for (dwp in members) {
             value dec = dwp.declaration;
             if (ambiguousNames.add(dec.name)) {
                 for (d in overloads(dec)) {
                     if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
-                        appendRefinementText(indent, delim, def, defIndent, d);
+                        appendRefinementText {
+                            indent = indent;
+                            delim = delim;
+                            def = def;
+                            defIndent = defIndent;
+                            d = d;
+                        };
                     }
                 }
             }
@@ -207,7 +223,13 @@ shared class ObjectClassDefinitionGenerator(
                     if (!(r?.refines(m) else false),
                         // !r.getContainer().equals(ut)) && 
                         ambiguousNames.add(m.name)) {
-                        appendRefinementText(indent, delim, def, defIndent, m);
+                        appendRefinementText {
+                            indent = indent;
+                            delim = delim;
+                            def = def;
+                            defIndent = defIndent;
+                            d = m;
+                        };
                     }
                 }
             }
@@ -330,25 +352,25 @@ Boolean isValidSupertype(Type? returnType) {
 }
 
 ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
-    String brokenName, 
-    Tree.MemberOrTypeExpression node, 
-    Tree.CompilationUnit rootNode,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
-            importProposals,
-    Indents<out Anything> indents,
+    brokenName, node, rootNode, importProposals, indents,
+    completionManager) {
+    
+    String brokenName;
+    Tree.MemberOrTypeExpression node;
+    Tree.CompilationUnit rootNode;
+    DefinitionGenerator.ImpProposals importProposals;
+    Indents<out Anything> indents;
     IdeCompletionManager<out Anything,out Anything,out Anything> 
-            completionManager) {
+            completionManager;
     
     value isUpperCase 
             = brokenName.first?.uppercase else false;
     value fav = FindArgumentsVisitor(node);
     rootNode.visit(fav);
     value unit = node.unit;
-    Type? type = unit.denotableType(fav.expectedType);
-    //value params = StringBuilder();
     value paramTypes = getParameters(fav);
     Type? returnType;
-    if (exists type) {
+    if (exists type = unit.denotableType(fav.expectedType)) {
         if (type.\iobject || type.anything) {
             returnType = null;
         }

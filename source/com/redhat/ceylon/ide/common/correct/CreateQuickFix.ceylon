@@ -251,46 +251,40 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
     }
     
     shared void addCreateProposals(Data data, IFile file, Node node = data.node) {
-        assert (is Tree.MemberOrTypeExpression smte = node);
+        assert (is Tree.MemberOrTypeExpression node);
         
         if (exists idNode = nodes.getIdentifyingNode(node), 
             exists brokenName = idNode.text, 
             !brokenName.empty) {
-            
-            value vfdg = createValueFunctionDefinitionGenerator {
+            if (exists vfdg = createValueFunctionDefinitionGenerator {
                 brokenName = brokenName;
-                node = smte;
+                node = node;
                 rootNode = data.rootNode;
                 importProposals = importProposals;
-            };
-            if (exists vfdg) {
-                if (is Tree.BaseMemberExpression smte) {
-                    value bme = smte;
-                    value id = bme.identifier;
-                    if (id.token.type != CeylonLexer.\iAIDENTIFIER) {
-                        createParameterQuickFix.addCreateParameterProposal(data, vfdg);
-                    }
+            }) {
+                if (is Tree.BaseMemberExpression node, 
+                    node.identifier.token.type != CeylonLexer.\iAIDENTIFIER) {
+                    createParameterQuickFix.addCreateParameterProposal(data, vfdg);
                 }
                 addCreateProposalsInternal {
                     data = data;
                     file = file;
-                    smte = smte;
+                    smte = node;
                     dg = vfdg;
                 };
             }
-            value ocdg = createObjectClassDefinitionGenerator {
+            if (exists ocdg = createObjectClassDefinitionGenerator {
                 brokenName = brokenName;
-                node = smte;
+                node = node;
                 rootNode = data.rootNode;
                 importProposals = importProposals;
                 indents = indents;
                 completionManager = completionManager;
-            };
-            if (exists ocdg) {
+            }) {
                 addCreateProposalsInternal {
                     data = data;
                     file = file;
-                    smte = smte;
+                    smte = node;
                     dg = ocdg;
                 };
             }

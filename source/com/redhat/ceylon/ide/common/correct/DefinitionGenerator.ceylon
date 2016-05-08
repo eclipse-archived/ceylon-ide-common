@@ -25,12 +25,20 @@ import java.util {
 
 shared abstract class DefinitionGenerator() {
     
-    shared formal String generateShared(String indent, String delim);
+    shared alias ImpProposals 
+            => ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything>;
     
-    shared formal String generate(String indent, String delim);
+    shared String generateShared(String indent, String delim) 
+            => "shared " + generateInternal(indent, delim, false);
     
-    shared formal String generateSharedFormal(String indent, String delim);
+    shared String generate(String indent, String delim) 
+            => generateInternal(indent, delim, false);
     
+    shared String generateSharedFormal(String indent, String delim) 
+            => "shared formal " + generateInternal(indent, delim, true);
+    
+    shared formal String generateInternal(String indent, String delim, Boolean isFormal);
+        
     shared formal Boolean isFormalSupported;
     
     shared formal Set<Declaration> getImports();
