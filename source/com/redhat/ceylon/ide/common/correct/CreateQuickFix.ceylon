@@ -170,7 +170,7 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
             doc = doc;
         };
         value gen = dg.generate(indent, delim) + delim + indent;
-        value def = local then gen + delim else gen;
+        value def = local then gen else gen + delim;
         addEditToChange(change, 
             newInsertEdit {
                 position = offset;
