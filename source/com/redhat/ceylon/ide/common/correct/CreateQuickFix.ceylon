@@ -36,14 +36,16 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
         given InsertEdit satisfies TextEdit
         given Data satisfies QuickFixData<Project> {
 
-    shared formal CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> createParameterQuickFix;
+    shared formal CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> 
+            createParameterQuickFix;
 
     shared formal void newCreateQuickFix(Data data, String desc,
         Scope scope, Unit unit, Type? returnType, Icons image,
         TextChange change, Integer exitPos, Region selection);
     
-    void addCreateMemberProposal(Data data, DefinitionGenerator dg, Declaration typeDec,
-        PhasedUnit unit, Tree.Declaration decNode, Tree.Body body, Tree.Statement? statement) {
+    void addCreateMemberProposal(Data data, DefinitionGenerator dg, 
+        Declaration typeDec, PhasedUnit unit, Tree.Declaration decNode, 
+        Tree.Body body, Tree.Statement? statement) {
         
         value change = newTextChange("Create Member", unit);
         initMultiEditChange(change);
@@ -59,23 +61,23 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
             indent = bodyIndent + indents.defaultIndent;
             indentBefore = delim + indent;
             try {
-                value singleLineBody = getLineOfOffset(doc, body.startIndex.intValue())
+                value singleLineBody = 
+                        getLineOfOffset(doc, body.startIndex.intValue())
                         == getLineOfOffset(doc, body.stopIndex.intValue());
-                if (singleLineBody) {
-                    indentAfter = delim + bodyIndent;
-                } else {
-                    indentAfter = "";
-                }
-            } catch (Exception e) {
+                indentAfter = 
+                        singleLineBody then delim + bodyIndent else "";
+            } catch (e) {
                 e.printStackTrace();
                 indentAfter = delim;
             }
             offset = body.startIndex.intValue() + 1;
         } else {
             variable Tree.Statement st;
-            if (exists statement, statement.unit.equals(body.unit),
-                statement.startIndex.intValue() >= body.startIndex.intValue(),
-                statement.endIndex.intValue() <= body.endIndex.intValue()) {
+            if (exists statement, statement.unit==body.unit,
+                statement.startIndex.intValue() 
+                        >= body.startIndex.intValue(),
+                statement.endIndex.intValue() 
+                        <= body.endIndex.intValue()) {
                 
                 st = statements.get(0);
                 for (s in statements) {
@@ -101,67 +103,113 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
         then dg.generateSharedFormal(indent, delim)
         else dg.generateShared(indent, delim);
         value def = indentBefore + generated + indentAfter;
-        value il = importProposals.applyImports(change, dg.getImports(), unit.compilationUnit, doc);
+        value il = importProposals.applyImports {
+            change = change;
+            declarations = dg.getImports();
+            rootNode = unit.compilationUnit;
+            doc = doc;
+        };
         addEditToChange(change, newInsertEdit(offset, def));
-        value desc = "Create " + memberKind(dg) + " in '" + typeDec.name + "'";
-        value exitPos = dg.node.endIndex.intValue();
         
-        value selection = if (dg is ObjectClassDefinitionGenerator)
-                          then newRegion(offset + il, 0)
-                          else correctionUtil.computeSelection(offset + il, def, newRegion);
-        
-        newCreateQuickFix(data, desc, body.scope, body.unit, dg.returnType, dg.image,
-            change, exitPos, selection);
+        newCreateQuickFix {
+            data = data;
+            desc = "Create " + memberKind(dg) + 
+                    " in '" + typeDec.name + "'";
+            scope = body.scope;
+            unit = body.unit;
+            returnType = dg.returnType;
+            image = dg.image;
+            change = change;
+            exitPos = dg.node.endIndex.intValue();
+            selection 
+                    = if (dg is ObjectClassDefinitionGenerator)
+                    then newRegion(offset + il, 0)
+                    else correctionUtil.computeSelection {
+                        offset = offset + il;
+                        def = def;
+                        newRegion = newRegion;
+                    };
+        };
     }
     
     String memberKind(DefinitionGenerator dg) {
         value desc = dg.description;
-        if (desc.startsWith("function")) {
+        if (desc.startsWith("constructor")) {
+            return desc;
+        }
+        else if (desc.startsWith("function")) {
             return "method" + desc.spanFrom(8);
         }
-        if (desc.startsWith("value")) {
+        else if (desc.startsWith("value")) {
             return "attribute" + desc.spanFrom(5);
         }
-        if (desc.startsWith("class")) {
+        else if (desc.startsWith("class")) {
             return "member class" + desc.spanFrom(5);
         }
         return desc;
     }
     
-    void addCreateProposal(Data data, Boolean local, DefinitionGenerator dg,
-        PhasedUnit unit, Tree.Statement statement) {
+    void addCreateProposal(Data data, Boolean local, 
+        DefinitionGenerator dg, PhasedUnit unit, 
+        Tree.Statement statement) {
         
-        value change = newTextChange(if (local) then "Create Local" else "Create Toplevel", unit);
+        value change = newTextChange {
+            desc = local then "Create Local" else "Create Toplevel";
+            u = unit;
+        };
         initMultiEditChange(change);
         value doc = getDocumentForChange(change);
         value indent = indents.getIndent(statement, doc);
         value offset = statement.startIndex.intValue();
         value delim = indents.getDefaultLineDelimiter(doc);
-        value cu = unit.compilationUnit;
-        value il = importProposals.applyImports(change, dg.getImports(), cu, doc);
-        variable value def = dg.generate(indent, delim) + delim + indent;
-        if (!local) {
-            def += delim;
-        }
-        addEditToChange(change, newInsertEdit(offset, def));
-        value desc = (if (local) then "Create local " else "Create toplevel ") + dg.description;
-        value scope = if (local) then statement.scope else cu.unit.\ipackage;
-        value exitPos = dg.node.endIndex.intValue();
+        value rootNode = unit.compilationUnit;
+        value il = importProposals.applyImports {
+            change = change;
+            declarations = dg.getImports();
+            rootNode = rootNode;
+            doc = doc;
+        };
+        value gen = dg.generate(indent, delim) + delim + indent;
+        value def = local then gen + delim else gen;
+        addEditToChange(change, 
+            newInsertEdit {
+                position = offset;
+                text = def;
+            });
+        value desc = 
+                (local then "Create local " else "Create toplevel ") 
+                    + dg.description;
+        value scope = 
+                local then statement.scope else rootNode.unit.\ipackage;
         
-        value selection = if (dg is ObjectClassDefinitionGenerator)
-                          then newRegion(offset + il, 0)
-                          else correctionUtil.computeSelection(offset + il, def, newRegion);
-        
-        newCreateQuickFix(data, desc, scope, cu.unit, dg.returnType, dg.image,
-            change, exitPos, selection);
+        newCreateQuickFix {
+            data = data;
+            desc = desc;
+            scope = scope;
+            unit = rootNode.unit;
+            returnType = dg.returnType;
+            image = dg.image;
+            change = change;
+            exitPos = dg.node.endIndex.intValue();
+            selection 
+                    = if (dg is ObjectClassDefinitionGenerator)
+                    then newRegion(offset + il, 0)
+                    else correctionUtil.computeSelection {
+                        offset = offset + il;
+                        def = def;
+                        newRegion = newRegion;
+                    };
+        };
     }
     
     void addCreateMemberProposals(Data data, DefinitionGenerator dg,
         Tree.QualifiedMemberOrTypeExpression qmte, Tree.Statement? statement) {
         
-        value p = qmte.primary;
-        if (exists model = p.typeModel) {
-            value typeDec = model.declaration;
+        if (exists typeDec
+            = if (is Tree.BaseTypeExpression|Tree.QualifiedTypeExpression
+                    type = qmte.primary)
+            then type.declaration
+            else qmte.primary.typeModel.declaration) {
             addCreateMemberProposals2(data, dg, typeDec, statement);
         }
     }
@@ -171,7 +219,7 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
         
         if (exists typeDec, 
             typeDec is Class || 
-                    typeDec is Interface && dg.isFormalSupported, 
+            typeDec is Interface && dg.isFormalSupported, 
             is AnyModifiableSourceFile unit = typeDec.unit, 
             exists phasedUnit = unit.phasedUnit) {
             value fdv = FindDeclarationNodeVisitor(typeDec);
@@ -209,7 +257,12 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
             exists brokenName = idNode.text, 
             !brokenName.empty) {
             
-            value vfdg = createValueFunctionDefinitionGenerator(brokenName, smte, data.rootNode, importProposals);
+            value vfdg = createValueFunctionDefinitionGenerator {
+                brokenName = brokenName;
+                node = smte;
+                rootNode = data.rootNode;
+                importProposals = importProposals;
+            };
             if (exists vfdg) {
                 if (is Tree.BaseMemberExpression smte) {
                     value bme = smte;
@@ -218,26 +271,45 @@ shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextC
                         createParameterQuickFix.addCreateParameterProposal(data, vfdg);
                     }
                 }
-                addCreateProposalsInternal(data, file, smte, vfdg);
+                addCreateProposalsInternal {
+                    data = data;
+                    file = file;
+                    smte = smte;
+                    dg = vfdg;
+                };
             }
-            value ocdg = createObjectClassDefinitionGenerator(brokenName, smte, data.rootNode,
-                importProposals, indents, completionManager);
+            value ocdg = createObjectClassDefinitionGenerator {
+                brokenName = brokenName;
+                node = smte;
+                rootNode = data.rootNode;
+                importProposals = importProposals;
+                indents = indents;
+                completionManager = completionManager;
+            };
             if (exists ocdg) {
-                addCreateProposalsInternal(data, file, smte, ocdg);
+                addCreateProposalsInternal {
+                    data = data;
+                    file = file;
+                    smte = smte;
+                    dg = ocdg;
+                };
             }
         }
     }
     
-    void addCreateProposalsInternal(Data data, IFile file, Tree.MemberOrTypeExpression smte, DefinitionGenerator dg) {
+    void addCreateProposalsInternal(Data data, IFile file, 
+        Tree.MemberOrTypeExpression smte, DefinitionGenerator dg) {
         if (is Tree.QualifiedMemberOrTypeExpression smte) {
-            addCreateMemberProposals(data, dg, smte, nodes.findStatement(data.rootNode, smte));
+            addCreateMemberProposals(data, dg, smte, 
+                nodes.findStatement(data.rootNode, smte));
         } else {
             if (!(dg.node is Tree.ExtendedTypeExpression)) {
                 addCreateLocalProposals(data, dg);
                 variable value container = findClassContainer(data.rootNode, smte);
                 if (exists con = container, con != smte.scope) {
                     while (exists _container = container) {
-                        addCreateMemberProposals2(data, dg, _container, nodes.findStatement(data.rootNode, smte));
+                        addCreateMemberProposals2(data, dg, _container, 
+                            nodes.findStatement(data.rootNode, smte));
                         if (is Declaration innerCon = _container.container) {
                             value outerContainer = innerCon;
                             container = findClassContainer2(outerContainer);

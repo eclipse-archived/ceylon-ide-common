@@ -20,32 +20,44 @@ import com.redhat.ceylon.ide.common.doc {
     Icons
 }
 
-shared class ValueFunctionDefinitionGenerator
-        (shared actual String brokenName, shared actual Tree.MemberOrTypeExpression node,
-         shared actual Tree.CompilationUnit rootNode, shared actual String description,
-         shared actual Icons image, shared actual Type? returnType, 
-         shared actual LinkedHashMap<String,Type>? parameters, Boolean? isVariable,
-         ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals)
+shared class ValueFunctionDefinitionGenerator(
+    shared actual String brokenName, 
+    shared actual Tree.MemberOrTypeExpression node,
+    shared actual Tree.CompilationUnit rootNode,
+    shared actual Icons image, 
+    shared actual Type? returnType, 
+    shared actual LinkedHashMap<String,Type>? parameters, 
+    Boolean? isVariable,
+    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
+            importProposals)
         extends DefinitionGenerator() {
     
+    value isVoid = !returnType exists;
+    value isNew 
+            = if (is Tree.QualifiedMemberExpression node)
+            then node.primary 
+                is Tree.BaseTypeExpression |
+                   Tree.QualifiedTypeExpression
+            else false;
     
-    shared actual String generateShared(String indent, String delim) {
-        return "shared " + generateInternal(indent, delim, false);
-    }
+    shared actual String generateShared(String indent, String delim) 
+            => "shared " + generateInternal(indent, delim, false);
     
-    shared actual String generate(String indent, String delim) {
-        return generateInternal(indent, delim, false);
-    }
+    shared actual String generate(String indent, String delim) 
+            => generateInternal(indent, delim, false);
     
-    shared actual String generateSharedFormal(String indent, String delim) {
-        return "shared formal " + generateInternal(indent, delim, true);
-    }
+    shared actual String generateSharedFormal(String indent, String delim) 
+            => "shared formal " + generateInternal(indent, delim, true);
     
     shared actual Boolean isFormalSupported => true;
     
+    shared actual String description 
+            => if (isNew) then "constructor 'new " + brokenName + "'"
+            else if (exists parameters) then "'function " + brokenName + "'"
+            else "'value " + brokenName + "'";
+    
     String generateInternal(String indent, String delim, Boolean isFormal) {
         value def = StringBuilder();
-        value isVoid = !(returnType exists);
         value unit = node.unit;
         if (exists parameters) {
             value typeParams = ArrayList<TypeParameter>();
@@ -58,7 +70,10 @@ shared class ValueFunctionDefinitionGenerator
                 typeParamDef.deleteTerminal(1);
                 typeParamDef.append(">");
             }
-            if (isVoid) {
+            if (isNew) {
+                def.append("new");
+            }
+            else if (isVoid) {
                 def.append("void");
             } else {
                 if (isTypeUnknown(returnType)) {
@@ -68,15 +83,19 @@ shared class ValueFunctionDefinitionGenerator
                     def.append(returnType.asSourceCodeString(unit));
                 }
             }
-            def.append(" ").append(brokenName).append(typeParamDef.string);
+            def.append(" ")
+                .append(brokenName)
+                .append(typeParamDef.string);
             appendParameters(parameters, def, unit.anythingDeclaration);
             def.append(typeParamConstDef.string);
             if (isFormal) {
                 def.append(";");
-            } else if (isVoid) {
+            } else if (isVoid||isNew) {
                 def.append(" {}");
             } else {
-                def.append(" => ").append(correctionUtil.defaultValue(unit, returnType)).append(";");
+                def.append(" => ")
+                    .append(correctionUtil.defaultValue(unit, returnType))
+                    .append(";");
             }
         } else {
             if (isVariable else false) {
@@ -94,7 +113,8 @@ shared class ValueFunctionDefinitionGenerator
             }
             def.append(" ").append(brokenName);
             if (!isFormal) {
-                def.append(" = ").append(correctionUtil.defaultValue(unit, returnType));
+                def.append(" = ")
+                    .append(correctionUtil.defaultValue(unit, returnType));
             }
             def.append(";");
         }
@@ -103,15 +123,24 @@ shared class ValueFunctionDefinitionGenerator
     
     shared actual Set<Declaration> getImports() {
         value imports = HashSet<Declaration>();
-        importProposals.importType(imports, returnType, rootNode);
+        importProposals.importType {
+            declarations = imports;
+            type = returnType;
+            rootNode = rootNode;
+        };
         if (exists parameters) {
-            importProposals.importTypes(imports, parameters.values(), rootNode);
+            importProposals.importTypes {
+                declarations = imports;
+                types = parameters.values();
+                rootNode = rootNode;
+            };
         }
         return imports;
     }
 }
 
-class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte) extends FindArgumentsVisitor(smte) {
+class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte) 
+        extends FindArgumentsVisitor(smte) {
     
     shared variable Boolean isVariable = false;
     
@@ -131,28 +160,32 @@ class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte) extends FindArg
     }
 }
 
-ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator
-        (String brokenName, Tree.MemberOrTypeExpression node, Tree.CompilationUnit rootNode,
-        ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals) {
+ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
+    String brokenName, 
+    Tree.MemberOrTypeExpression node, 
+    Tree.CompilationUnit rootNode,
+    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> 
+            importProposals) {
     
-    value isUpperCase = brokenName.first?.uppercase else false;
+    value isUpperCase 
+            = brokenName.first?.uppercase else false;
     if (isUpperCase) {
         return null;
     }
     value fav = FindValueFunctionVisitor(node);
     rootNode.visit(fav);
     value et = fav.expectedType;
-    value isVoid = !(et exists);
-    value returnType = if (isVoid) then null else node.unit.denotableType(et);
+    value isVoid = !et exists;
+    value returnType 
+            = if (isVoid) then null 
+            else node.unit.denotableType(et);
     value paramTypes = getParameters(fav);
     
-    if (exists paramTypes) {
-        value desc = "'function " + brokenName + "'";
-        return ValueFunctionDefinitionGenerator(brokenName, node, rootNode, desc, 
-            Icons.localMethod, returnType, paramTypes, null, importProposals);
-    } else {
-        value desc = "'value " + brokenName + "'";
-        return ValueFunctionDefinitionGenerator(brokenName, node, rootNode, desc,
-            Icons.localAttribute, returnType, null, fav.isVariable, importProposals);
-    }
+    return if (exists paramTypes) 
+    then ValueFunctionDefinitionGenerator(brokenName, node, rootNode,  
+            Icons.localMethod, returnType, paramTypes, null, 
+            importProposals) 
+    else ValueFunctionDefinitionGenerator(brokenName, node, rootNode,
+            Icons.localAttribute, returnType, null, fav.isVariable, 
+            importProposals);
 }
