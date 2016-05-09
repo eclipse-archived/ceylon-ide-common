@@ -42,12 +42,6 @@ shared class SourceCodeVirtualFile<NativeProject, NativeResource,NativeFolder,Na
     shared actual InputStream inputStream =>
             stream;
     
-    shared actual String string {
-        value sb = StringBuilder();
-        sb.append("SourceCodeVirtualFile");
-        return sb.string;
-    }
-
     shared actual String? charset => _charset;
     shared actual String name => _name;
     shared actual String path => _path;

@@ -71,14 +71,6 @@ shared class LocalFileVirtualFile(file)
     
     hash => (super of FileVirtualFile<Nothing,File,File,File>).hash;
 
-    string => StringBuilder()
-                .append("FileSystemVirtualFile")
-                .append("{name='")
-                .append( file.name )
-                .appendCharacter('\'')
-                .appendCharacter('}')
-                .string;
-    
     charset => null;
 
     nativeResource => file;
@@ -118,14 +110,6 @@ shared class LocalFolderVirtualFile(file)
     equals(Object that) => (super of FolderVirtualFile<Nothing,File,File,File>).equals(that);
     
     hash => (super of FolderVirtualFile<Nothing,File,File,File>).hash;
-    
-    string => StringBuilder()
-                .append("FileSystemVirtualFile")
-                .append("{name='")
-                .append( file.name )
-                .appendCharacter('\'')
-                .appendCharacter('}')
-                .string;
     
     findFile(String fileName)
         => file.listFiles(

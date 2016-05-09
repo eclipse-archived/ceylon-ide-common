@@ -1,5 +1,6 @@
 import ceylon.interop.java {
-    CeylonIterable
+    CeylonIterable,
+    javaClassFromInstance
 }
 
 import com.redhat.ceylon.compiler.typechecker.io {
@@ -59,6 +60,7 @@ shared interface BaseResourceVirtualFile
     shared actual formal BaseFolderVirtualFile? parent;
     shared default {BaseResourceVirtualFile*} childrenIterable => CeylonIterable(children);
     shared Boolean existsOnDisk => \iexists();
+    shared actual default String string => "`` javaClassFromInstance(this).name ``: `` path ``";
 }
 
 shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
@@ -123,6 +125,8 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
         hash = 31*hash + nativeProject.hash;
         return hash;
     }
+    
+    string => "`` javaClassFromInstance(this).name ``: `` nativeResource ``";
 }
 
 shared interface BaseFolderVirtualFile
