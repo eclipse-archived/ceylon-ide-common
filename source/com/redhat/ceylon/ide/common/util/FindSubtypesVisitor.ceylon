@@ -14,9 +14,8 @@ shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() 
     shared Set<Tree.Declaration|Tree.ObjectExpression> declarationNodes
             = HashSet<Tree.Declaration|Tree.ObjectExpression>();
     
-    Boolean isRefinement(TypeDeclaration? dec) {
-        return dec?.inherits(declaration) else false;
-    }
+    Boolean isRefinement(TypeDeclaration? dec) 
+            => dec?.inherits(declaration) else false;
     
     shared actual void visit(Tree.TypeDeclaration that) {
         if (isRefinement(that.declarationModel)) {
@@ -35,7 +34,7 @@ shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() 
     }
     
     shared actual void visit(Tree.ObjectExpression that) {
-        if (isRefinement(that.typeModel.declaration)) {
+        if (exists t=that.typeModel, isRefinement(t.declaration)) {
             declarationNodes.add(that);
         }
         
