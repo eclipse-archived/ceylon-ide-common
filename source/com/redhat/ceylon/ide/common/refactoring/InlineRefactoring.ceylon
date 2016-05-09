@@ -24,10 +24,6 @@ import com.redhat.ceylon.ide.common.model {
 import com.redhat.ceylon.ide.common.platform {
     ImportProposalServicesConsumer
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    AnyProjectPhasedUnit,
-    AnyEditedPhasedUnit
-}
 import com.redhat.ceylon.ide.common.util {
     nodes,
     FindReferencesVisitor,
