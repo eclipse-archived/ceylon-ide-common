@@ -10,8 +10,7 @@ import ceylon.test {
 }
 
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit,
-    TypecheckerUnit
+    PhasedUnit
 }
 import com.redhat.ceylon.ide.common.platform {
     DefaultDocument,
