@@ -888,7 +888,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 if (exists pkg = file.ceylonPackage) {
                     for (Unit unitToTest in pkg.units) {
                         if (unitToTest.filename == file.name) {
-                            BaseJavaUnitAlias javaUnit = unsafeCast<BaseJavaUnitAlias>(unitToTest);
+                            assert(is JavaUnitAlias javaUnit = unitToTest);
                             javaUnit.remove();
                             break;
                         }
@@ -1157,7 +1157,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             return toCeylonStringIterable(unit.dependentsOf);
         } 
         else {
-            if (is Source & BaseJavaUnitAlias unit = srcFile.unit) {
+            if (is JavaCompilationUnitAlias unit = srcFile.unit) {
                 return toCeylonStringIterable(unit.dependentsOf);
             }
         }

@@ -148,19 +148,17 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
             else if (is CeylonBinaryUnitAlias declarationUnit) {
                 declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
             } 
-            else if (is BaseJavaUnit<NativeProject, NativeFolder, NativeFile> declarationUnit) {
-                if (is Source declarationUnit) {
+            else if (is JavaCompilationUnitAlias declarationUnit) {
                     //TODO: this does not seem to work for cross-project deps
                     // We should introduce a CrossProjectJavaUnit that can return 
                     // the original JavaCompilationUnit from the original project 
                     declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
-                } 
-                else {
+            }
+            else  if (is JavaClassFileAlias declarationUnit) {
                     //TODO: All the dependencies to class files are also added... It is really useful ?
                     // I assume in the case of the classes in the classes or exploded dirs, it might be,
                     // but not sure it is also used not in the case of jar-located classes
                     declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
-                } 
             }
             else {
                 assert(false);
