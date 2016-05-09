@@ -471,9 +471,9 @@ shared interface DocGenerator<Document> {
         if (!is NothingType d = decl) {
             addPackageInfo(decl, builder);
         }
-        addContainerInfo(decl, node, builder); //TODO: use the pr to get the qualifying type??
+        addContainerInfo(decl, pr, node, builder);
         value hasDoc = addDoc(decl, node, builder, cmp);
-        addRefinementInfo(decl, node, builder, hasDoc, unit, cmp); //TODO: use the pr to get the qualifying type??
+        addRefinementInfo(decl, pr, node, builder, hasDoc, unit, cmp);
         addReturnType(decl, builder, node, pr, isObj, unit);
         addParameters(cmp, decl, node, pr, builder, unit);
         if (showMembers) {
@@ -992,8 +992,8 @@ shared interface DocGenerator<Document> {
     }
 
     // see addContainerInfo(Declaration dec, Node node, StringBuilder buffer)
-    void addContainerInfo(Declaration decl, Node? node, 
-        StringBuilder builder) {
+    void addContainerInfo(Declaration decl, Reference? pr, 
+        Node? node, StringBuilder builder) {
         Unit? unit = node?.unit;
         builder.append("<p>");
         
@@ -1020,8 +1020,7 @@ shared interface DocGenerator<Document> {
             appendParameterLink(builder, decl.declaration);
             builder.append(".");
         } else if (decl.classOrInterfaceMember,
-                is ClassOrInterface outerClass = decl.container,
-                exists qt = getQualifyingType(node, outerClass)) {
+                exists qt = getQualifyingType(decl, pr, node)) {
             value desc = switch (decl)
                 case (is Constructor)
                     if (exists n = decl.name)
@@ -1081,20 +1080,22 @@ shared interface DocGenerator<Document> {
         builder.append(buildLink(decl, decl.nameAsString));
     }
 
-    Type? getQualifyingType(Node? node, ClassOrInterface? outerClass) {
-        if (!exists outerClass) {
-            return null;
+    Type? getQualifyingType(Declaration dec, Reference? r, 
+        Node? node) {
+        if (exists r) {
+            return r.qualifyingType;
         }
-        
-        if (is Tree.MemberOrTypeExpression node, 
+        else if (is Tree.MemberOrTypeExpression node, 
             exists pr = node.target) {
             return pr.qualifyingType;
         }
-        if (is Tree.QualifiedType node) {
+        else if (is Tree.QualifiedType node) {
             return node.outerType.typeModel;
         }
-        
-        return outerClass.type;
+        else {
+            assert (is ClassOrInterface outerClass = dec.container);
+            return outerClass.type;
+        }
     }
 
     void addPackageInfo(Declaration decl, StringBuilder builder) {
@@ -1417,18 +1418,16 @@ shared interface DocGenerator<Document> {
     }
     
     // see addRefinementInfo(Declaration, Node, StringBuilder,  boolean, Unit)
-    void addRefinementInfo(Declaration dec, Node? node, 
-        StringBuilder buffer, Boolean hasDoc, Unit unit, 
-        IdeComponent cmp) {
+    void addRefinementInfo(Declaration dec, Reference? pr, 
+        Node? node, StringBuilder buffer, Boolean hasDoc, 
+        Unit unit, IdeComponent cmp) {
         
         if (exists rd = dec.refinedDeclaration, rd != dec) {
             buffer.append("<p>");
             
-            assert(is TypeDeclaration superclass = rd.container);
-            assert(is ClassOrInterface outerCls = dec.container);
-            
+            assert (is TypeDeclaration superclass = rd.container);            
             value supertype 
-                    = getQualifyingType(node, outerCls)
+                    = getQualifyingType(dec, pr, node)
                         ?.getSupertype(superclass);
             value icon 
                     = if (rd.formal) 
