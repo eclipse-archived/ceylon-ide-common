@@ -351,7 +351,7 @@ shared abstract class BaseCeylonProject() {
     shared formal Boolean compileToJs;
     shared formal Boolean compileToJava;
 
-    value loadBinariesFirst => 
+    shared default Boolean loadBinariesFirst => 
             "true".equals(process.propertyValue("ceylon.loadBinariesFirst") else "true");
     
     shared Boolean loadDependenciesFromModelLoaderFirst =>
@@ -475,6 +475,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
     
     value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
+    value virtualFileCache = WeakHashMap<NativeFile, SoftReference<FileVirtualFileAlias>>();
     // value virtualFolderCacheLock = ReentrantReadWriteLock();
 
     variable CeylonProjectBuildAlias? build_ = null;
@@ -941,10 +942,21 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         });
     };
     
-    shared FileVirtualFileAlias getOrCreateFileVirtualFile(NativeFile nativeFile) =>
-            if (exists existingFile=projectFilesMap.get(nativeFile))
-            then existingFile 
-            else vfsServices.createVirtualFile(nativeFile, ideArtifact);
+    shared FileVirtualFileAlias getOrCreateFileVirtualFile(NativeFile nativeFile) {
+        if (exists existingFile=projectFilesMap.get(nativeFile)) {
+            return existingFile;
+        }
+        else {
+            SoftReference<FileVirtualFileAlias>? virtualFileRef = virtualFileCache.get(nativeFile);
+            if (exists virtualFile=virtualFileRef?.get()) {
+                return virtualFile;
+            }
+            value virtualFile = vfsServices.createVirtualFile(nativeFile, ideArtifact);
+            virtualFileCache.put(virtualFile.nativeResource, SoftReference(virtualFile));
+            return virtualFile;
+        }
+    }
+
 
     shared FolderVirtualFileAlias getOrCreateFolderVirtualFile(NativeFolder nativeFolder) {
         SoftReference<FolderVirtualFileAlias>? virtualFolderRef = virtualFolderCache.get(nativeFolder);
