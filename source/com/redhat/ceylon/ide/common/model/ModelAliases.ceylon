@@ -17,9 +17,11 @@ shared interface ModelAliases<NativeProject, NativeResource, NativeFolder, Nativ
     shared alias ProjectSourceFileAlias => ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias CrossProjectSourceFileAlias => CrossProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>;
     shared alias IResourceAwareAlias => IResourceAware<NativeProject, NativeFolder, NativeFile>;
-    shared alias BaseJavaUnitAlias => BaseJavaUnit<NativeProject, NativeFolder, NativeFile>;
     shared alias ICrossProjectReferenceAlias => ICrossProjectReference<NativeProject, NativeResource, NativeFolder, NativeFile>;
-    shared alias CeylonBinaryUnitAlias => CeylonBinaryUnit<NativeProject, NativeFolder, NativeFile>;
+    shared alias CeylonBinaryUnitAlias => CeylonBinaryUnit<NativeProject, out Anything, out Anything>;
+    shared alias JavaUnitAlias => JavaUnit<NativeProject, NativeFolder, NativeFile, out Anything, out Anything>;
+    shared alias JavaCompilationUnitAlias => JavaCompilationUnit<NativeProject, NativeFolder, NativeFile, out Anything, out Anything>;
+    shared alias JavaClassFileAlias => JavaClassFile<NativeProject, NativeFolder, NativeFile, out Anything, out Anything>;
         
 
     shared alias IdeModuleManagerAlias => IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>;

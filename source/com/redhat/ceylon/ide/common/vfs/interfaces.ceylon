@@ -226,8 +226,8 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
             then !isInSourceFolder 
             else false;
     
-    shared <ModifiableSourceFileAlias | BaseJavaUnitAlias>? unit =>
+    shared <ModifiableSourceFileAlias | JavaUnitAlias>? unit =>
             ifExists(ceylonPackage?.units, CeylonIterable<Unit>)
-            ?.narrow<ModifiableSourceFileAlias | BaseJavaUnitAlias>()
+            ?.narrow<ModifiableSourceFileAlias | JavaUnitAlias>()
             ?.find((unit) => unit.filename == name);
 }

@@ -534,7 +534,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    shared Boolean performBuild(BaseProgressMonitor monitor) {
+    shared Boolean performBuild(BaseProgressMonitor monitor, Boolean includeBinaryGeneration=false) {
         variable Boolean finished = false;
         try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
             // should do pre-build checks
@@ -558,13 +558,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             consumeModelChanges(progress.newChild(100));
             
-            updateCeylonModel(progress.newChild(300));
-            
             if (state.ceylonModelUpdateRequired.empty &&
-                state.jvmBackendGenerationRequired.empty) {
+                (!includeBinaryGeneration || state.jvmBackendGenerationRequired.empty))  {
                 finished = true;
                 return true;
             }
+            
+            updateCeylonModel(progress.newChild(300));
             
             performBinaryGeneration(progress.newChild(200));
             finished = true;
@@ -604,21 +604,23 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             value utc = UnknownTypeCollector();
 
-            value step = typecheckingStep(phasedUnitsToTypecheck, progress);
-            {
-                [PhasedUnit.scanDeclarations, "scanning declarations", 1],
-                [PhasedUnit.scanTypeDeclarations, "scanning types", 2],
-                [PhasedUnit.validateRefinement, "validating refinement", 1],
+            value runStep = unflatten(typecheckingStep(phasedUnitsToTypecheck, progress));
+            for (step in {
+                [(PhasedUnit pu) => pu.scanDeclarations(), "scanning declarations", 1],
+                [(PhasedUnit pu) => pu.scanTypeDeclarations(), "scanning types", 2],
+                [(PhasedUnit pu) => pu.validateRefinement(), "validating refinement", 1],
                 [void (PhasedUnit pu) { 
                     pu.analyseTypes();
                     if (ceylonProject.showWarnings) {
                         pu.analyseUsage();
                     }
                 }, "analysing usages", 3],
-                [PhasedUnit.analyseFlow, "analyzing flow", 1],
-                [void (PhasedUnit pu) => 
+                [(PhasedUnit pu) => pu.analyseFlow(), "analyzing flow", 1],
+                [(PhasedUnit pu) => 
                     pu.compilationUnit.visit(utc), "collecting unknown types", 1]
-            }.each(unflatten(step));
+            }) {
+                runStep(step);
+            }
             
             if (progress.cancelled) {
                 throw platformUtils.newOperationCanceledException();
@@ -697,14 +699,16 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     .flatMap((phasedUnits) => CeylonIterable(phasedUnits.phasedUnits))
                     .sequence();
             
-            value dependenciesStep = typecheckingStep(dependencies, progress);
-            {
-                [PhasedUnit.scanDeclarations, "scanning declarations", 1],
-                [PhasedUnit.scanTypeDeclarations, "scanning types", 2],
-                [PhasedUnit.validateRefinement, "validating refinement", 1],
-                [PhasedUnit.analyseTypes, "analysing types", 2]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
+            value runDependenciesStep = unflatten(typecheckingStep(dependencies, progress));
+            for (step in {
+                [(PhasedUnit pu) => pu.scanDeclarations(), "scanning declarations", 1],
+                [(PhasedUnit pu) => pu.scanTypeDeclarations(), "scanning types", 2],
+                [(PhasedUnit pu) => pu.validateRefinement(), "validating refinement", 1],
+                [(PhasedUnit pu) => pu.analyseTypes(), "analysing types", 2]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
                 // which in turn is important for debugging !
-            }.each(unflatten(dependenciesStep));
+            }) {
+                runDependenciesStep(step);
+            }
         }
     }
     
@@ -730,7 +734,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 // skip non-ceylon files
                 if(!ceylonProject.isCeylon(fileToUpdate)) {
                     if (ceylonProject.isJava(fileToUpdate)) {
-                        if (is BaseJavaUnitAlias toRemove = virtualFile.unit) {
+                        if (is JavaUnitAlias toRemove = virtualFile.unit) {
                             toRemove.remove();
                         } else {
                             if(exists packageName = virtualFile.ceylonPackage?.nameAsString,

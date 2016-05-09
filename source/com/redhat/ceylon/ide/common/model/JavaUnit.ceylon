@@ -12,12 +12,14 @@ shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
     shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
 }
 
-shared abstract class BaseJavaUnit<NativeProject,NativeFolder,NativeFile>
+shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
         extends IdeUnit
-        satisfies IResourceAware<NativeProject, NativeFolder, NativeFile> {
+        satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
+        & IJavaModelAware<NativeProject, JavaClassRoot, JavaElement>
+        & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
     shared new(String theFilename, String theRelativePath, String theFullPath, Package thePackage)
             extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {}
-    
+
     shared void remove() {
         value p = \ipackage;
         p.removeUnit(this);
@@ -26,17 +28,7 @@ shared abstract class BaseJavaUnit<NativeProject,NativeFolder,NativeFile>
                 .each((BaseIdeModule m) 
             => m.removedOriginalUnit(relativePath));
     }
-}
 
-shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>(
-    String theFilename, 
-    String theRelativePath, 
-    String theFullPath, 
-    Package thePackage)
-        extends BaseJavaUnit<NativeProject,NativeFolder,NativeFile>(theFilename, theRelativePath, theFullPath, thePackage)
-        satisfies IJavaModelAware<NativeProject, JavaClassRoot, JavaElement>
-        & JavaUnitUtils<NativeFolder, NativeFile, JavaClassRoot> {
-    
     shared actual NativeFile? resourceFile =>
             javaClassRootToNativeFile(typeRoot);
     
