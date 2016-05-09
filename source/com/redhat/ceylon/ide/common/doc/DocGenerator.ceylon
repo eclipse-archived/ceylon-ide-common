@@ -155,19 +155,25 @@ shared interface DocGenerator<Document> {
         if (exists moduleNameAndVersion = bits[1],
             exists loc = moduleNameAndVersion.firstOccurrence('/')) {
             
-            String moduleName = moduleNameAndVersion.spanTo(loc - 1);
-            String moduleVersion = moduleNameAndVersion.spanFrom(loc + 1);
-            value tc = cpc.typeChecker;
-            value mod = CeylonIterable(tc.context.modules.listOfModules).find(
-                (m) => m.nameAsString==moduleName && m.version==moduleVersion
-            );
+            String moduleName 
+                    = moduleNameAndVersion.spanTo(loc - 1);
+            String moduleVersion 
+                    = moduleNameAndVersion.spanFrom(loc + 1);
             
-            if (bits.size == 2, exists mod) {
-                return mod;
+            value linkedModule 
+                    = let (modules 
+                        = cpc.typeChecker.context.modules)
+                    CeylonIterable(modules.listOfModules)
+                        .find((m) 
+                            => m.nameAsString==moduleName 
+                            && m.version==moduleVersion);
+            
+            if (bits.size==2, exists linkedModule) {
+                return linkedModule;
             }
-            if (exists mod) {
-                variable Referenceable? target = mod.getPackage(bits[2]);
-                
+            if (exists linkedModule) {
+                variable Referenceable? target 
+                        = linkedModule.getPackage(bits[2]);
                 if (bits.size > 3) {
                     for (i in 3 .. bits.size-1) {
                         variable Scope scope;
@@ -179,7 +185,8 @@ shared interface DocGenerator<Document> {
                             return null;
                         }
                         
-                        if (is Value s = scope, s.typeDeclaration.anonymous) {
+                        if (is Value s = scope, 
+                            s.typeDeclaration.anonymous) {
                             scope = s.typeDeclaration;
                         }
                         
