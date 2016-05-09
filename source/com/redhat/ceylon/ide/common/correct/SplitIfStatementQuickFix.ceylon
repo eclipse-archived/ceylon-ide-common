@@ -21,7 +21,9 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                         exists c1 = conditions.get(size - 2),
                         exists c2 = conditions.get(size - 1)) {
                         
-                        value change = newTextChange("Split If Statement", file);
+                        value change 
+                                = newTextChange("Split If Statement", 
+                                                file);
                         value doc = getDocumentForChange(change);
                         initMultiEditChange(change);
                         String ws;
@@ -38,10 +40,17 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                         
                         value start = c1.endIndex.intValue();
                         value stop = c2.startIndex.intValue();
-                        addEditToChange(change, newReplaceEdit(start, stop - start,
-                             ") {" + ws + indent + "if ("));
-                        value end = ifSt.endIndex.intValue();
-                        addEditToChange(change, newInsertEdit(end, ws + "}"));
+                        addEditToChange(change, 
+                            newReplaceEdit {
+                                start = start;
+                                length = stop - start;
+                                text = ") {" + ws + indent + "if (";
+                            });
+                        addEditToChange(change, 
+                            newInsertEdit {
+                                position = ifSt.endIndex.intValue();
+                                text = ws + "}";
+                            });
                         incrementIndent(doc, ifSt, cl, change, indent);
                         
                         newProposal(data, "Split 'if' statement at condition", change);
@@ -56,16 +65,26 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                     if (is Tree.IfStatement st) {
                         value inner = st;
                         value icl = inner.ifClause.conditionList;
-                        value change = newTextChange("Split If Statement", file);
+                        value change 
+                                = newTextChange("Split If Statement", 
+                                                file);
                         value doc = getDocumentForChange(change);
                         initMultiEditChange(change);
-                        value ws = indents.getDefaultLineDelimiter(doc)
+                        value ws 
+                                = indents.getDefaultLineDelimiter(doc)
                                 + indents.getIndent(ifSt, doc);
                         value indent = indents.defaultIndent;
                         value start = block.startIndex.intValue();
-                        addEditToChange(change, newInsertEdit(start, "{" + ws + indent));
-                        value end = ifSt.endIndex.intValue();
-                        addEditToChange(change, newInsertEdit(end, ws + "}"));
+                        addEditToChange(change, 
+                            newInsertEdit {
+                                position = start;
+                                text = "{" + ws + indent;
+                            });
+                        addEditToChange(change, 
+                            newInsertEdit {
+                                position = ifSt.endIndex.intValue();
+                                text = ws + "}";
+                            });
                         incrementIndent(doc, ifSt, icl, change, indent);
                         
                         newProposal(data, "Split 'if' statement at 'else'", change);
@@ -79,9 +98,14 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         TextChange change, String indent) {
         
         if (!indent.empty) {
-            variable value line = getLineOfOffset(doc, cl.endIndex.intValue() - 1) + 1;
+            variable value line 
+                    = getLineOfOffset(doc, cl.endIndex.intValue() - 1) + 1;
             while (line <= getLineOfOffset(doc, ifSt.endIndex.intValue() - 1)) {
-                addEditToChange(change, newInsertEdit(getLineStartOffset(doc, line), indent));
+                addEditToChange(change, 
+                    newInsertEdit {
+                        position = getLineStartOffset(doc, line);
+                        text = indent;
+                    });
                 line++;
             }
         }
