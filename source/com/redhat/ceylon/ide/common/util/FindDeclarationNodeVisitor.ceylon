@@ -24,7 +24,7 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
     }
     
     shared actual default void visit(Tree.ObjectDefinition that) {
-        if (isDeclaration(that.declarationModel.typeDeclaration)) {
+        if (isDeclaration(that.declarationModel?.typeDeclaration)) {
             declarationNode = that;
         }
         super.visit(that);
