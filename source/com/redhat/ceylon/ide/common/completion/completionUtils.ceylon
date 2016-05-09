@@ -172,7 +172,7 @@ String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
         fullPath.append(TreeUtil.formatPath(path.identifiers));
         fullPath.append(".");
         value maxLength = offset - path.startIndex.intValue() - prefix.size;
-        return fullPath.substring(0, maxLength);
+        return fullPath.measure(0, maxLength);
     }
     return fullPath.string;
 }

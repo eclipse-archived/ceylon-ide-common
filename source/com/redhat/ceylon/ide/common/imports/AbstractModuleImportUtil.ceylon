@@ -26,7 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    //StringBuilder,
     ObjectArray,
     JString=String
 }

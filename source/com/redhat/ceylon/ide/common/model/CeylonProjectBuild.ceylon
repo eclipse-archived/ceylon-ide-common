@@ -245,7 +245,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             if (is ProjectMessage that) {
                 return message==that.message && 
                         backend==that.backend && 
-                        backend==that.severity && 
+                        severity==that.severity && 
                         project==that.project;
             }
             else {
@@ -298,7 +298,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             if (is SourceFileMessage that) {
                 return message==that.message && 
                         backend==that.backend && 
-                        backend==that.severity && 
+                        severity==that.severity && 
                         file==that.file;
             }
             else {

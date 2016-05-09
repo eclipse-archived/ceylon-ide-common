@@ -173,7 +173,7 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
             }
             if (is Tree.FunctionArgument core) {
                 assert (exists anonParams = core.parameterLists[0]);
-                if (anonParams.parameters.size == localRefs.size) {
+                if (anonParams.parameters.size() == localRefs.size) {
                     call = newName;
                     refStart = 0;
                 }

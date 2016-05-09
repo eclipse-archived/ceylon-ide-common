@@ -257,7 +257,8 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         }
         
         value split = javaString(prefix).split("\\s+");
-        if (split.size > 0, dec.name==split.get(split.size - 1)) {
+        if (split.size > 0, 
+            dec.name==split.get(split.size-1).string) {
             return;
         }
         value pname = dec.unit.\ipackage.nameAsString;
