@@ -14,10 +14,10 @@ shared interface BaseProgressMonitor satisfies Cancellable {
             action();
             worked(amountOfWork);
         };
-        shared void iterate<Element>({Element*} iterable)(Integer unitAmountOfWork, Anything(Element) action) {
+        shared void iterate<Element>(Integer work, Anything on(Element item))({Element*} iterable) {
             iterable.each((e) {
-                action(e);
-                worked(unitAmountOfWork);
+                on(e);
+                worked(work);
             });
         }
     }
