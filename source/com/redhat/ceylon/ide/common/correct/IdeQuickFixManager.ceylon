@@ -21,6 +21,11 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+
+shared alias AnyQuickFixData => QuickFixData<out Anything>;
 
 shared interface QuickFixData<Project> {
     shared formal Integer errorCode;
@@ -28,6 +33,7 @@ shared interface QuickFixData<Project> {
     shared formal Integer problemLength;
     shared formal Node node;
     shared formal Tree.CompilationUnit rootNode;
+    shared formal PhasedUnit phasedUnit;
     shared formal Project project;
     shared formal BaseCeylonProject ceylonProject;
     shared formal CommonDocument doc;

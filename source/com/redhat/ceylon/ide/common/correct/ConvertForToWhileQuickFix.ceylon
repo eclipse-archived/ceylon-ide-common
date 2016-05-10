@@ -10,7 +10,7 @@ import com.redhat.ceylon.ide.common.platform {
 
 shared object convertForToWhileQuickFix {
  
-    shared void addConvertForToWhileProposal(QuickFixData<out Anything> data,
+    shared void addConvertForToWhileProposal(AnyQuickFixData data,
         Tree.Statement? statement) {
      
         if (is Tree.ForStatement forSt = statement, 
@@ -18,7 +18,10 @@ shared object convertForToWhileQuickFix {
             exists e = fi.specifierExpression?.expression) {
             
             value doc = data.doc;
-            value change = platformServices.createTextChange("Convert For to While", doc);
+            value change = platformServices.createTextChange { 
+                desc = "Convert For to While";
+                input = data.phasedUnit;
+            };
             change.initMultiEdit();
             
             change.addEdit(
