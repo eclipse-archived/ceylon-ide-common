@@ -16,8 +16,8 @@ import ceylon.collection {
     ArrayList
 }
 
-shared interface AssignToLocalQuickFix<IFile,Project,Data>
-        satisfies LocalQuickFix<IFile,Project,Data>
+shared interface AssignToLocalQuickFix<IFile,Data>
+        satisfies LocalQuickFix<IFile,Data>
         given Data satisfies QuickFixData {
 
     desc => "Assign expression to new local";

@@ -21,7 +21,7 @@ import com.redhat.ceylon.ide.common.util {
 }
 
 shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Project,Data,CompletionResult,LinkedMode>
+        TextChange,Region,Data,CompletionResult,LinkedMode>
         satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
         Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
@@ -33,7 +33,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);
 
     shared formal SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Project,Data,CompletionResult> specifyTypeArgumentsQuickFix;
+        TextChange,Region,Data,CompletionResult> specifyTypeArgumentsQuickFix;
     //shared formal void applyChange(TextChange change);
     
     shared Region? specifyType(IDocument document, Tree.Type typeNode,

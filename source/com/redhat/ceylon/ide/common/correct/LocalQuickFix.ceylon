@@ -11,7 +11,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 
-shared interface LocalQuickFix<IFile,Project,Data>
+shared interface LocalQuickFix<IFile,Data>
         given Data satisfies QuickFixData {
 
     shared formal void newProposal(Data data, String desc);

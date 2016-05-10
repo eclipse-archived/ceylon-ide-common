@@ -8,7 +8,7 @@ import com.redhat.ceylon.ide.common.util {
     nodes
 }
 
-shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult,Project,Data,Region>
+shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult,Data,Region>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
                 & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
                 & LinkedModeSupport<LinkedMode, Document, CompletionResult>

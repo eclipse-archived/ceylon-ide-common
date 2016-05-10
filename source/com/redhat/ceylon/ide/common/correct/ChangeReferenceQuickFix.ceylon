@@ -20,7 +20,7 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     Collections
 }
-shared interface ChangeReferenceQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Data,Region,CompletionResult>
+shared interface ChangeReferenceQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Data,Region,CompletionResult>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
                 & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit

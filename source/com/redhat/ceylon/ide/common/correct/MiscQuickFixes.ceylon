@@ -4,23 +4,23 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 // TODO rename to something like BlockQuickFix?
-shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
         satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit 
         given Data satisfies QuickFixData {
     
     shared formal ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToBlockQuickFix;
+    TextChange,Region,Data,CompletionResult> convertToBlockQuickFix;
     
     shared formal ConvertToSpecifierQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToSpecifierQuickFix;
+    TextChange,Region,Data,CompletionResult> convertToSpecifierQuickFix;
     
     shared formal ConvertToGetterQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToGetterQuickFix;
+    TextChange,Region,Data,CompletionResult> convertToGetterQuickFix;
     
     shared formal FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> fillInQuickFix;
+    TextChange,Region,Data,CompletionResult> fillInQuickFix;
 
     shared void addAnonymousFunctionProposals(Data data, IFile file) {
         variable value currentOffset = data.node.startIndex.intValue();
