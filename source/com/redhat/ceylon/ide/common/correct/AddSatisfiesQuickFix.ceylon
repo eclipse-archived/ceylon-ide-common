@@ -51,10 +51,10 @@ import java.util {
  "
 // TODO automatically import satisfied type if needed
 shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal void newProposal(Data data, TypeDeclaration typeParam, 
             String description, String missingSatisfiedTypeText, 

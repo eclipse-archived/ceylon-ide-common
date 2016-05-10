@@ -5,10 +5,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 
 // TODO rename to something like BlockQuickFix?
 shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     TextChange,Region,Project,Data,CompletionResult> convertToBlockQuickFix;

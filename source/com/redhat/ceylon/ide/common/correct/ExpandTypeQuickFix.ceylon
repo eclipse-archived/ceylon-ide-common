@@ -10,9 +10,9 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 
 shared interface ExpandTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared void addExpandTypeProposal(Data data, IFile file, Tree.Statement? node,
         Integer selectionStart, Integer selectionStop) {

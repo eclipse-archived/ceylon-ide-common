@@ -6,9 +6,9 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 
 shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
  
     shared void addConvertSwitchToIfProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.SwitchStatement statement) {

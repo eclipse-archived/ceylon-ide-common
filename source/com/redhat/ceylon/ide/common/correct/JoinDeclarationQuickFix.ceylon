@@ -11,9 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface JoinDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared void addJoinDeclarationProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.SpecifierStatement spec = statement) {

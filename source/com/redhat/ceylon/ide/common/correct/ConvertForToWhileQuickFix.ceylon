@@ -10,7 +10,7 @@ import com.redhat.ceylon.ide.common.platform {
 
 shared object convertForToWhileQuickFix {
  
-    shared void addConvertForToWhileProposal(AnyQuickFixData data,
+    shared void addConvertForToWhileProposal(QuickFixData data,
         Tree.Statement? statement) {
      
         if (is Tree.ForStatement forSt = statement, 

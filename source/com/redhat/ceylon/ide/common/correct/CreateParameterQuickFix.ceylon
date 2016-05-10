@@ -30,10 +30,10 @@ import java.util {
 
 // TODO extends InitializerProposal
 shared interface CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult> 
+        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> 
                 & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal void newCreateParameterProposal(Data data, String desc, Declaration dec, 
         Type? type, Region selection, Icons image, TextChange change, Integer exitPos);

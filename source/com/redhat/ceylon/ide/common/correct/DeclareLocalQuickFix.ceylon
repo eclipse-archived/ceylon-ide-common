@@ -10,10 +10,10 @@ import com.redhat.ceylon.ide.common.util {
 
 shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult,Project,Data,Region>
         satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
                 & LinkedModeSupport<LinkedMode, Document, CompletionResult>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared void enableLinkedMode(Data data, Tree.Term term, TextChange change) {
         if (exists type = term.typeModel) {

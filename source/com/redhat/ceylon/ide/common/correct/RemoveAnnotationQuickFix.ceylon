@@ -16,21 +16,21 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal void newRemoveAnnotationQuickFix(Declaration dec, String annotation,
             String desc, Integer offset, TextChange change, Region selection, Data data);
     
-    shared void addRemoveAnnotationProposal(Node node, String annotation, Project project, Data data) {
+    shared void addRemoveAnnotationProposal(Node node, String annotation, Data data) {
         if (is Declaration dec = nodes.getReferencedDeclaration(node)) {
-            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, project, data);
+            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, data);
         }
     }
     
-    shared void addMakeContainerNonfinalProposal(Project project, Node node, Data data) {
+    shared void addMakeContainerNonfinalProposal(Node node, Data data) {
         Declaration dec;
         if (is Tree.Declaration node) {
             if (is Declaration container = node.declarationModel.container) {
@@ -42,11 +42,11 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             assert(is Declaration scope = node.scope);
             dec = scope;
         }
-        addRemoveAnnotationProposal2(node, "final", "Make Nonfinal", dec, project, data);
+        addRemoveAnnotationProposal2(node, "final", "Make Nonfinal", dec, data);
     }
     
     void addRemoveAnnotationProposal2(Node node, String annotation, String desc,
-        Declaration? dec, Project project, Data data) {
+        Declaration? dec, Data data) {
         
         if (exists dec, exists d = dec.name,
             exists phasedUnit = getPhasedUnit(dec.unit, data)) {
@@ -111,9 +111,9 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     }
 
     
-    shared void addRemoveAnnotationDecProposal(String annotation, Project project, Node node, Data data) {
+    shared void addRemoveAnnotationDecProposal(String annotation, Node node, Data data) {
         if (is Tree.Declaration node) {
-            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, node.declarationModel, project, data);
+            addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, node.declarationModel, data);
         }
     }
 }

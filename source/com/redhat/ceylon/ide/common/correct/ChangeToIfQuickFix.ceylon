@@ -7,9 +7,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 shared interface ChangeToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
  
     shared void addChangeToIfProposal(Data data, IFile file, Tree.Statement? statement) {
         if (is Tree.Assertion statement) {

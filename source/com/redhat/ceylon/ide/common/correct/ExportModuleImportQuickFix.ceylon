@@ -14,10 +14,10 @@ import com.redhat.ceylon.ide.common.imports {
 }
 
 shared interface ExportModuleImportQuickFix<IFile, IDocument, InsertEdit, TextEdit, TextChange, Region, Project, Data, CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared formal void newExportModuleImportProposal(Data data, Unit u, String desc,
         String name, String version);

@@ -15,7 +15,7 @@ import com.redhat.ceylon.ide.common.platform {
 
 shared object splitIfStatementQuickFix {
  
-    shared void addSplitIfStatementProposal(AnyQuickFixData data, 
+    shared void addSplitIfStatementProposal(QuickFixData data, 
      Tree.Statement? statement) {
         if (is Tree.IfStatement ifSt = statement) {
             Tree.ElseClause? elseClause = ifSt.elseClause;

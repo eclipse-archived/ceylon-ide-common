@@ -18,8 +18,8 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 
 shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
-        Region,Project,Data,ICompletionResult=Anything>
-        given Data satisfies QuickFixData<Project> {
+        Region,Data,ICompletionResult=Anything>
+        given Data satisfies QuickFixData {
 
     shared formal Indents<IDocument> indents;
     
@@ -40,11 +40,11 @@ shared interface AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
     shared formal IFile? getFile<NativeFile>(IResourceAware<out Anything, out Anything, NativeFile> pu, Data data);
 }
 
-shared interface GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+shared interface GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared formal void newProposal(Data data, String desc, TextChange change,
         DefaultRegion? region = null);

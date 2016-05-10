@@ -12,9 +12,9 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 
 shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared void addInvertIfElseProposal(Data data, IFile file, IDocument doc, Tree.Statement? statement) {
         addInvertIfElseExpressionProposal(data, file, doc);

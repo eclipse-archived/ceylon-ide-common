@@ -12,7 +12,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface LocalQuickFix<IFile,Project,Data>
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared formal void newProposal(Data data, String desc);
 
@@ -111,11 +111,11 @@ shared interface LocalQuickFix<IFile,Project,Data>
     }
 }
 
-shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
+shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
         satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange> 
-                & AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+                & AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared formal TextChange createChange(IFile file, Node expanse, Integer endIndex);
     shared formal LinkedMode? addLinkedPositions(IDocument document, Unit unit);

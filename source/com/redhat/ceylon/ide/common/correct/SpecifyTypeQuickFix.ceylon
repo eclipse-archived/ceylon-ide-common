@@ -23,11 +23,11 @@ import com.redhat.ceylon.ide.common.util {
 shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         TextChange,Region,Project,Data,CompletionResult,LinkedMode>
         satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
-        Region,Project,Data,CompletionResult>
+        Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
                 & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal void newSpecifyTypeProposal(String desc,
         Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);

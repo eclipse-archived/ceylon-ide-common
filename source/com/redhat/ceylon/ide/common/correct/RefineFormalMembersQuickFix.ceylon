@@ -20,10 +20,10 @@ import java.util {
 }
 
 shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult> 
+        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionResult> 
                 & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal Character getDocChar(Document doc, Integer offset);
     

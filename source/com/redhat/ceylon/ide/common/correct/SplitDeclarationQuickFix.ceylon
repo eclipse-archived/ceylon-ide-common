@@ -17,9 +17,9 @@ import java.util {
 }
 
 shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     void addSplitDeclarationProposal(Data data, Tree.TypedDeclaration decNode, IFile file) {
         TypedDeclaration? dec = decNode.declarationModel;

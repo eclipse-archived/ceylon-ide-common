@@ -18,17 +18,17 @@ import ceylon.collection {
 
 shared interface AssignToLocalQuickFix<IFile,Project,Data>
         satisfies LocalQuickFix<IFile,Project,Data>
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     desc => "Assign expression to new local";
 
 }
 
-shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
-        satisfies AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
+shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
+        satisfies AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
                 & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared actual TextChange createChange(IFile file, Node expanse, Integer endIndex) {
         value change = newTextChange("Assign to Local", file);

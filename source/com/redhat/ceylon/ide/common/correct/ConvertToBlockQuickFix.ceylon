@@ -10,9 +10,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 shared interface ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
         given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared void addConvertToBlockProposal(Data data, IFile file, Node decNode) {
         value change = newTextChange("Convert to Block", file);

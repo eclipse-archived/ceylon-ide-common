@@ -15,7 +15,7 @@ import com.redhat.ceylon.ide.common.platform {
 
 shared object joinIfStatementsQuickFix {
 
-    shared void addJoinIfStatementsProposal(AnyQuickFixData data, 
+    shared void addJoinIfStatementsProposal(QuickFixData data, 
         Tree.Statement? statement) {
         if (is Tree.IfStatement statement) {
             if (exists elseClause = statement.elseClause) {

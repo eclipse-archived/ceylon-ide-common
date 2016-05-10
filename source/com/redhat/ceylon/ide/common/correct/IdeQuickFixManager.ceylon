@@ -25,16 +25,13 @@ import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
 
-shared alias AnyQuickFixData => QuickFixData<out Anything>;
-
-shared interface QuickFixData<Project> {
+shared interface QuickFixData {
     shared formal Integer errorCode;
     shared formal Integer problemOffset;
     shared formal Integer problemLength;
     shared formal Node node;
     shared formal Tree.CompilationUnit rootNode;
     shared formal PhasedUnit phasedUnit;
-    shared formal Project project;
     shared formal BaseCeylonProject ceylonProject;
     shared formal CommonDocument doc;
     
@@ -43,7 +40,7 @@ shared interface QuickFixData<Project> {
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,Project,IFile,ICompletionProposal,Data,LinkedMode>()
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addAnnotations;
     shared formal RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> removeAnnotations;
@@ -85,12 +82,11 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     // temporary
     shared formal void addCreateTypeParameterProposal<Data>(Data data,
         Tree.BaseType bt, String brokenName)
-            given Data satisfies QuickFixData<Project>;
+            given Data satisfies QuickFixData;
 
     shared void addQuickFixes(Data data, TypeChecker? tc, IFile file) {
         
         value node = data.node;
-        value project = data.project;
         
         switch (data.errorCode)
         case (100|102) {
@@ -103,7 +99,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
                 importProposals.addImportProposals(data.rootNode, data.node, proposals, file);
                 addImportProposals(proposals, data);
             }
-            createEnumQuickFix.addCreateEnumProposal(project, data);
+            createEnumQuickFix.addCreateEnumProposal(data);
             addCreationProposals(data, file);
             if (exists tc) {
                 changeReferenceQuickFix.addChangeReferenceProposals(data, file);
@@ -120,75 +116,75 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (300) {
             refineFormalMembersQuickFix.addRefineFormalMembersProposal(data, false);
-            addAnnotations.addMakeAbstractDecProposal(node, project, data);
+            addAnnotations.addMakeAbstractDecProposal(node, data);
         }
         case (350) {
             refineFormalMembersQuickFix.addRefineFormalMembersProposal(data, true);
-            addAnnotations.addMakeAbstractDecProposal(node, project, data);
+            addAnnotations.addMakeAbstractDecProposal(node, data);
         }
         case (310) {
-            addAnnotations.addMakeAbstractDecProposal(node, project, data);
+            addAnnotations.addMakeAbstractDecProposal(node, data);
         }
         case (320) {
-            removeAnnotations.addRemoveAnnotationProposal(node, "formal", project, data);
+            removeAnnotations.addRemoveAnnotationProposal(node, "formal", data);
         }
         case (400|402) {
-            addAnnotations.addMakeSharedProposal(project, node, data);
+            addAnnotations.addMakeSharedProposal(node, data);
         }
         case (705) {
-            addAnnotations.addMakeSharedDecProposal(project, node, data);
+            addAnnotations.addMakeSharedDecProposal(node, data);
         }
         case (500|510) {
-            addAnnotations.addMakeDefaultProposal(project, node, data);
+            addAnnotations.addMakeDefaultProposal(node, data);
         }
         case (600) {
-            addAnnotations.addMakeActualDecProposal(project, node, data);
+            addAnnotations.addMakeActualDecProposal(node, data);
         }
         case (701) {
-            addAnnotations.addMakeSharedDecProposal(project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("actual", project, node, data);
+            addAnnotations.addMakeSharedDecProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("actual", node, data);
         }
         case (702) {
-            addAnnotations.addMakeSharedDecProposal(project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("formal", project, node, data);
+            addAnnotations.addMakeSharedDecProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
         case (703) {
-            addAnnotations.addMakeSharedDecProposal(project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("default", project, node, data);
+            addAnnotations.addMakeSharedDecProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("default", node, data);
         }
         case (710|711) {
-            addAnnotations.addMakeSharedProposal(project, node, data);
+            addAnnotations.addMakeSharedProposal(node, data);
         }
         case (712) {
             exportModuleImportQuickFix.addExportModuleImportProposal(data);
         }
         case (713) {
-            addAnnotations.addMakeSharedProposalForSupertypes(project, node, data);
+            addAnnotations.addMakeSharedProposalForSupertypes(node, data);
         }
         case (714) {
             exportModuleImportQuickFix.addExportModuleImportProposalForSupertypes(data);
         }
         case (800|804) {
-            addAnnotations.addMakeVariableProposal(project, node, data);
+            addAnnotations.addMakeVariableProposal(node, data);
         }
         case (803) {
-            addAnnotations.addMakeVariableProposal(project, node, data);
+            addAnnotations.addMakeVariableProposal(node, data);
         }
         case (801) {
-            addAnnotations.addMakeVariableDecProposal(project, data);
+            addAnnotations.addMakeVariableDecProposal(data);
         }
         case (802) {
             // empty
         }
         case (905) {
-            addAnnotations.addMakeContainerAbstractProposal(project, node, data);
+            addAnnotations.addMakeContainerAbstractProposal(node, data);
         }
         case (1100) {
-            addAnnotations.addMakeContainerAbstractProposal(project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("formal", project, node, data);
+            addAnnotations.addMakeContainerAbstractProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
         case (1101) {
-            removeAnnotations.addRemoveAnnotationDecProposal("formal", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
             //TODO: replace body with ;
         }
         case (1000|1001) {
@@ -204,54 +200,54 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             fixAliasQuickFix.addFixAliasProposal(data, file);
         }
         case (1200|1201) {
-            removeAnnotations.addRemoveAnnotationDecProposal("shared", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("shared", node, data);
         }
         case (1300|1301) {
-            addAnnotations.addMakeRefinedSharedProposal(project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("actual", project, node, data);
+            addAnnotations.addMakeRefinedSharedProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("actual", node, data);
         }
         case (1302|1312|1317) {
-            removeAnnotations.addRemoveAnnotationDecProposal("formal", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
         case (1303|1313|1320) {
-            removeAnnotations.addRemoveAnnotationDecProposal("formal", project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("default", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("default", node, data);
         }
         case (1350) {
-            removeAnnotations.addRemoveAnnotationDecProposal("default", project, node, data);
-            removeAnnotations.addMakeContainerNonfinalProposal(project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("default", node, data);
+            removeAnnotations.addMakeContainerNonfinalProposal(node, data);
         }
         case (1400|1401) {
-            addAnnotations.addMakeFormalDecProposal(project, node, data);
+            addAnnotations.addMakeFormalDecProposal(node, data);
         }
         case (1450) {
-            addAnnotations.addMakeFormalDecProposal(project, node, data);
+            addAnnotations.addMakeFormalDecProposal(node, data);
             addParameterQuickFix.addParameterProposals(data, file);
             addInitializerQuickFix.addInitializerProposals(data, file);
             addParameterListQuickFix.addParameterListProposal(data, file, false);
             addConstructorQuickFix.addConstructorProposal(data, file);
         }
         case (1610) {
-            removeAnnotations.addRemoveAnnotationDecProposal("shared", project, node, data);
-            removeAnnotations.addRemoveAnnotationDecProposal("abstract", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("shared", node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("abstract", node, data);
         }
         case (1500|1501) {
-            removeAnnotations.addRemoveAnnotationDecProposal("variable", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("variable", node, data);
         }
         case (1600|1601) {
-            removeAnnotations.addRemoveAnnotationDecProposal("abstract", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("abstract", node, data);
         }
         case (1700) {
-            removeAnnotations.addRemoveAnnotationDecProposal("final", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("final", node, data);
         }
         case (1800|1801) {
-            removeAnnotations.addRemoveAnnotationDecProposal("sealed", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("sealed", node, data);
         }
         case (1900) {
-            removeAnnotations.addRemoveAnnotationDecProposal("late", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("late", node, data);
         }
         case (1950|1951) {
-            removeAnnotations.addRemoveAnnotationDecProposal("annotation", project, node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("annotation", node, data);
         }
         case (2000) {
             createParameterQuickFix.addCreateParameterProposals(data);
@@ -316,7 +312,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             changeToQuickFix.changeToFunction(data, file);
         }
         case (20000) {
-            addAnnotations.addMakeNativeProposal(project, node, file, data);
+            addAnnotations.addMakeNativeProposal(node, file, data);
         }
         else {
         }

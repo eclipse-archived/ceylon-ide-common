@@ -164,11 +164,11 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         }
         
         value unit = getUnit(project, target);
-        return addModuleImports3(unit[0], unit[1], project, moduleNamesAndVersions);
+        return addModuleImports3(unit[0], unit[1], moduleNamesAndVersions);
     }
 
     shared Integer addModuleImports3(IFile file, Tree.CompilationUnit cu,
-        IProject project, Map<String,ModuleVersionNode> moduleNamesAndVersions) {
+        Map<String,ModuleVersionNode> moduleNamesAndVersions) {
         
         value textFileChange = newTextChange("Add Module Imports", file);
         initMultiEditChange(textFileChange);

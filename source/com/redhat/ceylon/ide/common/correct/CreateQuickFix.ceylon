@@ -31,10 +31,10 @@ import com.redhat.ceylon.model.typechecker.model {
 
 // TODO extends InitializerProposal
 shared interface CreateQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
                 & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
         given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
 
     shared formal CreateParameterQuickFix<IFile,Project,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> 
             createParameterQuickFix;

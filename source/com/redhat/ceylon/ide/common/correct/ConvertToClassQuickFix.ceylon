@@ -13,7 +13,7 @@ import org.antlr.runtime {
 }
 
 shared interface ConvertToClassQuickFix<Project,Data>
-        given Data satisfies QuickFixData<Project> {
+        given Data satisfies QuickFixData {
     
     shared formal void newProposal(Data data, String desc, Tree.ObjectDefinition declaration);
  
@@ -26,10 +26,10 @@ shared interface ConvertToClassQuickFix<Project,Data>
 }
 
 shared interface AbstractConvertToClassProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
+        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
                 & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
                 & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
-            given Data satisfies QuickFixData<Project>
+            given Data satisfies QuickFixData
             given InsertEdit satisfies TextEdit {
 
     shared formal void performChange(TextChange change);
