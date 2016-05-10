@@ -14,6 +14,13 @@ import java.util {
     ArrayList,
     Collection
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    TextChange
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface QuickFixData<Project> {
     shared formal Integer errorCode;
@@ -23,6 +30,10 @@ shared interface QuickFixData<Project> {
     shared formal Tree.CompilationUnit rootNode;
     shared formal Project project;
     shared formal BaseCeylonProject ceylonProject;
+    shared formal CommonDocument doc;
+    
+    shared formal void addQuickFix(String desc, TextChange change,
+        DefaultRegion? selection = null);
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,Project,IFile,ICompletionProposal,Data,LinkedMode>()

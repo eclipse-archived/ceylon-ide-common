@@ -1,47 +1,51 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    ReplaceEdit,
+    commonIndents
+}
 
-shared interface ConvertForToWhileQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object convertForToWhileQuickFix {
  
-    shared void addConvertForToWhileProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addConvertForToWhileProposal(QuickFixData<out Anything> data,
+        Tree.Statement? statement) {
+     
         if (is Tree.ForStatement forSt = statement, 
             is Tree.ValueIterator fi = forSt.forClause?.forIterator,
             exists e = fi.specifierExpression?.expression) {
             
-            value change = newTextChange("Convert For to While", file);
-            value doc = getDocumentForChange(change);
-            initMultiEditChange(change);
-            addEditToChange(change, 
-                newInsertEdit {
-                    position = forSt.startIndex.intValue();
-                    text = "value it = " + this.getDocContent {
-                        doc = doc;
-                        start = e.startIndex.intValue();
-                        length = e.distance.intValue();
-                    } 
+            value doc = data.doc;
+            value change = platformServices.createTextChange("Convert For to While", doc);
+            change.initMultiEdit();
+            
+            change.addEdit(
+                InsertEdit {
+                    start = forSt.startIndex.intValue();
+                    text = "value it = "
+                        + doc.getText(e.startIndex.intValue(), e.distance.intValue())
                         + ".iterator();" 
-                        + indents.getDefaultLineDelimiter(doc)
-                        + indents.getIndent(forSt, doc);
+                        + commonIndents.getDefaultLineDelimiter(doc)
+                        + commonIndents.getIndent(forSt, doc);
                 });
-            addEditToChange(change, 
-                newReplaceEdit {
+            change.addEdit(
+                ReplaceEdit {
                     start = forSt.startIndex.intValue();
                     length = 3;
                     text = "while";
                 });
-            addEditToChange(change, 
-                newReplaceEdit {
+            change.addEdit(
+                ReplaceEdit {
                     start = fi.startIndex.intValue()+1;
                     length = fi.distance.intValue()-2;
                     text = "!is Finished " 
                             + fi.variable.identifier.text 
                             + " = it.next()";
                 });
-            newProposal(data, "Convert 'for' loop to 'while'", change);
+               
+            data.addQuickFix("Convert 'for' loop to 'while'", change);
         }
     }
     
