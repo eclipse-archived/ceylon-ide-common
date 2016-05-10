@@ -577,7 +577,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         return finished;
     }
     
-    void typecheckingStep({PhasedUnit*} phasedUnits, BaseProgressMonitor.Progress progress)(void phase(PhasedUnit pu), String subTaskPrefix, Integer ticks) {
+    void applyTypecheckingPhase({PhasedUnit*} phasedUnits, BaseProgressMonitor.Progress progress)(String subTaskPrefix, Integer ticks, void phase(PhasedUnit pu)) {
         for (pu in phasedUnits) {
             progress.subTask(subTaskPrefix + " for file " + pu.unit.filename);
             phase(pu);
@@ -603,24 +603,23 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             //    (apart from the tree validation and the module / package descriptors)
             
             value utc = UnknownTypeCollector();
-
-            value runStep = unflatten(typecheckingStep(phasedUnitsToTypecheck, progress));
-            for (step in {
-                [(PhasedUnit pu) => pu.scanDeclarations(), "scanning declarations", 1],
-                [(PhasedUnit pu) => pu.scanTypeDeclarations(), "scanning types", 2],
-                [(PhasedUnit pu) => pu.validateRefinement(), "validating refinement", 1],
-                [void (PhasedUnit pu) { 
+            
+            value mainTypecheckingPhases = {
+                ["scanning declarations", 1, void(PhasedUnit pu) => pu.scanDeclarations()],
+                ["scanning types", 2, void(PhasedUnit pu) => pu.scanTypeDeclarations()],
+                ["validating refinement", 1, void(PhasedUnit pu) => pu.validateRefinement()],
+                ["analysing usages", 3, void(PhasedUnit pu) { 
                     pu.analyseTypes();
                     if (ceylonProject.showWarnings) {
                         pu.analyseUsage();
                     }
-                }, "analysing usages", 3],
-                [(PhasedUnit pu) => pu.analyseFlow(), "analyzing flow", 1],
-                [(PhasedUnit pu) => 
-                    pu.compilationUnit.visit(utc), "collecting unknown types", 1]
-            }) {
-                runStep(step);
-            }
+                }],
+                ["analyzing flow", 1, void(PhasedUnit pu) => pu.analyseFlow()],
+                ["collecting unknown types", 1, void(PhasedUnit pu) => pu.compilationUnit.visit(utc)]
+            };
+            
+            mainTypecheckingPhases.each(unflatten(
+                applyTypecheckingPhase(phasedUnitsToTypecheck, progress)));
             
             if (progress.cancelled) {
                 throw platformUtils.newOperationCanceledException();
@@ -680,8 +679,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         value ceylonArchivesRefreshingTicks = modulesToRefresh.size*10;
         
         try(progress = monitor.Progress(ceylonArchivesRefreshingTicks, "Refreshing Ceylon archives")) {
-            progress.iterate(modulesToRefresh)
-            (10, IdeModuleAlias.refresh);
+            progress.iterate {
+                work = 10;
+                on(IdeModuleAlias m) => m.refresh();
+            }(modulesToRefresh);
         }
     }
     
@@ -699,16 +700,16 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     .flatMap((phasedUnits) => CeylonIterable(phasedUnits.phasedUnits))
                     .sequence();
             
-            value runDependenciesStep = unflatten(typecheckingStep(dependencies, progress));
-            for (step in {
-                [(PhasedUnit pu) => pu.scanDeclarations(), "scanning declarations", 1],
-                [(PhasedUnit pu) => pu.scanTypeDeclarations(), "scanning types", 2],
-                [(PhasedUnit pu) => pu.validateRefinement(), "validating refinement", 1],
-                [(PhasedUnit pu) => pu.analyseTypes(), "analysing types", 2]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
+            value dependencyTypecheckingPhases = {
+                ["scanning declarations", 1, void (PhasedUnit pu) => pu.scanDeclarations()],
+                ["scanning types", 2, void (PhasedUnit pu) => pu.scanTypeDeclarations()],
+                ["validating refinement", 1, void (PhasedUnit pu) => pu.validateRefinement()],
+                ["analysing types", 2, void (PhasedUnit pu) => pu.analyseTypes()]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
                 // which in turn is important for debugging !
-            }) {
-                runDependenciesStep(step);
-            }
+            };
+            
+            dependencyTypecheckingPhases.each(unflatten(
+                applyTypecheckingPhase(dependencies, progress)));
         }
     }
     
@@ -794,14 +795,18 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 throw platformUtils.newOperationCanceledException();
             }
             
-            value incrementalTypecheckingPreStep = typecheckingStep(phasedUnitsToUpdate, progress);
-            {
-                [PhasedUnit.validateTree, "validating tree", 1],
-                [PhasedUnit.visitSrcModulePhase, "module descriptor parsing", 1],
-                [PhasedUnit.visitRemainingModulePhase, "module and package descriptor completion", 1]
-            }.each(unflatten(incrementalTypecheckingPreStep));
+            value incrementalTypecheckingPreliminaryPhases = {
+                ["validating tree", 1, void(PhasedUnit pu) => pu.validateTree()],
+                ["module descriptor parsing", 1, void(PhasedUnit pu) { pu.visitSrcModulePhase(); }], // The use of the specifier is prohibited here, 
+                                                                                                      // because visitSrcModulePhase() would seen as returning 
+                                                                                                      // Module though in fact can return null (Java method).
+                ["module and package descriptor completion", 1, void(PhasedUnit pu) => pu.visitRemainingModulePhase()]
+            };
+            
+            incrementalTypecheckingPreliminaryPhases.each(unflatten(
+                applyTypecheckingPhase(phasedUnitsToUpdate, progress)));
+            return phasedUnitsToUpdate;        
         }
-        return {};        
     }
     
     void initializeLanguageModule(BaseProgressMonitor monitor) {
@@ -1210,7 +1215,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         value changeDependents= HashSet<FileVirtualFileAlias>();
         changeDependents.addAll(changedFiles*.resource);
         
-        function searchStep() => { 
+        function searchForNewDependencies() => { 
             for (srcFile in changeDependents) 
                 if (shouldConsiderFile(srcFile),
                     exists currentFileCeylonProject = srcFile.ceylonProject,
@@ -1218,11 +1223,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     for (dependingFilePath in getDependentsOf(srcFile, currentFileTypeChecker))
                         if (exists depFile = dependencyToFile(dependingFilePath, currentFileCeylonProject))
                             depFile
-        };
+        }.sequence();
         
-        while(is {Anything +} addedDependencies = searchStep(),
-                includeTransitiveDependencies) {
-            changeDependents.addAll(addedDependencies);
+        while(nonempty newDependencies = searchForNewDependencies()) {
+            changeDependents.addAll(newDependencies);
+            if (!includeTransitiveDependencies) {
+                break;
+            }
         }
         return changeDependents;
     }
