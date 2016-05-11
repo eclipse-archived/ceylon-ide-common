@@ -670,6 +670,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 expand(phasedUnitsToTypecheck
                     .map(retrieveErrors)));
             
+            ceylonProject.model.buildMessagesChanged(ceylonProject, frontendMessages, null, null);
             // TODO addTaskMarkers(file, phasedUnit.getTokens());
         }
     }
