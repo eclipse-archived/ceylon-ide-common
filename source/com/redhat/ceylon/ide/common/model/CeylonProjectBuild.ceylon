@@ -225,7 +225,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     shared abstract class BuildMessage() 
             of ProjectMessage | SourceFileMessage {
         shared formal String message;
-        shared formal Backend backend;
+        shared formal Backend? backend;
         shared formal Severity severity;
         
         shared actual formal Boolean equals(Object that);
@@ -244,7 +244,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared actual Boolean equals(Object that) {
             if (is ProjectMessage that) {
                 return message==that.message && 
-                        backend==that.backend && 
+                        equalsWithNulls(backend,that.backend) && 
                         severity==that.severity && 
                         project==that.project;
             }
@@ -256,9 +256,9 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared actual Integer hash {
             variable value hash = 1;
             hash = 31*hash + message.hash;
-            hash = 31*hash + backend.hash;
             hash = 31*hash + project.hash;
             hash = 31*hash + severity.hash;
+            hash = 31*hash + (backend?.hash else 0);
             return hash;
         }
     }
@@ -297,7 +297,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared actual Boolean equals(Object that) {
             if (is SourceFileMessage that) {
                 return message==that.message && 
-                        backend==that.backend && 
+                        equalsWithNulls(backend, that.backend) && 
                         severity==that.severity && 
                         file==that.file;
             }
@@ -309,9 +309,9 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared actual Integer hash {
             variable value hash = 1;
             hash = 31*hash + message.hash;
-            hash = 31*hash + backend.hash;
             hash = 31*hash + file.hash;
             hash = 31*hash + severity.hash;
+            hash = 31*hash + (backend?.hash else 0);
             return hash;
         }
     }
@@ -637,37 +637,40 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             }
             
             // add problems
+            progress.worked(1);
+            if (progress.cancelled) {
+                throw platformUtils.newOperationCanceledException();
+            }
+            
             
             progress.subTask("Collecting problems for project: `` ceylonProject.name ``");
 
-            for (projectPhasedUnit in phasedUnitsToTypecheck) {
-                NativeFile file = projectPhasedUnit.resourceFile;
+            function retrieveErrors(TypecheckerAliases<NativeProject,NativeResource,NativeFolder,NativeFile>.ProjectPhasedUnitAlias projectPhasedUnit) {
                 value compilationUnit = projectPhasedUnit.compilationUnit;
                 compilationUnit.visit(WarningSuppressionVisitor<Warning>(javaClass<Warning>(),
                     ceylonProject.configuration.suppressWarningsEnum));
-
                 value messages = LinkedList<SourceFileMessage>();
                 compilationUnit.visit(object extends ErrorVisitor() {
                     shared actual void handleMessage(Integer startOffset, Integer endOffset,
                         Integer startCol, Integer startLine, Message message) {
-
+                        
                         value createError = if (message.warning)
-                                then SourceFileWarning
-                                else SourceFileError;
+                        then SourceFileWarning
+                        else SourceFileError;
                         
                         messages.add(
-                            createError(file, startOffset, endOffset, startCol, startLine, message)); 
+                            createError(projectPhasedUnit.resourceFile, startOffset, endOffset, startCol, startLine, message)); 
                     }
                 });
-
-                progress.worked(1);
-                if (progress.cancelled) {
-                    throw platformUtils.newOperationCanceledException();
-                }
                 
-                // TODO addTaskMarkers(file, phasedUnit.getTokens());
+                return messages;
             }
-
+            
+            state.frontendMessages.addAll(
+                expand(phasedUnitsToTypecheck
+                    .map(retrieveErrors)));
+            
+            // TODO addTaskMarkers(file, phasedUnit.getTokens());
         }
     }
     
