@@ -33,7 +33,9 @@ shared interface ParametersCompletion<IdeComponent,CompletionResult,Document>
                           then !(node.declaration is Functional)
                           else true;
         
-        if (condition, exists unit = node.unit, exists type = node.typeModel) {
+        if (condition, 
+            exists unit = node.unit, 
+            exists type = node.typeModel) {
             value cd = unit.callableDeclaration;
             value td = type.declaration;
             
@@ -44,34 +46,35 @@ shared interface ParametersCompletion<IdeComponent,CompletionResult,Document>
                 value text = StringBuilder().append("(");
                 
                 for (i in 0..argTypes.size()-1) {
-                    variable value argType = argTypes.get(i);
+                    value argType = argTypes.get(i);
                     if (desc.size > 1) {
                         desc.append(", ");
                     }
                     if (text.size > 1) {
                         text.append(", ");
                     }
+                    Type returnType;
                     if (argType.classOrInterface,
                         argType.declaration == cd) {
-                        
                         String anon = 
                                 anonFunctionHeader(argType, unit);
-                        text.append(anon)
-                                .append(" => ");
-                        desc.append(anon)
-                                .append(" => ");
-                        argType = unit.getCallableReturnType(argType);
-                        argTypes.set(i, argType);
+                        text.append(anon).append(" => ");
+                        desc.append(anon).append(" => ");
+                        returnType = unit.getCallableReturnType(argType);
+                        argTypes.set(i, returnType);
                     }
                     else if (paramTypes) {
+                        returnType = argType;
                         desc.append(argType.asString(unit))
-                                .append(" ");
+                            .append(" ");
+                    }
+                    else {
+                        returnType = argType;
                     }
                     String name;
-                    if (argType.classOrInterface
-                        || argType.typeParameter) {
-                        
-                        String n = argType.declaration.getName(unit);
+                    if (returnType.classOrInterface
+                        || returnType.typeParameter) {
+                        String n = returnType.declaration.getName(unit);
                         name = escaping.toInitialLowercase(n);
                     }
                     else {
