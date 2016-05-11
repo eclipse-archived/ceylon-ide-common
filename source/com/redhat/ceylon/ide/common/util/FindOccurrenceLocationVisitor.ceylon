@@ -4,7 +4,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 
-class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor() {
+class FindOccurrenceLocationVisitor(Integer offset, Node node) 
+        extends Visitor() {
     
     shared variable OccurrenceLocation? occurrence = null;
     variable Boolean inTypeConstraint = false;
@@ -29,20 +30,28 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.ExistsCondition that) {
         super.visit(that);
-        Tree.Statement var = that.variable;
-        value isInBounds = if (is Tree.Variable var) then inBounds(var.identifier) else inBounds(that);
-        if (isInBounds) {
-            occurrence = OccurrenceLocation.\iEXISTS;
+        if (exists var = that.variable) {
+            value isInBounds 
+                    = if (is Tree.Variable var) 
+                    then inBounds(var.identifier) 
+                    else inBounds(that);
+            if (isInBounds) {
+                occurrence = OccurrenceLocation.\iEXISTS;
+            }
         }
     }
     
     actual
     shared void visit(Tree.NonemptyCondition that) {
         super.visit(that);
-        Tree.Statement var = that.variable;
-        value isInBounds = if (is Tree.Variable var) then inBounds(var.identifier) else inBounds(that);
-        if (isInBounds) {
-            occurrence = OccurrenceLocation.\iNONEMPTY;
+        if (exists var = that.variable) {
+            value isInBounds 
+                    = if (is Tree.Variable var) 
+                    then inBounds(var.identifier) 
+                    else inBounds(that);
+            if (isInBounds) {
+                occurrence = OccurrenceLocation.\iNONEMPTY;
+            }
         }
     }
     
@@ -54,7 +63,8 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
             isInBounds = inBounds(var.identifier);
         }
         else if (exists type = that.type) {
-            isInBounds = inBounds(that) && offset>type.endIndex.intValue();
+            isInBounds = inBounds(that) 
+                    && offset>type.endIndex.intValue();
         }
         else {
             isInBounds = false;
