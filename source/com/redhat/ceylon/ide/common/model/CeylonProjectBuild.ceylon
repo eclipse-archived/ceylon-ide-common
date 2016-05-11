@@ -290,6 +290,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             extends BuildMessage() {
         shared NativeFile file = theFile;
         shared Message typecheckerMessage = theTypecheckerMessage;
+        shared Integer startLine = theStartLine;
+        shared Integer startCol = theStartCol;
         
         message => typecheckerMessage.message;
         backend => typecheckerMessage.backend;
