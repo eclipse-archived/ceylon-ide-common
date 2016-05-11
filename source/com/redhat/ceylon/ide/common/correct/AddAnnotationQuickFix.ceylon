@@ -1,3 +1,6 @@
+import com.redhat.ceylon.common {
+    Backends
+}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -115,6 +118,24 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             dec = scope;
         }
         addAddAnnotationProposal(node, "abstract", "Make Abstract", dec, data);
+    }
+    
+    shared void addMakeContainerNativeProposal(Node node, Data data) {
+        if (is Declaration dec = node.scope) {
+            Backends backends;
+            if (is Tree.MemberOrTypeExpression node) {
+                backends = node.declaration.nativeBackends;
+            } 
+            else if (is Tree.SimpleType node) {
+                backends = node.declarationModel.nativeBackends;
+            }
+            else {
+                return;
+            }
+            value annotation = StringBuilder();
+            moduleImportUtil.appendNative(annotation, backends);
+            addAddAnnotationProposal(node, annotation.string, "Make Native", dec, data);
+        }
     }
     
     shared void addMakeVariableProposal(Node node, Data data) {

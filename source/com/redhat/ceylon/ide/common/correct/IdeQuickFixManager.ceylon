@@ -314,6 +314,9 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         case (20000) {
             addAnnotations.addMakeNativeProposal(node, file, data);
         }
+        case (20010) {
+            addAnnotations.addMakeContainerNativeProposal(node, data);
+        }
         else {
         }
     }
