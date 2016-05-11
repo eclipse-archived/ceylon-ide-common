@@ -3,22 +3,22 @@ import com.redhat.ceylon.ide.common.platform {
     Status
 }
 shared interface ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
-    shared formal void ceylonModelParsed(CeylonProjectAlias project);
-    shared formal void ceylonProjectAdded(CeylonProjectAlias project);
-    shared formal void ceylonProjectRemoved(CeylonProjectAlias project);
-    shared formal void buildMessagesChanged(CeylonProjectAlias project,
-        {<CeylonProjectBuildAlias.SourceFileMessage>*}? frontendMessages, 
-        {<CeylonProjectBuildAlias.SourceFileMessage>*}? backendMessages, 
-        {<CeylonProjectBuildAlias.ProjectMessage>*}? projectMessages);
+    shared formal void ceylonModelParsed(CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> project);
+    shared formal void ceylonProjectAdded(CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> project);
+    shared formal void ceylonProjectRemoved(CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> project);
+    shared formal void buildMessagesChanged(CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> project,
+        {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.SourceFileMessage>*}? frontendMessages, 
+        {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.SourceFileMessage>*}? backendMessages, 
+        {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.ProjectMessage>*}? projectMessages);
 }
 
 shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolder, NativeFile>
         satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
@@ -34,6 +34,7 @@ shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolde
 
 shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFolder, NativeFile>
         satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource 
