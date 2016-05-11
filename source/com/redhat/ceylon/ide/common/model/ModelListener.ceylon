@@ -46,7 +46,7 @@ shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFo
         (Arguments args) =>
                 modelListeners.each((listener) {
                     try {
-                        unflatten(listenerMethod(listener));
+                        unflatten(listenerMethod(listener))(args);
                     } catch(Throwable t) {
                         value messagePrefix = "A Ceylon Model listener (``listener``) has triggered the following ";
                         if (is Exception e=t) {
