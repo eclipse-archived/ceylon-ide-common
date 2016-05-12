@@ -12,7 +12,7 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    OccurrenceLocation,
+    OL=OccurrenceLocation,
     escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -60,18 +60,30 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         Declaration dec, Scope scope, Boolean isMember) {
         
         Unit? unit = cpc.lastCompilationUnit.unit;
-        value name = dec.getName(unit);
-        value desc = escaping.escapeName(dec, unit);
-        result.add(newInvocationCompletion(offset, prefix, 
-            name, desc, dec, dec.reference, scope, cpc, true, 
-            false, false, false, isMember, null));
+        result.add(newInvocationCompletion {
+            offset = offset;
+            prefix = prefix;
+            desc = dec.getName(unit);
+            text = escaping.escapeName(dec, unit);
+            dec = dec;
+            pr = dec.reference;
+            scope = scope;
+            cmp = cpc;
+            includeDefaulted = true;
+            positionalInvocation = false;
+            namedInvocation = false;
+            inheritance = false;
+            qualified = isMember;
+            qualifyingDec = null;
+        });
     }    
 
     // see InvocationCompletionProposal.addReferenceProposal()
     shared void addReferenceProposal(Tree.CompilationUnit cu,
         Integer offset, String prefix, IdeComponent cmp,
-        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
-        Reference? pr, Scope scope, OccurrenceLocation? ol,
+        MutableList<CompletionResult> result, 
+        DeclarationWithProximity dwp,
+        Reference? pr, Scope scope, OL? ol,
         Boolean isMember) {
         
         value unit = cu.unit;
@@ -79,16 +91,25 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         
         //proposal with type args
         if (is Generic dec) {
-            value desc = getDescriptionFor2(dwp, unit, true);
-            value text = getTextFor(dec, unit);
-            
-            result.add(newInvocationCompletion(offset, prefix,
-                desc, text, dec, pr, scope, cmp,
-                true, false, false,
-                isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
-                        || isLocation(ol, OccurrenceLocation.\iEXTENDS)
-                        || isLocation(ol, OccurrenceLocation.\iSATISFIES),
-                isMember, null));
+            result.add(newInvocationCompletion {
+                offset = offset;
+                prefix = prefix;
+                desc = getDescriptionFor2(dwp, unit, true);
+                text = getTextFor(dec, unit);
+                dec = dec;
+                pr = pr;
+                scope = scope;
+                cmp = cmp;
+                includeDefaulted = true;
+                positionalInvocation = false;
+                namedInvocation = false;
+                inheritance 
+                        = isLocation(ol, OL.\iUPPER_BOUND)
+                        || isLocation(ol, OL.\iEXTENDS)
+                        || isLocation(ol, OL.\iSATISFIES);
+                qualified = isMember;
+                qualifyingDec = null;
+            });
             
             if (dec.typeParameters.empty) {
                 // don't add another proposal below!
@@ -97,62 +118,111 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         }
         
         //proposal without type args
-        value isAbstract = if (is Class dec) then dec.abstract else dec is Interface;
-        if (!isAbstract && !isLocation(ol, OccurrenceLocation.\iEXTENDS) &&
-            !isLocation(ol, OccurrenceLocation.\iSATISFIES) &&
-            !isLocation(ol, OccurrenceLocation.\iUPPER_BOUND) ||
-            !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) &&
-            !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)) {
+        value isAbstract 
+                = if (is Class dec) 
+                then dec.abstract 
+                else dec is Interface;
+        if (!isAbstract && 
+            !isLocation(ol, OL.\iEXTENDS) &&
+            !isLocation(ol, OL.\iSATISFIES) &&
+            !isLocation(ol, OL.\iUPPER_BOUND) ||
+            !isLocation(ol, OL.\iCLASS_ALIAS) &&
+            !isLocation(ol, OL.\iTYPE_ALIAS)) {
             
-            value desc = getDescriptionFor2(dwp, unit, false);
-            value text = escaping.escapeName(dec, unit);
-            
-            result.add(newInvocationCompletion(offset, prefix, desc, 
-                text, dec, pr, scope, cmp, true, false, false,
-                false, isMember, null));
+            result.add(newInvocationCompletion {
+                offset = offset;
+                prefix = prefix;
+                desc = getDescriptionFor2(dwp, unit, false);
+                text = escaping.escapeName(dec, unit);
+                dec = dec;
+                pr = pr;
+                scope = scope;
+                cmp = cmp;
+                includeDefaulted = true;
+                positionalInvocation = false;
+                namedInvocation = false;
+                inheritance = false;
+                qualified = isMember;
+                qualifyingDec = null;
+            });
         }
     }
 
     shared void addSecondLevelProposal(Integer offset, String prefix, 
         IdeComponent controller, MutableList<CompletionResult> result,
         Declaration dec, Scope scope, Boolean isMember, Reference pr,
-        Type? requiredType, OccurrenceLocation? ol) {
+        Type? requiredType, OL? ol) {
         
         value unit = controller.lastCompilationUnit.unit;
         
         if (exists type = pr.type) {
-            if (!(dec is Functional), !(dec is TypeDeclaration)) {
+            if (!dec is Functional, 
+                !dec is TypeDeclaration) {
                 //add qualified member proposals
-                value members = type.declaration
-                        .getMatchingMemberDeclarations(unit, scope, "", 0).values();
+                value members 
+                        = type.declaration
+                            .getMatchingMemberDeclarations(unit, scope, "", 0)
+                            .values();
                 for (ndwp in members) {
                     value m = ndwp.declaration;
                     if (m is FunctionOrValue || m is Class,
                         !ModelUtil.isConstructor(m)) {
-                        
                         if (m.abstraction) {
                             for (o in m.overloads) {
-                                addSecondLevelProposalInternal(offset, prefix,
-                                    controller, result, dec, scope, requiredType,
-                                    ol, unit, type, ndwp, o);
+                                addSecondLevelProposalInternal {
+                                    offset = offset;
+                                    prefix = prefix;
+                                    controller = controller;
+                                    result = result;
+                                    dec = dec;
+                                    scope = scope;
+                                    requiredType = requiredType;
+                                    ol = ol;
+                                    unit = unit;
+                                    type = type;
+                                    mwp = ndwp;
+                                    m = o;
+                                };
                             }
                         } else {
-                            addSecondLevelProposalInternal(offset, prefix,
-                                controller, result, dec, scope, requiredType,
-                                ol, unit, type, ndwp, m);
+                            addSecondLevelProposalInternal {
+                                offset = offset;
+                                prefix = prefix;
+                                controller = controller;
+                                result = result;
+                                dec = dec;
+                                scope = scope;
+                                requiredType = requiredType;
+                                ol = ol;
+                                unit = unit;
+                                type = type;
+                                mwp = ndwp;
+                                m = m;
+                            };
                         }
                     }
                 }
             }
             if (is Class dec) {
-                //add constructor proposals
-                value members = type.declaration.members;
-                
-                for (m in members) {
-                    if (m is FunctionOrValue && ModelUtil.isConstructor(m) 
+                //add constructor proposals                
+                for (m in type.declaration.members) {
+                    if (m is FunctionOrValue 
+                        && ModelUtil.isConstructor(m) 
                         && m.shared && m.name exists) {
-                        addSecondLevelProposalInternal(offset, prefix, controller,
-                            result, dec, scope, requiredType, ol, unit, type, null, m);
+                        addSecondLevelProposalInternal {
+                            offset = offset;
+                            prefix = prefix;
+                            controller = controller;
+                            result = result;
+                            dec = dec;
+                            scope = scope;
+                            requiredType = requiredType;
+                            ol = ol;
+                            unit = unit;
+                            type = type;
+                            mwp = null;
+                            m = m;
+                        };
                     }
                 }
             }
@@ -164,37 +234,71 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         IdeComponent controller,
         MutableList<CompletionResult> result,
         Declaration dec, Scope scope,
-        Type? requiredType, OccurrenceLocation? ol,
+        Type? requiredType, OL? ol,
         Unit unit, Type type,
         DeclarationWithProximity? mwp,
         // sometimes we have no mwp so we also need the m
         Declaration m) {
         
-        value ptr = type.getTypedReference(m, Collections.emptyList<Type>());
+        value ptr = type.getTypedReference(m, 
+                        Collections.emptyList<Type>());
         
         if (exists mt = ptr.type) {
-            value cond = if (exists requiredType)
-            then withinBounds(requiredType, mt, scope)
-                    || dec is Class && dec==requiredType.declaration
-            else true;
+            value cond 
+                    = if (exists requiredType)
+                    then withinBounds(requiredType, mt, scope)
+                        || dec is Class 
+                        && dec==requiredType.declaration
+                    else true;
             
             if (cond) {
                 value addParameterTypesInCompletions
-                        = controller.options.parameterTypesInCompletion;
+                        = controller.options
+                            .parameterTypesInCompletion;
                 value qualifier = dec.name + ".";
-                value desc = qualifier + getPositionalInvocationDescriptionFor(
-                    mwp, m, ol, ptr, unit, false, null,
-                    addParameterTypesInCompletions);
-                value text = qualifier + getPositionalInvocationTextFor(m, ol,
-                    ptr, unit, false, null, addParameterTypesInCompletions);
+                value desc = qualifier 
+                        + getPositionalInvocationDescriptionFor {
+                            dwp = mwp;
+                            dec = m;
+                            ol = ol;
+                            pr = ptr;
+                            unit = unit;
+                            includeDefaulted = false;
+                            typeArgs = null;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                value text = qualifier 
+                        + getPositionalInvocationTextFor {
+                            dec = m;
+                            ol = ol;
+                            pr = ptr;
+                            unit = unit;
+                            includeDefaulted = false;
+                            typeArgs = null;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
                 
-                result.add(newInvocationCompletion(offset, prefix,
-                        desc, text, m, ptr, scope, controller, true,
-                        true, false,
-                        isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
-                                || isLocation(ol, OccurrenceLocation.\iEXTENDS)
-                                || isLocation(ol, OccurrenceLocation.\iSATISFIES),
-                        true, dec));
+                result.add(newInvocationCompletion {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = desc;
+                    text = text;
+                    dec = m;
+                    pr = ptr;
+                    scope = scope;
+                    cmp = controller;
+                    includeDefaulted = true;
+                    positionalInvocation = true;
+                    namedInvocation = false;
+                    inheritance 
+                            = isLocation(ol, OL.\iUPPER_BOUND)
+                            || isLocation(ol, OL.\iEXTENDS)
+                            || isLocation(ol, OL.\iSATISFIES);
+                    qualified = true;
+                    qualifyingDec = dec;
+                });
             }
         }
     }
@@ -205,15 +309,15 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         MutableList<CompletionResult> result,
         DeclarationWithProximity? dwp,
         // sometimes we have no dwp, just a dec, so we have to handle that too
-        Declaration dec,
-        Reference? pr, 
-        Scope scope, OccurrenceLocation? ol,
+        Declaration dec, Reference? pr, 
+        Scope scope, OL? ol,
         String? typeArgs, Boolean isMember) {
         
         if (is Functional fd = dec) {
             value unit = cmp.lastCompilationUnit.unit;
-            value isAbstract = if (is TypeDeclaration dec, dec.abstract)
-                               then true else false;
+            value isAbstract 
+                    = if (is TypeDeclaration dec, dec.abstract)
+                    then true else false;
             value pls = fd.parameterLists;
             
             if (!pls.empty) {
@@ -226,67 +330,179 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
                 value positional = exact
                         || "both"==inexactMatches
                         || "positional"==inexactMatches;
-                value named = exact || "both"==inexactMatches;
-                value addParameterTypesInCompletions = cmp.options.parameterTypesInCompletion;
+                value named = exact 
+                        || "both"==inexactMatches;
+                value addParameterTypesInCompletions 
+                        = cmp.options
+                            .parameterTypesInCompletion;
                 
-                Boolean inheritance = isLocation(ol, OccurrenceLocation.\iUPPER_BOUND) 
-                        || isLocation(ol, OccurrenceLocation.\iEXTENDS)
-                        || isLocation(ol, OccurrenceLocation.\iSATISFIES);
+                Boolean inheritance 
+                        = isLocation(ol, OL.\iUPPER_BOUND) 
+                        || isLocation(ol, OL.\iEXTENDS)
+                        || isLocation(ol, OL.\iSATISFIES);
 
                 if (positional, exists pr, 
                     parameterList.positionalParametersSupported,
-                    !isAbstract || isLocation(ol, OccurrenceLocation.\iEXTENDS)
-                            || isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS)) {
+                    !isAbstract 
+                        || isLocation(ol, OL.\iEXTENDS)
+                        || isLocation(ol, OL.\iCLASS_ALIAS)) {
 
-                    value parameters = getParameters(parameterList, false, false);
+                    value parameters 
+                            = getParameters(parameterList, false, false);
                     if (ps.size() != parameters.size()) {
-                        value desc = getPositionalInvocationDescriptionFor(
-                            dwp, dec, ol, pr, unit, false, typeArgs,
-                            addParameterTypesInCompletions);
-                        value text = getPositionalInvocationTextFor(dec, ol, pr,
-                            unit, false, typeArgs, addParameterTypesInCompletions);
                         
-                        result.add(newInvocationCompletion(offset, prefix, desc,
-                            text, dec, pr, scope, cmp, false, true, false,
-                            inheritance, isMember, null));
+                        result.add(newInvocationCompletion {
+                            offset = offset;
+                            prefix = prefix;
+                            desc = getPositionalInvocationDescriptionFor {
+                                dwp = dwp;
+                                dec = dec;
+                                ol = ol;
+                                pr = pr;
+                                unit = unit;
+                                includeDefaulted = false;
+                                typeArgs = typeArgs;
+                                addParameterTypesInCompletions 
+                                        = addParameterTypesInCompletions;
+                            };
+                            text = getPositionalInvocationTextFor {
+                                    dec = dec;
+                                    ol = ol;
+                                    pr = pr;
+                                    unit = unit;
+                                    includeDefaulted = false;
+                                    typeArgs = typeArgs;
+                                    addParameterTypesInCompletions 
+                                            = addParameterTypesInCompletions;
+                                };
+                            dec = dec;
+                            pr = pr;
+                            scope = scope;
+                            cmp = cmp;
+                            includeDefaulted = false;
+                            positionalInvocation = true;
+                            namedInvocation = false;
+                            inheritance = inheritance;
+                            qualified = isMember;
+                            qualifyingDec = null;
+                        });
                     }
 
-                    value desc = getPositionalInvocationDescriptionFor(dwp, dec,
-                        ol, pr, unit, true, typeArgs, addParameterTypesInCompletions);
-                    value text = getPositionalInvocationTextFor(dec, ol, pr,
-                        unit, true, typeArgs, addParameterTypesInCompletions);
-
-                    result.add(newInvocationCompletion(offset, prefix, desc,
-                        text, dec, pr, scope, cmp, true, true, false, inheritance,
-                        isMember, null));
+                    result.add(newInvocationCompletion {
+                        offset = offset;
+                        prefix = prefix;
+                        desc = getPositionalInvocationDescriptionFor {
+                            dwp = dwp;
+                            dec = dec;
+                            ol = ol;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = true;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                        text = getPositionalInvocationTextFor {
+                            dec = dec;
+                            ol = ol;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = true;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                        dec = dec;
+                        pr = pr;
+                        scope = scope;
+                        cmp = cmp;
+                        includeDefaulted = true;
+                        positionalInvocation = true;
+                        namedInvocation = false;
+                        inheritance = inheritance;
+                        qualified = isMember;
+                        qualifyingDec = null;
+                    });
                 }
-                if (named, parameterList.namedParametersSupported, exists pr,
-                    !isAbstract && !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
-                            && !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS)
+                if (named, 
+                    parameterList.namedParametersSupported, 
+                    exists pr,
+                    !isAbstract 
+                            && !isLocation(ol, OL.\iEXTENDS) 
+                            && !isLocation(ol, OL.\iCLASS_ALIAS)
                             && !dec.overloaded) {
                     
                     //if there is at least one parameter, 
                     //suggest a named argument invocation
-                    value parameters = getParameters(parameterList, false, true);
+                    value parameters 
+                            = getParameters(parameterList, false, true);
                     if (ps.size() != parameters.size()) {
-                        value desc = getNamedInvocationDescriptionFor(dec, pr,
-                            unit, false, typeArgs, addParameterTypesInCompletions);
-                        value text =  getNamedInvocationTextFor(dec, pr, unit,
-                            false, typeArgs, addParameterTypesInCompletions);
-                        
-                        result.add(newInvocationCompletion(offset, prefix, desc,
-                            text, dec, pr, scope, cmp, false, false, true,
-                            inheritance, isMember, null));
+                        result.add(newInvocationCompletion {
+                            offset = offset;
+                            prefix = prefix;
+                            desc = getNamedInvocationDescriptionFor {
+                            dec = dec;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = false;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                            text = getNamedInvocationTextFor {
+                            dec = dec;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = false;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                            dec = dec;
+                            pr = pr;
+                            scope = scope;
+                            cmp = cmp;
+                            includeDefaulted = false;
+                            positionalInvocation = false;
+                            namedInvocation = true;
+                            inheritance = inheritance;
+                            qualified = isMember;
+                            qualifyingDec = null;
+                        });
                     }
                     if (!ps.empty) {
-                        value desc = getNamedInvocationDescriptionFor(dec, pr,
-                            unit, true, typeArgs, addParameterTypesInCompletions);
-                        value text = getNamedInvocationTextFor(dec, pr, unit,
-                            true, typeArgs, addParameterTypesInCompletions);
-                        
-                        result.add(newInvocationCompletion(offset, prefix, desc,
-                            text, dec, pr, scope, cmp, true, false, true,
-                            inheritance, isMember, null));
+                        result.add(newInvocationCompletion {
+                            offset = offset;
+                            prefix = prefix;
+                            desc = getNamedInvocationDescriptionFor {
+                            dec = dec;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = true;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                            text = getNamedInvocationTextFor {
+                            dec = dec;
+                            pr = pr;
+                            unit = unit;
+                            includeDefaulted = true;
+                            typeArgs = typeArgs;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
+                            dec = dec;
+                            pr = pr;
+                            scope = scope;
+                            cmp = cmp;
+                            includeDefaulted = true;
+                            positionalInvocation = false;
+                            namedInvocation = true;
+                            inheritance = inheritance;
+                            qualified = isMember;
+                            qualifyingDec = null;
+                        });
                     }
                 }
             }
@@ -296,41 +512,39 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
     shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc,
         MutableList<CompletionResult> result) {
         
-        Tree.CompilationUnit? upToDateAndTypeChecked = cpc.typecheckedRootNode;
-        if (!exists upToDateAndTypeChecked) {
-            return;
-        }
-        object extends Visitor() {
-            shared actual void visit(Tree.InvocationExpression that) {
-                if (exists pal=that.positionalArgumentList else that.namedArgumentList) {
-                    if (exists startIndex = pal.startIndex,
+        if (exists upToDateAndTypeChecked = cpc.typecheckedRootNode) {
+            object extends Visitor() {
+                shared actual void visit(Tree.InvocationExpression that) {
+                    if (exists pal = that.positionalArgumentList 
+                        else that.namedArgumentList, 
+                        exists startIndex = pal.startIndex,
                         exists startIndex2 = node.startIndex, 
-                        startIndex.intValue() == startIndex2.intValue()) {
+                        startIndex.intValue() == startIndex2.intValue(), 
+                        is Tree.MemberOrTypeExpression primary = that.primary, 
+                        exists decl = primary.declaration,
+                        exists target = primary.target) {
                         
-                        if (is Tree.MemberOrTypeExpression primary = that.primary) {
-                            if (exists decl = primary.declaration,
-                                
-                                exists target = primary.target) {
-                                result.add(newParameterInfo(startIndex.intValue(),
-                                    decl, target, node.scope, cpc,
-                                    pal is Tree.NamedArgumentList));
-                            }
-                        }
+                        result.add(newParameterInfo {
+                            offset = startIndex.intValue();
+                            dec = decl;
+                            producedReference = target;
+                            scope = node.scope;
+                            cpc = cpc;
+                            namedInvocation 
+                                    = pal is Tree.NamedArgumentList;
+                        });
                     }
+                    super.visit(that);
                 }
-                super.visit(that);
-            }
-        }.visit(upToDateAndTypeChecked);
+            }.visit(upToDateAndTypeChecked);
+        }
     }
 
     // see InvocationCompletionProposal.prefixWithoutTypeArgs
-    String prefixWithoutTypeArgs(String prefix, String? typeArgs) {
-        if (exists typeArgs) {
-            return prefix.spanTo(prefix.size - typeArgs.size - 1);
-        } else {
-            return prefix;
-        }
-    }
+    String prefixWithoutTypeArgs(String prefix, String? typeArgs) 
+            => if (exists typeArgs) 
+            then prefix.spanTo(prefix.size - typeArgs.size - 1) 
+            else prefix;
 }
 
 shared abstract class InvocationCompletionProposal
@@ -361,7 +575,6 @@ shared abstract class InvocationCompletionProposal
             appendPositionalArgs(dec, dec.reference, unit, sb, false,
                 description, false);
         }
-        
         return sb.string;
     }
 
@@ -390,15 +603,17 @@ shared abstract class InvocationCompletionProposal
         if (is Generic declaration) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
-                (positionalInvocation || namedInvocation)) {
+                positionalInvocation || namedInvocation) {
                 
                 value pls = fd.parameterLists;
-                if (!pls.empty, !pls.get(0).parameters.empty) {
+                if (!pls.empty, 
+                    !pls.get(0).parameters.empty) {
                     paramList = pls.get(0);
                 }
             }
             if (exists pl = paramList) {
-                value params = getParameters(pl, includeDefaulted, namedInvocation);
+                value params = 
+                        getParameters(pl, includeDefaulted, namedInvocation);
                 if (!params.empty) {
                     enterLinkedMode(document, params, null, cpc);
                     return; //NOTE: early exit!
@@ -470,12 +685,13 @@ shared abstract class InvocationCompletionProposal
     }
     
     shared void enterLinkedMode(Document document, 
-        JList<Parameter>? params, JList<TypeParameter>? typeParams, 
+        JList<Parameter>? params, 
+        JList<TypeParameter>? typeParams, 
         IdeComponent cpc) {
         
-        value proposeTypeArguments = !(params exists);
+        value proposeTypeArguments = !params exists;
         value paramCount 
-                = if (proposeTypeArguments)
+                = proposeTypeArguments
                 then (typeParams?.size() else 0)
                 else (params?.size() else 0);
         if (paramCount == 0) {
@@ -483,11 +699,13 @@ shared abstract class InvocationCompletionProposal
         }
         try {
             value loc = offset - prefix.size;
-            variable value first = getFirstPosition();
+            variable value first 
+                    = getFirstPosition();
             if (first <= 0) {
                 return; //no arg list
             }
-            variable value next = getNextPosition(document, first);
+            variable value next 
+                    = getNextPosition(document, first);
             if (next <= 0) {
                 return; //empty arg list
             }
@@ -496,7 +714,8 @@ shared abstract class InvocationCompletionProposal
             variable value param = 0;
             while (next>0 && param<paramCount) {
                 // if proposeTypeArguments is false, params *should* exist
-                value voidParam = !proposeTypeArguments
+                value voidParam 
+                        = !proposeTypeArguments
                         && (params?.get(param)?.declaredVoid else false);
                 if (proposeTypeArguments || positionalInvocation
                         //don't create linked positions for
@@ -506,23 +725,42 @@ shared abstract class InvocationCompletionProposal
                     
                     value props = ArrayList<CompletionResult>();
                     if (proposeTypeArguments) {
-                        assert(exists typeParams);
-                        addTypeArgumentProposals(props, typeParams.get(seq), 
-                            loc, first, seq);
+                        assert (exists typeParams);
+                        addTypeArgumentProposals {
+                            props = props;
+                            tp = typeParams.get(seq);
+                            loc = loc;
+                            first = first;
+                            index = seq;
+                        };
                     } else if (!voidParam) {
-                        assert(exists params);
-                        addValueArgumentProposals(props, params.get(param), 
-                            loc, first, seq, param == params.size() - 1, cpc);
+                        assert (exists params);
+                        addValueArgumentProposals {
+                            props = props;
+                            param = params.get(param);
+                            loc = loc;
+                            first = first;
+                            index = seq;
+                            last = param == params.size() - 1;
+                            cpc = cpc;
+                        };
                     }
-                    value middle = getCompletionPosition(first, next);
+                    value middle 
+                            = getCompletionPosition(first, next);
                     variable value start = loc + first + middle;
                     variable value len = next - middle;
                     if (voidParam) {
                         start++;
                         len = 0;
                     }
-                    addEditableRegion(linkedMode, document, start, len, seq,
-                        props.sequence());
+                    addEditableRegion {
+                        lm = linkedMode;
+                        doc = document;
+                        start = start;
+                        len = len;
+                        exitSeqNumber = seq;
+                        proposals = props.sequence();
+                    };
                     first = first + next + 1;
                     next = getNextPosition(document, first);
                     seq++;
@@ -530,7 +768,13 @@ shared abstract class InvocationCompletionProposal
                 param++;
             }
             if (seq > 0) {
-                installLinkedMode(document, linkedMode, this, seq, loc + text.size);
+                installLinkedMode {
+                    doc = document;
+                    lm = linkedMode;
+                    owner = this;
+                    exitSeqNumber = seq;
+                    exitPosition = loc + text.size;
+                };
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -538,59 +782,93 @@ shared abstract class InvocationCompletionProposal
     }
     
     void addValueArgumentProposals(MutableList<CompletionResult> props, 
-        Parameter param, Integer loc, Integer first, Integer index, Boolean last, 
-        IdeComponent cpc) {
+        Parameter param, Integer loc, Integer first, Integer index, 
+        Boolean last, IdeComponent cpc) {
         
-        if (param.model.dynamicallyTyped) {
-            return;
-        }
-        if (!exists producedReference) {
-            return;
-        }
-        Type? type = producedReference.getTypedParameter(param).type;
-        if (!exists type) {
-            return;
-        }
-
-        value unit = cu.unit;
-        value proposals = getSortedProposedValues(scope, unit, param.name);
-        
-        //very special case for print()
-        value dname = declaration.qualifiedNameString;
-        value print = "ceylon.language::print" == dname;
-        if (print) {
-            for (val in getAssignableLiterals(unit.stringType, unit)) {
-                props.add(newNestedLiteralCompletionProposal(val, loc, index));
+        if (!param.model.dynamicallyTyped, 
+            exists producedReference, 
+            exists type 
+                    = producedReference
+                        .getTypedParameter(param)
+                        .type) {
+            
+            value unit = cu.unit;
+            value proposals 
+                    = getSortedProposedValues {
+                        scope = scope;
+                        unit = unit;
+                        exactName = param.name;
+                    };
+            
+            //very special case for print()
+            value dname = declaration.qualifiedNameString;
+            value print = "ceylon.language::print" == dname;
+            if (print) {
+                for (val in getAssignableLiterals(unit.stringType, unit)) {
+                    props.add(newNestedLiteralCompletionProposal {
+                        val = val;
+                        loc = loc;
+                        index = index;
+                    });
+                }
             }
-        }
-        
-        //stuff defined in the same block, along with
-        //stuff with fuzzily-matching name:
-        for (dwp in proposals) {
-            if (dwp.proximity <= 1) {
-                addValueArgumentProposal(props, param, loc, index, last, 
-                    type, unit, dwp, null, cpc);
+            
+            //stuff defined in the same block, along with
+            //stuff with fuzzily-matching name:
+            for (dwp in proposals) {
+                if (dwp.proximity <= 1) {
+                    addValueArgumentProposal {
+                        props = props;
+                        p = param;
+                        loc = loc;
+                        index = index;
+                        last = last;
+                        type = type;
+                        unit = unit;
+                        dwp = dwp;
+                        qualifier = null;
+                        cpc = cpc;
+                    };
+                }
             }
-        }
-        
-        //this:
-        if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
-            ci.type.isSubtypeOf(type)) {
-            props.add(newNestedLiteralCompletionProposal("this", loc, index));
-        }
-        
-        //literals:
-        if (!print) {
-            for (val in getAssignableLiterals(type, unit)) {
-                props.add(newNestedLiteralCompletionProposal(val, loc, index));
+            
+            //this:
+            if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
+                ci.type.isSubtypeOf(type)) {
+                props.add(newNestedLiteralCompletionProposal {
+                    val = "this";
+                    loc = loc;
+                    index = index;
+                });
             }
-        }
-        
-        //stuff with lower proximity:
-        for (dwp in proposals) {
-            if (dwp.proximity > 1) {
-                addValueArgumentProposal(props, param, loc, index, last, 
-                    type, unit, dwp, null, cpc);
+            
+            //literals:
+            if (!print) {
+                for (val in getAssignableLiterals(type, unit)) {
+                    props.add(newNestedLiteralCompletionProposal {
+                        val = val;
+                        loc = loc;
+                        index = index;
+                    });
+                }
+            }
+            
+            //stuff with lower proximity:
+            for (dwp in proposals) {
+                if (dwp.proximity > 1) {
+                    addValueArgumentProposal {
+                        props = props;
+                        p = param;
+                        loc = loc;
+                        index = index;
+                        last = last;
+                        type = type;
+                        unit = unit;
+                        dwp = dwp;
+                        qualifier = null;
+                        cpc = cpc;
+                    };
+                }
             }
         }
     }
@@ -598,7 +876,8 @@ shared abstract class InvocationCompletionProposal
     void addValueArgumentProposal(MutableList<CompletionResult> props, 
         Parameter p, Integer loc, Integer index, Boolean last, 
         Type type, Unit unit, 
-        DeclarationWithProximity dwp, DeclarationWithProximity? qualifier, 
+        DeclarationWithProximity dwp, 
+        DeclarationWithProximity? qualifier, 
         IdeComponent cpc) {
         
         if (!qualifier exists && dwp.unimported) {
@@ -616,63 +895,104 @@ shared abstract class InvocationCompletionProposal
         value qdec = qualifier?.declaration;
         
         if (is Value dec, 
-            !(isInLanguageModule && isIgnoredLanguageModuleValue(dec)), 
+            !(isInLanguageModule 
+                && isIgnoredLanguageModuleValue(dec)), 
             exists vt = dec.type, !vt.nothing) {
             if (withinBounds(type, vt, scope)) {
                 value isIterArg 
-                        = namedInvocation && last
+                        = namedInvocation 
+                        && last
                         && unit.isIterableParameterType(type);
-                value isVarArg = p.sequenced && positionalInvocation;
-                value op = isIterArg || isVarArg then "*" else "";
-                props.add(newNestedCompletionProposal(dec, qdec, 
-                    loc, index, false, op));
+                value isVarArg 
+                        = p.sequenced && positionalInvocation;
+                props.add(newNestedCompletionProposal {
+                    dec = dec;
+                    qualifier = qdec;
+                    loc = loc;
+                    index = index;
+                    basic = false;
+                    op = isIterArg || isVarArg then "*" else "";
+                });
             }
-            if (!qualifier exists, cpc.options.chainLinkedModeArguments) {
+            if (!qualifier exists, 
+                cpc.options.chainLinkedModeArguments) {
                 value members = 
                         dec.typeDeclaration
                            .getMatchingMemberDeclarations(unit, scope, "", 0)
                            .values();
                 for (mwp in members) {
-                    addValueArgumentProposal(props, p, loc, index, last, 
-                        type, unit, mwp, dwp, cpc);
+                    addValueArgumentProposal {
+                        props = props;
+                        p = p;
+                        loc = loc;
+                        index = index;
+                        last = last;
+                        type = type;
+                        unit = unit;
+                        dwp = mwp;
+                        qualifier = dwp;
+                        cpc = cpc;
+                    };
                 }
             }
         }
         
         if (is Function dec, 
             !dec.annotation, 
-            !(isInLanguageModule && isIgnoredLanguageModuleMethod(dec)), 
+            !(isInLanguageModule 
+                && isIgnoredLanguageModuleMethod(dec)), 
             exists mt = dec.type, !mt.nothing, 
             withinBounds(type, mt, scope)) {
             value isIterArg 
-                    = namedInvocation && last
+                    = namedInvocation 
+                    && last
                     && unit.isIterableParameterType(type);
             value isVarArg = p.sequenced && positionalInvocation;
-            value op = isIterArg || isVarArg then "*" else "";
-            props.add(newNestedCompletionProposal(dec, qdec, 
-                loc, index, false, op));
+            props.add(newNestedCompletionProposal {
+                dec = dec;
+                qualifier = qdec;
+                loc = loc;
+                index = index;
+                basic = false;
+                op = isIterArg || isVarArg then "*" else "";
+            });
         }
         
         if (is Class dec, 
             !dec.abstract && !dec.annotation, 
-            !(isInLanguageModule && isIgnoredLanguageModuleClass(dec)), 
+            !(isInLanguageModule 
+                && isIgnoredLanguageModuleClass(dec)), 
             exists ct = dec.type, 
-            withinBounds(type, ct, scope) || dec==type.declaration) {
+            withinBounds(type, ct, scope) 
+                    || dec==type.declaration) {
             value isIterArg 
-                    = namedInvocation && last
+                    = namedInvocation 
+                    && last
                     && unit.isIterableParameterType(type);
-            value isVarArg = p.sequenced && positionalInvocation;
+            value isVarArg 
+                    = p.sequenced && positionalInvocation;
             if (dec.parameterList exists) {
-                value op = isIterArg || isVarArg then "*" else "";
-                props.add(newNestedCompletionProposal(dec, qdec, 
-                    loc, index, false, op));
+                props.add(newNestedCompletionProposal {
+                    dec = dec;
+                    qualifier = qdec;
+                    loc = loc;
+                    index = index;
+                    basic = false;
+                    op = isIterArg || isVarArg then "*" else "";
+                });
             }
             for (m in dec.members) {
-                if (m is FunctionOrValue && ModelUtil.isConstructor(m) 
+                if (m is FunctionOrValue 
+                    && ModelUtil.isConstructor(m) 
                     && m.shared && m.name exists) {
-                    value op = isIterArg || isVarArg then "*" else "";
-                    props.add(newNestedCompletionProposal(m, dec, 
-                        loc, index, false, op));
+                    props.add(newNestedCompletionProposal {
+                        dec = m;
+                        qualifier = dec;
+                        loc = loc;
+                        index = index;
+                        basic = false;
+                        op = isIterArg || isVarArg then "*" else "";
+                    });
                 }
             }
         }
@@ -693,12 +1013,19 @@ shared abstract class InvocationCompletionProposal
                 !dwp.unimported, 
                 !dec.type.nothing && dec.typeParameters.empty && 
                 !dec.annotation && !dec.inherits(ed), 
-                !(isInLanguageModule && isIgnoredLanguageModuleType(dec)), 
+                !(isInLanguageModule 
+                    && isIgnoredLanguageModuleType(dec)), 
                 inheritance && tp.isSelfType() 
                     then scope == dec
                     else isInBounds(tp.satisfiedTypes, dec.type)) {
-                props.add(newNestedCompletionProposal(dec, null, 
-                    loc, index, true, ""));
+                props.add(newNestedCompletionProposal {
+                    dec = dec;
+                    qualifier = null;
+                    loc = loc;
+                    index = index;
+                    basic = true;
+                    op = "";
+                });
             }
         }
     }
