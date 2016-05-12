@@ -705,7 +705,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         value cu = cmp.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
-        value addParameterTypesInCompletions = cmp.options.parameterTypesInCompletion;
+        value addParameterTypesInCompletions 
+                = cmp.options.parameterTypesInCompletion;
 
         if (is Tree.Term node) {
             addParametersProposal(offset, prefix, node, result, cmp);
@@ -768,7 +769,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 addAnonFunctionProposal(offset, requiredType, result, unit);
             }
 
-            value isPackageOrModuleDescriptor = isModuleDescriptor(cu) || isPackageDescriptor(cu);
+            value isPackageOrModuleDescriptor 
+                    = isModuleDescriptor(cu) 
+                    || isPackageDescriptor(cu);
 
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
@@ -783,7 +786,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
                 if (isPackageOrModuleDescriptor, !inDoc, !isLocation(ol, OccurrenceLocation.\iMETA),
                     !(ol?.reference else false),
-                    !dec.annotation || !(dec is Function)) {
+                    !dec.annotation || !dec is Function) {
                     continue;
                 }
 
@@ -1198,10 +1201,14 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
 
-    Boolean isCaseOfSwitch(Type? requiredType, Declaration dec, Integer previousTokenType) {
-        return previousTokenType == CeylonLexer.\iIS_OP && isTypeCaseOfSwitch(requiredType, dec)
-                || previousTokenType != CeylonLexer.\iIS_OP && isValueCaseOfSwitch(requiredType, dec);
-    }
+    Boolean isCaseOfSwitch(Type? requiredType, Declaration dec, Integer previousTokenType) 
+            => previousTokenType == CeylonLexer.\iIS_OP 
+                    && isTypeCaseOfSwitch(requiredType, dec)
+            || previousTokenType == CeylonLexer.\iLPAREN
+                    && isValueCaseOfSwitch(requiredType, dec)
+            || /*previousTokenType == CeylonLexer.\iMEMBER_OP
+                    &&*/ (isTypeCaseOfSwitch(requiredType, dec) ||
+                        isValueCaseOfSwitch(requiredType, dec));
 
     Boolean isDelegatableConstructor(Scope scope, Declaration dec) {
         if (ModelUtil.isConstructor(dec)) {
@@ -1215,8 +1222,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             if (outerScope == container) {
                 return !scope.equals(dec); //local constructor
             } else {
-                TypeDeclaration? id = scope.getInheritingDeclaration(dec);
-                return if (exists id) then id.equals(outerScope) else false; //inherited constructor
+                return if (exists id = scope.getInheritingDeclaration(dec)) 
+                    then id.equals(outerScope) 
+                    else false; //inherited constructor
             }
         } else if (is Class dec) {
             Scope outerScope = scope.container;
@@ -1248,21 +1256,29 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                     return true;
                 }
             }
-            return false;
-        } else {
+        }
+        else if (is Value dec) {
             if (isAnonymousClassValue(dec)) {
                 if (exists requiredType) {
-                    assert(is TypedDeclaration d = dec);
-                    TypeDeclaration td = d.typeDeclaration;
-                    TypeDeclaration rtd = requiredType.declaration;
-                    return td.inherits(rtd);
-                } else {
+                    if (dec.typeDeclaration
+                           .inherits(requiredType.declaration)) {
+                        return true;
+                    }
+                }
+                else {
                     return true;
                 }
-            } else {
-                return false;
             }
         }
+        else if (is TypeDeclaration dec) {
+            for (m in dec.members) {
+                if (m is Value, 
+                    isTypeCaseOfSwitch(requiredType, m)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     Boolean isTypeCaseOfSwitch(Type? requiredType, Declaration dec) {
@@ -1272,19 +1288,24 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                     return true;
                 }
             }
-            return false;
-        } else {
-            if (is TypeDeclaration dec) {
-                if (exists requiredType) {
-                    TypeDeclaration rtd = requiredType.declaration;
-                    return dec.inherits(rtd);
-                } else {
+        }
+        else if (is TypeDeclaration dec) {
+            if (exists requiredType) {
+                if (dec.inherits(requiredType.declaration)) {
                     return true;
                 }
-            } else {
-                return false;
+                for (m in dec.members) {
+                    if (m is TypeDeclaration, 
+                        isTypeCaseOfSwitch(requiredType, m)) {
+                        return true;
+                    }
+                }
+            }
+            else {
+                return true;
             }
         }
+        return false;
     }
 
     Boolean definitelyRequiresType(OccurrenceLocation? ol) {
@@ -1296,14 +1317,17 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean isReferenceProposable(OccurrenceLocation? ol, Declaration dec) {
         return (isLocation(ol, OccurrenceLocation.\iVALUE_REF)
-                || (if (is Value dec) then dec.typeDeclaration.anonymous else true)
-               )
-             && (isLocation(ol, OccurrenceLocation.\iFUNCTION_REF) || !(dec is Function))
-             && (isLocation(ol, OccurrenceLocation.\iALIAS_REF) || !(dec is TypeAlias))
-             && (isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) || !(dec is TypeParameter))
+                || (if (is Value dec) then dec.typeDeclaration.anonymous else true))
+             && (isLocation(ol, OccurrenceLocation.\iFUNCTION_REF) 
+                   || !dec is Function)
+             && (isLocation(ol, OccurrenceLocation.\iALIAS_REF) 
+                   || !dec is TypeAlias)
+             && (isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) 
+                   || !dec is TypeParameter)
                 //note: classes and interfaces are almost always proposable
                 //      because they are legal qualifiers for other refs
-             && (!isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) || dec is TypeParameter);
+             && (!isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) 
+                   || dec is TypeParameter);
     }
 
     CommonToken? getNextToken(IdeComponent cmp, CommonToken token) {
@@ -1320,7 +1344,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 break;
             }
             
-            isHiddenChannel = (nextToken?.channel else -1) == Token.\iHIDDEN_CHANNEL;
+            isHiddenChannel 
+                    = (nextToken?.channel else -1) 
+                        == Token.\iHIDDEN_CHANNEL;
         }
 
         return nextToken;
