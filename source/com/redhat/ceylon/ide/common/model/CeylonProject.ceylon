@@ -766,7 +766,8 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     if (parts.size == 2,
                         exists name = parts[0],
                         exists version = parts[1],
-                        exists file = repositoryManager.getArtifact(name, version)) {
+                        exists file = repositoryManager.getArtifact(
+                            ArtifactContext(name, version, ArtifactContext.\iJAR))) {
                     
                         // OK
                     } else {
