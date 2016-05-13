@@ -732,11 +732,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
             
             //member names we can refine
-            Type? t = switch (node)
+            if (exists t = switch (node)
                 case (is Tree.Type) node.typeModel
-                else node.target?.type;
-
-            if (exists t) {
+                else node.target?.type) {
                 addRefinementProposals(offset,
                         sortedProposals, cmp, scope, node, doc,
                         secondLevel, result, ol, t, false);
@@ -759,7 +757,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         } else {
             value isMember = if (is Tree.MemberLiteral node)
                 then node.type exists
-                else node is Tree.QualifiedMemberOrTypeExpression || node is Tree.QualifiedType;
+                else node is Tree.QualifiedMemberOrTypeExpression|Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
                 addKeywordProposals(cmp.lastCompilationUnit, offset, prefix, result, node, ol, isMember, tokenType);
@@ -776,15 +774,15 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
 
-                if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit) {
-                    if (exists decNode = nodes.getReferencedNodeInUnit(dec, cu),
-                            exists id = nodes.getIdentifyingNode(decNode), 
-                            offset < id.startIndex.intValue()) {
-                        continue;
-                    }
+                if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit, 
+                    exists decNode = nodes.getReferencedNodeInUnit(dec, cu),
+                    exists id = nodes.getIdentifyingNode(decNode), 
+                    offset < id.startIndex.intValue()) {
+                    continue;
                 }
 
-                if (isPackageOrModuleDescriptor, !inDoc, !isLocation(ol, OccurrenceLocation.\iMETA),
+                if (isPackageOrModuleDescriptor, !inDoc, 
+                    !isLocation(ol, OccurrenceLocation.\iMETA),
                     !(ol?.reference else false),
                     !dec.annotation || !dec is Function) {
                     continue;
@@ -900,11 +898,12 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
     Boolean isDirectlyInsideBlock(Node node, IdeComponent cpc, Scope scope, CommonToken token) {
-        if (scope is Interface || scope is Package) {
+        if (scope is Interface|Package) {
             return false;
         } else {
-            assert(exists tokens = cpc.tokens);
-            return !(node is Tree.SequenceEnumeration) && occursAfterBraceOrSemicolon(token, tokens);
+            assert (exists tokens = cpc.tokens);
+            return !node is Tree.SequenceEnumeration 
+                    && occursAfterBraceOrSemicolon(token, tokens);
         }
     }
 
