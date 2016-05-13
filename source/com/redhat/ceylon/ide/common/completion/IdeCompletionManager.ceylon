@@ -1159,7 +1159,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                                 || dec is Function && dec.annotation //i.e. an annotation
                                 || dec is Value && dec.container == scope; //a parameter ref
         isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iIMPORT) || !dwp.unimported;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCASE) || isCaseOfSwitch(requiredType, dec, previousTokenType);
+        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCASE) || isCaseOfSwitch(requiredType, dec);//, previousTokenType);
         isCorrectLocation &&= previousTokenType != CeylonLexer.\iIS_OP
                            && (previousTokenType != CeylonLexer.\iCASE_TYPES || isLocation(ol, OccurrenceLocation.\iOF))
                            || dec is TypeDeclaration;
@@ -1200,14 +1200,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
 
-    Boolean isCaseOfSwitch(Type? requiredType, Declaration dec, Integer previousTokenType) 
-            => previousTokenType == CeylonLexer.\iIS_OP 
-                    && isTypeCaseOfSwitch(requiredType, dec)
-            || previousTokenType == CeylonLexer.\iLPAREN
-                    && isValueCaseOfSwitch(requiredType, dec)
-            || /*previousTokenType == CeylonLexer.\iMEMBER_OP
-                    &&*/ (isTypeCaseOfSwitch(requiredType, dec) ||
-                        isValueCaseOfSwitch(requiredType, dec));
+    Boolean isCaseOfSwitch(Type? requiredType, Declaration dec)//, Integer previousTokenType) 
+            => /*previousTokenType == CeylonLexer.\iIS_OP 
+                    &&*/ isTypeCaseOfSwitch(requiredType, dec)
+            || /*previousTokenType == CeylonLexer.\iLPAREN
+                    &&*/ isValueCaseOfSwitch(requiredType, dec);
 
     Boolean isDelegatableConstructor(Scope scope, Declaration dec) {
         if (ModelUtil.isConstructor(dec)) {
