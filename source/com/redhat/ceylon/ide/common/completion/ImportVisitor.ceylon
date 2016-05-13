@@ -27,14 +27,16 @@ class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, Commo
     
     shared actual void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
             completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
         }
     }
     shared actual void visit(Tree.PackageDescriptor that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
             completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
         }
@@ -50,14 +52,16 @@ class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, Commo
     }
     shared actual void visit(Tree.PackageLiteral that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
             completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result, false, monitor);
         }
     }
     shared actual void visit(Tree.ImportModule that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
             value withBody = nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL;
             completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, withBody, monitor);
@@ -65,7 +69,8 @@ class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, Commo
     }
     shared actual void visit(Tree.ModuleLiteral that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
             completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, false, monitor);
         }
