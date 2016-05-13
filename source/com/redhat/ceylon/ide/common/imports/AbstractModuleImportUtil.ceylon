@@ -1,5 +1,4 @@
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -254,9 +253,8 @@ shared abstract class AbstractModuleImportUtil<IFile,IProject,IDocument,InsertEd
         builder.append(")");
     }
     
-    shared void appendNativeBackends(StringBuilder builder, Backends backends) {
-        builder.append(", ".join(CeylonIterable(backends).map((be) => "\"``be.nativeAnnotation``\"")));
-    }
+    shared void appendNativeBackends(StringBuilder builder, Backends backends) 
+            => builder.append(", ".join { for (be in backends) "\"``be.nativeAnnotation``\"" });
 
     
     TextEdit? createRemoveEdit(Tree.CompilationUnit unit, String moduleName) {
