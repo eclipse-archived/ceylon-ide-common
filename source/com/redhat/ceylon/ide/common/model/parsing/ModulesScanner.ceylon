@@ -71,8 +71,8 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 moduleManager.moduleSourceMapper,
                 moduleManager.typeChecker,
                 theTokens) {
-            
-            shared actual Boolean isAllowedToChangeModel(Declaration? declaration) => false;
+            isAllowedToChangeModel(Declaration? declaration) 
+                    => false;
         };
     };
     

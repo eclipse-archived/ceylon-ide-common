@@ -1,18 +1,19 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
     ModelAliases,
-    isCentralModelDeclaration
+    isCentralModelDeclaration,
+    BaseIdeModuleSourceMapper
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -20,8 +21,7 @@ import com.redhat.ceylon.ide.common.vfs {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package,
-    Declaration,
-    Unit
+    Declaration
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -36,9 +36,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.platform {
-    ModelServicesConsumer
 }
 
 
@@ -62,7 +59,7 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
             Tree.CompilationUnit cu, 
             Package p, 
             ModuleManager moduleManager, 
-            ModuleSourceMapper moduleSourceMapper, 
+            BaseIdeModuleSourceMapper moduleSourceMapper, 
             TypeChecker typeChecker, 
             JList<CommonToken> tokens,
             ProjectPhasedUnitAlias? savedPhasedUnit)
@@ -84,27 +81,22 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
         //}
     }
     
-    shared actual Unit newUnit() => 
-            object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
+    shared actual TypecheckerUnit newUnit() 
+            => object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
             }.modelServices.newEditedSourceFile(this);
     
-    shared actual EditedSourceFileAlias? unit =>
-            unsafeCast<EditedSourceFileAlias?>(super.unit);
+    /*shared actual EditedSourceFileAlias? unit =>
+            unsafeCast<EditedSourceFileAlias?>(super.unit);*/
 
-    shared ProjectPhasedUnitAlias? originalPhasedUnit =>
-            savedPhasedUnitRef.get();
+    shared ProjectPhasedUnitAlias? originalPhasedUnit 
+            => savedPhasedUnitRef.get();
     
-    shared actual NativeFile? resourceFile =>
-            originalPhasedUnit?.resourceFile;
+    resourceFile => originalPhasedUnit?.resourceFile;
+    resourceRootFolder => originalPhasedUnit?.resourceRootFolder;
+    resourceProject => originalPhasedUnit?.resourceProject;
     
-    shared actual NativeFolder? resourceRootFolder =>
-            originalPhasedUnit?.resourceRootFolder;
-
-    shared actual NativeProject? resourceProject =>
-            originalPhasedUnit?.resourceProject;
-    
-    shared actual Boolean isAllowedToChangeModel(Declaration declaration) =>
-            !isCentralModelDeclaration(declaration);
+    isAllowedToChangeModel(Declaration declaration) 
+            => !isCentralModelDeclaration(declaration);
 }
 
 

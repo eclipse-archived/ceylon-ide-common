@@ -1,28 +1,25 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
-    ModelAliases
+    ModelAliases,
+    BaseIdeModuleSourceMapper
 }
 import com.redhat.ceylon.ide.common.platform {
     ModelServicesConsumer
-}
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipEntryVirtualFile,
     ZipFileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Package,
-    Unit
+    Package
 }
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
@@ -42,8 +39,8 @@ import org.antlr.runtime {
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
         extends ExternalPhasedUnit
         satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
-        & ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
-        & TypecheckerAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+                & ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+                & TypecheckerAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
         given NativeProject satisfies Object
         given OriginalNativeResource satisfies Object
         given OriginalNativeFolder satisfies OriginalNativeResource
@@ -58,7 +55,7 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         Tree.CompilationUnit cu, 
         Package p, 
         ModuleManager moduleManager, 
-        ModuleSourceMapper moduleSourceMapper, 
+        BaseIdeModuleSourceMapper moduleSourceMapper, 
         TypeChecker typeChecker, 
         List<CommonToken> tokenStream, 
         CeylonProjectAlias originalProject) 
@@ -87,13 +84,13 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         return null;
     }
     
-    shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
-            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
+    /*shared actual IdeModuleSourceMapperAlias moduleSourceMapper 
+            => unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);*/
     
-    shared actual Unit newUnit()  => 
-            object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
+    shared actual TypecheckerUnit newUnit()
+            => object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
             }.modelServices.newCrossProjectSourceFile(this);
     
-    shared actual CrossProjectSourceFileAlias unit =>
-            unsafeCast<CrossProjectSourceFileAlias>(super.unit);
+    /*shared actual CrossProjectSourceFileAlias unit 
+            => unsafeCast<CrossProjectSourceFileAlias>(super.unit);*/
 }

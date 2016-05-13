@@ -1,82 +1,83 @@
+import com.redhat.ceylon.compiler.typechecker {
+    TypeChecker
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit,
+    TypecheckerUnit
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.model {
+    BaseIdeModuleSourceMapper
+}
 import com.redhat.ceylon.ide.common.vfs {
     BaseFileVirtualFile,
     BaseFolderVirtualFile
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Package
+}
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
+
 import java.lang.ref {
     WeakReference
 }
 import java.util {
     JList=List
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
+
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Package,
-    Unit
-}
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
-}
-import com.redhat.ceylon.ide.common.model {
-    BaseIdeModuleSourceMapper
 }
 
 shared abstract class IdePhasedUnit
         extends PhasedUnit {
 
-    variable WeakReference<TypeChecker>? typeCheckerRef = null;
+    WeakReference<TypeChecker> typeCheckerRef;
+    WeakReference<BaseIdeModuleSourceMapper> sourceMapperRef;
 
+    BaseFileVirtualFile _unitFile;
+    BaseFolderVirtualFile _srcDir;
+    
     shared new(
         BaseFileVirtualFile unitFile,
         BaseFolderVirtualFile srcDir,
         Tree.CompilationUnit cu,
         Package p,
         ModuleManager moduleManager,
-        ModuleSourceMapper moduleSourceMapper,
+        BaseIdeModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker,
-        JList<CommonToken> tokenStream) extends PhasedUnit(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker.context, tokenStream) {
-        typeCheckerRef = WeakReference<TypeChecker>(typeChecker);
+        JList<CommonToken> tokenStream) 
+            extends PhasedUnit(unitFile, srcDir, cu, p, 
+                moduleManager, moduleSourceMapper, 
+                typeChecker.context, tokenStream) {
+        typeCheckerRef = WeakReference(typeChecker);
+        sourceMapperRef = WeakReference(moduleSourceMapper);
+        this._unitFile = unitFile; 
+        this._srcDir = srcDir;
     }
 
-    shared new clone(PhasedUnit other) extends PhasedUnit(other) {
-        if (is IdePhasedUnit other) {
-            typeCheckerRef = WeakReference<TypeChecker>(other.typeChecker);
-        }
+    shared new clone(IdePhasedUnit other) extends PhasedUnit(other) {
+        typeCheckerRef = WeakReference(other.typeChecker);
+        sourceMapperRef = WeakReference(other.moduleSourceMapper);
+        this._unitFile = other.unitFile; 
+        this._srcDir = other.srcDir;
     }
-
-    shared actual default BaseIdeModuleSourceMapper moduleSourceMapper => 
-            unsafeCast<BaseIdeModuleSourceMapper>(super.moduleSourceMapper);
     
-    shared actual default BaseFileVirtualFile unitFile =>
-            unsafeCast<BaseFileVirtualFile>(super.unitFile);
-
-    shared actual default BaseFolderVirtualFile srcDir =>
-            unsafeCast<BaseFolderVirtualFile>(super.srcDir);
-
-    shared TypeChecker? typeChecker {
-        return typeCheckerRef?.get();
-    }
-
-    shared actual default Unit createUnit() {
-        Unit? oldUnit = super.unit;
+    shared TypeChecker? typeChecker => typeCheckerRef.get();
+    
+    shared actual BaseIdeModuleSourceMapper? moduleSourceMapper 
+            => sourceMapperRef.get();
+    
+    shared actual default BaseFileVirtualFile unitFile => _unitFile;
+    shared actual default BaseFolderVirtualFile srcDir => _srcDir;
+    
+    shared actual default TypecheckerUnit createUnit() {
         value theNewUnit = newUnit();
-        if (exists oldUnit) {
+        if (exists oldUnit = super.unit) {
             theNewUnit.filename = oldUnit.filename;
             theNewUnit.fullPath = oldUnit.fullPath;
             theNewUnit.relativePath = oldUnit.relativePath;
@@ -86,5 +87,5 @@ shared abstract class IdePhasedUnit
         return theNewUnit;
     }
 
-    shared formal Unit newUnit();
+    shared formal TypecheckerUnit newUnit();
 }

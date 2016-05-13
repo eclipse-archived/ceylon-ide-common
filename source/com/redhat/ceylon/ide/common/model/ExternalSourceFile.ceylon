@@ -1,5 +1,9 @@
-import java.util {
-    Stack
+import com.redhat.ceylon.ide.common.typechecker {
+    ExternalPhasedUnit
+}
+import com.redhat.ceylon.ide.common.util {
+    SingleSourceUnitPackage,
+    equalsWithNulls
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -7,13 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     Value
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    ExternalPhasedUnit
-}
-import com.redhat.ceylon.ide.common.util {
-    SingleSourceUnitPackage,
-    equalsWithNulls,
-    unsafeCast
+
+import java.util {
+    Stack
 }
 "
  Used when the external declarations come from a source archive
@@ -23,8 +23,11 @@ shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit)
         
         modifiable => false;
         
-        shared actual default ExternalPhasedUnit phasedUnit =>
-                unsafeCast<ExternalPhasedUnit>(super.phasedUnit);
+        shared actual default ExternalPhasedUnit? phasedUnit {
+            assert (is ExternalPhasedUnit? phasedUnit 
+                        = super.phasedUnit);
+            return phasedUnit;
+        }
         
         shared Boolean binaryDeclarationSource 
                 => ceylonModule.isCeylonBinaryArchive && 

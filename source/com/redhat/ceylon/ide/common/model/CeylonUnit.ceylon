@@ -13,31 +13,39 @@ import com.redhat.ceylon.model.typechecker.model {
 
 shared abstract class CeylonUnit extends IdeUnit {
     
-    shared variable default WeakReference<out IdePhasedUnit>? phasedUnitRef = null;
-
-    shared new(BaseIdeModuleSourceMapper moduleSourceMapper) 
-            extends IdeUnit(moduleSourceMapper) {}
-
-    shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
-            extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage) {}
+    variable WeakReference<out IdePhasedUnit> phasedUnitRef;
     
-    
-    shared PhasedUnitType createPhasedUnitRef<PhasedUnitType>(PhasedUnitType phasedUnit)
-        given PhasedUnitType satisfies IdePhasedUnit {
-        phasedUnitRef = WeakReference<PhasedUnitType>(phasedUnit);
-        return phasedUnit;
+    shared new (IdePhasedUnit phasedUnit) 
+            extends IdeUnit(phasedUnit.moduleSourceMapper) {
+        phasedUnitRef = WeakReference(phasedUnit);
     }
     
-    shared formal IdePhasedUnit? setPhasedUnitIfNecessary();
+    shared new init(String theFilename, 
+                    String theRelativePath, 
+                    String theFullPath, 
+                    Package thePackage) 
+            extends IdeUnit.init(theFilename, 
+                                theRelativePath, 
+                                theFullPath, 
+                                thePackage) {
+        phasedUnitRef = WeakReference<IdePhasedUnit>(null);
+    }
     
-    shared default IdePhasedUnit? phasedUnit => 
-            setPhasedUnitIfNecessary();
+    shared default IdePhasedUnit? findPhasedUnit() => null;
+    
+    shared default IdePhasedUnit? phasedUnit {
+        value result 
+                = phasedUnitRef.get() 
+                else findPhasedUnit();
+        phasedUnitRef = WeakReference(result);
+        return result;
+    }
     
     shared formal String? ceylonFileName;
     shared formal String? ceylonSourceRelativePath;
     shared formal String? ceylonSourceFullPath;
     
-    shared Tree.CompilationUnit? compilationUnit => 
-            phasedUnit?.compilationUnit;
+    shared Tree.CompilationUnit? compilationUnit 
+            => phasedUnit?.compilationUnit;
     
 }

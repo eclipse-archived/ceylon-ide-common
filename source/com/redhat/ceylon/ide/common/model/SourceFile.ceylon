@@ -11,21 +11,13 @@ import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
 
-import java.lang.ref {
-    WeakReference
-}
-
-shared abstract class SourceFile(
-    IdePhasedUnit phasedUnit)
-        extends CeylonUnit(phasedUnit.moduleSourceMapper)
+shared abstract class SourceFile(IdePhasedUnit phasedUnit)
+        extends CeylonUnit(phasedUnit)
         satisfies Source {
     
     language = Language.ceylon;
     
     shared formal Boolean modifiable;
-    
-    shared variable actual WeakReference<out IdePhasedUnit>? phasedUnitRef =
-        WeakReference<IdePhasedUnit>(phasedUnit);
     
     shared actual Package \ipackage => super.\ipackage;
     
@@ -41,24 +33,10 @@ shared abstract class SourceFile(
         }
     }
     
-    shared actual IdePhasedUnit? setPhasedUnitIfNecessary() =>
-        phasedUnitRef?.get();
-    
-    shared actual String sourceFileName =>
-        filename;
-    
-    shared actual String sourceRelativePath =>
-        relativePath;
-    
-    shared actual String sourceFullPath =>
-        fullPath;
-    
-    shared actual String ceylonSourceRelativePath =>
-        relativePath;
-    
-    shared actual String ceylonSourceFullPath =>
-        sourceFullPath;
-    
-    shared actual String ceylonFileName =>
-        filename;
+    shared actual String sourceFileName => filename;
+    shared actual String sourceRelativePath => relativePath;
+    shared actual String sourceFullPath => fullPath;
+    shared actual String ceylonSourceRelativePath => relativePath;
+    shared actual String ceylonSourceFullPath => sourceFullPath;
+    shared actual String ceylonFileName => filename;
 }

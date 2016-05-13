@@ -11,7 +11,7 @@ import com.redhat.ceylon.model.typechecker.model {
 shared abstract class IdeUnit 
         extends TypecheckerUnit
         satisfies IUnit & SourceAware  {
-    shared new(BaseIdeModuleSourceMapper moduleSourceMapper) 
+    shared new(BaseIdeModuleSourceMapper? moduleSourceMapper) 
             extends TypecheckerUnit(moduleSourceMapper) {}
 
     shared new init(String theFilename, String theRelativePath, String theFullPath, Package thePackage) 
