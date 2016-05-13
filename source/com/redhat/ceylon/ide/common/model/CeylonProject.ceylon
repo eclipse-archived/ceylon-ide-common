@@ -760,6 +760,20 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 PhasedUnits phasedUnits = newTypechecker.phasedUnits;
                 
                 value moduleManager = unsafeCast<IdeModuleManagerAlias>(phasedUnits.moduleManager);
+                
+                if (exists jdkProvider = configuration.jdkProvider) {
+                    value parts = jdkProvider.split('/'.equals).sequence();
+                    if (parts.size == 2,
+                        exists name = parts[0],
+                        exists version = parts[1],
+                        exists file = repositoryManager.getArtifact(name, version)) {
+                    
+                        // OK
+                    } else {
+                        throw platformUtils.newOperationCanceledException(
+                            "JDK provider not found in repository: " + jdkProvider);
+                    }
+                }
                 value moduleSourceMapper = unsafeCast<IdeModuleSourceMapperAlias>(phasedUnits.moduleSourceMapper);
                 moduleManager.typeChecker = newTypechecker;
                 moduleSourceMapper.typeChecker = newTypechecker;
