@@ -46,8 +46,8 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         given OriginalNativeFolder satisfies OriginalNativeResource
         given OriginalNativeFile satisfies OriginalNativeResource {
     
-    variable value originalProjectRef = WeakReference<CeylonProjectAlias>(null);
-    variable value originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(null);
+    WeakReference<CeylonProjectAlias> originalProjectRef;
+    variable WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>> originalProjectPhasedUnitRef;
     
     shared new (
         ZipEntryVirtualFile unitFile, 
@@ -59,35 +59,48 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         TypeChecker typeChecker, 
         List<CommonToken> tokenStream, 
         CeylonProjectAlias originalProject) 
-            extends ExternalPhasedUnit(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
-        originalProjectRef = WeakReference<CeylonProjectAlias>(originalProject);
+            extends ExternalPhasedUnit(unitFile, srcDir, 
+                                       cu, p, 
+                                       moduleManager, 
+                                       moduleSourceMapper, 
+                                       typeChecker, 
+                                       tokenStream) {
+        originalProjectRef 
+                = WeakReference(originalProject);
+        originalProjectPhasedUnitRef
+                = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(null);
     }
     
     shared new clone(CrossProjectPhasedUnitAlias other)
             extends ExternalPhasedUnit.clone(other) {
-        originalProjectRef = WeakReference<CeylonProjectAlias>(other.originalProjectRef.get());
-        originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(other.originalProjectPhasedUnit);
+        originalProjectRef 
+                = WeakReference(other.originalProjectRef.get());
+        originalProjectPhasedUnitRef 
+                = WeakReference(other.originalProjectPhasedUnit);
     }
     
     shared ProjectPhasedUnitAlias? originalProjectPhasedUnit {
-        if (exists originalPhasedUnit = originalProjectPhasedUnitRef.get()) {
+        if (exists originalPhasedUnit 
+                = originalProjectPhasedUnitRef.get()) {
             return originalPhasedUnit;
         } 
         if (exists originalProject = originalProjectRef.get(), 
             exists originalTypeChecker = originalProject.typechecker,
-            is ProjectPhasedUnitAlias originalPhasedUnit =
-                    originalTypeChecker.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
-            originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(originalPhasedUnit);
+            is ProjectPhasedUnitAlias originalPhasedUnit 
+                    = originalTypeChecker.getPhasedUnitFromRelativePath(
+                            pathRelativeToSrcDir)) {
+            originalProjectPhasedUnitRef 
+                    = WeakReference<ProjectPhasedUnitAlias>
+                        (originalPhasedUnit);
             return originalPhasedUnit;
         }
-        
         return null;
     }
     
     /*shared actual IdeModuleSourceMapperAlias moduleSourceMapper 
             => unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);*/
     
-    shared actual TypecheckerUnit newUnit()
+    shared actual TypecheckerUnit createUnit()
             => object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
             }.modelServices.newCrossProjectSourceFile(this);
     

@@ -93,7 +93,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
     shared CeylonProjectAlias ceylonProject 
             => ceylonProjectRef.get();
 
-    shared actual TypecheckerUnit newUnit() 
+    shared actual TypecheckerUnit createUnit() 
             => object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
             }.modelServices.newProjectSourceFile(this);
 

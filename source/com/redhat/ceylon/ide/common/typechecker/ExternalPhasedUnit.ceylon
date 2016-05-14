@@ -59,7 +59,7 @@ shared class ExternalPhasedUnit extends IdePhasedUnit {
         this._unitFile = other.unitFile;
     }
     
-    shared actual default TypecheckerUnit newUnit() 
+    shared actual default TypecheckerUnit createUnit() 
             => ExternalSourceFile(this);
     
     shared actual CeylonUnit unit {
