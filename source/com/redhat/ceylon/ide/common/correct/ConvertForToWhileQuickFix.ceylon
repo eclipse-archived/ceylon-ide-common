@@ -19,7 +19,7 @@ shared object convertForToWhileQuickFix {
             
             value doc = data.document;
             value change = platformServices.createTextChange { 
-                desc = "Convert For to While";
+                name = "Convert For to While";
                 input = data.phasedUnit;
             };
             change.initMultiEdit();

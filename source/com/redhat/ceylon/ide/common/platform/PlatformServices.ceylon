@@ -22,8 +22,8 @@ shared interface PlatformServices {
     deprecated("Prefer [[commonIndents]] and [[CommonDocument]] instead.")
     shared formal Indents<IDocument> indents<IDocument>();
 
-    shared formal TextChange createTextChange(String desc, CommonDocument|PhasedUnit input);
-    shared formal CompositeChange createCompositeChange(String desc);
+    shared formal TextChange createTextChange(String name, CommonDocument|PhasedUnit input);
+    shared formal CompositeChange createCompositeChange(String name);
 }
 
 suppressWarnings("expressionTypeNothing")

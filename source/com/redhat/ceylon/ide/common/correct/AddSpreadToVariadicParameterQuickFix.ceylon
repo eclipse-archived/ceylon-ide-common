@@ -1,21 +1,20 @@
-import com.redhat.ceylon.model.typechecker.model {
-    TypedDeclaration,
-    FunctionOrValue
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.model.typechecker.model {
+    FunctionOrValue
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-shared interface AddSpreadToVariadicParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object addSpreadToVariadicParameterQuickFix {
     
-    shared formal void newProposal(Data data, String desc, 
-        TypedDeclaration parameter, Integer offset, TextChange change); 
-    
-    shared void addSpreadToSequenceParameterProposal(Data data, IFile file) {
+    shared void addSpreadToSequenceParameterProposal(QuickFixData data) {
         if (is Tree.Term term = data.node) {
             value type = term.typeModel;
             value id = type.declaration.unit.iterableDeclaration;
@@ -25,18 +24,23 @@ shared interface AddSpreadToVariadicParameterQuickFix<IFile,IDocument,InsertEdit
             
             value fiv = FindInvocationVisitor(term);
             fiv.visit(data.rootNode);
-            
-            value param = fiv.parameter;
-            if (exists param,
+            if (exists param = fiv.parameter,
                 param.parameter,
                 is FunctionOrValue param,
                 param.initializerParameter.sequenced) {
 
-                value change = newTextChange("Spread iterable argument of variadic parameter", file);
-                addEditToChange(change, newInsertEdit(term.startIndex.intValue(), "*"));
+                value change 
+                        = platformServices.createTextChange {
+                    name = "Spread Argument of Variadic Parameter";
+                    input = data.phasedUnit;
+                };
+                change.addEdit(InsertEdit {
+                    start = term.startIndex.intValue();
+                    text = "*";
+                });
                 
-                newProposal(data, "Spread iterable argument of variadic parameter",
-                    param, term.endIndex.intValue() + 3, change);
+                data.addQuickFix("Spread iterable argument of variadic parameter '``param.getName(term.unit)``'",
+                    change, DefaultRegion(term.endIndex.intValue() + 3, 0));
             }
         }
     }

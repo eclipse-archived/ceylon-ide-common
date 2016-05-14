@@ -30,7 +30,7 @@ shared object splitIfStatementQuickFix {
                         value doc = data.document;
                         value change 
                                 = platformServices.createTextChange {
-                            desc = "Split If Statement";
+                            name = "Split If Statement";
                             input = data.phasedUnit;
                         };
                         change.initMultiEdit();

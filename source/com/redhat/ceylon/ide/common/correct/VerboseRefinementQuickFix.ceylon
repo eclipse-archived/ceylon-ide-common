@@ -21,7 +21,7 @@ shared object verboseRefinementQuickFix {
             
             value change 
                     = platformServices.createTextChange {
-                desc = "Convert to Verbose Refinement";
+                name = "Convert to Verbose Refinement";
                 input = data.phasedUnit;
             };
             change.initMultiEdit();
@@ -65,7 +65,7 @@ shared object verboseRefinementQuickFix {
             
             value change 
                     = platformServices.createTextChange {
-                desc = "Convert to Shortcut Refinement";
+                name = "Convert to Shortcut Refinement";
                 input = data.phasedUnit;
             };
             change.initMultiEdit();

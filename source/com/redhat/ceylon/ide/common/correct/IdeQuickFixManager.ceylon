@@ -63,7 +63,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
-    shared formal AddSpreadToVariadicParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSpreadToVariadicParameterQuickFix;
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addTypeParameterQuickFix;
     shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> shadowReferenceQuickFix; 
     shared formal ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeInitialCaseQuickFix;
@@ -261,7 +260,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addSatisfiesQuickFix.addSatisfiesProposals(data);
         }
         case (2101) {
-            addSpreadToVariadicParameterQuickFix.addSpreadToSequenceParameterProposal(data, file);
+            addSpreadToVariadicParameterQuickFix.addSpreadToSequenceParameterProposal(data);
         }
         case (2500) {
             addTypeParameterQuickFix.addTypeParameterProposal(data, file);

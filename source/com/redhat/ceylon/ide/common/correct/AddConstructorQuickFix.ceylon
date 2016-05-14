@@ -29,7 +29,7 @@ shared object addConstructorQuickFix {
                     else data.node) {
             value change 
                     = platformServices.createTextChange {
-                desc = "Add Default Constructor";
+                name = "Add Default Constructor";
                 input = data.phasedUnit;
             };
             

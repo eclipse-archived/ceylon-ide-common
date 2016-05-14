@@ -27,7 +27,7 @@ shared object joinIfStatementsQuickFix {
                     value doc = data.document;
                     value change 
                             = platformServices.createTextChange {
-                        desc = "Join If Statements";
+                        name = "Join If Statements";
                         input = data.phasedUnit;
                     };
                     change.initMultiEdit();
@@ -64,7 +64,7 @@ shared object joinIfStatementsQuickFix {
                     value doc = data.document;
                     value change 
                             = platformServices.createTextChange {
-                        desc = "Join If Statements";
+                        name = "Join If Statements";
                         input = data.phasedUnit;
                     };
                     change.initMultiEdit();
