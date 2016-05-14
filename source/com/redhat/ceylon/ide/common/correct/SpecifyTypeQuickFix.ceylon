@@ -41,12 +41,14 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
-        value infType = rootNode.unit.denotableType(_infType);
+        value unit = rootNode.unit;
+        value infType = unit.denotableType(_infType);
         
         if (!inEditor) {
             if (is Tree.LocalModifier typeNode) {
                 value change 
-                        = newTextChange("Specify Type", document);
+                        = newTextChange("Specify Type", 
+                                        document);
                 initMultiEditChange(change);
                 value decs = HashSet<Declaration>();
                 importProposals.importType {
@@ -61,7 +63,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                     doc = document;
                 };
                 value typeName 
-                        = infType.asSourceCodeString(rootNode.unit);
+                        = infType.asSourceCodeString(unit);
                 addEditToChange(change, 
                     newReplaceEdit {
                         start = offset;
@@ -71,7 +73,10 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                 
                 //applyChange(change);
                 
-                return newRegion(offset + il, typeName.size);
+                return newRegion {
+                    start = offset + il;
+                    length = typeName.size;
+                };
             }
         } else {
             value lm = newLinkedMode();
@@ -189,11 +194,9 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
 
     shared void addTypingProposals(Data data, IFile file, Tree.Declaration? decNode) {
         if (is Tree.TypedDeclaration decNode, 
-            !(decNode is Tree.ObjectDefinition),
-            !(decNode is Tree.Variable)) {
-            
+            !(decNode is Tree.ObjectDefinition|Tree.Variable)) {
             value type = decNode.type;
-            if (type is Tree.LocalModifier || type is Tree.StaticType) {
+            if (type is Tree.LocalModifier|Tree.StaticType) {
                 addSpecifyTypeProposal(type, data);
             }
         } else if (is Tree.LocalModifier|Tree.StaticType node = data.node) {
@@ -206,9 +209,13 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     }
     
     void newProposal(String desc, Tree.Type type, 
-        Tree.CompilationUnit rootNode, Type infType, Data data) {
-        
-        newSpecifyTypeProposal("``desc`` '``infType.asString(data.rootNode.unit)``'",
-            type, rootNode, infType, data);
-    }
+        Tree.CompilationUnit rootNode, Type infType, Data data) 
+            => newSpecifyTypeProposal {
+        desc = "``desc`` '``infType.asString(data.rootNode.unit)``'";
+        type = type;
+        cu = rootNode;
+        infType = infType;
+        data = data;
+    };
+    
 }
