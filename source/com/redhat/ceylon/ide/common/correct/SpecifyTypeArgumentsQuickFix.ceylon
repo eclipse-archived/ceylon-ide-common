@@ -13,7 +13,8 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
     
     shared formal void newProposal(Data data, String desc, TextChange change);
     
-    shared void addSpecifyTypeArgumentsProposal(Tree.MemberOrTypeExpression ref, 
+    shared void addSpecifyTypeArgumentsProposal(
+        Tree.MemberOrTypeExpression ref, 
         Data data, IFile file) {
         
         Tree.Identifier identifier;
@@ -29,7 +30,9 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
             return;
         }
         
-        if (typeArguments is Tree.InferredTypeArguments, typeArguments.typeModels exists, !typeArguments.typeModels.empty) {
+        if (typeArguments is Tree.InferredTypeArguments, 
+            typeArguments.typeModels exists, 
+            !typeArguments.typeModels.empty) {
             value builder = StringBuilder().append("<");
             for (arg in typeArguments.typeModels) {
                 if (ModelUtil.isTypeUnknown(arg)) {
@@ -44,11 +47,19 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
             }
             
             builder.append(">");
-            value change = newTextChange("Specify Explicit Type Arguments", file);
-            addEditToChange(change, newInsertEdit(identifier.endIndex.intValue(), builder.string));
-            
-            String desc = "Specify explicit type arguments '" + builder.string + "'";
-            newProposal(data, desc, change);
+            value change 
+                    = newTextChange("Specify Explicit Type Arguments", 
+                                    file);
+            addEditToChange(change, 
+                newInsertEdit {
+                    position = identifier.endIndex.intValue();
+                    text = builder.string;
+                });
+            newProposal {
+                data = data;
+                desc = "Specify explicit type arguments '``builder``'";
+                change = change;
+            };
         }
     }
 }
