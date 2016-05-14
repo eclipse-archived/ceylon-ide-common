@@ -198,7 +198,8 @@ shared interface BaseFileVirtualFile
     shared actual formal InputStream inputStream;
     shared formal String? charset;
     shared actual Boolean folder => false;
-    shared actual default JList<out BaseResourceVirtualFile> children => Collections.emptyList<BaseFileVirtualFile>();
+    shared actual default JList<out BaseResourceVirtualFile> children 
+            => Collections.emptyList<BaseFileVirtualFile>();
 }
 
 shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
@@ -209,29 +210,29 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
         given NativeResource satisfies Object 
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    shared actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children => Collections.emptyList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    
+    shared actual JList<out ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> children 
+            => Collections.emptyList<FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    
     shared actual formal NativeFile nativeResource;
     
-    shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolder =>
-            parent?.rootFolder;
+    rootFolder => parent?.rootFolder;
     
-    shared actual Boolean? isSource =>
-            parent?.isSource;
+    shared actual Boolean? isSource => parent?.isSource;
 
-    shared actual Package? ceylonPackage =>
-            parent?.ceylonPackage;
+    shared actual Package? ceylonPackage => parent?.ceylonPackage;
     
-    shared Boolean sourceFile => 
-            (isSource else false) 
+    shared Boolean sourceFile 
+            => (isSource else false)
             && (ceylonProject?.isCompilable(nativeResource) else false);
     
-    shared Boolean resourceFile => 
-            if (exists isInSourceFolder=isSource) 
+    shared Boolean resourceFile 
+            => if (exists isInSourceFolder = isSource) 
             then !isInSourceFolder 
             else false;
     
-    shared <ModifiableSourceFileAlias | JavaUnitAlias>? unit =>
-            ifExists(ceylonPackage?.units, CeylonIterable<Unit>)
-            ?.narrow<ModifiableSourceFileAlias | JavaUnitAlias>()
-            ?.find((unit) => unit.filename == name);
+    shared <ModifiableSourceFileAlias | JavaUnitAlias>? unit 
+            => ifExists(ceylonPackage?.units, CeylonIterable<Unit>)
+                ?.narrow<ModifiableSourceFileAlias | JavaUnitAlias>()
+                ?.find((unit) => unit.filename == name);
 }
