@@ -89,7 +89,7 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
     shared actual NativeProject resourceProject => project;
     shared actual NativeFile resourceFile => file;
     
-    resourceRootFolder => savedPhasedUnit?.resourceRootFolder;
+    resourceRootFolder => originalPhasedUnit?.resourceRootFolder;
     
     isAllowedToChangeModel(Declaration declaration) 
             => !isCentralModelDeclaration(declaration);
