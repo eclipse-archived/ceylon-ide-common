@@ -1,6 +1,11 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    DeleteEdit
+}
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     Declaration
@@ -10,34 +15,50 @@ import java.util {
     HashSet
 }
 
-shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object verboseRefinementQuickFix {
     
-    shared void addVerboseRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addVerboseRefinementProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.SpecifierStatement ss = statement,
             ss.refinement, 
             exists e = ss.specifierExpression.expression,
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             
-            value change = newTextChange("Convert to Verbose Refinement", file);
-            initMultiEditChange(change);
+            value doc = data.doc;
+            value change 
+                    = platformServices.createTextChange {
+                desc = "Convert to Verbose Refinement";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             
             value unit = ss.unit;
-            value t = unit.denotableType(e.typeModel);
+            value type = unit.denotableType(e.typeModel);
             value decs = HashSet<Declaration>();
-            importProposals.importType(decs, t, data.rootNode);
-            importProposals.applyImports(change, decs, data.rootNode, getDocumentForChange(change));
-            value type = t.asSourceCodeString(unit);
+            value importProposals = CommonImportProposals(doc);
+            importProposals.importType {
+                declarations = decs;
+                type = type;
+                rootNode = data.rootNode;
+            };
+            importProposals.applyImports {
+                change = change;
+                declarations = decs;
+                rootNode = data.rootNode;
+                doc = doc;
+            };
             
-            addEditToChange(change, newInsertEdit(ss.startIndex.intValue(), "shared actual " + type + " "));
+            change.addEdit(InsertEdit {
+                start = ss.startIndex.intValue();
+                text = "shared actual ``type.asSourceCodeString(unit)`` ";
+            });
             
-            newProposal(data, "Convert to verbose refinement", change);
+            data.addQuickFix("Convert to verbose refinement", change);
         }
     }
 
-    shared void addShortcutRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addShortcutRefinementProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.TypedDeclaration statement,
             exists model = statement.declarationModel,
             model.actual, 
@@ -51,17 +72,24 @@ shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                     case (is Tree.MethodDeclaration) 
                         statement.specifierExpression
                     else null,
-            exists e = spec.expression,
-            !ModelUtil.isTypeUnknown(e.typeModel)) {
+            exists expr = spec.expression,
+            !ModelUtil.isTypeUnknown(expr.typeModel)) {
             
-            value change = newTextChange("Convert to Shortcut Refinement", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.createTextChange {
+                desc = "Convert to Shortcut Refinement";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             
             value start = statement.startIndex.intValue();
             value length = statement.identifier.startIndex.intValue() - start;
-            addEditToChange(change, newDeleteEdit(start, length));
+            change.addEdit(DeleteEdit {
+                start = start;
+                length = length;
+            });
             
-            newProposal(data, "Convert to shortcut refinement", change);
+            data.addQuickFix("Convert to shortcut refinement", change);
         }
     }
 }
