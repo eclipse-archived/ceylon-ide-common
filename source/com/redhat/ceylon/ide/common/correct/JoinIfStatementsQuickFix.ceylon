@@ -34,9 +34,14 @@ shared object joinIfStatementsQuickFix {
                         start = from;
                         length = to - from;
                     });
-                    decrementIndent(doc, inner, icl, change, 
-                        commonIndents.getIndent(inner, doc), 
-                        commonIndents.getIndent(statement, doc));
+                    decrementIndent {
+                        doc = doc;
+                        ifSt = inner;
+                        cl = icl;
+                        change = change;
+                        indent = commonIndents.getIndent(inner, doc);
+                        outerIndent = commonIndents.getIndent(statement, doc);
+                    };
                     change.addEdit(DeleteEdit {
                         start = inner.endIndex.intValue();
                         length = statement.endIndex.intValue() 
@@ -63,9 +68,14 @@ shared object joinIfStatementsQuickFix {
                         text = ", ";
                     });
                     
-                    decrementIndent(doc, inner, icl, change,
-                        commonIndents.getIndent(inner, doc),
-                        commonIndents.getIndent(statement, doc));
+                    decrementIndent {
+                        doc = doc;
+                        ifSt = inner;
+                        cl = icl;
+                        change = change;
+                        indent = commonIndents.getIndent(inner, doc);
+                        outerIndent = commonIndents.getIndent(statement, doc);
+                    };
                     
                     change.addEdit(DeleteEdit {
                         start = inner.endIndex.intValue();
