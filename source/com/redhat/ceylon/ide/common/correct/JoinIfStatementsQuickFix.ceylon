@@ -25,7 +25,11 @@ shared object joinIfStatementsQuickFix {
                     exists icl = inner.ifClause.conditionList) {
                     
                     value doc = data.doc;
-                    value change = platformServices.createTextChange("Join If Statements", doc);
+                    value change 
+                            = platformServices.createTextChange {
+                        desc = "Join If Statements";
+                        input = data.phasedUnit;
+                    };
                     change.initMultiEdit();
                     
                     value from = block.startIndex.intValue();
@@ -58,7 +62,11 @@ shared object joinIfStatementsQuickFix {
                     !inner.elseClause exists) {
                     
                     value doc = data.doc;
-                    value change = platformServices.createTextChange("Join If Statements", doc);
+                    value change 
+                            = platformServices.createTextChange {
+                        desc = "Join If Statements";
+                        input = data.phasedUnit;
+                    };
                     change.initMultiEdit();
                     
                     change.addEdit(ReplaceEdit {

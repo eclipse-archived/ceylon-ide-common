@@ -29,8 +29,10 @@ shared object splitIfStatementQuickFix {
                         
                         value doc = data.doc;
                         value change 
-                                = platformServices.createTextChange(
-                                    "Split If Statement", doc);
+                                = platformServices.createTextChange {
+                            desc = "Split If Statement";
+                            input = data.phasedUnit;
+                        };
                         change.initMultiEdit();
                         String ws;
                         String indent;
@@ -57,7 +59,13 @@ shared object splitIfStatementQuickFix {
                                 start = ifSt.endIndex.intValue();
                                 text = ws + "}";
                             });
-                        incrementIndent(doc, ifSt, cl, change, indent);
+                        incrementIndent {
+                            doc = doc;
+                            ifSt = ifSt;
+                            cl = cl;
+                            change = change;
+                            indent = indent;
+                        };
                         
                         data.addQuickFix("Split 'if' statement at condition", change);
                     }
@@ -91,7 +99,13 @@ shared object splitIfStatementQuickFix {
                                 start = ifSt.endIndex.intValue();
                                 text = ws + "}";
                             });
-                        incrementIndent(doc, ifSt, icl, change, indent);
+                        incrementIndent {
+                            doc = doc;
+                            ifSt = ifSt;
+                            cl = icl;
+                            change = change;
+                            indent = indent;
+                        };
                         
                         data.addQuickFix("Split 'if' statement at 'else'", change);
                     }
