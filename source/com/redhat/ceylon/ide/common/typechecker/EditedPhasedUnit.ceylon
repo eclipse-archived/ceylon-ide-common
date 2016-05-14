@@ -41,19 +41,7 @@ import org.antlr.runtime {
 
 shared alias AnyEditedPhasedUnit => EditedPhasedUnit<in Nothing, in Nothing, in Nothing, in Nothing>;
 
-shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
-    
-    WeakReference<ProjectPhasedUnitAlias> savedPhasedUnitRef;
-    
-    shared new (
+shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
             FileVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> unitFile, 
             FolderVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> srcDir, 
             Tree.CompilationUnit cu, 
@@ -62,8 +50,10 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
             BaseIdeModuleSourceMapper moduleSourceMapper, 
             TypeChecker typeChecker, 
             JList<CommonToken> tokens,
-            ProjectPhasedUnitAlias? savedPhasedUnit)
-                extends ModifiablePhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile>(
+            ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? savedPhasedUnit,
+            NativeProject project,
+            NativeFile file)
+        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
             unitFile,
             srcDir,
             cu,
@@ -71,16 +61,21 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
             moduleManager,
             moduleSourceMapper,
             typeChecker,
-            tokens) {
-        
-        savedPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(savedPhasedUnit);
+            tokens)
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
+    
+    value savedPhasedUnitRef = WeakReference(savedPhasedUnit);
 
         // TODO : do this when instanciating the function
         //if (exists savedPhasedUnit) {
         //    savedPhasedUnit.addWorkingCopy(this);
         //}
-    }
-    
     shared actual TypecheckerUnit createUnit() 
             => object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
             }.modelServices.newEditedSourceFile(this);
@@ -91,9 +86,10 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
     shared ProjectPhasedUnitAlias? originalPhasedUnit 
             => savedPhasedUnitRef.get();
     
-    resourceFile => originalPhasedUnit?.resourceFile;
-    resourceRootFolder => originalPhasedUnit?.resourceRootFolder;
-    resourceProject => originalPhasedUnit?.resourceProject;
+    shared actual NativeProject resourceProject => project;
+    shared actual NativeFile resourceFile => file;
+    
+    resourceRootFolder => savedPhasedUnit?.resourceRootFolder;
     
     isAllowedToChangeModel(Declaration declaration) 
             => !isCentralModelDeclaration(declaration);
