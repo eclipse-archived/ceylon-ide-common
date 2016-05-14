@@ -33,7 +33,7 @@ shared interface QuickFixData {
     shared formal Tree.CompilationUnit rootNode;
     shared formal PhasedUnit phasedUnit;
     shared formal BaseCeylonProject ceylonProject;
-    shared formal CommonDocument doc;
+    shared formal CommonDocument document;
     
     shared formal void addQuickFix(String desc, TextChange change,
         DefaultRegion? selection = null);

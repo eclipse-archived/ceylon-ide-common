@@ -585,14 +585,18 @@ shared object nodes {
         value start = from.startIndex.intValue();
         value length = to.endIndex.intValue() - start;
         value exp = StringBuilder();
-        if (exists ti = getTokenIterator(tokens, DefaultRegion(start, length))) {
-            while (ti.hasNext()) {
-                value token = ti.next();
+        if (exists tokenIterator 
+                = getTokenIterator(tokens, 
+                        DefaultRegion(start, length))) {
+            while (tokenIterator.hasNext()) {
+                value token = tokenIterator.next();
                 value type = token.type;
                 value text = token.text;
-                if (type == CeylonLexer.\iLIDENTIFIER, getTokenLength(token) > text.size) {
+                if (type == CeylonLexer.\iLIDENTIFIER, 
+                        getTokenLength(token) > text.size) {
                     exp.append("\\i");
-                } else if (type == CeylonLexer.\iUIDENTIFIER, getTokenLength(token) > text.size) {
+                } else if (type == CeylonLexer.\iUIDENTIFIER, 
+                        getTokenLength(token) > text.size) {
                     exp.append("\\I");
                 }
                 exp.append(text);

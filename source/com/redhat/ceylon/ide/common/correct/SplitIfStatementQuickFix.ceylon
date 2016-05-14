@@ -27,7 +27,7 @@ shared object splitIfStatementQuickFix {
                         exists c1 = conditions.get(size - 2),
                         exists c2 = conditions.get(size - 1)) {
                         
-                        value doc = data.doc;
+                        value doc = data.document;
                         value change 
                                 = platformServices.createTextChange {
                             desc = "Split If Statement";
@@ -79,7 +79,7 @@ shared object splitIfStatementQuickFix {
                     if (is Tree.IfStatement st) {
                         value inner = st;
                         value icl = inner.ifClause.conditionList;
-                        value doc = data.doc;
+                        value doc = data.document;
                         value change 
                                 = platformServices.createTextChange(
                                     "Split If Statement", doc);

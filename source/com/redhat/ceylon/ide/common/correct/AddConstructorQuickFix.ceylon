@@ -36,7 +36,7 @@ shared object addConstructorQuickFix {
             if (exists body = cd.classBody, 
                 !cd.parameterList exists,
                 cd.identifier exists) {
-                value doc = data.doc;
+                value doc = data.document;
                 value uninitialized 
                         = correctionUtil.collectUninitializedMembers(body);
                 value les = findLastExecutable(body);

@@ -50,9 +50,7 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     JList=List,
-    JHashSet=HashSet,
-    JArrayList=ArrayList,
-    JSet=Set
+    JArrayList=ArrayList
 }
 
 import org.antlr.runtime {
@@ -79,7 +77,7 @@ createExtractFunctionRefactoring(
                     endOffset = selectionEnd;
                 }) 
         then ExtractFunctionRefactoring {
-            doc = doc;
+            document = doc;
             newName = 
                     functionName 
                     else nodes.nameProposals(node).first;
@@ -107,7 +105,7 @@ shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
 }
 
 shared class ExtractFunctionRefactoring(
-    CommonDocument doc, 
+    CommonDocument document, 
     shared variable String newName,
     shared Tree.CompilationUnit rootNode, 
     JList<CommonToken> tokens, 
@@ -189,7 +187,8 @@ shared class ExtractFunctionRefactoring(
         statements = statements;
     };
     
-    value importProposals = CommonImportProposals(doc);
+    value importProposals 
+            = CommonImportProposals(document, rootNode);
     
     shared variable DefaultRegion? typeRegion = null;
     shared variable DefaultRegion? decRegion = null;
@@ -271,7 +270,7 @@ shared class ExtractFunctionRefactoring(
     
     shared CompositeChange|TextChange build() {
         "The changes applied to the current editor"
-        value tfc = platformServices.createTextChange(name, doc);
+        value tfc = platformServices.createTextChange(name, document);
         
         if (is Tree.Term node) {
             if (exists tn = getTargetNode {
@@ -304,8 +303,7 @@ shared class ExtractFunctionRefactoring(
     function typeParameters(
         ArrayList<TypeDeclaration> localTypes,
         String extraIndent, 
-        Unit unit,
-        JSet<Declaration> imports) {
+        Unit unit) {
         value typeParams = StringBuilder();
         value constraints = StringBuilder();
         if (!localTypes.empty) {
@@ -323,10 +321,9 @@ shared class ExtractFunctionRefactoring(
                         .append(t.name)
                         .append(" satisfies ");
                     for (boundType in sts) {
-                        importProposals.importType(imports, boundType, rootNode);
-                        value bound = boundType.asSourceCodeString(unit);
+                        importProposals.addImportedType(boundType);
                         constraints
-                            .append(bound)
+                            .append(boundType.asSourceCodeString(unit))
                             .appendCharacter('&');
                     }
                     constraints.deleteTerminal(1);
@@ -392,8 +389,6 @@ shared class ExtractFunctionRefactoring(
             };
         }
         
-        value imports = JHashSet<Declaration>();
-        
         value params = StringBuilder();
         for (tr in localThisRefs) {
             params.append(tr.typeModel.asSourceCodeString(unit))
@@ -409,8 +404,9 @@ shared class ExtractFunctionRefactoring(
                 pdec.dynamicallyTyped) {
                 params.append("dynamic");
             } else {
-                value paramType = unit.denotableType(bme.typeModel);
-                importProposals.importType(imports, paramType, rootNode);
+                value paramType 
+                        = unit.denotableType(bme.typeModel);
+                importProposals.addImportedType(paramType);
                 params.append(paramType.asSourceCodeString(unit));
             }
             
@@ -423,22 +419,20 @@ shared class ExtractFunctionRefactoring(
             tokens = tokens;
         };
         
-        value indent =
-                indents.getDefaultLineDelimiter(doc) +
-                indents.getIndent(decNode, doc);
-        value extraIndent =
-            indent +
-                    indents.defaultIndent +
-                    indents.defaultIndent;
+        value indent 
+                = indents.getDefaultLineDelimiter(document) 
+                + indents.getIndent(decNode, document);
+        value extraIndent 
+                = indent 
+                + indents.defaultIndent 
+                + indents.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                    imports = imports;
                 };
         
-        value specifier = extraIndent + "=> ";
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisRefs) {
             fixedTokens.set(tokens.indexOf(tr.token),
@@ -451,43 +445,47 @@ shared class ExtractFunctionRefactoring(
                 type = unit.denotableType(core.type.typeModel);
             }
             if (exists block = core.block) {
-                body = nodes.text(fixedTokens, block);
-            } else if (exists expression = core.expression) {
-                body = specifier + nodes.text(fixedTokens, expression) + ";";
-            } else {
-                body = specifier + ";";
+                body = " " + nodes.text(fixedTokens, block);
             }
-        } else {
+            else if (exists expression = core.expression) {
+                body = extraIndent 
+                        + "=> ``nodes.text(fixedTokens, expression)``;";
+            }
+            else {
+                body = " => ;";
+            }
+        }
+        else {
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            body = specifier + nodes.text(fixedTokens, core) + ";";
+            body = extraIndent
+                    + "=> ``nodes.text(fixedTokens, core)``;";
         }
         
         String typeOrKeyword;
         if (exists returnType = this.type,
             !returnType.unknown) {
-            value voidModifier = returnType.anything;
-            if (voidModifier) {
+            if (returnType.anything) {
                 typeOrKeyword = "void";
-            } else if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
-                importProposals.importType(imports, returnType, rootNode);
-            } else {
+            }
+            else if (explicitType || dec.toplevel) {
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
+                importProposals.addImportedType(returnType);
+            }
+            else {
                 typeOrKeyword = "function";
                 canBeInferred = true;
             }
-        } else {
+        }
+        else {
             typeOrKeyword = "dynamic";
         }
         
-        value definition =
-            typeOrKeyword + " " + newName +
-                    typeParams.string +
-                    "(" + params.string + ")" +
-                    constraints.string + " " +
-                    body +
-                    indent + indent;
+        value definition 
+            = "``typeOrKeyword`` ``newName````typeParams``(``params``)``constraints````body``" 
+            + indent + indent;
         
         String invocation;
         Integer refStart;
@@ -496,27 +494,29 @@ shared class ExtractFunctionRefactoring(
             if (cpl.parameters.size() == localRefs.size) {
                 invocation = newName;
                 refStart = start;
-            } else {
-                value header = nodes.text(tokens, cpl) + " => ";
-                invocation = header + newName + "(" + argList.string + ")";
-                refStart = start + header.size;
+            }
+            else {
+                value pl = nodes.text(tokens, cpl);
+                invocation = "``pl`` => ``newName``(``argList``)";
+                refStart = start + pl.size + 4;
             }
         } else {
-            invocation = newName + "(" + argList.string + ")";
+            invocation = "``newName``(``argList``)";
             refStart = start;
         }
         
-        value shift
-                = importProposals.applyImports {
-                    change = tfc;
-                    declarations = imports;
-                    rootNode = rootNode;
-                    doc = doc;
-                };
+        value shift = importProposals.applyAddedImports(tfc);
         
         value decStart = decNode.startIndex.intValue();
-        tfc.addEdit(InsertEdit(decStart, definition));
-        tfc.addEdit(ReplaceEdit(start, length, invocation));
+        tfc.addEdit(InsertEdit {
+            start = decStart;
+            text = definition;
+        });
+        tfc.addEdit(ReplaceEdit {
+            start = start;
+            length = length;
+            text = invocation;
+        });
         
         typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
         decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
@@ -539,10 +539,7 @@ shared class ExtractFunctionRefactoring(
                         arguments = args;
                     }) {
                     value invocation =
-                        newName +
-                                "(" +
-                                asArgList(args, localThisRefs, tokens) +
-                                ")";
+                        "``newName``(``asArgList(args, localThisRefs, tokens)``)";
                     tfc.addEdit(ReplaceEdit {
                             start = tstart;
                             length = tlength;
@@ -579,14 +576,11 @@ shared class ExtractFunctionRefactoring(
                                     arguments = args;
                                 }) {
                                 value invocation =
-                                    newName +
-                                    "(" +
-                                    asArgList(args, localThisRefs, pu.tokens) +
-                                    ")";
+                                    "``newName``(``asArgList(args, localThisRefs, pu.tokens)``)";
                                 tc.addEdit(ReplaceEdit {
-                                        start = tstart;
-                                        length = tlength;
-                                        text = invocation;
+                                    start = tstart;
+                                    length = tlength;
+                                    text = invocation;
                                 });
                                 found = true;
                             } else {
@@ -615,13 +609,11 @@ shared class ExtractFunctionRefactoring(
     }
     
     function resultModifiers(Node result,
-        TypedDeclaration rdec,
-        Unit unit,
-        JSet<Declaration> imports) {
+        TypedDeclaration rdec, Unit unit) {
         if (result is Tree.AttributeDeclaration) {
             if (rdec.shared, exists type = rdec.type) {
-                importProposals.importType(imports, type, rootNode);
-                return "shared " + type.asSourceCodeString(unit) + " ";
+                importProposals.addImportedType(type);
+                return "shared ``type.asSourceCodeString(unit)`` ";
             } else {
                 return "value ";
             }
@@ -721,8 +713,6 @@ shared class ExtractFunctionRefactoring(
             });
         }
         
-        value imports = JHashSet<Declaration>();
-        
         value params = StringBuilder();
         value args = StringBuilder();
         value done = HashSet<Declaration>();
@@ -761,8 +751,9 @@ shared class ExtractFunctionRefactoring(
                         bmed.dynamicallyTyped) {
                         params.append("dynamic");
                     } else {
-                        value paramType = unit.denotableType(bme.typeModel);
-                        importProposals.importType(imports, paramType, rootNode);
+                        value paramType 
+                                = unit.denotableType(bme.typeModel);
+                        importProposals.addImportedType(paramType);
                         params.append(paramType.asSourceCodeString(unit));
                     }
                     
@@ -774,8 +765,8 @@ shared class ExtractFunctionRefactoring(
         }
         
         value indent =
-                indents.getDefaultLineDelimiter(doc) +
-                indents.getIndent(decNode, doc);
+                indents.getDefaultLineDelimiter(document) +
+                indents.getIndent(decNode, document);
         value extraIndent =
             indent +
                     indents.defaultIndent +
@@ -785,7 +776,6 @@ shared class ExtractFunctionRefactoring(
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                    imports = imports;
                 };
         
         if (results.size == 1) {
@@ -826,8 +816,9 @@ shared class ExtractFunctionRefactoring(
             !returnType.unknown) {
             //we need to return a value
             if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
-                importProposals.importType(imports, returnType, rootNode);
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
+                importProposals.addImportedType(returnType);
             } else {
                 typeOrKeyword = "function";
             }
@@ -849,7 +840,7 @@ shared class ExtractFunctionRefactoring(
             if (!result is Tree.Declaration &&
                         !rdec.variable) { //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
-                importProposals.importType(imports, resultType, rootNode);
+                importProposals.addImportedType(resultType);
                 definition
                     .append(bodyIndent)
                     .append(resultType.asSourceCodeString(unit))
@@ -894,7 +885,7 @@ shared class ExtractFunctionRefactoring(
             .append(indent)
             .append(indent);
         
-        value call = newName + "(" + args.string + ");";
+        value call = "``newName``(``args``);";
         value invocation = StringBuilder();
         if (results.size == 1) {
             //we're assigning the result of the extracted 
@@ -905,7 +896,6 @@ shared class ExtractFunctionRefactoring(
                     result = result;
                     rdec = rdec;
                     unit = unit;
-                    imports = imports;
                 })
                 .append(rdec.name)
                 .append(" = ")
@@ -913,7 +903,9 @@ shared class ExtractFunctionRefactoring(
         } else if (!results.empty) {
             //we're assigning the result tuple of the extracted 
             //function to various things
-            if (results.every((e) => e.key is Tree.AttributeDeclaration && !e.item.shared)) {
+            if (results.every((e) 
+                    => e.key is Tree.AttributeDeclaration 
+                    && !e.item.shared)) {
                 invocation
                     .append("value [")
                     .append(", ".join { for (_->rdec in results) rdec.name })
@@ -924,8 +916,8 @@ shared class ExtractFunctionRefactoring(
                     .append("value tuple = ")
                     .append(call);
                 value ind =
-                        indents.getDefaultLineDelimiter(doc) +
-                        indents.getIndent(ss.last, doc);
+                        indents.getDefaultLineDelimiter(document) +
+                        indents.getIndent(ss.last, document);
                 variable value i = 0;
                 for (result->rdec in results) {
                     invocation
@@ -934,7 +926,6 @@ shared class ExtractFunctionRefactoring(
                             result = result;
                             rdec = rdec;
                             unit = unit;
-                            imports = imports;
                         })
                         .append(rdec.name)
                         .append(" = tuple[")
@@ -945,23 +936,27 @@ shared class ExtractFunctionRefactoring(
             }
         } else if (!returns.empty) {
             //we're returning the result of the extracted function
-            invocation.append("return ").append(call);
+            invocation
+                    .append("return ")
+                    .append(call);
         } else {
             //we're just calling the extracted function
-            invocation.append(call);
+            invocation
+                    .append(call);
         }
         
-        value shift
-                = importProposals.applyImports {
-                    change = tfc;
-                    declarations = imports;
-                    rootNode = rootNode;
-                    doc = doc;
-                };
+        value shift = importProposals.applyAddedImports(tfc);
         
         value decStart = decNode.startIndex.intValue();
-        tfc.addEdit(InsertEdit(decStart, definition.string));
-        tfc.addEdit(ReplaceEdit(start, length, invocation.string));
+        tfc.addEdit(InsertEdit {
+            start = decStart;
+            text = definition.string;
+        });
+        tfc.addEdit(ReplaceEdit {
+            start = start;
+            length = length;
+            text = invocation.string;
+        });
         
         typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
         decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
@@ -1037,8 +1032,7 @@ shared class ExtractFunctionRefactoring(
                 value v = CheckStatementsVisitor(body, statements);
                 s.visit(v);
                 if (exists prob = v.problem) {
-                    return "Selected statements contain " + prob
-                            + " at  " + s.location;
+                    return "Selected statements contain ``prob`` at  ``s.location``";
                 }
             }
         } 
@@ -1046,7 +1040,7 @@ shared class ExtractFunctionRefactoring(
             value v = CheckExpressionVisitor();
             node.visit(v);
             if (exists prob = v.problem) {
-                return "Selected expression contains " + prob;
+                return "Selected expression contains ``prob``";
             }
         }
         else {}
@@ -1088,7 +1082,8 @@ shared class ExtractFunctionRefactoring(
             !descriptor(sourceVirtualFile) &&
             (node is Tree.Term ||
                 !statements.empty &&
-                !statements.any((statement) => statement is Tree.Constructor));
+                !statements.any((statement) 
+                    => statement is Tree.Constructor));
     
     shared [String+] nameProposals {
         value proposals = nodes.nameProposals {
@@ -1097,12 +1092,13 @@ shared class ExtractFunctionRefactoring(
         }.collect((n) => n == "it" then "do" else n);
         
         if (!results.empty) {
-            value name =
-                "get" +
-                        "And".join {
-                    for (_->rdec in results)
-                        rdec.name[0..0].uppercased +
-                                rdec.name[1...] };
+            value name 
+                    = "get" 
+                    + "And".join {
+                        for (_->rdec in results)
+                            rdec.name[0..0].uppercased 
+                                + rdec.name[1...] 
+                    };
             return proposals.withLeading(name);
         } else {
             return proposals;

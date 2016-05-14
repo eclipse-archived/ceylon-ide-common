@@ -7,12 +7,7 @@ import com.redhat.ceylon.ide.common.platform {
     DeleteEdit
 }
 import com.redhat.ceylon.model.typechecker.model {
-    ModelUtil,
-    Declaration
-}
-
-import java.util {
-    HashSet
+    ModelUtil
 }
 
 shared object verboseRefinementQuickFix {
@@ -24,7 +19,6 @@ shared object verboseRefinementQuickFix {
             exists e = ss.specifierExpression.expression,
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             
-            value doc = data.doc;
             value change 
                     = platformServices.createTextChange {
                 desc = "Convert to Verbose Refinement";
@@ -34,19 +28,13 @@ shared object verboseRefinementQuickFix {
             
             value unit = ss.unit;
             value type = unit.denotableType(e.typeModel);
-            value decs = HashSet<Declaration>();
-            value importProposals = CommonImportProposals(doc);
-            importProposals.importType {
-                declarations = decs;
-                type = type;
-                rootNode = data.rootNode;
-            };
-            importProposals.applyImports {
-                change = change;
-                declarations = decs;
-                rootNode = data.rootNode;
-                doc = doc;
-            };
+            value importProposals 
+                    = CommonImportProposals {
+                        document = data.document;
+                        rootNode = data.rootNode;
+                    };
+            importProposals.addImportedType(type);
+            importProposals.applyAddedImports(change);
             
             change.addEdit(InsertEdit {
                 start = ss.startIndex.intValue();

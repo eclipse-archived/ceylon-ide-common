@@ -17,7 +17,7 @@ shared object convertForToWhileQuickFix {
             is Tree.ValueIterator fi = forSt.forClause?.forIterator,
             exists e = fi.specifierExpression?.expression) {
             
-            value doc = data.doc;
+            value doc = data.document;
             value change = platformServices.createTextChange { 
                 desc = "Convert For to While";
                 input = data.phasedUnit;

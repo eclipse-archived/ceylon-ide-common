@@ -24,7 +24,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Function,
     FunctionOrValue,
     Module {
-        \iLANGUAGE_MODULE_NAME
+        \iLANGUAGE_MODULE_NAME=languageModuleName
     },
     Package,
     ParameterList,
@@ -38,27 +38,14 @@ import java.lang {
     JString=String
 }
 import java.util {
-    JArrayList=ArrayList,
     JCollection=Collection,
+    JArrayList=ArrayList,
     JHashSet=HashSet,
     JIterator=Iterator,
     JList=List,
     JMap=Map,
     JSet=Set,
     Collections
-}
-import com.redhat.ceylon.ide.common.platform {
-    InsertEdit,
-    TextChange,
-    TextEdit,
-    platformServices,
-    DeleteEdit,
-    ReplaceEdit,
-    commonIndents,
-    CommonDocument
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
 }
 
 
@@ -366,7 +353,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     shared Integer applyImportsWithAliases(TextChange change, JMap<Declaration, JString> declarations, Tree.CompilationUnit cu, IDocument? doc, Declaration? declarationBeingDeleted=null)
         => applyImportsInternal(change, declarations.keySet(), declarations.values(), cu, doc, declarationBeingDeleted);
 
-    shared void importSignatureTypes(Declaration declaration, Tree .CompilationUnit rootNode, JSet<Declaration> declarations){
+    shared void importSignatureTypes(Declaration declaration, Tree.CompilationUnit rootNode, JSet<Declaration> declarations) {
         if(is TypedDeclaration declaration){
             TypedDeclaration td = declaration;
             importType(declarations, td.type, rootNode);
@@ -381,7 +368,7 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
         }
     }
 
-    shared void importTypes(JSet<Declaration> declarations, JCollection<Type>? types, Tree.CompilationUnit rootNode){
+    shared void importTypes(JSet<Declaration> declarations, JIterable<Type>? types, Tree.CompilationUnit rootNode){
         if(exists types) {
             for(type in types){
                 importType(declarations, type, rootNode);
@@ -464,46 +451,4 @@ shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEd
     }
 }
 
-shared class CommonImportProposals(CommonDocument doc) 
-        satisfies ImportProposals<PhasedUnit,Nothing,CommonDocument,InsertEdit,TextEdit,TextChange> {
-    
-    addEditToChange(TextChange change, TextEdit edit) => change.addEdit(edit);
-    
-    createImportChange(PhasedUnit file) 
-            => platformServices.createTextChange("", file);
-    
-    getDocContent(CommonDocument doc, Integer start, Integer length) 
-            => doc.getText(start, length);
-    
-    getDocumentForChange(TextChange change) => change.document;
-    
-    getInsertedText(TextEdit edit) 
-            => if (is InsertEdit edit) then edit.text else "";
-    
-    getLineContent(CommonDocument doc, Integer line) 
-            => doc.getLineContent(line);
-    
-    getLineOfOffset(CommonDocument doc, Integer offset) 
-            => doc.getLineOfOffset(offset);
-    
-    getLineStartOffset(CommonDocument doc, Integer line) 
-            => doc.getLineStartOffset(line);
-    
-    hasChildren(TextChange change) => change.hasEdits;
-    
-    indents => commonIndents;
-    
-    initMultiEditChange(TextChange change) => change.initMultiEdit();
-    
-    newDeleteEdit(Integer start, Integer length) 
-            => DeleteEdit(start, length);
-    
-    newImportProposal(String description, TextChange correctionChange) => nothing;
-    
-    newInsertEdit(Integer position, String text)
-            => InsertEdit(position, text);
-    
-    newReplaceEdit(Integer start, Integer length, String text)
-            => ReplaceEdit(start, length, text);
 
-}

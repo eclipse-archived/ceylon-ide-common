@@ -24,7 +24,7 @@ shared object joinIfStatementsQuickFix {
                     is Tree.IfStatement inner = block.statements[0],
                     exists icl = inner.ifClause.conditionList) {
                     
-                    value doc = data.doc;
+                    value doc = data.document;
                     value change 
                             = platformServices.createTextChange {
                         desc = "Join If Statements";
@@ -61,7 +61,7 @@ shared object joinIfStatementsQuickFix {
                     exists icl = inner.ifClause.conditionList,
                     !inner.elseClause exists) {
                     
-                    value doc = data.doc;
+                    value doc = data.document;
                     value change 
                             = platformServices.createTextChange {
                         desc = "Join If Statements";
