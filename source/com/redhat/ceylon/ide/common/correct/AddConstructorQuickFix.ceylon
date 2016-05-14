@@ -1,49 +1,54 @@
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    commonIndents,
+    InsertEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Node
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
-import java.util {
-    Collections
-}
 import com.redhat.ceylon.model.typechecker.model {
     Type
 }
-shared interface AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+
+import java.util {
+    Collections
+}
+shared object addConstructorQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
-    
-    shared void addConstructorProposal(Data data, IFile file) {
-        variable Node? node = data.node;
-        if (is Tree.TypedDeclaration n = node) {
-            node = nodes.findDeclarationWithBody(data.rootNode, n);
-        }
+    shared void addConstructorProposal(QuickFixData data) {
         
-        if (is Tree.ClassDefinition cd = node) {
-            value change = newTextChange("Add Default Constructor", file);
-            if (cd.parameterList exists) {
-                return;
-            }
+        if (is Tree.ClassDefinition cd 
+                = if (is Tree.TypedDeclaration node = data.node) 
+                    then nodes.findDeclarationWithBody(data.rootNode, node) 
+                    else data.node) {
+            value change 
+                    = platformServices.createTextChange {
+                desc = "Add Default Constructor";
+                input = data.phasedUnit;
+            };
             
-            if (exists body = cd.classBody, cd.identifier exists) {
-                value doc = getDocumentForChange(change);
-                value uninitialized = correctionUtil.collectUninitializedMembers(body);
+            if (exists body = cd.classBody, 
+                !cd.parameterList exists,
+                cd.identifier exists) {
+                value doc = data.doc;
+                value uninitialized 
+                        = correctionUtil.collectUninitializedMembers(body);
                 value les = findLastExecutable(body);
-                value defaultIndent = indents.defaultIndent;
-                value delim = indents.getDefaultLineDelimiter(doc);
-                value indent = if (!exists les)
-                               then indents.getIndent(cd, doc) + defaultIndent
-                               else indents.getIndent(les, doc);
+                value defaultIndent 
+                        = commonIndents.defaultIndent;
+                value delim 
+                        = commonIndents.getDefaultLineDelimiter(doc);
+                value indent 
+                        = if (!exists les)
+                        then commonIndents.getIndent(cd, doc) 
+                                + defaultIndent
+                        else commonIndents.getIndent(les, doc);
                 value unit = cd.unit;
                 value params = StringBuilder();
                 value initializers = StringBuilder();
@@ -52,41 +57,63 @@ shared interface AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
                 }
                 
                 for (dec in uninitialized) {
-                    if (params.size != 0) {
+                    if (!params.empty) {
                         params.append(", ");
                     }
-                    
-                    value pr = dec.appliedReference(null, Collections.emptyList<Type>());
-                    value type = pr.fullType.asString(unit);
+                    value type 
+                            = dec.appliedReference(null, 
+                                    Collections.emptyList<Type>())
+                                 .fullType;
                     value name = dec.name;
-                    params.append(type).append(" ").append(name);
-                    initializers.append(indent).append(defaultIndent).append("this.").append(name).append(" = ").append(name).append(";").append(delim);
+                    params.append(type.asString(unit))
+                          .append(" ")
+                          .append(name);
+                    initializers.append(indent)
+                                .append(defaultIndent)
+                                .append("this.")
+                                .append(name).append(" = ")
+                                .append(name)
+                                .append(";")
+                                .append(delim);
                 }
                 
                 if (!uninitialized.empty) {
                     initializers.append(indent);
                 }
                 
-                variable value text = delim + indent + "shared new (" 
-                        + params.string + ") {" + initializers.string + "}";
+                value text = "``delim````indent``shared new (``params``) {``initializers``}";
                 Integer start;
-                if (!exists les) {
+                String textWithWs;
+                if (exists les) {
+                    start = les.endIndex.intValue();
+                    textWithWs = text;
+                }
+                else {
                     start = body.startIndex.intValue() + 1;
                     if (body.endIndex.intValue()-1 == start) {
-                        text += delim + indents.getIndent(cd, doc);
+                        textWithWs 
+                                = text + delim 
+                                + commonIndents.getIndent(cd, doc);
                     }
-                } else {
-                    start = les.endIndex.intValue();
+                    else {
+                        textWithWs = text;
+                    }
                 }
                 
-                addEditToChange(change, newInsertEdit(start, text));
-                value firstParen = text.firstOccurrence('(') else 0; 
+                change.addEdit(InsertEdit {
+                    start = start;
+                    text = textWithWs;
+                });
+                value firstParen 
+                        = text.firstOccurrence('(') else 0; 
                 value loc = start + firstParen + 1;
                 value name = cd.declarationModel.name;
                 
-                newProposal(data, 
-                    "Add constructor 'new (" + params.string + ")' of '" + name + "'",
-                    change, DefaultRegion(loc, 0));
+                data.addQuickFix { 
+                    desc = "Add constructor 'new (``params``)' of '``name``'"; 
+                    change = change; 
+                    selection = DefaultRegion(loc, 0);
+                };
             }
         }
     }
@@ -94,62 +121,68 @@ shared interface AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
     Tree.Statement? findLastExecutable(Tree.ClassBody? body) {
         variable Tree.Statement? les = null;
         if (exists body) {
-            value statements = body.statements;
-            for (st in statements) {
-                if (isExecutableStatement(st) || st is Tree.Constructor) {
+            for (st in body.statements) {
+                if (isExecutableStatement(st) 
+                    || st is Tree.Constructor) {
                     les = st;
                 }
             }
         }
-        
         return les;
     }
 
     Boolean isExecutableStatement(Tree.Statement s) {
         value unit = s.unit;
-        if (is Tree.SpecifierStatement s) {
-            //shortcut refinement statements with => aren't really "executable"
-            value ss = s;
-            return !(ss.specifierExpression is Tree.LazySpecifierExpression && !ss.refinement);
-        } else if (is Tree.ExecutableStatement s) {
-            return true;
-        } else {
-            if (is Tree.AttributeDeclaration s) {
-                value ad = s;
-                value sie = ad.specifierOrInitializerExpression;
-                return !(sie is Tree.LazySpecifierExpression) && !ad.declarationModel.formal;
-            } else if (is Tree.MethodDeclaration s) {
-                value ad = s;
-                value sie = ad.specifierExpression;
-                return !(sie is Tree.LazySpecifierExpression) && !ad.declarationModel.formal;
-            } else if (is Tree.ObjectDefinition s) {
-                value o = s;
-                if (o.extendedType exists) {
-                    if (exists et = o.extendedType.type.typeModel,
-                        !et.declaration.equals(unit.objectDeclaration), !et.declaration.equals(unit.basicDeclaration)) {
+        switch (s)
+        case (is Tree.ExecutableStatement) {
+            if (is Tree.SpecifierStatement s) {
+                // shortcut refinement statements with => 
+                // aren't really "executable"
+                return !(s.specifierExpression 
+                            is Tree.LazySpecifierExpression 
+                        && !s.refinement);
+            }
+            else {
+                return true;
+            }
+        }
+        case (is Tree.AttributeDeclaration) {
+            value sie = s.specifierOrInitializerExpression;
+            return !sie is Tree.LazySpecifierExpression 
+                    && !s.declarationModel.formal;
+        }
+        case (is Tree.MethodDeclaration) {
+            value sie = s.specifierExpression;
+            return !sie is Tree.LazySpecifierExpression 
+                    && !s.declarationModel.formal;
+        }
+        case (is Tree.ObjectDefinition) {
+            if (s.extendedType exists) {
+                if (exists et = s.extendedType.type.typeModel,
+                    !et.declaration==unit.objectDeclaration 
+                 && !et.declaration==unit.basicDeclaration) {
+                    return true;
+                }
+            }
+            
+            if (exists ocb = s.classBody) {
+                value statements = ocb.statements;
+                variable value i = statements.size() - 1;
+                while (i >= 0) {
+                    value st = statements.get(i);
+                    if (isExecutableStatement(st) 
+                        || st is Tree.Constructor) {
                         return true;
                     }
+                    i--;
                 }
-                
-                if (exists ocb = o.classBody) {
-                    value statements = ocb.statements;
-                    variable value i = statements.size() - 1;
-                    while (i >= 0) {
-                        value st = statements.get(i);
-                        if (isExecutableStatement(st) || st is Tree.Constructor) {
-                            return true;
-                        }
-                        
-                        i--;
-                    }
-                    
-                    return false;
-                }
-                
-                return false;
-            } else {
                 return false;
             }
+            
+            return false;
+        }
+        else {
+            return false;
         }
     }
 

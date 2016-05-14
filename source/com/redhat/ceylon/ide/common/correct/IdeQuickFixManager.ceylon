@@ -58,7 +58,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddParameterListQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addParameterListQuickFix;
     shared formal AddParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addParameterQuickFix;
     shared formal AddInitializerQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addInitializerQuickFix;
-    shared formal AddConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addConstructorQuickFix;
     shared formal ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeDeclarationQuickFix;
     shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixAliasQuickFix;
     shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
@@ -190,7 +189,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         case (1000|1001) {
             addPunctuationQuickFix.addEmptyParameterListProposal(data, file);
             addParameterListQuickFix.addParameterListProposal(data, file, false);
-            addConstructorQuickFix.addConstructorProposal(data, file);
+            addConstructorQuickFix.addConstructorProposal(data);
             changeDeclarationQuickFix.addChangeDeclarationProposal(data, file);
         }
         case (1020) {
@@ -225,7 +224,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addParameterQuickFix.addParameterProposals(data, file);
             addInitializerQuickFix.addInitializerProposals(data, file);
             addParameterListQuickFix.addParameterListProposal(data, file, false);
-            addConstructorQuickFix.addConstructorProposal(data, file);
+            addConstructorQuickFix.addConstructorProposal(data);
         }
         case (1610) {
             removeAnnotations.addRemoveAnnotationDecProposal("shared", node, data);
