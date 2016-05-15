@@ -10,7 +10,6 @@ import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
     types
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -27,30 +26,49 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import ceylon.interop.java {
+    CeylonMap,
+    javaString
+}
 
 shared object appendMemberReferenceQuickFix {
     
     value noTypes => Collections.emptyList<Type>();
             
     shared void addAppendMemberReferenceProposals(QuickFixData data) {
-        value node = data.node;
-        if (exists id = nodes.getIdentifyingNode(node),
-            is Tree.StaticMemberOrTypeExpression node,
-            exists t = node.typeModel) {
-            
-            assert (is CommonToken token = id.token);
-            value required = types.getRequiredType(data.rootNode, node, token);
+        value node
+                = switch (node = data.node) 
+                case (is Tree.SpecifierExpression) 
+                    node.expression.term
+                //case (is Tree.Expression) 
+                //    node.term
+                else node;
+        if (is Tree.Primary node, //TODO: if it's not a primary, just add parens!
+            exists type = node.typeModel) {
+            value token = 
+                    if (is Tree.StaticMemberOrTypeExpression node, 
+                        is CommonToken token = node.identifier.token)
+                    then token else null;
 
-            if (exists requiredType = required.type) {
-                value type = t.declaration;
-                value dwps = type.getMatchingMemberDeclarations(node.unit, node.scope, "", 0).values();
-                for (dwp in dwps) {
-                    if (is Value val = dwp.declaration) {
-                        value vt = val.appliedReference(t, noTypes).type;
-                        if (!ModelUtil.isTypeUnknown(vt),
-                            vt.isSubtypeOf(requiredType)) {
-                            
-                            addAppendMemberReferenceProposal(id, data, val, t);
+            if (exists requiredType 
+                    = types.getRequiredType(data.rootNode, node, token)
+                          .type) {
+                value proposals 
+                        = type.declaration
+                              .getMatchingMemberDeclarations(
+                                    node.unit, node.scope, "", 0);
+                for (dwp in proposals.values()) {
+                    if (is Value val = dwp.declaration,
+                        !javaString(dwp.name) in val.aliases) {
+                        value vt = val.appliedReference(type, noTypes).type;
+                        if (!ModelUtil.isTypeUnknown(vt) 
+                            && vt.isSubtypeOf(requiredType)) {
+                            addAppendMemberReferenceProposal {
+                                node = node;
+                                data = data;
+                                dec = val;
+                                type = type;
+                            };
                         }
                     }
                 }
@@ -65,23 +83,19 @@ shared object appendMemberReferenceQuickFix {
             name = "Append Member Reference";
             input = data.phasedUnit;
         };
-        value problemOffset = node.endIndex.intValue();
-        value name = dec.name;
-        value desc = "Append reference to member '``name``' of type '``type``'";
-
+        
         change.addEdit(InsertEdit {
-            start = problemOffset;
-            text = "." + name;
+            start = node.endIndex.intValue();
+            text = "." + dec.name;
         });
         
         data.addQuickFix {
-            desc = desc;
+            desc = "Append reference to member '``dec.name``' of type '``type.asString(node.unit)``'";
             change = change;
             selection = DefaultRegion {
-                start = problemOffset;
-                length = name.size + 1;
+                start = node.endIndex.intValue();
+                length = dec.name.size + 1;
             };
-            qualifiedNameIsPath = true;
         };
     }
 }

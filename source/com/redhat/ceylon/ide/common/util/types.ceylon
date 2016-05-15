@@ -37,8 +37,8 @@ shared object types {
         }
     }
         
-    shared RequiredType getRequiredType(variable Tree.CompilationUnit rootNode, variable Node node, variable CommonToken token) {
-        RequiredTypeVisitor rtv = RequiredTypeVisitor(node, token);
+    shared RequiredType getRequiredType(Tree.CompilationUnit rootNode, Node node, CommonToken? token) {
+        value rtv = RequiredTypeVisitor(node, token);
         rtv.visit(rootNode);
         return rtv;
     }

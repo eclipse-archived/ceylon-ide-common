@@ -80,9 +80,12 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                             pos = i;
                             break;
                         }
-                    } else {
-                        if (node.startIndex.intValue() >= pa.startIndex.intValue(),
-                            node.endIndex.intValue() <= pa.endIndex.intValue()) {
+                    }
+                    else {
+                        if (node.startIndex.intValue() 
+                                >= pa.startIndex.intValue(),
+                            node.endIndex.intValue() 
+                               <= pa.endIndex.intValue()) {
                             
                             pos = i;
                             break;
@@ -95,7 +98,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 if (exists params = getParameters(pr)) {
                     if (params.size() > pos) {
                         Parameter param = params.get(pos);
-                        if (pr.declaration.qualifiedNameString.equals("ceylon.language::print")) {
+                        if (pr.declaration.qualifiedNameString=="ceylon.language::print") {
                             requiredType = unit.stringDeclaration.type;
                         } else {
                             requiredType = pr.getTypedParameter(param).fullType;
