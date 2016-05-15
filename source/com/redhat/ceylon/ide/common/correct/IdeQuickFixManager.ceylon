@@ -64,13 +64,10 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
-    shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixAliasQuickFix;
     shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addTypeParameterQuickFix;
-    shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> shadowReferenceQuickFix; 
-    shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
     shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> renameDescriptorQuickFix;
     shared formal ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeRefiningTypeQuickType;
@@ -199,7 +196,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addPunctuationQuickFix.addImportWildcardProposal(data);
         }
         case (1050) {
-            fixAliasQuickFix.addFixAliasProposal(data, file);
+            fixAliasQuickFix.addFixAliasProposal(data);
         }
         case (1200|1201) {
             removeAnnotations.addRemoveAnnotationDecProposal("shared", node, data);
@@ -274,16 +271,16 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             // TODO
         }
         case (3100) {
-            shadowReferenceQuickFix.addShadowReferenceProposal(data, file);
+            shadowReferenceQuickFix.addShadowReferenceProposal(data);
         }
         case (3101|3102) {
-            shadowReferenceQuickFix.addShadowSwitchReferenceProposal(data, file);
+            shadowReferenceQuickFix.addShadowSwitchReferenceProposal(data);
         }
         case (5001|5002) {
             changeInitialCaseQuickFix.addChangeIdentifierCaseProposal(data);
         }
         case (6000) {
-            fixMultilineStringIndentationQuickFix.addFixMultilineStringIndentation(data, file);
+            fixMultilineStringIndentationQuickFix.addFixMultilineStringIndentation(data);
         }
         case (7000) {
             if (exists tc) {

@@ -33,7 +33,7 @@ shared object verboseRefinementQuickFix {
                         document = data.document;
                         rootNode = data.rootNode;
                     };
-            importProposals.importedType(type);
+            importProposals.importType(type);
             importProposals.apply(change);
             
             change.addEdit(InsertEdit {

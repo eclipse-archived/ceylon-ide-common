@@ -127,7 +127,7 @@ shared object addParameterQuickFix {
                     document = data.document;
                     rootNode = data.rootNode;
                 };
-                importProposals.importedType(explicitType);
+                importProposals.importType(explicitType);
                 shift = importProposals.apply(change);
             }
             else {

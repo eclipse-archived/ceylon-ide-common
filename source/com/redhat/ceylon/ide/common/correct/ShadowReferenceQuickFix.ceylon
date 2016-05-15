@@ -5,19 +5,20 @@ import com.redhat.ceylon.ide.common.util {
     nodes,
     FindReferencesVisitor
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object shadowReferenceQuickFix {
     
     value quickFixDesc => "Shadow reference inside control structure";
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        Integer offset, Integer length);
-
-    shared void addShadowSwitchReferenceProposal(Data data, IFile file) {
+    shared void addShadowSwitchReferenceProposal(QuickFixData data) {
         if (is Tree.Term node = data.node) {
             value statement = nodes.findStatement(data.rootNode, node);
             
@@ -26,8 +27,12 @@ shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
                     node = node;
                     rootNode = data.rootNode;
                 }[0];
-                value change = newTextChange("Shadow Reference", file);
-                initMultiEditChange(change);
+                value change 
+                        = platformServices.createTextChange {
+                    name = "Shadow Reference";
+                    input = data.phasedUnit;
+                };
+                change.initMultiEdit();
 //                Integer offset = statement.getStartIndex();
 //                change.addEdit(new ReplaceEdit(offset,
 //                        node.getStartIndex()-offset,
@@ -40,47 +45,57 @@ shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
 //                        "switch (" + name));
                 value ss = statement;
                 value loc = node.startIndex.intValue();
-                addEditToChange(change, newInsertEdit(loc, name + " = "));
+                change.addEdit(InsertEdit(loc, name + " = "));
                 
                 if (is Tree.BaseMemberExpression bme = node,
                     exists d = bme.declaration) {
 
                     value frv = FindReferencesVisitor(d);
                     frv.visit(ss.switchCaseList);
-                    
                     for (n in frv.nodeSet) {
-                        value identifyingNode = nodes.getIdentifyingNode(n);
-                        
-                        if (exists identifyingNode) {
+                        if (exists identifyingNode 
+                                = nodes.getIdentifyingNode(n)) {
                             value start = identifyingNode.startIndex.intValue();
                             if (start != loc) {
                                 value len = identifyingNode.text.size;
-                                addEditToChange(change, newReplaceEdit(start, len, name));
+                                change.addEdit(ReplaceEdit(start, len, name));
                             }
                         }
                     }
                 }
                 
-                newProposal(data, quickFixDesc, change, loc, name.size);
+                data.addQuickFix {
+                    desc = quickFixDesc;
+                    change = change;
+                    selection = DefaultRegion(loc, name.size);
+                };
             }
         }
     }
 
-    shared void addShadowReferenceProposal(Data data, IFile file) {
-        if (is Tree.Variable var = data.node) {
-            value offset = var.identifier.startIndex.intValue();
-            value term = var.specifierExpression.expression.term;
+    shared void addShadowReferenceProposal(QuickFixData data) {
+        switch (node = data.node)
+        case (is Tree.Variable) {
+            value offset = node.identifier.startIndex.intValue();
+            value term = node.specifierExpression.expression.term;
             value name = nodes.nameProposals {
                 node = term;
                 rootNode = data.rootNode;
             }[0];
-            value change = newTextChange("Shadow Reference", file);
-            initMultiEditChange(change);
-            addEditToChange(change, newInsertEdit(offset, name + " = "));
-            value statement = nodes.findStatement(data.rootNode, var);
-            value dec = var.declarationModel;
+            value change 
+                    = platformServices.createTextChange {
+                name = "Shadow Reference";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            change.addEdit(InsertEdit(offset, name + " = "));
+            value statement 
+                    = nodes.findStatement {
+                cu = data.rootNode;
+                node = node;
+            };
+            value dec = node.declarationModel;
             value frv = FindReferencesVisitor(dec);
-
             frv.visit(statement);
             for (n in frv.nodeSet) {
                 value identifyingNode = nodes.getIdentifyingNode(n);
@@ -89,19 +104,33 @@ shared interface ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
                     value start = identifyingNode.startIndex.intValue();
                     if (start != offset) {
                         value len = identifyingNode.text.size;
-                        addEditToChange(change, newReplaceEdit(start, len, name));
+                        change.addEdit(ReplaceEdit(start, len, name));
                     }
                 }
             }
             
-            newProposal(data, quickFixDesc, change, offset, name.size);
-        } else if (is Tree.Term node = data.node) {
+            data.addQuickFix {
+                desc = quickFixDesc;
+                change = change;
+                selection = DefaultRegion(offset, name.size);
+            };
+        }
+        case (is Tree.Term) {
             value name = nodes.nameProposals(node)[0];
-            value change = newTextChange("Shadow Reference", file);
+            value change 
+                    = platformServices.createTextChange {
+                name = "Shadow Reference";
+                input = data.phasedUnit;
+            };
             value offset = node.startIndex.intValue();
             
-            addEditToChange(change, newInsertEdit(offset, name + " = "));
-            newProposal(data, quickFixDesc, change, offset, name.size);
+            change.addEdit(InsertEdit(offset, name + " = "));
+            data.addQuickFix {
+                desc = quickFixDesc;
+                change = change;
+                selection = DefaultRegion(offset, name.size);
+            };
         }
+        else {}
     }
 }

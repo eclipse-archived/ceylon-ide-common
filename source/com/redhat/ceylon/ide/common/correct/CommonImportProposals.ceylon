@@ -94,7 +94,7 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
                 rootNode = rootNode;
             };
     
-    shared void importedType(Type? type)
+    shared void importType(Type? type)
             => delegate.importType {
                 type = type;
                 declarations = imports;

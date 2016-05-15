@@ -1,6 +1,12 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit,
+    InsertEdit,
+    ReplaceEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
@@ -12,16 +18,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
-import java.util {
-    HashSet
-}
+shared object splitDeclarationQuickFix {
 
-shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
-
-    void addSplitDeclarationProposal(Data data, Tree.TypedDeclaration decNode, IFile file) {
+    void addSplitDeclarationProposal(QuickFixData data, 
+        Tree.TypedDeclaration decNode) {
+        
         TypedDeclaration? dec = decNode.declarationModel;
         if (!exists dec) {
             return;
@@ -54,10 +55,17 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         
         value typeStartOffset = type.startIndex.intValue();
         value typeEndOffset = type.endIndex.intValue();
-        value change = newTextChange("Split Declaration", file);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
-        value typeString = getDocContent(doc, typeStartOffset, typeEndOffset - typeStartOffset);
+        value change 
+                = platformServices.createTextChange {
+            name = "Split Declaration";
+            input = data.phasedUnit;
+        };
+        change.initMultiEdit();
+        value doc = change.document;
+        value typeString = doc.getText {
+            offset = typeStartOffset;
+            length = typeEndOffset - typeStartOffset;
+        };
         
         if (is Tree.MethodDeclaration md = decNode) {
             value pls = md.parameterLists;
@@ -66,37 +74,52 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             } else {
                 value paramsOffset = pls.get(0).startIndex.intValue();
                 paramsEndOffset = pls.get(pls.size() - 1).endIndex.intValue();
-                paramsString = getDocContent(doc, paramsOffset, paramsEndOffset - paramsOffset);
+                paramsString = doc.getText {
+                    offset = paramsOffset;
+                    length = paramsEndOffset - paramsOffset;
+                };
             }
         }
         
-        value delim = indents.getDefaultLineDelimiter(doc);
-        value indent = indents.getIndent(decNode, doc);
+        value delim = doc.defaultLineDelimiter;
+        value indent = doc.getIndent(decNode);
         if (dec.parameter) {
-            addEditToChange(change, newDeleteEdit(startOffset, idStartOffset - startOffset));
-            addEditToChange(change, newDeleteEdit(idEndOffset, paramsEndOffset - idEndOffset));
+            change.addEdit(DeleteEdit {
+                start = startOffset;
+                length = idStartOffset - startOffset;
+            });
+            change.addEdit(DeleteEdit {
+                start = idEndOffset;
+                length = paramsEndOffset - idEndOffset;
+            });
 
             assert (is Declaration container = dec.container);
 
-            value containerNode = nodes.getReferencedNodeInUnit(container, data.rootNode);
+            value containerNode 
+                    = nodes.getReferencedNodeInUnit(container, data.rootNode);
             
             Tree.Body? body;
-            if (is Tree.ClassDefinition cd = containerNode) {
-                body = cd.classBody;
-            } else if (is Tree.MethodDefinition md = containerNode) {
-                body = md.block;
-            } else if (is Tree.FunctionArgument fa = containerNode) {
-                body = fa.block;
-            } else if (is Tree.Constructor cd = containerNode) {
-                body = cd.block;
-            } else {
+            switch (containerNode)
+            case (is Tree.ClassDefinition) {
+                body = containerNode.classBody;
+            }
+            case (is Tree.MethodDefinition) {
+                body = containerNode.block;
+            }
+            case (is Tree.FunctionArgument) {
+                body = containerNode.block;
+            }
+            case (is Tree.Constructor) {
+                body = containerNode.block;
+            }
+            else {
                 return;
             }
             
             if (!exists body) {
                 return;
             }
-            if (body.statements.contains(decNode)) {
+            if (decNode in body.statements) {
                 return;
             }
             
@@ -112,11 +135,11 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                 if (allen == 0) {
                     annotations = "";
                 } else {
-                    annotations = getDocContent(doc, alstart, allen) + " ";
+                    annotations = doc.getText(alstart, allen) + " ";
                 }
             }
             
-            variable value text = delim + indent + indents.defaultIndent
+            variable value text = delim + indent + doc.defaultIndent
                      + annotations + typeString + " " + dec.name + paramsString + ";";
             value bstart = body.startIndex.intValue();
             value bstop = body.endIndex.intValue();
@@ -124,10 +147,10 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                 text += delim+indent;
             }
             
-            addEditToChange(change, newInsertEdit(bstart + 1, text));
+            change.addEdit(InsertEdit(bstart + 1, text));
         } else {
             value text = paramsString + ";" + delim + indent + dec.name;
-            addEditToChange(change, newInsertEdit(idEndOffset, text));
+            change.addEdit(InsertEdit(idEndOffset, text));
         }
         
         variable Integer il;
@@ -135,9 +158,10 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             variable String explicitType;
             if (exists infType = type.typeModel, !infType.unknown) {
                 explicitType = infType.asSourceCodeString(decNode.unit);
-                value decs = HashSet<Declaration>();
-                importProposals.importType(decs, infType, data.rootNode);
-                il = importProposals.applyImports(change, decs, data.rootNode, doc);
+                value importProposals 
+                        = CommonImportProposals(doc, data.rootNode);
+                importProposals.importType(infType);
+                il = importProposals.apply(change);
             } else {
                 explicitType = "Object";
                 il = 0;
@@ -145,16 +169,18 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             
             value typeOffset = type.startIndex.intValue();
             value typeLen = type.distance.intValue();
-            addEditToChange(change, newReplaceEdit(typeOffset, typeLen, explicitType));
+            change.addEdit(ReplaceEdit(typeOffset, typeLen, explicitType));
         } else {
             il = 0;
         }
-        
-        value desc = "Split declaration of '" + dec.name + "'";
-        newProposal(data, desc, change, DefaultRegion(idEndOffset + il, 0));
+        data.addQuickFix {
+            desc = "Split declaration of '``dec.name``'";
+            change = change;
+            selection = DefaultRegion(idEndOffset + il, 0);
+        };
     }
     
-    shared void addSplitDeclarationProposals(Data data, IFile file, 
+    shared void addSplitDeclarationProposals(QuickFixData data,
         Tree.Declaration? decNode, Tree.Statement? statement) {
         
         if (exists decNode, 
@@ -163,51 +189,57 @@ shared interface SplitDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             switch (decNode)
             case (is Tree.AttributeDeclaration) {
                 if (decNode.specifierOrInitializerExpression exists || dec.parameter) {
-                    addSplitDeclarationProposal(data, decNode, file);
+                    addSplitDeclarationProposal(data, decNode);
                 }
             }
             case (is Tree.MethodDeclaration) {
                 if (decNode.specifierExpression exists
                     then !dec.parameter else dec.parameter) {
-                    addSplitDeclarationProposal(data, decNode, file);
+                    addSplitDeclarationProposal(data, decNode);
                 }
             }
             case (is Tree.Variable) {
                 if (is Tree.ControlStatement statement,
                     exists sie = decNode.specifierExpression) {
-                    addSplitDeclarationProposal2(data, decNode, statement, file);
+                    addSplitDeclarationProposal2(data, decNode, statement);
                 }
             }
             else {}
         }
     }
     
-    void addSplitDeclarationProposal2(Data data, Tree.Variable varNode, 
-        Tree.ControlStatement statement, IFile file) {
+    void addSplitDeclarationProposal2(QuickFixData data, 
+        Tree.Variable varNode, 
+        Tree.ControlStatement statement) {
         
         if (exists sie = varNode.specifierExpression,
             exists id = varNode.identifier,
             !(varNode.type is Tree.SyntheticVariable)) {
             
-            value tfc = newTextChange("Split Variable", file);
-            initMultiEditChange(tfc);
+            value change = platformServices.createTextChange {
+                name = "Split Variable";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             value vstart = varNode.startIndex.intValue();
             value vlen = varNode.distance.intValue();
-            value doc = getDocumentForChange(tfc);
-            value text = "value " + getDocContent(doc, vstart, vlen) + ";"
-                    + indents.getDefaultLineDelimiter(doc)
-                    + indents.getIndent(statement, doc);
+            value doc = change.document;
+            value text = "value " + doc.getText(vstart, vlen) + ";"
+                    + doc.defaultLineDelimiter
+                    + doc.getIndent(statement);
             
             value start = statement.startIndex.intValue();
-            addEditToChange(tfc, newInsertEdit(start, text));
+            change.addEdit(InsertEdit(start, text));
             value estart = id.endIndex.intValue();
             value eend = sie.endIndex.intValue();
             
-            addEditToChange(tfc, newDeleteEdit(estart, eend - estart));
-            
-            value desc = "Split declaration of '" + varNode.declarationModel.name + "'";
+            change.addEdit(DeleteEdit(estart, eend - estart));
 
-            newProposal(data, desc, tfc, DefaultRegion(start + 6, 0));
+            data.addQuickFix {
+                desc = "Split declaration of '``varNode.declarationModel.name``'";
+                change = change;
+                selection = DefaultRegion(start + 6);
+            };
         }
     }
 }

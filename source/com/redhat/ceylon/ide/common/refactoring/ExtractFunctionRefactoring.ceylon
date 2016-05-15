@@ -320,7 +320,7 @@ shared class ExtractFunctionRefactoring(
                         .append(t.name)
                         .append(" satisfies ");
                     for (boundType in sts) {
-                        importProposals.importedType(boundType);
+                        importProposals.importType(boundType);
                         constraints
                             .append(boundType.asSourceCodeString(unit))
                             .appendCharacter('&');
@@ -405,7 +405,7 @@ shared class ExtractFunctionRefactoring(
             } else {
                 value paramType 
                         = unit.denotableType(bme.typeModel);
-                importProposals.importedType(paramType);
+                importProposals.importType(paramType);
                 params.append(paramType.asSourceCodeString(unit));
             }
             
@@ -471,7 +471,7 @@ shared class ExtractFunctionRefactoring(
             else if (explicitType || dec.toplevel) {
                 typeOrKeyword 
                         = returnType.asSourceCodeString(unit);
-                importProposals.importedType(returnType);
+                importProposals.importType(returnType);
             }
             else {
                 typeOrKeyword = "function";
@@ -611,7 +611,7 @@ shared class ExtractFunctionRefactoring(
         TypedDeclaration rdec, Unit unit) {
         if (result is Tree.AttributeDeclaration) {
             if (rdec.shared, exists type = rdec.type) {
-                importProposals.importedType(type);
+                importProposals.importType(type);
                 return "shared ``type.asSourceCodeString(unit)`` ";
             } else {
                 return "value ";
@@ -752,7 +752,7 @@ shared class ExtractFunctionRefactoring(
                     } else {
                         value paramType 
                                 = unit.denotableType(bme.typeModel);
-                        importProposals.importedType(paramType);
+                        importProposals.importType(paramType);
                         params.append(paramType.asSourceCodeString(unit));
                     }
                     
@@ -817,7 +817,7 @@ shared class ExtractFunctionRefactoring(
             if (explicitType || dec.toplevel) {
                 typeOrKeyword 
                         = returnType.asSourceCodeString(unit);
-                importProposals.importedType(returnType);
+                importProposals.importType(returnType);
             } else {
                 typeOrKeyword = "function";
             }
@@ -839,7 +839,7 @@ shared class ExtractFunctionRefactoring(
             if (!result is Tree.Declaration &&
                         !rdec.variable) { //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
-                importProposals.importedType(resultType);
+                importProposals.importType(resultType);
                 definition
                     .append(bodyIndent)
                     .append(resultType.asSourceCodeString(unit))
