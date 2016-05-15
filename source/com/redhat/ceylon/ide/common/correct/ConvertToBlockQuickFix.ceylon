@@ -5,7 +5,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
-    commonIndents,
     ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.refactoring {
@@ -152,9 +151,9 @@ shared object convertToBlockQuickFix {
         }
         
         value doc = change.document;
-        value baseIndent = commonIndents.getIndent(decNode, doc);
-        value indent = commonIndents.defaultIndent;
-        value nl = commonIndents.getDefaultLineDelimiter(doc);
+        value baseIndent = doc.getIndent(decNode);
+        value indent = doc.defaultIndent;
+        value nl = doc.defaultLineDelimiter;
         change.addEdit(ReplaceEdit {
             start = offset;
             length = length;

@@ -50,7 +50,7 @@ shared object testPlatform satisfies PlatformServices {
 
 shared object testIndents satisfies Indents<DefaultDocument> {
     getDefaultLineDelimiter(DefaultDocument? document) 
-            => document?.getDefaultLineDelimiter() else "\n";
+            => document?.defaultLineDelimiter else "\n";
     
     getLine(Node node, DefaultDocument doc)
             => doc.getLineContent(doc.getLineOfOffset(node.startIndex.intValue()));

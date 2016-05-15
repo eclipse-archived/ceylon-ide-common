@@ -27,7 +27,6 @@ import com.redhat.ceylon.ide.common.platform {
     TextChange,
     InsertEdit,
     ReplaceEdit,
-    indents=commonIndents,
     CompositeChange,
     CommonDocument
 }
@@ -420,12 +419,12 @@ shared class ExtractFunctionRefactoring(
         };
         
         value indent 
-                = indents.getDefaultLineDelimiter(document) 
-                + indents.getIndent(decNode, document);
+                = document.defaultLineDelimiter 
+                + document.getIndent(decNode);
         value extraIndent 
                 = indent 
-                + indents.defaultIndent 
-                + indents.defaultIndent;
+                + document.defaultIndent 
+                + document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -765,12 +764,12 @@ shared class ExtractFunctionRefactoring(
         }
         
         value indent =
-                indents.getDefaultLineDelimiter(document) +
-                indents.getIndent(decNode, document);
+                document.defaultLineDelimiter +
+                document.getIndent(decNode);
         value extraIndent =
-            indent +
-                    indents.defaultIndent +
-                    indents.defaultIndent;
+                indent +
+                document.defaultIndent +
+                document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -826,7 +825,7 @@ shared class ExtractFunctionRefactoring(
             typeOrKeyword = "dynamic";
         }
         
-        value bodyIndent = indent + indents.defaultIndent;
+        value bodyIndent = indent + document.defaultIndent;
         value definition = StringBuilder();
         definition
             .append(typeOrKeyword)
@@ -916,8 +915,8 @@ shared class ExtractFunctionRefactoring(
                     .append("value tuple = ")
                     .append(call);
                 value ind =
-                        indents.getDefaultLineDelimiter(document) +
-                        indents.getIndent(ss.last, document);
+                        document.defaultLineDelimiter +
+                        document.getIndent(ss.last);
                 variable value i = 0;
                 for (result->rdec in results) {
                     invocation

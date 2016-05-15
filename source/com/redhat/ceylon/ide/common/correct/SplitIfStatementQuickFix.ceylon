@@ -6,7 +6,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    commonIndents,
     InsertEdit,
     ReplaceEdit,
     CommonDocument,
@@ -41,9 +40,9 @@ shared object splitIfStatementQuickFix {
                             ws = " ";
                             indent = "";
                         } else {
-                            ws = commonIndents.getDefaultLineDelimiter(doc)
-                                    + commonIndents.getIndent(ifSt, doc);
-                            indent = commonIndents.defaultIndent;
+                            ws = doc.defaultLineDelimiter
+                                    + doc.getIndent(ifSt);
+                            indent = doc.defaultIndent;
                         }
                         
                         value start = c1.endIndex.intValue();
@@ -85,9 +84,9 @@ shared object splitIfStatementQuickFix {
                                     "Split If Statement", doc);
                         change.initMultiEdit();
                         value ws 
-                                = commonIndents.getDefaultLineDelimiter(doc)
-                                + commonIndents.getIndent(ifSt, doc);
-                        value indent = commonIndents.defaultIndent;
+                                = doc.defaultLineDelimiter
+                                + doc.getIndent(ifSt);
+                        value indent = doc.defaultIndent;
                         value start = block.startIndex.intValue();
                         change.addEdit( 
                             InsertEdit {

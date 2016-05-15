@@ -35,7 +35,6 @@ import com.redhat.ceylon.ide.common.platform {
     TextEdit,
     ReplaceEdit,
     DeleteEdit,
-    commonIndents,
     InsertEdit
 }
 import com.redhat.ceylon.ide.common.typechecker {
@@ -676,8 +675,6 @@ shared abstract class ChangeParametersRefactoring(
         return false;
     }
 
-    value indents => commonIndents;
-    
     void refactorArgumentLists(ParameterList list, TextChange tfc, 
         Tree.CompilationUnit root, JList<CommonToken> tokens) {
         
@@ -733,9 +730,9 @@ shared abstract class ChangeParametersRefactoring(
                     if (doc.getLineOfOffset(stopOffset) 
                             > doc.getLineOfOffset(startOffset)) {
                         argString = 
-                                  indents.defaultIndent + argString + ";"
-                                + indents.getDefaultLineDelimiter(doc)
-                                + indents.getIndent(nal, doc);
+                                  doc.defaultIndent + argString + ";"
+                                + doc.defaultLineDelimiter
+                                + doc.getIndent(nal);
                     } else if (startOffset == stopOffset-1) {
                         argString = " " + argString + "; ";
                     } else {

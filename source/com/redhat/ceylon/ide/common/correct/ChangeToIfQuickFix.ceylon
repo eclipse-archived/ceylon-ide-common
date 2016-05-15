@@ -7,7 +7,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    commonIndents,
     ReplaceEdit,
     InsertEdit
 }
@@ -42,8 +41,8 @@ shared object changeToIfQuickFix {
                 };
                 change.initMultiEdit();
                 value doc = change.document;
-                value newline = commonIndents.getDefaultLineDelimiter(doc);
-                value indent = commonIndents.getIndent(last, doc);
+                value newline = doc.defaultLineDelimiter;
+                value indent = doc.getIndent(last);
                 value begin = statement.startIndex.intValue();
                 value end = conditionList.startIndex.intValue();
                 
@@ -63,7 +62,7 @@ shared object changeToIfQuickFix {
                 while (i < statements.size()) {
                     change.addEdit(InsertEdit {
                         start = statements.get(i).startIndex.intValue();
-                        text = commonIndents.defaultIndent;
+                        text = doc.defaultIndent;
                     }
                     );
                     i++;
@@ -79,7 +78,7 @@ shared object changeToIfQuickFix {
                 change.addEdit(InsertEdit {
                     start = last.endIndex.intValue();
                     text = newline + indent + "else {" + newline 
-                        + indent + commonIndents.defaultIndent
+                        + indent + doc.defaultIndent
                         + "assert (false);" + newline + indent + "}";
                 });
                 

@@ -4,8 +4,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
-    ReplaceEdit,
-    commonIndents
+    ReplaceEdit
 }
 
 shared object convertForToWhileQuickFix {
@@ -30,8 +29,8 @@ shared object convertForToWhileQuickFix {
                     text = "value it = "
                         + doc.getText(e.startIndex.intValue(), e.distance.intValue())
                         + ".iterator();" 
-                        + commonIndents.getDefaultLineDelimiter(doc)
-                        + commonIndents.getIndent(forSt, doc);
+                        + doc.defaultLineDelimiter
+                        + doc.getIndent(forSt);
                 });
             change.addEdit(
                 ReplaceEdit {

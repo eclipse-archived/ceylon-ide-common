@@ -1,28 +1,82 @@
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Node
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+
+import java.lang {
+    StringBuilder
+}
+
 shared interface CommonDocument {
+    
     shared formal Integer getLineOfOffset(Integer offset);
 
     shared formal Integer getLineStartOffset(Integer line);
     shared formal Integer getLineEndOffset(Integer line);
+    
     shared DefaultRegion getLineRegion(Integer line)
-        => let (start = getLineStartOffset(line))
-            DefaultRegion(start, getLineEndOffset(line) - start);
+        => let (start = getLineStartOffset(line),
+                end = getLineEndOffset(line))
+            DefaultRegion(start, end-start);
     
     shared formal String getText(Integer offset, Integer length);
     
-    shared Character getChar(Integer offset) => getText(offset, 1).first else ' ';
+    shared Character getChar(Integer offset) 
+            => getText(offset, 1).first else ' ';
     
-    shared formal String getLineContent(Integer line);
+    shared default String getLineContent(Integer line)
+            => let (region=getLineRegion(line))
+                getText(region.start, region.length);
     
-    shared formal String getDefaultLineDelimiter();
+    shared formal String defaultLineDelimiter;
+    
+    shared String getLine(Node node) 
+            => getLineContent(node.token.line - 1);
+    
+    shared String getIndent(Node node) {
+        if (exists endToken = node.endToken,
+            endToken.line!=0) {
+            value line = getLine(node);
+            value loc = line.firstIndexWhere((c) => c != '\t' && c != ' ');
+            return if (exists loc) then line.initial(loc) else line;
+        }
+        else {
+            return "";
+        }
+    }
+    
+    shared String defaultIndent {
+        StringBuilder result = StringBuilder();
+        initialIndent(result);
+        return result.string;
+    }
+    
+    shared void initialIndent(StringBuilder buf) {
+        //guess an initial indent level
+        if (indentWithSpaces) {
+            value spaces = indentSpaces;
+            for (i in 1..spaces) {
+                buf.append(' ');
+            }
+        }
+        else {
+            buf.append('\t');
+        }
+    }
+    
+    shared formal Integer indentSpaces;
+    shared formal Boolean indentWithSpaces;
+
 }
 
-shared class DefaultDocument(_text) satisfies CommonDocument {
+shared class DefaultDocument(_text) 
+        satisfies CommonDocument {
 
     variable String _text;
-    variable String[] lines = _text.linesWithBreaks.sequence();
+    variable String[] lines 
+            = _text.linesWithBreaks.sequence();
 
     shared String text => _text;
     assign text {
@@ -30,17 +84,18 @@ shared class DefaultDocument(_text) satisfies CommonDocument {
         lines = text.linesWithBreaks.sequence();
     }
     
-    getDefaultLineDelimiter() => "\n";
+    defaultLineDelimiter => "\n";
     
     getLineContent(Integer line) => lines[line - 1] else "";
     
     getLineStartOffset(Integer line)
-            => if (line == 1)
-    then 0
-    else lines[0..line - 2].fold(0)((size, str) => size + str.size);
+            => if (line == 1) then 0
+            else lines[0..line - 2].fold(0)
+                ((size, str) => size + str.size);
     
     getLineEndOffset(Integer line)
-            => lines[0..line - 1].fold(0)((size, str) => size + str.size);
+            => lines[0..line - 1].fold(0)
+                ((size, str) => size + str.size);
     
     shared actual Integer getLineOfOffset(Integer offset) {
         variable value size = 0;
@@ -59,4 +114,9 @@ shared class DefaultDocument(_text) satisfies CommonDocument {
     
     getText(Integer offset, Integer length)
             => text.substring(offset, offset + length);
+    
+    indentSpaces => 4;
+    
+    indentWithSpaces => true;
+    
 }

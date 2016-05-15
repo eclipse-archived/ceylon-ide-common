@@ -8,7 +8,6 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     DeleteEdit,
     ReplaceEdit,
-    commonIndents,
     CommonDocument,
     TextChange
 }
@@ -43,8 +42,8 @@ shared object joinIfStatementsQuickFix {
                         ifSt = inner;
                         cl = icl;
                         change = change;
-                        indent = commonIndents.getIndent(inner, doc);
-                        outerIndent = commonIndents.getIndent(statement, doc);
+                        indent = doc.getIndent(inner);
+                        outerIndent = doc.getIndent(statement);
                     };
                     change.addEdit(DeleteEdit {
                         start = inner.endIndex.intValue();
@@ -81,8 +80,8 @@ shared object joinIfStatementsQuickFix {
                         ifSt = inner;
                         cl = icl;
                         change = change;
-                        indent = commonIndents.getIndent(inner, doc);
-                        outerIndent = commonIndents.getIndent(statement, doc);
+                        indent = doc.getIndent(inner);
+                        outerIndent = doc.getIndent(statement);
                     };
                     
                     change.addEdit(DeleteEdit {
@@ -100,7 +99,7 @@ shared object joinIfStatementsQuickFix {
     void decrementIndent(CommonDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
         TextChange change, String indent, String outerIndent) {
         
-        value defaultIndent = commonIndents.defaultIndent;
+        value defaultIndent = doc.defaultIndent;
         variable Integer line = doc.getLineOfOffset(cl.stopIndex.intValue()) + 1;
         while (line < doc.getLineOfOffset(ifSt.stopIndex.intValue())) {
             value lineText = doc.getLineContent(line);

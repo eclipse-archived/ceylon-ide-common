@@ -3,7 +3,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    commonIndents,
     InsertEdit
 }
 import com.redhat.ceylon.ide.common.refactoring {
@@ -40,15 +39,13 @@ shared object addConstructorQuickFix {
                 value uninitialized 
                         = correctionUtil.collectUninitializedMembers(body);
                 value les = findLastExecutable(body);
-                value defaultIndent 
-                        = commonIndents.defaultIndent;
-                value delim 
-                        = commonIndents.getDefaultLineDelimiter(doc);
+                value defaultIndent = doc.defaultIndent;
+                value delim = doc.defaultLineDelimiter;
                 value indent 
                         = if (!exists les)
-                        then commonIndents.getIndent(cd, doc) 
+                        then doc.getIndent(cd) 
                                 + defaultIndent
-                        else commonIndents.getIndent(les, doc);
+                        else doc.getIndent(les);
                 value unit = cd.unit;
                 value params = StringBuilder();
                 value initializers = StringBuilder();
@@ -93,7 +90,7 @@ shared object addConstructorQuickFix {
                     if (body.endIndex.intValue()-1 == start) {
                         textWithWs 
                                 = text + delim 
-                                + commonIndents.getIndent(cd, doc);
+                                + doc.getIndent(cd);
                     }
                     else {
                         textWithWs = text;

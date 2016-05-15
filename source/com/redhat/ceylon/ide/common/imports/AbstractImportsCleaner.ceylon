@@ -13,7 +13,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.platform {
-    indents=commonIndents,
     CommonDocument,
     platformServices,
     ReplaceEdit
@@ -48,7 +47,7 @@ shared interface AbstractImportsCleaner {
                 if (il.imports.empty) {
                     start = 0;
                     length = 0;
-                    extra = indents.getDefaultLineDelimiter(doc);
+                    extra = doc.defaultLineDelimiter;
                 } else {
                     start = il.startIndex.intValue();
                     length = il.distance.intValue();
@@ -105,7 +104,7 @@ shared interface AbstractImportsCleaner {
         
         value builder = StringBuilder();
         variable String? lastToplevel = null;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value delim = doc.defaultLineDelimiter;
         for (packageName->imports in packages) {
             value _hasWildcard = hasWildcard(imports);
             value list = getUsedImportElements(imports, unused, _hasWildcard, packages);
@@ -160,7 +159,7 @@ shared interface AbstractImportsCleaner {
                          else currentPackage.spanTo(index - 1);
         
         if (exists lastToplevel, !topLevel.equals(lastToplevel)) {
-            builder.append(indents.getDefaultLineDelimiter(doc));
+            builder.append(doc.defaultLineDelimiter);
         }
         
         return topLevel;
@@ -170,8 +169,8 @@ shared interface AbstractImportsCleaner {
         List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
         StringBuilder builder, CommonDocument doc) {
         
-        value indent = indents.defaultIndent;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value indent = doc.defaultIndent;
+        value delim = doc.defaultLineDelimiter;
         
         for (i in elements) {
             if (exists d = i.declarationModel,
@@ -212,8 +211,8 @@ shared interface AbstractImportsCleaner {
     void appendNestedImportElements(Tree.ImportMemberOrType imt,
         List<Declaration> unused, StringBuilder builder, CommonDocument doc) {
         
-        value indent = indents.defaultIndent;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value indent = doc.defaultIndent;
+        value delim = doc.defaultLineDelimiter;
         
         if (imt.importMemberOrTypeList exists) {
             builder.append(" {");
