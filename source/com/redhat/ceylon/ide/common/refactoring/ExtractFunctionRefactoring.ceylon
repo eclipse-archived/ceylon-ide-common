@@ -321,7 +321,7 @@ shared class ExtractFunctionRefactoring(
                         .append(t.name)
                         .append(" satisfies ");
                     for (boundType in sts) {
-                        importProposals.addImportedType(boundType);
+                        importProposals.importedType(boundType);
                         constraints
                             .append(boundType.asSourceCodeString(unit))
                             .appendCharacter('&');
@@ -406,7 +406,7 @@ shared class ExtractFunctionRefactoring(
             } else {
                 value paramType 
                         = unit.denotableType(bme.typeModel);
-                importProposals.addImportedType(paramType);
+                importProposals.importedType(paramType);
                 params.append(paramType.asSourceCodeString(unit));
             }
             
@@ -472,7 +472,7 @@ shared class ExtractFunctionRefactoring(
             else if (explicitType || dec.toplevel) {
                 typeOrKeyword 
                         = returnType.asSourceCodeString(unit);
-                importProposals.addImportedType(returnType);
+                importProposals.importedType(returnType);
             }
             else {
                 typeOrKeyword = "function";
@@ -505,7 +505,7 @@ shared class ExtractFunctionRefactoring(
             refStart = start;
         }
         
-        value shift = importProposals.applyAddedImports(tfc);
+        value shift = importProposals.apply(tfc);
         
         value decStart = decNode.startIndex.intValue();
         tfc.addEdit(InsertEdit {
@@ -612,7 +612,7 @@ shared class ExtractFunctionRefactoring(
         TypedDeclaration rdec, Unit unit) {
         if (result is Tree.AttributeDeclaration) {
             if (rdec.shared, exists type = rdec.type) {
-                importProposals.addImportedType(type);
+                importProposals.importedType(type);
                 return "shared ``type.asSourceCodeString(unit)`` ";
             } else {
                 return "value ";
@@ -753,7 +753,7 @@ shared class ExtractFunctionRefactoring(
                     } else {
                         value paramType 
                                 = unit.denotableType(bme.typeModel);
-                        importProposals.addImportedType(paramType);
+                        importProposals.importedType(paramType);
                         params.append(paramType.asSourceCodeString(unit));
                     }
                     
@@ -818,7 +818,7 @@ shared class ExtractFunctionRefactoring(
             if (explicitType || dec.toplevel) {
                 typeOrKeyword 
                         = returnType.asSourceCodeString(unit);
-                importProposals.addImportedType(returnType);
+                importProposals.importedType(returnType);
             } else {
                 typeOrKeyword = "function";
             }
@@ -840,7 +840,7 @@ shared class ExtractFunctionRefactoring(
             if (!result is Tree.Declaration &&
                         !rdec.variable) { //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
-                importProposals.addImportedType(resultType);
+                importProposals.importedType(resultType);
                 definition
                     .append(bodyIndent)
                     .append(resultType.asSourceCodeString(unit))
@@ -945,7 +945,7 @@ shared class ExtractFunctionRefactoring(
                     .append(call);
         }
         
-        value shift = importProposals.applyAddedImports(tfc);
+        value shift = importProposals.apply(tfc);
         
         value decStart = decNode.startIndex.intValue();
         tfc.addEdit(InsertEdit {

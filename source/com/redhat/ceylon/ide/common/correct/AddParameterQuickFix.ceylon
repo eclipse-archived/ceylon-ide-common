@@ -175,14 +175,15 @@ shared object addParameterQuickFix {
                 String explicitType;
                 if (exists pt = type.typeModel) {
                     paramType = pt;
-                    explicitType = pt.asString();
+                    explicitType 
+                            = pt.asSourceCodeString(type.unit);
                     value importProposals 
                             = CommonImportProposals {
                         document = data.document;
                         rootNode = data.rootNode;
                     };
-                    importProposals.addImportedType(paramType);
-                    shift = importProposals.applyAddedImports(change);
+                    importProposals.importedType(paramType);
+                    shift = importProposals.apply(change);
                 }
                 else {
                     explicitType = "Object";

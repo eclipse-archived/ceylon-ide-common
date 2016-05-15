@@ -31,35 +31,35 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
     
     value imports = JHashSet<Declaration>();
     
-    shared void addImportedDeclaration(Declaration declaration)
+    shared void importDeclaration(Declaration declaration)
             => delegate.importDeclaration {
                 declaration = declaration;
                 declarations = imports;
                 rootNode = rootNode;
             };
     
-    shared void addImportedType(Type? type)
+    shared void importedType(Type? type)
             => delegate.importType {
                 type = type;
                 declarations = imports;
                 rootNode = rootNode;
             };
     
-    shared void addImportedTypes({Type*} types)
+    shared void importTypes({Type*} types)
             => delegate.importTypes {
                 types = JavaIterable(types);
                 declarations = imports;
                 rootNode = rootNode;
             };
     
-    shared void addImportedSignatureTypes(Declaration declaration)
+    shared void importSignatureTypes(Declaration declaration)
             => delegate.importSignatureTypes {
                 declaration = declaration;
                 declarations = imports;
                 rootNode = rootNode;
             };
         
-    shared Integer applyAddedImports(TextChange change) 
+    shared Integer apply(TextChange change) 
             => delegate.applyImports(change, imports, rootNode, document);
     
     object delegate satisfies ImportProposals<PhasedUnit,Nothing,CommonDocument,InsertEdit,TextEdit,TextChange> {
