@@ -1,17 +1,23 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    DeleteEdit
+}
 
-shared interface FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object fillInArgumentNameQuickFix {
 
-    shared void addFillInArgumentNameProposal(Data data, IFile file, Tree.SpecifiedArgument sa) {
+    shared void addFillInArgumentNameProposal(QuickFixData data, Tree.SpecifiedArgument sa) {
         value id = sa.identifier;
         if (!id.token exists) {
-            value change = newTextChange("Fill in argument name", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.createTextChange {
+                name = "Fill in argument name";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
 
             if (exists e = sa.specifierExpression.expression) {
                 value name = id.text;
@@ -24,14 +30,23 @@ shared interface FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                     //and      void (Param param) {};
                     //becomes  void fun(Param param) {}
                     if (!fa.parameterLists.empty) {
-                        value startIndex = fa.parameterLists.get(0).startIndex;
+                        value startIndex 
+                                = fa.parameterLists
+                                    .get(0)
+                                    .startIndex;
                         if (!fa.type.token exists) {
                             //only really necessary if the anon 
                             //function has a block instead of => 
-                            addEditToChange(change, newInsertEdit(startIndex.intValue(), "function "));
+                            change.addEdit(InsertEdit {
+                                start = startIndex.intValue();
+                                text = "function ";
+                            });
                         }
                         
-                        addEditToChange(change, newInsertEdit(startIndex.intValue(), name));
+                        change.addEdit(InsertEdit {
+                            start = startIndex.intValue();
+                            text = name;
+                        });
                         
                         try {
                             //if it is an anon function with a body,
@@ -39,10 +54,10 @@ shared interface FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                             //required by the named arg list syntax
                             if (fa.block exists) {
                                 value offset = sa.endIndex.intValue() - 1;
-                                value doc = getDocumentForChange(change);
+                                value doc = change.document;
                                 
-                                if (getDocContent(doc, offset, 1) == ";") {
-                                    addEditToChange(change, newDeleteEdit(offset, 1));
+                                if (doc.getText(offset, 1) == ";") {
+                                    change.addEdit(DeleteEdit(offset, 1));
                                 }
                             }
                         } catch (Exception ex) {
@@ -52,12 +67,17 @@ shared interface FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                     //convert other args to specified named args
                     //i.e.     arg;
                     //becomes  name = arg;
-                    addEditToChange(change, newInsertEdit(sa.startIndex.intValue(), name + " = "));
+                    change.addEdit(InsertEdit {
+                        start = sa.startIndex.intValue();
+                        text = name + " = ";
+                    });
                 }
                 
-                if (hasChildren(change)) {
-                    value desc = "Fill in argument name '" + name + "'";
-                    newProposal(data, desc, change);
+                if (change.hasEdits) {
+                    data.addQuickFix {
+                        desc = "Fill in argument name '``name``'";
+                        change = change;
+                    };
                 }
             }
         }

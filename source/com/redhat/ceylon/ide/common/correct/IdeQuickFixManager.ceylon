@@ -64,8 +64,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
-    shared formal AddPunctuationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addPunctuationQuickFix;
-    shared formal AddParameterListQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addParameterListQuickFix;
     shared formal ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeDeclarationQuickFix;
     shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixAliasQuickFix;
     shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
@@ -73,7 +71,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addTypeParameterQuickFix;
     shared formal ShadowReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> shadowReferenceQuickFix; 
-    shared formal ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeInitialCaseQuickFix;
     shared formal FixMultilineStringIndentationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixMultilineStringIndentationQuickFix;
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
     shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> renameDescriptorQuickFix;
@@ -194,13 +191,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             //TODO: replace body with ;
         }
         case (1000|1001) {
-            addPunctuationQuickFix.addEmptyParameterListProposal(data, file);
-            addParameterListQuickFix.addParameterListProposal(data, file, false);
+            addPunctuationQuickFix.addEmptyParameterListProposal(data);
+            addParameterListQuickFix.addParameterListProposal(data, false);
             addConstructorQuickFix.addConstructorProposal(data);
             changeDeclarationQuickFix.addChangeDeclarationProposal(data, file);
         }
         case (1020) {
-            addPunctuationQuickFix.addImportWildcardProposal(data, file);
+            addPunctuationQuickFix.addImportWildcardProposal(data);
         }
         case (1050) {
             fixAliasQuickFix.addFixAliasProposal(data, file);
@@ -230,7 +227,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addAnnotations.addMakeFormalDecProposal(node, data);
             addParameterQuickFix.addParameterProposals(data);
             addInitializerQuickFix.addInitializerProposals(data);
-            addParameterListQuickFix.addParameterListProposal(data, file, false);
+            addParameterListQuickFix.addParameterListProposal(data, false);
             addConstructorQuickFix.addConstructorProposal(data);
         }
         case (1610) {
@@ -284,7 +281,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             shadowReferenceQuickFix.addShadowSwitchReferenceProposal(data, file);
         }
         case (5001|5002) {
-            changeInitialCaseQuickFix.addChangeIdentifierCaseProposal(data, file);
+            changeInitialCaseQuickFix.addChangeIdentifierCaseProposal(data);
         }
         case (6000) {
             fixMultilineStringIndentationQuickFix.addFixMultilineStringIndentation(data, file);

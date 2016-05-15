@@ -1,58 +1,56 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import java.lang {
-    JString=String,
-    Character
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
 }
-shared interface ChangeInitialCaseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object changeInitialCaseQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change);
-    
-    shared void addChangeIdentifierCaseProposal(Data data, IFile file) {
-        variable Tree.Identifier? identifier = null;
-        
-        if (is Tree.Declaration td = data.node) {
-            value id = td.identifier;
+    shared void addChangeIdentifierCaseProposal(QuickFixData data) {
+        switch (node = data.node)
+        case (is Tree.Declaration) {
+            value id = node.identifier;
             if (!id.text.empty) {
-                identifier = id;
+                addProposal(id, data);
             }
-        } else if (is Tree.ImportPath ip = data.node) {
-            value id = ip.identifiers;
-
-            for (importIdentifier in id) {
+        }
+        case (is Tree.ImportPath) {
+            for (importIdentifier in node.identifiers) {
                 if (exists text = importIdentifier.text,
                     !text.empty,
                     text.first?.uppercase else false) {
-                    
-                    identifier = importIdentifier;
+                    addProposal(importIdentifier, data);
                     break;
                 }
             }
         }
-        
-        if (exists id = identifier) {
-            addProposal(id, data, file);
-        }
+        else {}
     }
 
-    void addProposal(Tree.Identifier identifier, Data data, IFile file) {
-        value oldIdentifier = JString(identifier.text);
-        value first = oldIdentifier.codePointAt(0);
-        value newFirst = if (Character.isUpperCase(first)) 
-                         then Character.toLowerCase(first) 
-                         else Character.toUpperCase(first);
-        value newFirstLetter = JString(Character.toChars(newFirst));
-        value newIdentifier = newFirstLetter.concat(oldIdentifier.substring(Character.charCount(first)));
-
-        value change = newTextChange("Change initial case of identifier", file);
-        addEditToChange(change, newReplaceEdit(identifier.startIndex.intValue(), 1, newFirstLetter.string));
-        
-        value desc = "Change initial case of identifier to '" + newIdentifier + "'";
-        newProposal(data, desc, change);
+    void addProposal(Tree.Identifier identifier, QuickFixData data) {
+        value oldIdentifier = identifier.text;
+        if (exists first = oldIdentifier.first) {
+            value newFirstLetter
+                    = first.uppercase then first.lowercased 
+                                      else first.uppercased;
+            value newIdentifier
+                    = newFirstLetter.string
+                    + oldIdentifier.spanFrom(1);
+            
+            value change = platformServices.createTextChange {
+                name = "Change Initial Case of Identifier";
+                input = data.phasedUnit;
+            };
+            change.addEdit(ReplaceEdit {
+                start = identifier.startIndex.intValue();
+                length = 1;
+                text = newFirstLetter.string;
+            });
+            data.addQuickFix {
+                desc = "Change initial case of identifier to '``newIdentifier``'";
+                change = change;
+            };
+        }
     }
 }

@@ -1,31 +1,39 @@
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    commonIndents,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.model.typechecker.model {
     Function,
     Value
 }
-shared interface ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+
+shared object convertToBlockQuickFix {
     
-    shared void addConvertToBlockProposal(Data data, IFile file, Node decNode) {
-        value change = newTextChange("Convert to Block", file);
-        initMultiEditChange(change);
-        variable Integer offset;
+    shared void addConvertToBlockProposal(QuickFixData data, Node decNode) {
+        value change 
+                = platformServices.createTextChange {
+            name = "Convert to Block";
+            input = data.phasedUnit;
+        };
+        change.initMultiEdit();
+        
+        Integer offset;
         Integer length;
         String semi;
         Boolean isVoid;
-        variable String? addedKeyword = null;
-        variable value desc = "Convert => to block";
-        
-        if (is Tree.MethodDeclaration md = decNode) {
-            Function? dm = md.declarationModel;
+        String? addedKeyword;
+        switch (decNode)
+        case (is Tree.MethodDeclaration) {
+            Function? dm = decNode.declarationModel;
             if (!exists dm) {
                 return;
             }
@@ -34,21 +42,25 @@ shared interface ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
             }
             
             isVoid = dm.declaredVoid;
-            value pls = md.parameterLists;
+            value pls = decNode.parameterLists;
             if (pls.empty) {
                 return;
             }
             
-            offset = pls.get(pls.size() - 1).endIndex.intValue();
 
-            if (exists tcl = md.typeConstraintList) {
+            if (exists tcl = decNode.typeConstraintList) {
                 offset = tcl.endIndex.intValue();
             }
+            else {
+                offset = pls.get(pls.size() - 1).endIndex.intValue();
+            }
             
-            length = md.specifierExpression.expression.startIndex.intValue() - offset;
+            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
             semi = "";
-        } else if (is Tree.AttributeDeclaration ad = decNode) {
-            Value? dm = ad.declarationModel;
+            addedKeyword = null;
+        }
+        case (is Tree.AttributeDeclaration) {
+            Value? dm = decNode.declarationModel;
             if (!exists dm) {
                 return;
             }
@@ -57,87 +69,114 @@ shared interface ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,Text
             }
             
             isVoid = false;
-            offset = ad.identifier.endIndex.intValue();
-            length = ad.specifierOrInitializerExpression.expression.startIndex.intValue() - offset;
+            offset = decNode.identifier.endIndex.intValue();
+            length = decNode.specifierOrInitializerExpression.expression.startIndex.intValue() - offset;
             semi = "";
-        } else if (is Tree.AttributeSetterDefinition asd = decNode) {
+            addedKeyword = null;
+        }
+        case (is Tree.AttributeSetterDefinition) {
             isVoid = true;
-            offset = asd.identifier.endIndex.intValue();
-            length = asd.specifierExpression.expression.startIndex.intValue() - offset;
+            offset = decNode.identifier.endIndex.intValue();
+            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
             semi = "";
-        } else if (is Tree.MethodArgument ma = decNode) {
-            Function? dm = ma.declarationModel;
+            addedKeyword = null;
+        }
+        case (is Tree.MethodArgument) {
+            Function? dm = decNode.declarationModel;
             if (!exists dm) {
                 return;
             }
             
             isVoid = dm.declaredVoid;
-            if (!ma.type.token exists) {
+            if (!decNode.type.token exists) {
                 addedKeyword = "function ";
             }
+            else {
+                addedKeyword = null;
+            }
             
-            value pls = ma.parameterLists;
+            value pls = decNode.parameterLists;
             if (pls.empty) {
                 return;
             }
             
             offset = pls.get(pls.size() - 1).endIndex.intValue();
-            length = ma.specifierExpression.expression.startIndex.intValue() - offset;
+            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
             semi = "";
-        } else if (is Tree.AttributeArgument decNode) {
-            value aa = decNode;
+        }
+        case (is Tree.AttributeArgument) {
             isVoid = false;
-            if (!aa.type.token exists) {
+            if (!decNode.type.token exists) {
                 addedKeyword = "value ";
             }
+            else {
+                addedKeyword = null;
+            }
             
-            offset = aa.identifier.endIndex.intValue();
-            length = aa.specifierExpression.expression.startIndex.intValue() - offset;
+            offset = decNode.identifier.endIndex.intValue();
+            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
             semi = "";
-        } else if (is Tree.FunctionArgument decNode) {
-            value fun = decNode;
-            Function? dm = fun.declarationModel;
-            
+        }
+        case (is Tree.FunctionArgument) {
+            Function? dm = decNode.declarationModel;
             if (!exists dm) {
                 return;
             }
             
             isVoid = dm.declaredVoid;
-            value pls = fun.parameterLists;
+            value pls = decNode.parameterLists;
             if (pls.empty) {
                 return;
             }
             
-            offset = pls.get(pls.size() - 1).endIndex.intValue();
-
-            if (exists tcl = fun.typeConstraintList) {
+            if (exists tcl = decNode.typeConstraintList) {
                 offset = tcl.endIndex.intValue();
             }
+            else {
+                offset = pls.get(pls.size() - 1).endIndex.intValue();
+            }
             
-            length = fun.expression.startIndex.intValue() - offset;
+            length = decNode.expression.startIndex.intValue() - offset;
             semi = ";";
-            desc = "Convert anonymous function => to block";
-        } else {
+            addedKeyword = null;
+        }
+        else {
             return;
         }
         
-        if (exists kw = addedKeyword) {
-            value loc = decNode.startIndex.intValue();
-            addEditToChange(change, newInsertEdit(loc, kw));
+        if (exists addedKeyword) {
+            change.addEdit(InsertEdit {
+                start = decNode.startIndex.intValue();
+                text = addedKeyword;
+            });
         }
         
-        value doc = getDocumentForChange(change);
-        value baseIndent = indents.getIndent(decNode, doc);
-        value indent = indents.defaultIndent;
-        value nl = indents.getDefaultLineDelimiter(doc);
-        value text = " {" + nl
-                + baseIndent + indent + (if (isVoid) then "" else "return ");
-        addEditToChange(change, newReplaceEdit(offset, length, text));
-        addEditToChange(change, newInsertEdit(decNode.endIndex.intValue(), 
-            semi + nl + baseIndent + "}"));
+        value doc = change.document;
+        value baseIndent = commonIndents.getIndent(decNode, doc);
+        value indent = commonIndents.defaultIndent;
+        value nl = commonIndents.getDefaultLineDelimiter(doc);
+        change.addEdit(ReplaceEdit {
+            start = offset;
+            length = length;
+            text = " {" + nl
+                + baseIndent + indent 
+                + (if (isVoid) then "" else "return ");
+        });
+        change.addEdit(InsertEdit {
+            start = decNode.endIndex.intValue();
+            text = semi + nl + baseIndent + "}";
+        });
         
-        value newOffset = offset + 2 + nl.size + baseIndent.size + indent.size;
-        newProposal(data, desc, change, DefaultRegion(newOffset, 0));
+        data.addQuickFix {
+            desc = decNode is Tree.FunctionArgument
+                then "Convert anonymous function => to block"
+                else "Convert => to block";
+            change = change;
+            selection = DefaultRegion {
+                start = offset + 2 + nl.size + baseIndent.size + indent.size;
+                length = 0;
+            };
+        };
     }
 
 }
