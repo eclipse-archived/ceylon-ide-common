@@ -1,6 +1,9 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
@@ -9,11 +12,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     BaseCeylonProject
 }
-
-import java.util {
-    ArrayList,
-    Collection
-}
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
     TextChange
@@ -21,13 +19,15 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
     Scope
+}
+
+import java.util {
+    ArrayList,
+    Collection
 }
 
 shared interface QuickFixData {
@@ -64,7 +64,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
-    shared formal ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeDeclarationQuickFix;
     shared formal FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> fixAliasQuickFix;
     shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
@@ -194,7 +193,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addPunctuationQuickFix.addEmptyParameterListProposal(data);
             addParameterListQuickFix.addParameterListProposal(data, false);
             addConstructorQuickFix.addConstructorProposal(data);
-            changeDeclarationQuickFix.addChangeDeclarationProposal(data, file);
+            changeDeclarationQuickFix.addChangeDeclarationProposal(data);
         }
         case (1020) {
             addPunctuationQuickFix.addImportWildcardProposal(data);

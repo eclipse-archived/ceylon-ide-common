@@ -4,21 +4,25 @@ import com.redhat.ceylon.compiler.typechecker.parser {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+
 import org.antlr.runtime {
     CommonToken
 }
 
-shared interface ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object changeDeclarationQuickFix {
 
-    shared formal void newProposal(Data data, String keyword, String desc, Integer position, TextChange change);
-    
-    shared void addChangeDeclarationProposal(Data data, IFile file) {
+    shared void addChangeDeclarationProposal(QuickFixData data) {
         assert (is Tree.Declaration decNode = data.node);
         if (exists token = decNode.mainToken) {
+            assert (is CommonToken token);
+
             String keyword;
             switch (decNode)
             case (is Tree.AnyClass) {
@@ -33,14 +37,25 @@ shared interface ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
             else {
                 return;
             }
-            
-            assert (is CommonToken token);
-            
-            value change = newTextChange("Change Declaration", file);
-            addEditToChange(change, newReplaceEdit(token.startIndex, token.text.size, keyword));
-            
-            value desc = "Change declaration to '" + keyword + "'";
-            newProposal(data, keyword, desc, token.startIndex, change);
+                        
+            value change 
+                    = platformServices.createTextChange {
+                name = "Change Declaration";
+                input = data.phasedUnit;
+            };
+            change.addEdit(ReplaceEdit {
+                start = token.startIndex;
+                length = token.text.size;
+                text = keyword;
+            });
+            data.addQuickFix {
+                desc = "Change declaration to '``keyword``'";
+                change = change;
+                selection = DefaultRegion {
+                    start = token.startIndex;
+                    length = keyword.size;
+                };
+            };
         }
     }
 }
