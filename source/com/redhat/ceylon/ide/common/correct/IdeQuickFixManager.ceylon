@@ -44,10 +44,12 @@ shared interface QuickFixData {
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false);
     
-    shared formal void addInitializerQuickFix(String desc, TextChange change,
+    shared formal void addInitializerQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type);
-    shared formal void addParameterQuickFix(String desc, TextChange change,
+    shared formal void addParameterQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type, Integer exitPos);
+    shared formal void addParameterListQuickFix(String description, TextChange change,
+        DefaultRegion selection);
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,Project,IFile,ICompletionProposal,Data,LinkedMode>()

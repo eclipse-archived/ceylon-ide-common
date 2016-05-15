@@ -236,7 +236,7 @@ shared object addParameterQuickFix {
                     then " of '``name``'" else "";
             
             data.addParameterQuickFix {
-                desc = "Add '``dec.name``' to parameter list``containerDesc``";
+                description = "Add '``dec.name``' to parameter list``containerDesc``";
                 change = change;
                 selection = DefaultRegion {
                     start = offset + param.size + shift - len;

@@ -11,6 +11,7 @@ import com.redhat.ceylon.ide.common.refactoring {
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
+
 shared object addParameterListQuickFix {
     
     shared void addParameterListProposal(QuickFixData data, Boolean evenIfEmpty) {
@@ -49,8 +50,11 @@ shared object addParameterListQuickFix {
                 });
                 
                 value description = correctionUtil.getDescription(node.declarationModel);
-                data.addQuickFix("Add initializer parameters '``params``' to ``description``", 
-                    change, DefaultRegion(offset + 1, 0));
+                data.addParameterListQuickFix {
+                    description = "Add initializer parameters '``params``' to ``description``";
+                    change = change;
+                    selection = DefaultRegion(offset + 1);
+                };
             }
         }
     }
