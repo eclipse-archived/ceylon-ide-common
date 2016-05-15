@@ -70,7 +70,7 @@ shared object assertExistsDeclarationQuickFix {
                 });
                 
                 data.addQuickFix {
-                    desc = "Change to 'assert (``existsOrNonempty`` ``dec.name``)'";
+                    description = "Change to 'assert (``existsOrNonempty`` ``dec.name``)'";
                     change = change;
                     selection = DefaultRegion {
                         start = idEndOffset + 8 + existsOrNonempty.size - typeLen;

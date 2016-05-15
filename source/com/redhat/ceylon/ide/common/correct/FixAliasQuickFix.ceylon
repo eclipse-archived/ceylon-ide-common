@@ -18,7 +18,7 @@ shared object fixAliasQuickFix {
         change.addEdit(ReplaceEdit(offset, 1, "=>"));
         
         data.addQuickFix {
-            desc = "Change = to =>";
+            description = "Change = to =>";
             change = change;
             selection = DefaultRegion(offset + 2);
         };

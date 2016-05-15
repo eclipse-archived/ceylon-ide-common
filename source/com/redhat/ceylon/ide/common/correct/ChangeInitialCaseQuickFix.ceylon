@@ -48,7 +48,7 @@ shared object changeInitialCaseQuickFix {
                 text = newFirstLetter.string;
             });
             data.addQuickFix {
-                desc = "Change initial case of identifier to '``newIdentifier``'";
+                description = "Change initial case of identifier to '``newIdentifier``'";
                 change = change;
             };
         }

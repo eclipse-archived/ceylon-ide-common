@@ -65,7 +65,7 @@ shared object shadowReferenceQuickFix {
                 }
                 
                 data.addQuickFix {
-                    desc = quickFixDesc;
+                    description = quickFixDesc;
                     change = change;
                     selection = DefaultRegion(loc, name.size);
                 };
@@ -110,7 +110,7 @@ shared object shadowReferenceQuickFix {
             }
             
             data.addQuickFix {
-                desc = quickFixDesc;
+                description = quickFixDesc;
                 change = change;
                 selection = DefaultRegion(offset, name.size);
             };
@@ -126,7 +126,7 @@ shared object shadowReferenceQuickFix {
             
             change.addEdit(InsertEdit(offset, name + " = "));
             data.addQuickFix {
-                desc = quickFixDesc;
+                description = quickFixDesc;
                 change = change;
                 selection = DefaultRegion(offset, name.size);
             };

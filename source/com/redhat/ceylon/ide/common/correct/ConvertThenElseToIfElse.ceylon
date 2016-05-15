@@ -188,7 +188,7 @@ shared object convertThenElseToIfElse {
         });
         
         data.addQuickFix {
-            desc = "Convert to 'if' 'else' statement";
+            description = "Convert to 'if' 'else' statement";
             change = change;
             selection = DefaultRegion(statement.startIndex.intValue(), 0);
         };

@@ -174,7 +174,7 @@ shared object splitDeclarationQuickFix {
             il = 0;
         }
         data.addQuickFix {
-            desc = "Split declaration of '``dec.name``'";
+            description = "Split declaration of '``dec.name``'";
             change = change;
             selection = DefaultRegion(idEndOffset + il, 0);
         };
@@ -236,7 +236,7 @@ shared object splitDeclarationQuickFix {
             change.addEdit(DeleteEdit(estart, eend - estart));
 
             data.addQuickFix {
-                desc = "Split declaration of '``varNode.declarationModel.name``'";
+                description = "Split declaration of '``varNode.declarationModel.name``'";
                 change = change;
                 selection = DefaultRegion(start + 6);
             };

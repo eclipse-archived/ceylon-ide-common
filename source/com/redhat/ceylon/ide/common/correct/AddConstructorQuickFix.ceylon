@@ -107,7 +107,7 @@ shared object addConstructorQuickFix {
                 value name = cd.declarationModel.name;
                 
                 data.addQuickFix { 
-                    desc = "Add constructor 'new (``params``)' of '``name``'"; 
+                    description = "Add constructor 'new (``params``)' of '``name``'"; 
                     change = change; 
                     selection = DefaultRegion(loc, 0);
                 };

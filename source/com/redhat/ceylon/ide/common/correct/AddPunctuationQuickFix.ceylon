@@ -31,7 +31,7 @@ shared object addPunctuationQuickFix {
         });
         
         data.addQuickFix {
-            desc = "Add '()' empty parameter list to " 
+            description = "Add '()' empty parameter list to " 
                 + correctionUtil.getDescription(dec);
             change = change;
             selection = DefaultRegion(offset + 1, 0);
@@ -55,7 +55,7 @@ shared object addPunctuationQuickFix {
             });
             
             data.addQuickFix {
-                desc = "Add '...' import wildcard";
+                description = "Add '...' import wildcard";
                 change = change;
                 selection = DefaultRegion(offset + 2, 3);
             };

@@ -167,7 +167,7 @@ shared object convertToBlockQuickFix {
         });
         
         data.addQuickFix {
-            desc = decNode is Tree.FunctionArgument
+            description = decNode is Tree.FunctionArgument
                 then "Convert anonymous function => to block"
                 else "Convert => to block";
             change = change;

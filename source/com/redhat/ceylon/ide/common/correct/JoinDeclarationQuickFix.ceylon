@@ -158,7 +158,7 @@ shared object joinDeclarationQuickFix {
         });
         
         data.addQuickFix {
-            desc = "Join declaration of '``dec.name``' with specification";
+            description = "Join declaration of '``dec.name``' with specification";
             change = change;
             selection = DefaultRegion(specifierStart-declarationLength);
         };

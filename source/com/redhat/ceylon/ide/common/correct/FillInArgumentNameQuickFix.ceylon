@@ -75,7 +75,7 @@ shared object fillInArgumentNameQuickFix {
                 
                 if (change.hasEdits) {
                     data.addQuickFix {
-                        desc = "Fill in argument name '``name``'";
+                        description = "Fill in argument name '``name``'";
                         change = change;
                     };
                 }

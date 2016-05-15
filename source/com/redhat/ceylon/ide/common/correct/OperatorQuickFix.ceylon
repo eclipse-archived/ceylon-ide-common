@@ -47,7 +47,7 @@ shared object operatorQuickFix {
                 text = doc.getText(lto, ltl);
             });
             data.addQuickFix {
-                desc = "Swap operands of ``boe.mainToken.text`` expression";
+                description = "Swap operands of ``boe.mainToken.text`` expression";
                 change = change;
             };
         }
@@ -91,7 +91,7 @@ shared object operatorQuickFix {
                 });
                 
                 data.addQuickFix {
-                    desc = "Convert ``ot`` to ``iot``";
+                    description = "Convert ``ot`` to ``iot``";
                     change = change;
                 };
             }
@@ -134,7 +134,7 @@ shared object operatorQuickFix {
                 }
                 
                 data.addQuickFix {
-                    desc = "Convert ``ot`` to ``iot``";
+                    description = "Convert ``ot`` to ``iot``";
                     change = change;
                 };
             }

@@ -40,7 +40,7 @@ shared interface QuickFixData {
     shared formal BaseCeylonProject ceylonProject;
     shared formal CommonDocument document;
     
-    shared formal void addQuickFix(String desc, TextChange change,
+    shared formal void addQuickFix(String description, TextChange change,
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false);
     

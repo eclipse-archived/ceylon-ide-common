@@ -46,7 +46,7 @@ shared object switchQuickFix {
             });
             
             data.addQuickFix {
-                desc = "Add 'else' clause";
+                description = "Add 'else' clause";
                 change = change;
                 selection = DefaultRegion {
                     start = offset + text.size - 1;
@@ -122,7 +122,7 @@ shared object switchQuickFix {
             });
             
             data.addQuickFix {
-                desc = "Add missing 'case' clauses";
+                description = "Add missing 'case' clauses";
                 change = change;
                 selection = DefaultRegion {
                     start = offset + text.size - 1;

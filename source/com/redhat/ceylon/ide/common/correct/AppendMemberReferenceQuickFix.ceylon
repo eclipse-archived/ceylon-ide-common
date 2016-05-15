@@ -90,7 +90,7 @@ shared object appendMemberReferenceQuickFix {
         });
         
         data.addQuickFix {
-            desc = "Append reference to member '``dec.name``' of type '``type.asString(node.unit)``'";
+            description = "Append reference to member '``dec.name``' of type '``type.asString(node.unit)``'";
             change = change;
             selection = DefaultRegion {
                 start = node.endIndex.intValue();

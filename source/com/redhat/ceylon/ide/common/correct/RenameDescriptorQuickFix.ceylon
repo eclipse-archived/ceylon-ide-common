@@ -25,7 +25,7 @@ shared object renameDescriptorQuickFix {
         });
         
         data.addQuickFix {
-            desc = "Rename to '``pack.qualifiedNameString``'";
+            description = "Rename to '``pack.qualifiedNameString``'";
             change = change;
             qualifiedNameIsPath = true;
         };

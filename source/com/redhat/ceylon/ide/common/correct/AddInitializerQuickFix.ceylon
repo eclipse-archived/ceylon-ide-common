@@ -57,7 +57,7 @@ shared object addInitializerQuickFix {
             });
             
             data.addQuickFix {
-                desc = "Add initializer to '``dec.name``'";
+                description = "Add initializer to '``dec.name``'";
                 change = change;
                 selection = DefaultRegion {
                     start = offset + specifier.size;

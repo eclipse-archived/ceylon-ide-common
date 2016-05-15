@@ -59,7 +59,7 @@ shared object expandTypeQuickFix {
                 });
                 
                 data.addQuickFix {
-                    desc = "Expand type abbreviation";
+                    description = "Expand type abbreviation";
                     change = change;
                     selection = DefaultRegion {
                         start = start;

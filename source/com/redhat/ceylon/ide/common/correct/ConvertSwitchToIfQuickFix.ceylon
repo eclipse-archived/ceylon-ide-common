@@ -146,7 +146,7 @@ shared object convertSwitchToIfQuickFix {
             }
             
             data.addQuickFix {
-                desc = "Convert 'switch' to 'if' chain";
+                description = "Convert 'switch' to 'if' chain";
                 change = change;
                 selection = DefaultRegion(sc.startIndex.intValue());
             };
@@ -271,7 +271,7 @@ shared object convertSwitchToIfQuickFix {
                     }
                     
                     data.addQuickFix {
-                        desc = "Convert 'if' to 'switch'";
+                        description = "Convert 'if' to 'switch'";
                         change = change;
                         selection = DefaultRegion(ifSt.startIndex.intValue());
                     };

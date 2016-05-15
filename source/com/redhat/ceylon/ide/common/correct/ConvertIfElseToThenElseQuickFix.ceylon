@@ -34,7 +34,7 @@ shared object convertIfElseToThenElseQuickFix {
                           .replace("Else", "'else'")
                     + " expression";
             data.addQuickFix {
-                desc = desc;
+                description = desc;
                 change = change;
                 selection = DefaultRegion(offset);
             };

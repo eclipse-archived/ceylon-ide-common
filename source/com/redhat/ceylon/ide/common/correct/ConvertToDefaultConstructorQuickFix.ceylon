@@ -194,7 +194,7 @@ shared object convertToDefaultConstructorQuickFix {
             });
             
             data.addQuickFix {
-                desc = "Convert '``statement.declarationModel.name``' to class with default constructor";
+                description = "Convert '``statement.declarationModel.name``' to class with default constructor";
                 change = change;
                 selection = DefaultRegion(statement.startIndex.intValue());
             };

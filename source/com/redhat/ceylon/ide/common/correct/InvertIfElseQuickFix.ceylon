@@ -99,7 +99,7 @@ shared object invertIfElseQuickFix {
                 });
             
             data.addQuickFix {
-                desc = "Invert 'if' 'then' 'else' expression";
+                description = "Invert 'if' 'then' 'else' expression";
                 change = change;
                 selection = DefaultRegion(ifExpr.startIndex.intValue());
             };
@@ -192,7 +192,7 @@ shared object invertIfElseQuickFix {
             });
         
         data.addQuickFix {
-            desc = "Invert 'if' 'else' statement";
+            description = "Invert 'if' 'else' statement";
             change = change;
             selection = DefaultRegion(ifStmt.startIndex.intValue());
         };

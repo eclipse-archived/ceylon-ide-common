@@ -41,7 +41,7 @@ shared object convertToGetterQuickFix {
 
                 value desc = "Convert '" + dec.name + "' to getter";
                 data.addQuickFix {
-                    desc = desc;
+                    description = desc;
                     change = change;
                     selection = DefaultRegion {
                         start = offset + space.size + 2;

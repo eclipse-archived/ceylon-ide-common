@@ -49,7 +49,7 @@ shared object changeDeclarationQuickFix {
                 text = keyword;
             });
             data.addQuickFix {
-                desc = "Change declaration to '``keyword``'";
+                description = "Change declaration to '``keyword``'";
                 change = change;
                 selection = DefaultRegion {
                     start = token.startIndex;

@@ -60,7 +60,7 @@ shared object convertToSpecifierQuickFix {
                 });
                 
                 data.addQuickFix {
-                    desc = if (anonymousFunction) 
+                    description = if (anonymousFunction) 
                         then "Convert anonymous function body to =>" 
                         else "Convert block to =>";
                     change = change;

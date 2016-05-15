@@ -83,7 +83,7 @@ shared object changeToIfQuickFix {
                 });
                 
                 data.addQuickFix {
-                    desc = "Change 'assert' to 'if'";
+                    description = "Change 'assert' to 'if'";
                     change = change;
                     selection = DefaultRegion {
                         start = statement.endIndex.intValue() - 3;

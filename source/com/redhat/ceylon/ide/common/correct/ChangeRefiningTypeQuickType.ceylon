@@ -75,7 +75,7 @@ shared object changeRefiningTypeQuickType {
                     text = type;
                 });
                 data.addQuickFix {
-                    desc = "Change type to '``type``'";
+                    description = "Change type to '``type``'";
                     change = change;
                     selection = DefaultRegion {
                         start = data.node.startIndex.intValue();
@@ -224,7 +224,7 @@ shared object changeRefiningTypeQuickType {
             
             if (change.hasEdits) {
                 data.addQuickFix {
-                    desc = "Fix refining parameter list";
+                    description = "Fix refining parameter list";
                     change = change;
                     selection = DefaultRegion {
                         start = list.startIndex.intValue() + 1;

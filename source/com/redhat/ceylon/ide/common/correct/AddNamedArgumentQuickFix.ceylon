@@ -65,7 +65,7 @@ shared object addNamedArgumentQuickFix {
             }
             
             data.addQuickFix {
-                desc 
+                description 
                     = if (multipleResults)
                     then "Fill in missing named arguments"
                     else "Fill in missing named argument '``(result else "")``'";
