@@ -67,13 +67,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
-    shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addTypeParameterQuickFix;
     shared formal AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addModuleImportQuickFix;
-    shared formal RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> renameDescriptorQuickFix;
-    shared formal ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeRefiningTypeQuickType;
-    shared formal SwitchQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> switchQuickFix;
-    shared formal ChangeToQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeToQuickFix;
-    shared formal AddNamedArgumentQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addNamedArgumentQuickFix;
     shared formal AssignToLocalQuickFix<IFile,Data> assignToLocalQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
@@ -264,7 +258,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addSpreadToVariadicParameterQuickFix.addSpreadToSequenceParameterProposal(data);
         }
         case (2500) {
-            addTypeParameterQuickFix.addTypeParameterProposal(data, file);
+            addTypeParameterQuickFix.addTypeParameterProposal(data);
         }
         case (3000) {
             assignToLocalQuickFix.addProposal(data, file);
@@ -288,27 +282,27 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             }
         }
         case (8000) {
-            renameDescriptorQuickFix.addRenameDescriptorProposal(data, file);
+            renameDescriptorQuickFix.addRenameDescriptorProposal(data);
             // TODO addMoveDirProposal
         }
         case (9000) {
-            changeRefiningTypeQuickType.addChangeRefiningTypeProposal(data, file);
+            changeRefiningTypeQuickType.addChangeRefiningTypeProposal(data);
         }
         case (9100|9200) {
-            changeRefiningTypeQuickType.addChangeRefiningParametersProposal(data, file);
+            changeRefiningTypeQuickType.addChangeRefiningParametersProposal(data);
         }
         case (10000) {
-            switchQuickFix.addElseProposal(data, file);
-            switchQuickFix.addCasesProposal(data, file);
+            switchQuickFix.addElseProposal(data);
+            switchQuickFix.addCasesProposal(data);
         }
         case (11000) {
-            addNamedArgumentQuickFix.addNamedArgumentsProposal(data, file);
+            addNamedArgumentQuickFix.addNamedArgumentsProposal(data);
         }
         case (12000|12100) {
-            changeToQuickFix.changeToVoid(data, file);
+            changeToQuickFix.changeToVoid(data);
         }
         case (13000) {
-            changeToQuickFix.changeToFunction(data, file);
+            changeToQuickFix.changeToFunction(data);
         }
         case (20000) {
             addAnnotations.addMakeNativeProposal(node, file, data);

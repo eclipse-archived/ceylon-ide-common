@@ -1,51 +1,69 @@
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
-    ModelUtil,
-    Type
+    ModelUtil
 }
+
 import java.util {
-    List,
     Collections
 }
 
 
-shared interface SwitchQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object switchQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
- 
-    shared void addElseProposal(Data data, IFile file) {
+    shared void addElseProposal(QuickFixData data) {
         if (is Tree.SwitchClause node = data.node, 
-            is Tree.SwitchStatement st = nodes.findStatement(data.rootNode, node)) {
-            
+            is Tree.SwitchStatement st 
+                    = nodes.findStatement {
+                        cu = data.rootNode;
+                        node = node;
+                    }) {
             value offset = st.endIndex.intValue();
-            value tfc = newTextChange("Add Else", file);
-            value doc = getDocumentForChange(tfc);
-            value text = indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc) + "else {}";
-            addEditToChange(tfc, newInsertEdit(offset, text));
-            value selection = DefaultRegion(offset + text.size - 1, 0);
+            value change 
+                    = platformServices.createTextChange {
+                name = "Add Else";
+                input = data.phasedUnit;
+            };
+            value doc = change.document;
+            value text 
+                    = doc.defaultLineDelimiter 
+                    + doc.getIndent(node) 
+                    + "else {}";
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = text;
+            });
             
-            newProposal(data, "Add 'else' clause", tfc, selection);
+            data.addQuickFix {
+                desc = "Add 'else' clause";
+                change = change;
+                selection = DefaultRegion {
+                    start = offset + text.size - 1;
+                };
+            };
         }
         //TODO: else handle switch *expressions* 
     }
 
-    shared void addCasesProposal(Data data, IFile file) {
+    shared void addCasesProposal(QuickFixData data) {
         //TODO: handle switch expressions!
         if (is Tree.SwitchClause sc = data.node, 
-            is Tree.SwitchStatement ss = nodes.findStatement(data.rootNode, sc), 
+            is Tree.SwitchStatement ss 
+                    = nodes.findStatement {
+                        cu = data.rootNode;
+                        node = sc;
+                    }, 
             exists e = sc.switched.expression, 
             exists _type = e.typeModel) {
             
@@ -77,30 +95,39 @@ shared interface SwitchQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
                 }
             }
             
-            value tfc = newTextChange("Add Cases", file);
-            value doc = getDocumentForChange(tfc);
-            variable value text = "";
-            variable List<Type> list;
+            value change 
+                    = platformServices.createTextChange {
+                name = "Add Cases";
+                input = data.phasedUnit;
+            };
+            value doc = change.document;
             
-            if (exists cts = type.caseTypes) {
-                list = cts;
-            } else {
-                list = Collections.singletonList(type);
-            }
-            
+            value text = StringBuilder();
+            value list = type.caseTypes 
+                else Collections.singletonList(type);
+            value unit = data.rootNode.unit;
             for (pt in list) {
-                value \iis = if (pt.declaration.anonymous) then "" else "is ";
-                value unit = data.rootNode.unit;
-                text += indents.getDefaultLineDelimiter(doc) 
-                        + indents.getIndent(data.node, doc)
-                        + "case (" + \iis + pt.asString(unit) + ") {}";
+                text.append(doc.defaultLineDelimiter)
+                    .append(doc.getIndent(data.node))
+                    .append("case (")
+                    .append(pt.declaration.anonymous then "" else "is ")
+                    .append(pt.asString(unit))
+                    .append(") {}");
             }
             
             value offset = ss.endIndex.intValue();
-            addEditToChange(tfc, newInsertEdit(offset, text));
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = text.string;
+            });
             
-            newProposal(data, "Add missing 'case' clauses", tfc, 
-                DefaultRegion(offset + text.size - 1, 0));
+            data.addQuickFix {
+                desc = "Add missing 'case' clauses";
+                change = change;
+                selection = DefaultRegion {
+                    start = offset + text.size - 1;
+                };
+            };
         }
     }
 }
