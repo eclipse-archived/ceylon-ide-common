@@ -33,7 +33,7 @@ shared interface CommonDocument {
     shared formal String defaultLineDelimiter;
     
     shared String getLine(Node node) 
-            => getLineContent(node.token.line - 1);
+            => getLineContent(node.token.line-1);
     
     shared String getIndent(Node node) {
         if (exists endToken = node.endToken,
@@ -68,6 +68,12 @@ shared interface CommonDocument {
     
     shared formal Integer indentSpaces;
     shared formal Boolean indentWithSpaces;
+    
+    shared String getNodeText(Node node) 
+            => this.getText {
+        offset = node.startIndex.intValue();
+        length = node.distance.intValue();
+    };
 
 }
 

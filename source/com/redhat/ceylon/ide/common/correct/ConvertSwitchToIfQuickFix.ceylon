@@ -1,66 +1,91 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    InsertEdit,
+    DeleteEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object convertSwitchToIfQuickFix {
  
-    shared void addConvertSwitchToIfProposal(Data data, IFile file, Tree.Statement? statement) {
-        if (is Tree.SwitchStatement statement) {
-            value ss = statement;
-            value tfc = newTextChange("Convert Switch To If", file);
-            initMultiEditChange(tfc);
-            Tree.SwitchClause? sc = ss.switchClause;
-            if (!exists sc) {
-                return;
-            }
-            
-            value scl = ss.switchCaseList;
-            Tree.Switched? switched = sc.switched;
-            if (!exists switched) {
-                return;
-            }
+    shared void addConvertSwitchToIfProposal(QuickFixData data, 
+     Tree.Statement? statement) {
+        if (is Tree.SwitchStatement statement,
+            exists sc = statement.switchClause,
+            exists scl = statement.switchCaseList,
+            exists switched = sc.switched) {
+            value change 
+                    = platformServices.createTextChange {
+                name = "Convert Switch To If";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             
             String name;
-            
             if (exists e = switched.expression) {
                 if (is Tree.BaseMemberExpression t = e.term) {
                     value bme = t;
                     name = bme.declaration.name;
-                    addEditToChange(tfc, newDeleteEdit(sc.startIndex.intValue(),
-                        scl.startIndex.intValue() - sc.startIndex.intValue()));
+                    change.addEdit(DeleteEdit {
+                        start = sc.startIndex.intValue();
+                        length = scl.startIndex.intValue() 
+                                - sc.startIndex.intValue();
+                    });
                 } else {
                     return;
                 }
-            } else if (exists v = switched.variable) {
+            }
+            else if (exists v = switched.variable) {
                 name = v.declarationModel.name;
-                addEditToChange(tfc, newReplaceEdit(sc.startIndex.intValue(),
-                    v.startIndex.intValue() - sc.startIndex.intValue(), "value "));
-                addEditToChange(tfc, newReplaceEdit(sc.endIndex.intValue() - 1, 1, ";"));
-            } else {
+                change.addEdit(ReplaceEdit {
+                    start = sc.startIndex.intValue();
+                    length = v.startIndex.intValue() 
+                            - sc.startIndex.intValue();
+                    text = "value ";
+                });
+                change.addEdit(ReplaceEdit {
+                    start = sc.endIndex.intValue() - 1;
+                    length = 1;
+                    text = ";";
+                });
+            }
+            else {
                 return;
             }
             
             variable String kw = "if";
             variable value i = 0;
-            
             for (cc in scl.caseClauses) {
                 value ci = cc.caseItem;
-                if (++i == scl.caseClauses.size(), !scl.elseClause exists) {
-                    addEditToChange(tfc, newReplaceEdit(cc.startIndex.intValue(),
-                        ci.endIndex.intValue() - cc.startIndex.intValue(), "else"));
-                } else {
-                    addEditToChange(tfc, newReplaceEdit(cc.startIndex.intValue(), 4, kw));
+                if (++i == scl.caseClauses.size(), 
+                    !scl.elseClause exists) {
+                    change.addEdit(ReplaceEdit {
+                        start = cc.startIndex.intValue();
+                        length = ci.endIndex.intValue() 
+                                - cc.startIndex.intValue();
+                        text = "else";
+                    });
+                }
+                else {
+                    change.addEdit(ReplaceEdit {
+                        start = cc.startIndex.intValue();
+                        length = 4;
+                        text = kw;
+                    });
                     kw = "else if";
-                    if (is Tree.IsCase ci) {
-                        addEditToChange(tfc, 
-                            newInsertEdit(ci.endIndex.intValue() - 1, " " + name));
-                    } else if (is Tree.MatchCase ci) {
+                    switch (ci)
+                    case (is Tree.IsCase) {
+                        change.addEdit(InsertEdit {
+                            start = ci.endIndex.intValue() - 1;
+                            text = " " + name;
+                        });
+                    }
+                    case (is Tree.MatchCase) {
                         value mc = ci;
                         value el = mc.expressionList;
                         if (el.expressions.size() == 1) {
@@ -72,48 +97,82 @@ shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                                 value start = ci.startIndex.intValue();
                                 value len = ci.distance.intValue() - 1;
 
-                                if (unit.nullValueDeclaration.equals(d)) {
-                                    addEditToChange(tfc, newReplaceEdit(start, len, "!exists " + name));
+                                if (d==unit.nullValueDeclaration) {
+                                    change.addEdit(ReplaceEdit {
+                                        start = start;
+                                        length = len;
+                                        text = "!exists " + name;
+                                    });
                                     continue;
-                                } else if (unit.getLanguageModuleDeclaration("true").equals(d)) {
-                                    addEditToChange(tfc, newReplaceEdit(start, len, name));
+                                }
+                                else if (d==unit.trueValueDeclaration) {
+                                    change.addEdit(ReplaceEdit {
+                                        start = start;
+                                        length = len;
+                                        text = name;
+                                    });
                                     continue;
-                                } else if (unit.getLanguageModuleDeclaration("false").equals(d)) {
-                                    addEditToChange(tfc, newReplaceEdit(start, len, "!" + name));
+                                }
+                                else if (d==unit.falseValueDeclaration) {
+                                    change.addEdit(ReplaceEdit {
+                                        start = start;
+                                        length = len;
+                                        text = "!" + name;
+                                    });
                                     continue;
                                 }
                             }
                             
-                            addEditToChange(tfc, newInsertEdit(ci.startIndex.intValue(), name + " == "));
-                        } else {
-                            addEditToChange(tfc, newInsertEdit(ci.startIndex.intValue(), name + " in ["));
-                            addEditToChange(tfc, newInsertEdit(ci.endIndex.intValue() - 1, "]"));
+                            change.addEdit(InsertEdit {
+                                start = ci.startIndex.intValue();
+                                text = name + " == ";
+                            });
                         }
-                    } else {
+                        else {
+                            change.addEdit(InsertEdit {
+                                start = ci.startIndex.intValue();
+                                text = name + " in [";
+                            });
+                            change.addEdit(InsertEdit {
+                                start = ci.endIndex.intValue() - 1;
+                                text = "]";
+                            });
+                        }
+                    }
+                    else {
                         return;
                     }
                 }
             }
             
-            newProposal(data, "Convert 'switch' to 'if' chain", tfc,
-                DefaultRegion(sc.startIndex.intValue(), 0));
+            data.addQuickFix {
+                desc = "Convert 'switch' to 'if' chain";
+                change = change;
+                selection = DefaultRegion(sc.startIndex.intValue());
+            };
         }
     }
     
-    shared void addConvertIfToSwitchProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addConvertIfToSwitchProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.IfStatement statement) {
             value ifSt = statement;
-            value tfc = newTextChange("Convert If To Switch", file);
-            initMultiEditChange(tfc);
-            value doc = getDocumentForChange(tfc);
+            value change 
+                    = platformServices.createTextChange {
+                name = "Convert If To Switch";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            value doc = change.document;
             
             if (exists cl = ifSt.ifClause.conditionList) {
                 value conditions = cl.conditions;
                 if (conditions.size() == 1) {
                     value condition = conditions.get(0);
-                    variable String var;
-                    variable String type;
-                    if (is Tree.IsCondition condition) {
+                    String var;
+                    String type;
+                    switch (condition)
+                    case (is Tree.IsCondition) {
                         value ic = condition;
                         if (ic.not) {
                             return;
@@ -123,7 +182,7 @@ shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                             value v = ic.variable;
                             value start = v.startIndex.intValue();
                             value len = v.distance.intValue();
-                            var = getDocContent(doc, start, len);
+                            var = doc.getText(start, len);
                         } catch (Exception e) {
                             e.printStackTrace();
                             return;
@@ -133,31 +192,33 @@ shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                             value t = ic.type;
                             value start = t.startIndex.intValue();
                             value len = t.distance.intValue();
-                            type = "is " + getDocContent(doc, start, len);
+                            type = "is " + doc.getText(start, len);
                         } catch (Exception e) {
                             e.printStackTrace();
                             return;
                         }
-                    } else if (is Tree.ExistsCondition condition) {
+                    }
+                    case (is Tree.ExistsCondition) {
                         value ec = condition;
                         type = if (ec.not) then "null" else "is Object";
                         try {
                             value v = ec.variable;
                             value start = v.startIndex.intValue();
                             value len = v.distance.intValue();
-                            var = getDocContent(doc, start, len);
+                            var = doc.getText(start, len);
                         } catch (Exception e) {
                             e.printStackTrace();
                             return;
                         }
-                    } else if (is Tree.BooleanCondition condition) {
+                    }
+                    case (is Tree.BooleanCondition) {
                         value ec = condition;
                         type = "true";
                         try {
                             value e = ec.expression;
                             value start = e.startIndex.intValue();
                             value len = e.distance.intValue();
-                            var = getDocContent(doc, start, len);
+                            var = doc.getText(start, len);
                         } catch (Exception e) {
                             e.printStackTrace();
                             return;
@@ -166,38 +227,54 @@ shared interface ConvertSwitchToIfQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
                         return;
                     }
                     
-                    value newline = indents.getDefaultLineDelimiter(doc)
-                            + indents.getIndent(ifSt, doc);
+                    value newline 
+                            = doc.defaultLineDelimiter
+                            + doc.getIndent(ifSt);
                     
                     value _start = ifSt.startIndex.intValue();
                     value len = cl.endIndex.intValue() - _start; 
-                    addEditToChange(tfc, newReplaceEdit(_start, len,
-                        "switch (" + var + ")" + newline + "case (" + type + ")"));
+                    change.addEdit(ReplaceEdit {
+                        start = _start;
+                        length = len;
+                        text = "switch (``var``)``newline``case (``type``)";
+                    });
 
                     if (exists ec = ifSt.elseClause) {
                         value b = ec.block;
                         if (!b.mainToken exists) {
                             value start = b.startIndex.intValue();
                             value end = b.endIndex.intValue();
-                            addEditToChange(tfc, newInsertEdit(start,
-                                "{" + newline + indents.defaultIndent));
+                            change.addEdit(InsertEdit {
+                                start = start;
+                                text = "{" + newline + doc.defaultIndent;
+                            });
 
-                            variable value line = getLineOfOffset(doc, start) + 1;
-                            while (line <= getLineOfOffset(doc, end)) {
-                                addEditToChange(tfc, newInsertEdit(
-                                    getLineStartOffset(doc, line), indents.defaultIndent));
+                            variable value line = doc.getLineOfOffset(start) + 1;
+                            while (line <= doc.getLineOfOffset(end)) {
+                                change.addEdit(InsertEdit {
+                                    start = doc.getLineStartOffset(line);
+                                    text = doc.defaultIndent;
+                                });
                                 line++;
                             }
                             
-                            addEditToChange(tfc, newInsertEdit(end, newline + "}"));
+                            change.addEdit(InsertEdit {
+                                start = end;
+                                text = newline + "}";
+                            });
                         }
                     } else {
-                        addEditToChange(tfc, newInsertEdit(ifSt.endIndex.intValue(),
-                            newline + "else {}"));
+                        change.addEdit(InsertEdit {
+                            start = ifSt.endIndex.intValue();
+                            text = newline + "else {}";
+                        });
                     }
                     
-                    newProposal(data, "Convert 'if' to 'switch'", tfc, 
-                        DefaultRegion(ifSt.startIndex.intValue(), 0));
+                    data.addQuickFix {
+                        desc = "Convert 'if' to 'switch'";
+                        change = change;
+                        selection = DefaultRegion(ifSt.startIndex.intValue());
+                    };
                 }
             }
         }

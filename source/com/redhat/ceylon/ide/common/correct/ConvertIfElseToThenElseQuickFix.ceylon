@@ -1,39 +1,48 @@
+import ceylon.interop.java {
+    javaString
+}
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    ReplaceEdit,
+    TextChange
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Node
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
+
 import java.util.regex {
     Pattern
 }
-import ceylon.interop.java {
-    javaString
-}
-shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+
+shared object convertIfElseToThenElseQuickFix {
     
-    shared void addConvertToThenElseProposal(Data data, IFile file, IDocument doc,
-        Tree.Statement? statement) {
-        
-        value result = createTextChange(data, doc, statement, file);
-        if (exists [text, offset, change] = result) {
-            value desc = text.replace("If", "'if'")
-                .replace("Then", "'then'")
-                .replace("Else", "'else'")
-                + " expression";
-            newProposal(data, desc, change, DefaultRegion(offset, 0));
+    shared void addConvertToThenElseProposal(QuickFixData data, 
+        CommonDocument doc, Tree.Statement? statement) {
+        if (exists [text, offset, change] 
+                = createTextChange(data, doc, statement)) {
+            value desc 
+                    = text.replace("If", "'if'")
+                          .replace("Then", "'then'")
+                          .replace("Else", "'else'")
+                    + " expression";
+            data.addQuickFix {
+                desc = desc;
+                change = change;
+                selection = DefaultRegion(offset);
+            };
         }
     }
     
-    [String, Integer, TextChange]? createTextChange(Data data, IDocument doc, 
-        Tree.Statement? statement, IFile file) {
+    [String, Integer, TextChange]? createTextChange(QuickFixData data, 
+        CommonDocument doc, Tree.Statement? statement) {
         
         if (!is Tree.IfStatement statement) {
             return null;
@@ -58,8 +67,11 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
         value elseBlockNode = elseBlock.statements.get(0);
         value conditionList = ifStmt.ifClause.conditionList;
         
-        variable value replaceFrom = statement.startIndex.intValue();
-        variable value test = removeEnclosingParenthesis(getTerm(doc, conditionList));
+        variable value replaceFrom 
+                = statement.startIndex.intValue();
+        variable value test 
+                = removeEnclosingParenthesis(
+                    doc.getNodeText(conditionList));
 
         String thenStr;
         String  elseStr;
@@ -80,35 +92,42 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
             elseStr = getOperands(doc, elseBlockNode.expression);
         } else if (is Tree.SpecifierStatement ifBlockNode) {
             value ifSpecifierStmt = ifBlockNode;
-            value attrId = getTerm(doc, ifSpecifierStmt.baseMemberExpression);
+            value attrId 
+                    = doc.getNodeText(
+                        ifSpecifierStmt.baseMemberExpression);
             operator = " = ";
             action = attrId + operator;
             if (!is Tree.SpecifierStatement elseBlockNode) {
                 return null;
             }
             
-            value elseId = getTerm(doc, elseBlockNode.baseMemberExpression);
+            value elseId 
+                    = doc.getNodeText(
+                        elseBlockNode.baseMemberExpression);
 
-            if (!attrId.equals(elseId)) {
+            if (attrId!=elseId) {
                 return null;
             }
             
             attributeIdentifier = attrId;
-            thenStr = getOperands(doc, ifSpecifierStmt.specifierExpression.expression.term);
-            elseStr = getOperands(doc, (elseBlockNode).specifierExpression.expression.term);
-        } else {
+            thenStr = getOperands(doc, 
+                ifSpecifierStmt.specifierExpression.expression.term);
+            elseStr = getOperands(doc, 
+                elseBlockNode.specifierExpression.expression.term);
+        }
+        else {
             return null;
         }
         
         if (exists attributeIdentifier) {
-            value prevStatement = findPreviousStatement(data, doc, statement);
-            if (exists prevStatement) {
-                if (is Tree.AttributeDeclaration prevStatement) {
-                    value attrDecl = prevStatement;
-                    if (attributeIdentifier.equals(getTerm(doc, attrDecl.identifier))) {
-                        action = removeSemiColon(getTerm(doc, attrDecl)) + operator;
-                        replaceFrom = attrDecl.startIndex.intValue();
-                    }
+            if (exists prevStatement 
+                    = findPreviousStatement(data, doc, statement), 
+                is Tree.AttributeDeclaration prevStatement) {
+                if (attributeIdentifier
+                        == doc.getNodeText(prevStatement.identifier)) {
+                    action = removeSemiColon(doc.getNodeText(prevStatement)) 
+                            + operator;
+                    replaceFrom = prevStatement.startIndex.intValue();
                 }
             }
         }
@@ -121,9 +140,9 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
             
             if (is Tree.ExistsCondition condition, 
                 is Tree.Variable variable = condition.variable, 
-                thenStr == getTerm(doc, variable.identifier)) {
+                thenStr == doc.getNodeText(variable.identifier)) {
                 value existsExpr = variable.specifierExpression.expression;
-                test = getTerm(doc, existsExpr);
+                test = doc.getNodeText(existsExpr);
                 abbreviateToElse = true;
             }
             else {
@@ -168,17 +187,25 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
                       else "Convert to If Then Else";
         
         
-        value change = newTextChange(desc, file);
-        addEditToChange(change, newReplaceEdit(replaceFrom, 
-            statement.endIndex.intValue() - replaceFrom, replace.string));
+        value change 
+                = platformServices.createTextChange {
+            name = desc;
+            input = data.phasedUnit;
+        };
+        change.addEdit(ReplaceEdit {
+            start = replaceFrom;
+            length = statement.endIndex.intValue() 
+                    - replaceFrom;
+            text = replace.string;
+        });
         
         return [desc, replaceFrom, change];
     }
     
-    String getOperands(IDocument doc, Tree.Term operand) {
-        value term = getTerm(doc, operand);
+    String getOperands(CommonDocument doc, Tree.Term operand) {
+        value term = doc.getNodeText(operand);
         if (hasLowerPrecedenceThenElse(operand)) {
-            return "(" + term + ")";
+            return "(``term``)";
         }
         
         return term;
@@ -200,23 +227,30 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
         return term;
     }
     
-    Tree.Statement? findPreviousStatement(Data data, IDocument doc, Tree.Statement statement) {
-        value cu = data.rootNode;
+    Tree.Statement? findPreviousStatement(QuickFixData data, 
+        CommonDocument doc, Tree.Statement statement) {
+        value rootNode = data.rootNode;
         
-        variable value previousLineNo = getLineOfOffset(doc, statement.startIndex.intValue());
+        variable value previousLineNo 
+                = doc.getLineOfOffset(statement.startIndex.intValue());
         
         while (previousLineNo > 1) {
             previousLineNo--;
-            value lineStart = getLineStartOffset(doc, previousLineNo);
-            value prevLine = getLineContent(doc, previousLineNo);
-            value m = Pattern.compile("(\\s*)\\w+").matcher(javaString(prevLine));
+            value lineStart 
+                    = doc.getLineStartOffset(previousLineNo);
+            value prevLine 
+                    = doc.getLineContent(previousLineNo);
+            value m = Pattern.compile("(\\s*)\\w+")
+                        .matcher(javaString(prevLine));
             if (m.find()) {
                 value whitespaceLen = m.group(1).size;
-                value node = nodes.findNode(cu, null, lineStart + whitespaceLen,
-                    lineStart + whitespaceLen + 1);
-                
-                if (exists node) {
-                    return nodes.findStatement(cu, node);
+                if (exists node = nodes.findNode {
+                    node = rootNode;
+                    tokens = null;
+                    startOffset = lineStart + whitespaceLen;
+                    endOffset = lineStart + whitespaceLen + 1;
+                }) {
+                    return nodes.findStatement(rootNode, node);
                 }
             }
         }
@@ -224,19 +258,10 @@ shared interface ConvertIfElseToThenElseQuickFix<IFile,IDocument,InsertEdit,Text
         return null;
     }
     
-    String removeEnclosingParenthesis(String s) {
-        value first = s.first;
-        value last = s.last;
-        if (exists first, first == '(',
-            exists last, last == ')') {
-            
-            return s[1..s.size - 2];
-        }
-        
-        return s;
-    }
-    
-    String getTerm(IDocument doc, Node node)
-            => getDocContent(doc, node.startIndex.intValue(), node.distance.intValue());
+    String removeEnclosingParenthesis(String s) 
+            => if (exists first = s.first, first == '(',
+                   exists last = s.last, last == ')') 
+            then s[1..s.size-2] 
+            else s;
 
 }

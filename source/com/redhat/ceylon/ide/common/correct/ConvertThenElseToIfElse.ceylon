@@ -1,125 +1,118 @@
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    Node,
-    CustomTree
+    CustomTree,
+    TreeUtil
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Type
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
 
-shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object convertThenElseToIfElse {
     
-    shared void addConvertToIfElseProposal(Data data, IFile file, IDocument doc, 
-        Tree.Statement? statement) {
-     
+    shared void addConvertToIfElseProposal(QuickFixData data, 
+        CommonDocument doc, Tree.Statement? statement) {
+             
         String action;
-        variable String? declaration = null;
-        variable Node operation;
-        
-        if (!exists statement) {
-            return;
-        }
-
-        if (is Tree.Return statement) {
-            value returnOp = statement;
+        String? declaration;
+        Tree.Term operation;
+        switch (statement)
+        case (is Tree.Return) {
             action = "return ";
-            if (!returnOp.expression exists || !returnOp.expression.term exists) {
+            declaration = null;
+            if (exists e = statement.expression,
+                exists t = e.term) {
+                operation = t;
+            }
+            else {
+                return;
+            }            
+        }
+        case (is Tree.ExpressionStatement) {
+            declaration = null;
+            if (exists e = statement.expression,
+                is Tree.AssignOp t = e.term) {
+                action = doc.getNodeText(t.leftTerm) + " = ";
+                operation = t.rightTerm;
+            }
+            else {
                 return;
             }
-            
-            operation = returnOp.expression.term;
-        } else if (is Tree.ExpressionStatement statement) {
-            value expressionStmt = statement;
-            if (!expressionStmt.expression exists) {
-                return;
-            }
-            
-            value expression = expressionStmt.expression;
-            if (!expression.term exists) {
-                return;
-            }
-            
-            if (!(expression.term is Tree.AssignOp)) {
-                return;
-            }
-            
-            assert(is Tree.AssignOp assignOp = expression.term);
-            action = getTerm(doc, assignOp.leftTerm) + " = ";
-            operation = assignOp.rightTerm;
-        } else if (is Tree.SpecifierStatement statement) {
+        }
+        case (is Tree.SpecifierStatement) {
             if (statement.refinement) {
                 return;
             }
-            action = getTerm(doc, statement.baseMemberExpression) + " = ";
+            declaration = null;
+            action = doc.getNodeText(statement.baseMemberExpression) + " = ";
             operation = statement.specifierExpression.expression;
-        } else if (is CustomTree.AttributeDeclaration statement) {
+        }
+        case (is CustomTree.AttributeDeclaration) {
             if (!statement.identifier exists) {
                 return;
             }
             
-            value identifier = getTerm(doc, statement.identifier);
+            value identifier = doc.getNodeText(statement.identifier);
             variable value annotations = "";
             if (!statement.annotationList.annotations.empty) {
-                annotations = getTerm(doc, statement.annotationList) + " ";
+                annotations = doc.getNodeText(statement.annotationList) + " ";
             }
             
             String type;
             if (is Tree.ValueModifier valueModifier = statement.type) {
-                Type? typeModel = valueModifier.typeModel;
-                if (!exists typeModel) {
+                if (exists typeModel = valueModifier.typeModel) {
+                    type = typeModel.asString();
+                }
+                else {
                     return;
                 }
-                
-                type = typeModel.asString();
-            } else {
-                type = getTerm(doc, statement.type);
+            }
+            else {
+                type = doc.getNodeText(statement.type);
             }
             
-            declaration = annotations + type + " " + identifier + ";";
-            Tree.SpecifierOrInitializerExpression? sie = 
-                    statement.specifierOrInitializerExpression;
-            
-            if (!exists sie) {
+            declaration 
+                    = annotations + type + " " + identifier + ";";
+            if (exists sie = 
+                    statement.specifierOrInitializerExpression,
+                exists ex = sie.expression) {
+                action = identifier + " = ";
+                operation = sie.expression.term;
+            }
+            else {
                 return;
             }
-            Tree.Expression? ex = sie.expression;
-            if (!exists ex) {
-                return;
-            }
-            
-            action = identifier + " = ";
-            operation = sie.expression.term;
-        } else {
+        }
+        else {
             return;
         }
+        assert (exists statement);
         
         variable String test;
         variable String elseTerm;
         variable String thenTerm;
-        while (is Tree.Expression o = operation) {
-            operation = o.term;
-        }
         
-        if (is Tree.DefaultOp defaultOp = operation) {
-            if (is Tree.ThenOp thenOp = defaultOp.leftTerm) {
-                thenTerm = getTerm(doc, thenOp.rightTerm);
-                test = getTerm(doc, thenOp.leftTerm);
-            } else {
-                value leftTerm = defaultOp.leftTerm;
-                value leftTermStr = getTerm(doc, leftTerm);
+        switch (op = TreeUtil.unwrapExpressionUntilTerm(operation))
+        case (is Tree.DefaultOp) {
+            if (is Tree.ThenOp thenOp = op.leftTerm) {
+                thenTerm = doc.getNodeText(thenOp.rightTerm);
+                test = doc.getNodeText(thenOp.leftTerm);
+            }
+            else {
+                value leftTerm = op.leftTerm;
+                value leftTermStr = doc.getNodeText(leftTerm);
                 if (is Tree.BaseMemberExpression leftTerm) {
                     thenTerm = leftTermStr;
                     test = "exists " + leftTermStr;
-                } else {
+                }
+                else {
                     value id = nodes.nameProposals {
                         node = leftTerm;
                         rootNode = data.rootNode;
@@ -129,51 +122,80 @@ shared interface ConvertThenElseToIfElse<IFile,IDocument,InsertEdit,TextEdit,Tex
                 }
             }
             
-            elseTerm = getTerm(doc, defaultOp.rightTerm);
-        } else if (is Tree.ThenOp thenOp = operation) {
-            thenTerm = getTerm(doc, thenOp.rightTerm);
-            test = getTerm(doc, thenOp.leftTerm);
+            elseTerm = doc.getNodeText(op.rightTerm);
+        }
+        case (is Tree.ThenOp) {
+            thenTerm = doc.getNodeText(op.rightTerm);
+            test = doc.getNodeText(op.leftTerm);
             elseTerm = "null";
-        } else if (is Tree.IfExpression ie = operation) {
-            thenTerm = getTerm(doc, ie.ifClause.expression);
-            elseTerm = if (exists el = ie.elseClause)
-                       then getTerm(doc, el.expression)
+        }
+        case (is Tree.IfExpression) {
+            thenTerm = doc.getNodeText(op.ifClause.expression);
+            elseTerm = if (exists el = op.elseClause)
+                       then doc.getNodeText(el.expression)
                        else "";
-            value cl = ie.ifClause.conditionList;
-            test = getTerm(doc, cl);
-        } else {
+            value cl = op.ifClause.conditionList;
+            test = doc.getNodeText(cl);
+        }
+        else {
             return;
         }
         
-        value baseIndent = indents.getIndent(statement, doc);
-        value indent = indents.defaultIndent;
-        test = removeEnclosingParentesis(test);
+        value baseIndent = doc.getIndent(statement);
+        value indent = doc.defaultIndent;
+        test = removeEnclosingParenthesis(test);
         value replace = StringBuilder();
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value delim = doc.defaultLineDelimiter;
         if (exists dec = declaration) {
-            replace.append(dec).append(delim).append(baseIndent);
+            replace.append(dec)
+                   .append(delim)
+                   .append(baseIndent);
         }
         
-        replace.append("if (").append(test).append(") {").append(delim).append(baseIndent).append(indent).append(action).append(thenTerm).append(";").append(delim).append(baseIndent).append("}").append(delim).append(baseIndent).append("else {").append(delim).append(baseIndent).append(indent).append(action).append(elseTerm).append(";").append(delim).append(baseIndent).append("}");
-        value change = newTextChange("Convert to If Else", file);
-        addEditToChange(change, newReplaceEdit(
-            statement.startIndex.intValue(), statement.distance.intValue(),
-            replace.string));
+        replace.append("if (")
+                .append(test)
+                .append(") {")
+                .append(delim)
+                .append(baseIndent)
+                .append(indent)
+                .append(action)
+                .append(thenTerm)
+                .append(";")
+                .append(delim)
+                .append(baseIndent)
+                .append("}")
+                .append(delim)
+                .append(baseIndent)
+                .append("else {")
+                .append(delim)
+                .append(baseIndent)
+                .append(indent)
+                .append(action)
+                .append(elseTerm)
+                .append(";")
+                .append(delim)
+                .append(baseIndent)
+                .append("}");
+        value change 
+                = platformServices.createTextChange {
+            name = "Convert to If Else";
+            input = data.phasedUnit;
+        };
+        change.addEdit(ReplaceEdit {
+            start = statement.startIndex.intValue();
+            length = statement.distance.intValue();
+            text = replace.string;
+        });
         
-        newProposal(data, "Convert to 'if' 'else' statement", change,
-            DefaultRegion(statement.startIndex.intValue(), 0));
+        data.addQuickFix {
+            desc = "Convert to 'if' 'else' statement";
+            change = change;
+            selection = DefaultRegion(statement.startIndex.intValue(), 0);
+        };
     }
     
-    String removeEnclosingParentesis(String s) {
-        if (exists f = s.first, f == '(',
-            exists l = s.last, l == ')') {
-            return s.span(1, s.size - 2);
-        }
-        
-        return s;
-    }
-    
-    String getTerm(IDocument doc, Node node) {
-        return getDocContent(doc, node.startIndex.intValue(), node.distance.intValue());
-    }
+    String removeEnclosingParenthesis(String s) 
+            => if (exists f = s.first, f == '(',
+                   exists l = s.last, l == ')') 
+            then s.span(1, s.size - 2) else s;
 }

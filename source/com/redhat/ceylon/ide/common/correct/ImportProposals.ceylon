@@ -49,7 +49,6 @@ import java.util {
 }
 
 
-deprecated("Use [[CommonImportProposals]]")
 shared interface ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>
         satisfies DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
         given InsertEdit satisfies TextEdit {

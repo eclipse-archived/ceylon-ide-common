@@ -41,7 +41,8 @@ shared interface QuickFixData {
     shared formal CommonDocument document;
     
     shared formal void addQuickFix(String desc, TextChange change,
-        DefaultRegion? selection = null);
+        DefaultRegion? selection = null, 
+        Boolean qualifiedNameIsPath = false);
     
     shared formal void addInitializerQuickFix(String desc, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type);
@@ -64,7 +65,6 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ExportModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> exportModuleImportQuickFix;
-    shared formal AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> appendMemberReferenceQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
     shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
     shared formal AddTypeParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addTypeParameterQuickFix;
@@ -252,7 +252,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             createParameterQuickFix.addCreateParameterProposals(data);
         }
         case (2100) {
-            appendMemberReferenceQuickFix.addAppendMemberReferenceProposals(data, file);
+            appendMemberReferenceQuickFix.addAppendMemberReferenceProposals(data);
             changeTypeQuickFix.addChangeTypeProposals(data, file);
             addSatisfiesQuickFix.addSatisfiesProposals(data);
         }

@@ -1,13 +1,17 @@
-import com.redhat.ceylon.ide.common.util {
-    nodes,
-    types
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import org.antlr.runtime {
-    CommonToken
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes,
+    types
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value,
@@ -15,22 +19,20 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     TypedDeclaration
 }
+
 import java.util {
     Collections
 }
 
-shared interface AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+import org.antlr.runtime {
+    CommonToken
+}
+
+shared object appendMemberReferenceQuickFix {
     
     value noTypes => Collections.emptyList<Type>();
             
-    shared formal void newProposal(Data data, String desc, TextChange change,
-           Integer offset, Integer length);
-
-    shared void addAppendMemberReferenceProposals(Data data, IFile file) {
+    shared void addAppendMemberReferenceProposals(QuickFixData data) {
         value node = data.node;
         if (exists id = nodes.getIdentifyingNode(node),
             is Tree.StaticMemberOrTypeExpression node,
@@ -48,7 +50,7 @@ shared interface AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEd
                         if (!ModelUtil.isTypeUnknown(vt),
                             vt.isSubtypeOf(requiredType)) {
                             
-                            addAppendMemberReferenceProposal(id, data, file, val, t);
+                            addAppendMemberReferenceProposal(id, data, val, t);
                         }
                     }
                 }
@@ -56,13 +58,30 @@ shared interface AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEd
         }
     }
 
-    void addAppendMemberReferenceProposal(Node node, Data data, IFile file, TypedDeclaration dec, Type type) {
-        value change = newTextChange("Append Member Reference", file);
+    void addAppendMemberReferenceProposal(Node node, QuickFixData data, 
+        TypedDeclaration dec, Type type) {
+        value change 
+                = platformServices.createTextChange {
+            name = "Append Member Reference";
+            input = data.phasedUnit;
+        };
         value problemOffset = node.endIndex.intValue();
         value name = dec.name;
         value desc = "Append reference to member '``name``' of type '``type``'";
 
-        addEditToChange(change, newInsertEdit(problemOffset, "." + name));
-        newProposal(data, desc, change, problemOffset, name.size + 1);
+        change.addEdit(InsertEdit {
+            start = problemOffset;
+            text = "." + name;
+        });
+        
+        data.addQuickFix {
+            desc = desc;
+            change = change;
+            selection = DefaultRegion {
+                start = problemOffset;
+                length = name.size + 1;
+            };
+            qualifiedNameIsPath = true;
+        };
     }
 }

@@ -6,16 +6,18 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Type
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
 
-shared interface AssignToFieldQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object assignToFieldQuickFix {
     
-    shared void addAssignToFieldProposal(Data data, IFile file, 
+    shared void addAssignToFieldProposal(QuickFixData data, 
         Tree.Statement? statement, Tree.Declaration? declaration) {
         
-        if (is Tree.TypedDeclaration declaration, is Tree.Constructor statement) {
+        if (is Tree.TypedDeclaration declaration, 
+            is Tree.Constructor statement) {
             value constructor = statement;
             value param = declaration;
             value model = param.declarationModel;
@@ -48,45 +50,56 @@ shared interface AssignToFieldQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                 return;
             }
             
-            value change = newTextChange("Assign to Field", file);
-            initMultiEditChange(change);
-            value document = getDocumentForChange(change);
-            value indent = indents.getDefaultLineDelimiter(document) 
-                    + indents.getIndent(constructor, document);
+            value change 
+                    = platformServices.createTextChange {
+                name = "Assign to Field";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            value document = change.document;
+            value indent 
+                    = document.defaultLineDelimiter 
+                    + document.getIndent(constructor);
             
             String desc;
             if (!exists existing) {
-                value start = declaration.startIndex.intValue();
                 Tree.SpecifierOrInitializerExpression? sie;
-                if (is Tree.AttributeDeclaration declaration) {
-                    value ad = declaration;
-                    sie = ad.specifierOrInitializerExpression;
-                } else if (is Tree.MethodDeclaration declaration) {
-                    value ad = declaration;
-                    sie = ad.specifierExpression;
-                } else {
+                switch (declaration)
+                case (is Tree.AttributeDeclaration) {
+                    sie = declaration.specifierOrInitializerExpression;
+                }
+                case (is Tree.MethodDeclaration) {
+                    sie = declaration.specifierExpression;
+                }
+                else {
                     sie = null;
                 }
                 
+                value start = declaration.startIndex.intValue();
                 value end = if (!exists sie) 
                             then declaration.endIndex.intValue() 
                             else sie.startIndex.intValue();
                 
-                value def = getDocContent(document, start, end - start).trimmed
-                    + ";" + indent;
-                
-                value loc = statement.startIndex.intValue();
-                addEditToChange(change, newInsertEdit(loc, def));
-                desc = "Assign parameter '" + name + "' to new field of '" + clazz.name + "'";
-            } else {
-                desc = "Assign parameter '" + name + "' to field '" + name + "' of '" + clazz.name + "'";
+                change.addEdit(InsertEdit {
+                    start = statement.startIndex.intValue();
+                    text 
+                        = document.getText(start, end-start).trimmed
+                        + ";" + indent;
+                });
+                desc = "Assign parameter '``name``' to new field of '``clazz.name``'";
             }
+            else {
+                desc = "Assign parameter '``name``' to field '``name``' of '``clazz.name``'";
+            }
+            change.addEdit(InsertEdit {
+                start = constructor.block.startIndex.intValue() + 1;
+                text 
+                    = indent 
+                    + document.defaultIndent 
+                    + "this.``name`` = ``name``;";
+            });
             
-            value offset = constructor.block.startIndex.intValue() + 1;
-            value text = indent + indents.defaultIndent + "this." + name + " = " + name + ";";
-            addEditToChange(change, newInsertEdit(offset, text));
-            
-            newProposal(data, desc, change);
+            data.addQuickFix(desc, change);
         }
     }
 }

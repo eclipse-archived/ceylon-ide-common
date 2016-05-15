@@ -7,21 +7,24 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    ReplaceEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object invertIfElseQuickFix {
     
-    shared void addInvertIfElseProposal(Data data, IFile file, IDocument doc, Tree.Statement? statement) {
-        addInvertIfElseExpressionProposal(data, file, doc);
-        addInvertIfElseStatementProposal(data, file, doc, statement);
+    shared void addInvertIfElseProposal(QuickFixData data, 
+            CommonDocument doc, Tree.Statement? statement) {
+        addInvertIfElseExpressionProposal(data, doc);
+        addInvertIfElseStatementProposal(data, doc, statement);
     }
     
-    void addInvertIfElseExpressionProposal(Data data, IFile file, IDocument doc) {
+    void addInvertIfElseExpressionProposal(QuickFixData data, CommonDocument doc) {
         try {
             variable Tree.IfExpression? result = null;
             
@@ -57,48 +60,56 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             value ifCondition = conditions.get(0);
             value test = invertCondition(doc, ifCondition);
             
-            value elseIndent = indents.getIndent(elseBlock, doc);
-            value thenIndent = indents.getIndent(ifBlock, doc);
-            value delim = indents.getDefaultLineDelimiter(doc);
-            value elseStr = text(doc, elseBlock);
+            value elseIndent = doc.getIndent(elseBlock);
+            value thenIndent = doc.getIndent(ifBlock);
+            value delim = doc.defaultLineDelimiter;
+            value elseStr = doc.getNodeText(elseBlock);
             
             value replace = StringBuilder();
-            replace.append("if (").append(test).append(")");
+            replace.append("if (")
+                   .append(test)
+                   .append(")");
             if (isElseOnOwnLine(doc, ifCondition, ifBlock)) {
-                replace.append(delim).append(thenIndent);
+                replace.append(delim)
+                       .append(thenIndent);
             } else {
                 replace.append(" ");
             }
             
-            replace.append("then ").append(elseStr);
+            replace.append("then ")
+                   .append(elseStr);
             if (isElseOnOwnLine(doc, ifBlock, elseBlock)) {
-                replace.append(delim).append(elseIndent);
+                replace.append(delim)
+                       .append(elseIndent);
             } else {
                 replace.append(" ");
             }
             
-            replace.append("else ").append(text(doc, ifBlock));
-            value change = newTextChange("Invert If Then Else", file);
-            addEditToChange(change, 
-                newReplaceEdit {
+            replace.append("else ")
+                   .append(doc.getNodeText(ifBlock));
+            value change 
+                    = platformServices.createTextChange {
+                name = "Invert If Then Else";
+                input = data.phasedUnit;
+            };
+            change.addEdit(ReplaceEdit {
                     start = ifExpr.startIndex.intValue();
                     length = ifExpr.distance.intValue();
                     text = replace.string;
                 });
             
-            newProposal {
-                data = data;
+            data.addQuickFix {
                 desc = "Invert 'if' 'then' 'else' expression";
                 change = change;
-                region = DefaultRegion(ifExpr.startIndex.intValue(), 0);
+                selection = DefaultRegion(ifExpr.startIndex.intValue());
             };
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     
-    void addInvertIfElseStatementProposal(Data data, IFile file, IDocument doc,
-        Tree.Statement? statement) {
+    void addInvertIfElseStatementProposal(QuickFixData data, 
+        CommonDocument doc, Tree.Statement? statement) {
         
         if (!exists statement) {
             return;
@@ -118,8 +129,10 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                     super.visit(that);
                     if (that.ifClause exists,
                         that.elseClause exists,
-                        that.startIndex.intValue() <= statement.startIndex.intValue(),
-                        that.endIndex.intValue() >= statement.endIndex.intValue()) {
+                        that.startIndex.intValue() 
+                                <= statement.startIndex.intValue(),
+                        that.endIndex.intValue() 
+                                >= statement.endIndex.intValue()) {
                         
                         result = that;
                     }
@@ -144,46 +157,58 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         value ifCondition = conditions.get(0);
         value test = invertCondition(doc, ifCondition);
         
-        value baseIndent = indents.getIndent(ifStmt, doc);
-        value indent = indents.defaultIndent;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value baseIndent = doc.getIndent(ifStmt);
+        value indent = doc.defaultIndent;
+        value delim = doc.defaultLineDelimiter;
         value elseStr = addEnclosingBraces {
-            s = text(doc, elseBlock);
+            s = doc.getNodeText(elseBlock);
             baseIndent = baseIndent;
             _indent = indent;
             delim = delim;
         };
         value replace = StringBuilder();
-        replace.append("if (").append(test).append(") ").append(elseStr);
+        replace.append("if (")
+               .append(test)
+               .append(") ")
+               .append(elseStr);
         
         if (isElseOnOwnLine(doc, ifBlock, elseBlock)) {
-            replace.append(delim).append(baseIndent);
+            replace.append(delim)
+                   .append(baseIndent);
         } else {
             replace.append(" ");
         }
         
-        replace.append("else ").append(text(doc, ifBlock));
-        value change = newTextChange("Invert If Else", file);
-        addEditToChange(change, 
-            newReplaceEdit {
+        replace.append("else ")
+               .append(doc.getNodeText(ifBlock));
+        value change = platformServices.createTextChange {
+            name = "Invert If Else";
+            input = data.phasedUnit;
+        };
+        change.addEdit(ReplaceEdit {
                 start = ifStmt.startIndex.intValue();
                 length = ifStmt.distance.intValue();
                 text = replace.string;
             });
         
-        newProposal(data, "Invert 'if' 'else' statement", change, 
-            DefaultRegion(ifStmt.startIndex.intValue(), 0));
+        data.addQuickFix {
+            desc = "Invert 'if' 'else' statement";
+            change = change;
+            selection = DefaultRegion(ifStmt.startIndex.intValue());
+        };
     }
     
-    Boolean isElseOnOwnLine(IDocument doc, Node ifBlock, Node elseBlock) 
-            => getLineOfOffset(doc, ifBlock.stopIndex.intValue())
-                != getLineOfOffset(doc, elseBlock.startIndex.intValue());
+    Boolean isElseOnOwnLine(CommonDocument doc, Node ifBlock, Node elseBlock) 
+            => doc.getLineOfOffset(ifBlock.stopIndex.intValue())
+                != doc.getLineOfOffset(elseBlock.startIndex.intValue());
     
     String addEnclosingBraces(String s, String baseIndent, String _indent, String delim) {
         assert(exists first = s.first);
         if (first != '{') {
-            return "{" + delim + baseIndent + _indent 
-                    + indent(s, _indent, delim) + delim + baseIndent + "}";
+            return "{" 
+                    + delim + baseIndent + _indent 
+                    + indent(s, _indent, delim) + delim + baseIndent 
+                    + "}";
         }
         else {
             return s;
@@ -194,14 +219,7 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             => javaString(s)
                 .replaceAll(delim + "(\\s*)", delim + "$1" + indentation);
     
-    String text(IDocument doc, Node node) 
-            => getDocContent {
-                doc = doc;
-                start = node.startIndex.intValue();
-                length = node.distance.intValue();
-            };
-   
-   String invertTerm(IDocument doc, Tree.Term? term) {
+   String invertTerm(CommonDocument doc, Tree.Term? term) {
        switch (term)
        case (null) {
            return ""; 
@@ -217,35 +235,35 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                return td.getName(unit);
            }
            else {
-               return "!" + text(doc, term);
+               return "!" + doc.getNodeText(term);
            }
        }
        case (is Tree.NotOp) {
-           return text(doc, term.term);
+           return doc.getNodeText(term.term);
        }
        case (is Tree.EqualOp) {
-           return text(doc, term.leftTerm) + "!=" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + "!=" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.NotEqualOp) {
-           return text(doc, term.leftTerm) + "=" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + "=" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.SmallerOp) {
-           return text(doc, term.leftTerm) + ">=" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + ">=" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.SmallAsOp) {
-           return text(doc, term.leftTerm) + ">" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + ">" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.LargerOp) {
-           return text(doc, term.leftTerm) + "<=" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + "<=" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.LargeAsOp) {
-           return text(doc, term.leftTerm) + "<" + 
-                   text(doc, term.rightTerm);
+           return doc.getNodeText(term.leftTerm) + "<" + 
+                   doc.getNodeText(term.rightTerm);
        }
        case (is Tree.AndOp) {
            //TODO: preserve whitespace!
@@ -266,7 +284,7 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
        }
        case (is Tree.Expression) {
            if (term.token exists) {
-               return "!" + text(doc, term);
+               return "!" + doc.getNodeText(term);
            }
            else {
                return invertTerm(doc, term.term);
@@ -279,20 +297,20 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                |Tree.IfExpression
                |Tree.AssignmentOp) {
            //something with a lower precedence than ! operator
-           return "!(" + text(doc, term) + ")";
+           return "!(" + doc.getNodeText(term) + ")";
        }
        else {
-           return "!" + text(doc, term);
+           return "!" + doc.getNodeText(term);
        }
    }
    
-   String invertCondition(IDocument doc, Tree.Condition? ifCondition) {
+   String invertCondition(CommonDocument doc, Tree.Condition? ifCondition) {
        switch(ifCondition)
        case (is Tree.BooleanCondition) {
            Tree.Term? term = ifCondition.expression.term;
            if (is Tree.NotOp term, is Tree.Expression e = term.term) {
                //special case for eliminating toplevel parens
-               return text(doc, e.term);
+               return doc.getNodeText(e.term);
            }
            else {
                return invertTerm(doc, term);
@@ -306,13 +324,15 @@ shared interface InvertIfElseQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                case (is Tree.IsCondition) 
                     ifCondition.not;
            return negated
-               then text(doc, ifCondition)[1...].trimmed 
-               else "!" + text(doc, ifCondition).trimmed;
+               then doc.getNodeText(ifCondition)[1...].trimmed 
+               else "!" + doc.getNodeText(ifCondition).trimmed;
        }
        else {
            return "";
        }
    }
    
-
 }
+
+
+
