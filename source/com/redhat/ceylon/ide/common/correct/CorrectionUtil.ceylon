@@ -108,19 +108,19 @@ object correctionUtil {
         return missingSatisfiedTypesText.string;
     }
     
-    shared String defaultValue(Unit unit, Type? t) {
-        if (ModelUtil.isTypeUnknown(t)) {
+    shared String defaultValue(Unit unit, Type? type) {
+        if (ModelUtil.isTypeUnknown(type)) {
             return "nothing";
         }
-        if (unit.isOptionalType(t)) {
+        if (unit.isOptionalType(type)) {
             return "null";
         }
-        assert (exists t);
-        if (t.typeAlias || t.classOrInterface, t.declaration.\ialias) {
-            return defaultValue(unit, t.extendedType);
+        assert (exists type);
+        if (type.typeAlias || type.classOrInterface, type.declaration.\ialias) {
+            return defaultValue(unit, type.extendedType);
         }
-        if (t.\iclass) {
-            value c = t.declaration;
+        if (type.\iclass) {
+            value c = type.declaration;
             if (c.equals(unit.booleanDeclaration)) {
                 return "false";
             } else if (c.equals(unit.integerDeclaration)) {
@@ -132,8 +132,8 @@ object correctionUtil {
             } else if (c.equals(unit.byteDeclaration)) {
                 return "0.byte";
             } else if (c.equals(unit.tupleDeclaration)) {
-                value minimumLength = unit.getTupleMinimumLength(t);
-                value tupleTypes = unit.getTupleElementTypes(t);
+                value minimumLength = unit.getTupleMinimumLength(type);
+                value tupleTypes = unit.getTupleElementTypes(type);
                 value sb = StringBuilder();
                 variable value i = 0;
                 while (i < minimumLength) {
@@ -147,19 +147,19 @@ object correctionUtil {
                 }
                 sb.append("]");
                 return sb.string;
-            } else if (unit.isSequentialType(t)) {
+            } else if (unit.isSequentialType(type)) {
                 value sb = StringBuilder();
                 sb.append("[");
-                if (!unit.emptyType.isSubtypeOf(t)) {
-                    sb.append(defaultValue(unit, unit.getSequentialElementType(t)));
+                if (!unit.emptyType.isSubtypeOf(type)) {
+                    sb.append(defaultValue(unit, unit.getSequentialElementType(type)));
                 }
                 sb.append("]");
                 return sb.string;
-            } else if (unit.isIterableType(t)) {
+            } else if (unit.isIterableType(type)) {
                 value sb = StringBuilder();
                 sb.append("{");
-                if (!unit.emptyType.isSubtypeOf(t)) {
-                    sb.append(defaultValue(unit, unit.getIteratedType(t)));
+                if (!unit.emptyType.isSubtypeOf(type)) {
+                    sb.append(defaultValue(unit, unit.getIteratedType(type)));
                 }
                 sb.append("}");
                 return sb.string;

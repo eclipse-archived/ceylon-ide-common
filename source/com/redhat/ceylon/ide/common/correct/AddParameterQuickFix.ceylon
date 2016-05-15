@@ -1,159 +1,222 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    FunctionOrValue,
-    Functional,
-    Type,
-    Declaration
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit,
+    InsertEdit,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
-import java.util {
-    HashSet
+import com.redhat.ceylon.model.typechecker.model {
+    FunctionOrValue,
+    Functional,
+    Type
 }
 
-shared interface AddParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object addParameterQuickFix {
     
-    shared formal void newProposal(Data data, String desc, Declaration dec, 
-        Type? type, Integer offset, Integer length, TextChange change, 
-        Integer exitPos);
-    
-    shared void addParameterProposals(Data data, IFile file) {
-        if (is Tree.AttributeDeclaration attDecNode = data.node) {
-            Tree.SpecifierOrInitializerExpression? sie = attDecNode.specifierOrInitializerExpression;
+    shared void addParameterProposals(QuickFixData data) {
+        switch (node = data.node)
+        case (is Tree.AttributeDeclaration) {
+            Tree.SpecifierOrInitializerExpression? sie 
+                    = node.specifierOrInitializerExpression;
             if (!(sie is Tree.LazySpecifierExpression)) {
-                addParameterProposal(data, file, attDecNode, sie);
+                addParameterProposal(data, node, sie);
             }
         }
-        
-        if (is Tree.MethodDeclaration node = data.node) {
-            value methDecNode = node;
-            Tree.SpecifierOrInitializerExpression? sie = methDecNode.specifierExpression;
-            addParameterProposal(data, file, methDecNode, sie);
+        case (is Tree.MethodDeclaration) {
+            addParameterProposal(data, node, 
+                node.specifierExpression);
         }
+        else {}
     }
 
-    void addParameterProposal(Data data, IFile file, Tree.TypedDeclaration decNode, Tree.SpecifierOrInitializerExpression? sie) {
-        assert (is FunctionOrValue? dec = decNode.declarationModel);
-        if (!exists dec) {
-            return;
-        }
+    void addParameterProposal(QuickFixData data, 
+        Tree.TypedDeclaration decNode, 
+        Tree.SpecifierOrInitializerExpression? sie) {
         
-        if (!dec.initializerParameter exists, !dec.formal, dec.container is Functional) {
-            value change = newTextChange("Add Parameter", file);
-            initMultiEditChange(change);
-            value doc = getDocumentForChange(change);
+        if (is FunctionOrValue dec = decNode.declarationModel,
+            !dec.parameter && !dec.formal, 
+            dec.container is Functional) {
+            value change 
+                    = platformServices.createTextChange {
+                name = "Add Parameter";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             //TODO: copy/pasted from SplitDeclarationProposal 
-            variable String? params = null;
+            String? params;
             if (is Tree.MethodDeclaration decNode) {
-                value md = decNode;
-                value pls = md.parameterLists;
+                value pls = decNode.parameterLists;
                 if (pls.empty) {
                     return;
-                } else {
-                    value start = pls.get(0).startIndex.intValue();
-                    value end = pls.get(pls.size() - 1).endIndex.intValue();
-
-                    
-                    params = getDocContent(doc, start, end - start);
+                }
+                else {
+                    value start 
+                            = pls.get(0)
+                                .startIndex
+                                .intValue();
+                    value end 
+                            = pls.get(pls.size()-1)
+                                .endIndex
+                                .intValue();
+                    params = data.document.getText {
+                        offset = start;
+                        length = end-start;
+                    };
                 }
             }
+            else {
+                params = null;
+            }
             
-            value container = nodes.findDeclarationWithBody(data.rootNode, decNode);
-            variable Tree.ParameterList? pl;
-            if (is Tree.ClassDefinition container) {
-                value cd = container;
-                pl = cd.parameterList;
-                if (!exists _ = pl) {
+            value container 
+                    = nodes.findDeclarationWithBody {
+                cu = data.rootNode;
+                node = decNode;
+            };
+            
+            Tree.ParameterList paramList;
+            switch (container)
+            case (is Tree.ClassDefinition) {
+                if (exists pl = container.parameterList) {
+                    paramList = pl;
+                }
+                else {
                     return;
                 }
-            } else if (is Tree.MethodDefinition container) {
-                value md = container;
-                value pls = md.parameterLists;
+            }
+            case (is Tree.MethodDefinition) {
+                value pls = container.parameterLists;
                 if (pls.empty) {
                     return;
                 }
-                
-                pl = pls.get(0);
-            } else if (is Tree.Constructor container) {
-                value cd = container;
-                pl = cd.parameterList;
-                if (!exists _ = pl) {
+                paramList = pls.get(0);
+            }
+            case (is Tree.Constructor) {
+                if (exists pl = container.parameterList) {
+                    paramList = pl;
+                }
+                else {
                     return;
                 }
-            } else {
+            }
+            else {
+                return;
+            }
+            assert (exists container);
+            value cont = container.declarationModel;
+            if (cont.actual) {
                 return;
             }
             
-            variable String def;
-            variable Integer len;
-            if (!exists sie) {
-                value defaultValue = correctionUtil.defaultValue(data.rootNode.unit, dec.type);
-                len = defaultValue.size;
-                if (is Tree.MethodDeclaration decNode) {
-                    def = " => " + defaultValue;
-                } else {
-                    def = " = " + defaultValue;
-                }
-            } else {
+            String def;
+            Integer len;
+            if (exists sie) {
                 len = 0;
-                def = getDocContent(doc, sie.startIndex.intValue(), sie.distance.intValue());
-                variable Integer start = sie.startIndex.intValue();
-                if (start > 0, getDocContent(doc, start - 1, 1).equals(" ")) {
-                    start--;
-                    def = " " + def;
+                value text = data.document.getText {
+                    offset = sie.startIndex.intValue();
+                    length = sie.distance.intValue();
+                };
+                value start = sie.startIndex.intValue();
+                Integer realStart;
+                if (start > 0, 
+                    data.document.getText(start-1, 1)==" ") {
+                    realStart = start-1;
+                    def = " " + text;
+                }
+                else {
+                    realStart = start;
+                    def = text;
                 }
                 
-                addEditToChange(change, newDeleteEdit(start, sie.endIndex.intValue() - start));
+                change.addEdit(DeleteEdit {
+                    start = realStart;
+                    length = sie.endIndex.intValue() - realStart;
+                });
+            }
+            else {
+                value defaultValue 
+                        = correctionUtil.defaultValue {
+                            unit = data.rootNode.unit;
+                            type = dec.type;
+                        };
+                len = defaultValue.size;
+                def = (if (is Tree.MethodDeclaration decNode) 
+                        then " => " else " = ") 
+                    + defaultValue;
             }
             
-            if (exists p = params) {
-                def = " = " + p + def;
-            }
+            String defWithParams 
+                    = if (exists params) 
+                    then " = " + params + def 
+                    else def;
             
-            assert(exists _pl = pl);
-            value param = (if (_pl.parameters.empty) then "" else ", ") + dec.name + def;
-            value offset = _pl.endIndex.intValue() - 1;
-            addEditToChange(change, newInsertEdit(offset, param));
+            value param 
+                    = (if (paramList.parameters.empty) then "" else ", ") 
+                    + dec.name 
+                    + defWithParams;
+            value offset = paramList.endIndex.intValue() - 1;
+            
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = param;
+            });
             value type = decNode.type;
-            variable Integer shift = 0;
-            variable Type? paramType;
+            Integer shift;
+            Type? paramType;
             if (is Tree.LocalModifier type) {
-                value typeOffset = type.startIndex.intValue();
-                paramType = type.typeModel;
-                variable String explicitType;
-                if (!exists pt = paramType) {
+                String explicitType;
+                if (exists pt = type.typeModel) {
+                    paramType = pt;
+                    explicitType = pt.asString();
+                    value importProposals 
+                            = CommonImportProposals {
+                        document = data.document;
+                        rootNode = data.rootNode;
+                    };
+                    importProposals.addImportedType(paramType);
+                    shift = importProposals.applyAddedImports(change);
+                }
+                else {
                     explicitType = "Object";
                     paramType = type.unit.objectType;
-                } else {
-                    assert(exists pt = paramType);
-                    explicitType = pt.asString();
-                    value decs = HashSet<Declaration>();
-                    importProposals.importType(decs, paramType, data.rootNode);
-                    shift = importProposals.applyImports(change, decs, data.rootNode, doc);
+                    shift = 0;
                 }
                 
-                addEditToChange(change, newReplaceEdit(typeOffset, type.text.size, explicitType));
+                change.addEdit(ReplaceEdit {
+                    start = type.startIndex.intValue();
+                    length = type.text.size;
+                    text = explicitType;
+                });
             } else {
                 paramType = type.typeModel;
+                shift = 0;
             }
             
-            value exitPos = data.node.endIndex.intValue();
-            variable String desc = "Add '" + dec.name + "' to parameter list";
-            assert(exists container);
-            value cont = container.declarationModel;
-            if (cont.name exists) {
-                desc += " of '"+cont.name+"'";
+            variable String desc = "Add '``dec.name``' to parameter list";
+            if (exists name = cont.name) {
+                desc += " of '``name``'";
             }
             
-            newProposal(data, desc, cont, paramType, 
-                offset + param.size + shift - len, len, change, exitPos);
+            data.addParameterQuickFix {
+                desc = desc;
+                change = change;
+                selection = DefaultRegion {
+                    start = offset + param.size + shift - len;
+                    length = len;
+                };
+                unit = cont.unit;
+                scope = cont.scope;
+                type = paramType;
+                exitPos = data.node.endIndex.intValue();
+            };
         }
     }
 

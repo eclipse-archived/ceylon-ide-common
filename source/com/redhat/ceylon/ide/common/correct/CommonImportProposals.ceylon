@@ -1,11 +1,12 @@
-import java.util {
-    JHashSet=HashSet
+import ceylon.interop.java {
+    JavaIterable
 }
+
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
-import ceylon.interop.java {
-    JavaIterable
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
 }
 import com.redhat.ceylon.ide.common.platform {
     ReplaceEdit,
@@ -17,12 +18,13 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     TextChange
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Type
+}
+
+import java.util {
+    JHashSet=HashSet
 }
 
 shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit rootNode) {
@@ -36,7 +38,7 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
                 rootNode = rootNode;
             };
     
-    shared void addImportedType(Type type)
+    shared void addImportedType(Type? type)
             => delegate.importType {
                 type = type;
                 declarations = imports;
