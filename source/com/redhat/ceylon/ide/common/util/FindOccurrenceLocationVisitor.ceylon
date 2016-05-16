@@ -42,6 +42,41 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node)
     }
     
     actual
+    shared void visit(Tree.ConditionList that) {
+        if (inBounds(that)) {
+            value conditions = that.conditions;
+            if (!conditions.empty) {
+                value size = conditions.size();
+                for (i in 1..size) {
+                    value current = conditions.get(i-1);
+                    value next = i<size then conditions.get(i);
+                    if (current.endToken == current.token,
+                        current.endIndex.intValue()<offset,
+                        if (exists next) 
+                        then next.startIndex.intValue()>offset 
+                        else true) {
+                        switch (current)
+                        case (is Tree.ExistsCondition) {
+                            occurrence = OccurrenceLocation.\iEXISTS;
+                        }
+                        case (is Tree.NonemptyCondition) {
+                            occurrence = OccurrenceLocation.\iNONEMPTY;
+                        }
+                        case (is Tree.IsCondition) {
+                            occurrence = OccurrenceLocation.\iIS;
+                        }
+                        else {
+                            continue;
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        super.visit(that);
+    }
+    
+    actual
     shared void visit(Tree.NonemptyCondition that) {
         super.visit(that);
         if (exists var = that.variable) {
