@@ -64,9 +64,7 @@ import java.util {
     Collection,
     Collections,
     JArrayList=ArrayList,
-    JIterator=Iterator,
-    TreeSet,
-    Set
+    TreeSet
 }
 import java.util.regex {
     Pattern
@@ -104,9 +102,22 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     
     shared formal Indents<Document> indents;
 
+    // see CeylonCompletionProcessor.sortProposals()
+    function sortProposals(String prefix, 
+        RequiredType required, Proposals proposals) {
+        value set = TreeSet(ProposalComparator(prefix, required));
+        set.addAll(proposals.values());
+        return set;
+    }
+    
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
-    shared CompletionResult[] getContentProposals(Tree.CompilationUnit typecheckedRootNode, IdeComponent analysisResult, 
-            Integer offset, Integer line, Boolean secondLevel, BaseProgressMonitor monitor, Boolean returnedParamInfo = false, Cancellable? cancellable = null) {
+    shared CompletionResult[] getContentProposals(
+        Tree.CompilationUnit typecheckedRootNode, 
+        IdeComponent analysisResult, 
+            Integer offset, Integer line, Boolean secondLevel, 
+            BaseProgressMonitor monitor, 
+            Boolean returnedParamInfo = false, 
+            Cancellable? cancellable = null) {
         value tokens = analysisResult.tokens;
         value document = analysisResult.document;
 
@@ -116,11 +127,13 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         //adjust the token to account for unclosed blocks
         //we search for the first non-whitespace/non-comment
         //token to the left of the caret
-        variable Integer tokenIndex = nodes.getTokenIndexAtCharacter(tokens, offset);
+        variable Integer tokenIndex 
+                = nodes.getTokenIndexAtCharacter(tokens, offset);
         if (tokenIndex < 0) {
             tokenIndex = -tokenIndex;
         }
-        CommonToken adjustedToken = adjust(tokenIndex, offset, tokens);
+        CommonToken adjustedToken 
+                = adjust(tokenIndex, offset, tokens);
         Integer tt = adjustedToken.type;
         
         if (offset <= adjustedToken.stopIndex,
@@ -141,11 +154,15 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
         //it's useful to know the type of the preceding token, if any
         variable Integer index = adjustedToken.tokenIndex;
-        if (offset <= adjustedToken.stopIndex+1, offset > adjustedToken.startIndex) {
+        if (offset <= adjustedToken.stopIndex+1, 
+            offset > adjustedToken.startIndex) {
             index--;
         }
         Integer tokenType = adjustedToken.type;
-        Integer previousTokenType = if (index >= 0) then adjust(index, offset, tokens).type else -1;
+        Integer previousTokenType 
+                = if (index >= 0) 
+                then adjust(index, offset, tokens).type 
+                else -1;
 
         //find the type that is expected in the current
         //location so we can prioritize proposals of that
@@ -154,7 +171,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         //      an expression, since RequiredTypeVisitor
         //      doesn't know how to search up the tree for
         //      the containing InvocationExpression
-        value required = types.getRequiredType(typecheckedRootNode, node, adjustedToken);
+        value required = types.getRequiredType {
+            rootNode = typecheckedRootNode;
+            node = node;
+            token = adjustedToken;
+        };
         variable String prefix = "";
         variable String fullPrefix = "";
         if (isIdentifierOrKeyword(adjustedToken)) {
@@ -163,24 +184,31 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             //compute the offset, in order to
             //account for quoted identifiers, where
             //the \i or \I is not in the token text 
-            Integer offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
-            Integer realOffsetInToken = offset - adjustedToken.startIndex;
+            Integer offsetInToken 
+                    = offset - adjustedToken.stopIndex - 1 + text.size;
+            Integer realOffsetInToken 
+                    = offset - adjustedToken.startIndex;
             if (offsetInToken <= text.size) {
                 prefix = text.spanTo(offsetInToken - 1);
-                fullPrefix = getRealText(adjustedToken).spanTo(realOffsetInToken - 1);
+                fullPrefix 
+                        = getRealText(adjustedToken)
+                            .spanTo(realOffsetInToken - 1);
             }
         }
-        variable Boolean isMemberOp = isMemberOperator(adjustedToken);
+        variable Boolean isMemberOp 
+                = isMemberOperator(adjustedToken);
         variable String qualified = "";
         
         // special handling for doc links
-        Boolean inDoc = isAnnotationStringLiteral(adjustedToken)
+        Boolean inDoc 
+                = isAnnotationStringLiteral(adjustedToken)
                 && offset>adjustedToken.startIndex
                 && offset<=adjustedToken.stopIndex;
         if (inDoc) {
             if (is Tree.DocLink node) {
                 Tree.DocLink docLink = node;
-                Integer offsetInLink = offset - docLink.startIndex.intValue();
+                Integer offsetInLink 
+                        = offset - docLink.startIndex.intValue();
                 String text = docLink.token.text;
                 Integer bar = (text.firstOccurrence('|') else -1) + 1;
                 if (offsetInLink < bar) { 
@@ -217,61 +245,206 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         
         //construct completions when outside ordinary code
         value completions = 
-                constructCompletionsOutsideOrdinaryCode(offset, fullPrefix, 
-                        analysisResult, node, adjustedToken,
-                        scope, returnedParamInfo, isMemberOp,
-                        tokenType, monitor);
+                constructCompletionsOutsideOrdinaryCode {
+                    offset = offset;
+                    prefix = fullPrefix;
+                    cpc = analysisResult;
+                    node = node;
+                    token = adjustedToken;
+                    scope = scope;
+                    returnedParamInfo = returnedParamInfo;
+                    memberOp = isMemberOp;
+                    tokenType = tokenType;
+                    monitor = monitor;
+                };
         
         if (exists completions) {
             return completions; 
         }
         else {
-            Proposals proposals = getProposals(node, scope, prefix, isMemberOp, typecheckedRootNode, cancellable);
-            Proposals functionProposals = getFunctionProposals(node, scope, prefix, isMemberOp, cancellable);
+            Proposals proposals 
+                    = getProposals {
+                        node = node;
+                        scope = scope;
+                        prefix = prefix;
+                        memberOp = isMemberOp;
+                        rootNode = typecheckedRootNode;
+                        cancellable = cancellable;
+                    };
+            Proposals functionProposals 
+                    = getFunctionProposals {
+                        node = node;
+                        scope = scope;
+                        prefix = prefix;
+                        memberOp = isMemberOp;
+                        cancellable = cancellable;
+                    };
             filterProposals(proposals);
             filterProposals(functionProposals);
-            value sortedProposals = sortProposals(prefix, required, proposals);
-            value sortedFunctionProposals = sortProposals(prefix, required, functionProposals);
-            return constructCompletions(offset, if (inDoc) then qualified else fullPrefix, sortedProposals,
-                sortedFunctionProposals, analysisResult, scope, node, adjustedToken, isMemberOp, document,
-                secondLevel, inDoc, required.type, previousTokenType, tokenType);
+            return constructCompletions {
+                offset = offset;
+                prefix = if (inDoc) then qualified else fullPrefix;
+                sortedProposals 
+                        = sortProposals {
+                            prefix = prefix;
+                            required = required;
+                            proposals = proposals;
+                        };
+                sortedFunctionProposals 
+                        = sortProposals {
+                            prefix = prefix;
+                            required = required;
+                            proposals = functionProposals;
+                        };
+                cmp = analysisResult;
+                scope = scope;
+                node = node;
+                token = adjustedToken;
+                memberOp = isMemberOp;
+                doc = document;
+                secondLevel = secondLevel;
+                inDoc = inDoc;
+                requiredType = required.type;
+                previousTokenType = previousTokenType;
+                tokenType = tokenType;
+            };
         }
     }
     
-    CompletionResult[]? constructCompletionsOutsideOrdinaryCode(Integer offset, String prefix, IdeComponent cpc,
-            Node node, CommonToken token, Scope scope, Boolean returnedParamInfo, Boolean memberOp,
+    CompletionResult[]? constructCompletionsOutsideOrdinaryCode(
+        Integer offset, String prefix, IdeComponent cpc,
+            Node node, CommonToken token, Scope scope, 
+            Boolean returnedParamInfo, Boolean memberOp,
             Integer tokenType, BaseProgressMonitor monitor) {
         value result = ArrayList<CompletionResult>();
 
-        if (!returnedParamInfo, atStartOfPositionalArgument(node, token)) {
+        if (!returnedParamInfo, 
+            atStartOfPositionalArgument(node, token)) {
             addFakeShowParametersCompletion(node, cpc, result);
             if (result.empty) {
                 return null;
             }
-        } else if (is Tree.PackageLiteral node) {
-            addPackageCompletions(cpc, offset, prefix, null, node, result, false, monitor);
-        } else if (is Tree.ModuleLiteral node) {
-            addModuleCompletions(cpc, offset, prefix, null, node, result, false, monitor);
-        } else if (isDescriptorPackageNameMissing(node)) {
-            addCurrentPackageNameCompletion(cpc, offset, prefix, result);
-        } else if (node is Tree.Import, offset > token.stopIndex+1) {
-            addPackageCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);
-        } else if (node is Tree.ImportModule, offset > token.stopIndex+1) {
-            addModuleCompletions(cpc, offset, prefix, null, node, result, nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL, monitor);
-        } else if (is Tree.ImportPath node) {
-            ImportVisitor(prefix, token, offset, node, cpc, result, monitor, this).visit(cpc.lastCompilationUnit);
-        } else if (isEmptyModuleDescriptor(cpc.lastCompilationUnit)) {
+        }
+        else if (is Tree.PackageLiteral node) {
+            addPackageCompletions {
+                lar = cpc;
+                offset = offset;
+                prefix = prefix;
+                path = null;
+                node = node;
+                result = result;
+                withBody = false;
+                monitor = monitor;
+            };
+        }
+        else if (is Tree.ModuleLiteral node) {
+            addModuleCompletions {
+                cpc = cpc;
+                offset = offset;
+                prefix = prefix;
+                path = null;
+                node = node;
+                result = result;
+                withBody = false;
+                monitor = monitor;
+            };
+        }
+        else if (isDescriptorPackageNameMissing(node)) {
+            addCurrentPackageNameCompletion {
+                cpc = cpc;
+                offset = offset;
+                prefix = prefix;
+                result = result;
+            };
+        }
+        else if (node is Tree.Import, 
+                offset > token.stopIndex+1) {
+            addPackageCompletions {
+                lar = cpc;
+                offset = offset;
+                prefix = prefix;
+                path = null;
+                node = node;
+                result = result;
+                withBody = nextTokenType(cpc, token) 
+                        != CeylonLexer.\iLBRACE;
+                monitor = monitor;
+            };
+        }
+        else if (node is Tree.ImportModule, 
+                offset > token.stopIndex+1) {
+            addModuleCompletions {
+                cpc = cpc;
+                offset = offset;
+                prefix = prefix;
+                path = null;
+                node = node;
+                result = result;
+                withBody = nextTokenType(cpc, token) 
+                        != CeylonLexer.\iSTRING_LITERAL;
+                monitor = monitor;
+            };
+        }
+        else if (is Tree.ImportPath node) {
+            ImportVisitor {
+                prefix = prefix;
+                token = token;
+                offset = offset;
+                node = node;
+                cpc = cpc;
+                result = result;
+                monitor = monitor;
+                completionManager = this;
+            }
+            .visit(cpc.lastCompilationUnit);
+        }
+        else if (isEmptyModuleDescriptor(cpc.lastCompilationUnit)) {
             addModuleDescriptorCompletion(cpc, offset, prefix, result);
-            addKeywordProposals(cpc.lastCompilationUnit, offset, prefix, result, node, null, false, tokenType);
-        } else if (isEmptyPackageDescriptor(cpc.lastCompilationUnit)) {
+            addKeywordProposals {
+                cu = cpc.lastCompilationUnit;
+                offset = offset;
+                prefix = prefix;
+                result = result;
+                node = node;
+                ol = null;
+                postfix = false;
+                previousTokenType = tokenType;
+            };
+        }
+        else if (isEmptyPackageDescriptor(cpc.lastCompilationUnit)) {
             addPackageDescriptorCompletion(cpc, offset, prefix, result);
-            addKeywordProposals(cpc.lastCompilationUnit, offset, prefix, result, node, null, false, tokenType);
-        } else if (node is Tree.TypeArgumentList, token.type == CeylonLexer.\iLARGER_OP) {
+            addKeywordProposals {
+                cu = cpc.lastCompilationUnit;
+                offset = offset;
+                prefix = prefix;
+                result = result;
+                node = node;
+                ol = null;
+                postfix = false;
+                previousTokenType = tokenType;
+            };
+        }
+        else if (node is Tree.TypeArgumentList, 
+            token.type == CeylonLexer.\iLARGER_OP) {
             if (offset == token.stopIndex+1) {
-                addTypeArgumentListProposal(offset, cpc, node, scope, result, this);
-            } else if (isMemberNameProposable(offset, node, memberOp)) {
-                addMemberNameProposals(offset, cpc, node, result);
-            } else {
+                addTypeArgumentListProposal {
+                    offset = offset;
+                    cpc = cpc;
+                    node = node;
+                    scope = scope;
+                    result = result;
+                    completionManager = this;
+                };
+            }
+            else if (isMemberNameProposable(offset, node, memberOp)) {
+                addMemberNameProposals {
+                    offset = offset;
+                    controller = cpc;
+                    node = node;
+                    result = result;
+                };
+            }
+            else {
                 return null;
             }
         } else {
@@ -282,9 +455,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean isDescriptorPackageNameMissing(Node node) {
         Tree.ImportPath? path;
-        if (is Tree.ModuleDescriptor node) {
+        switch (node)
+        case (is Tree.ModuleDescriptor) {
             path = node.importPath;
-        } else if (is Tree.PackageDescriptor node) {
+        }
+        case (is Tree.PackageDescriptor) {
             path = node.importPath;
         } else {
             return false;
@@ -295,11 +470,13 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean atStartOfPositionalArgument(Node node, CommonToken token) {
         if (is Tree.PositionalArgumentList node) {
-            variable Integer type = token.type;
-            return type == CeylonLexer.\iLPAREN || type == CeylonLexer.\iCOMMA;
+            value type = token.type;
+            return type == CeylonLexer.\iLPAREN
+                || type == CeylonLexer.\iCOMMA;
         } else if (is Tree.NamedArgumentList node) {
-            variable Integer type = token.type;
-            return type == CeylonLexer.\iLBRACE || type == CeylonLexer.\iSEMICOLON;
+            value type = token.type;
+            return type == CeylonLexer.\iLBRACE
+                || type == CeylonLexer.\iSEMICOLON;
         } else {
             return false;
         }
@@ -309,12 +486,13 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     void filterProposals(Proposals proposals) {
         List<Pattern> filters = proposalFilters;
         if (!filters.empty) {
-            JIterator<DeclarationWithProximity> iterator = proposals.values().iterator();
+            value iterator = proposals.values().iterator();
             while (iterator.hasNext()) {
                 DeclarationWithProximity dwp = iterator.next();
                 String name = dwp.declaration.qualifiedNameString;
                 for (Pattern filter in filters) {
-                    if (filter.matcher(javaString(name)).matches()) {
+                    if (filter.matcher(javaString(name))
+                              .matches()) {
                         iterator.remove();
                     }
                 }
@@ -324,26 +502,19 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     shared formal List<Pattern> proposalFilters;
     
-    // see CeylonCompletionProcessor.sortProposals()
-    Set<DeclarationWithProximity> sortProposals(String prefix, RequiredType required, Proposals proposals) {
-        Set<DeclarationWithProximity> set = TreeSet<DeclarationWithProximity>(ProposalComparator(prefix, required));
-        set.addAll(proposals.values());
-        return set;
-    }
-
     // see CeylonCompletionProcessor.isAnnotationStringLiteral()
     Boolean isAnnotationStringLiteral(CommonToken token) {
         Integer type = token.type;
         return type == CeylonLexer.\iASTRING_LITERAL
-                || type == CeylonLexer.\iAVERBATIM_STRING;
+            || type == CeylonLexer.\iAVERBATIM_STRING;
     }
 
     // see CeylonCompletionProcessor.isMemberOperator()
     Boolean isMemberOperator(Token token) {
         Integer type = token.type;
         return type == CeylonLexer.\iMEMBER_OP 
-                || type == CeylonLexer.\iSPREAD_OP 
-                || type == CeylonLexer.\iSAFE_MEMBER_OP;
+            || type == CeylonLexer.\iSPREAD_OP 
+            || type == CeylonLexer.\iSAFE_MEMBER_OP;
     }
     
     // see CeylonCompletionProcessor.getRealText()
@@ -352,12 +523,14 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         Integer type = token.type;
         Integer len = token.stopIndex - token.startIndex + 1;
         if (text.size < len) {
-            variable String quote;
+            String quote;
             if (type == CeylonLexer.\iLIDENTIFIER) {
                 quote = "\\i";
-            } else if (type == CeylonLexer.\iUIDENTIFIER) {
+            }
+            else if (type == CeylonLexer.\iUIDENTIFIER) {
                 quote = "\\I";
-            } else {
+            }
+            else {
                 quote = "";
             }
             return quote + text;
@@ -367,13 +540,21 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
     // see CeylonCompletionProcessor.getTokenNode()
-    Node getTokenNode(Integer adjustedStart, Integer adjustedEnd, Integer tokenType, Tree.CompilationUnit rootNode, Integer offset) {
-        variable Node? node = nodes.findNode(rootNode, null, adjustedStart, adjustedEnd);
+    Node getTokenNode(Integer adjustedStart, 
+        Integer adjustedEnd, Integer tokenType, 
+        Tree.CompilationUnit rootNode, Integer offset) {
+        variable Node? node 
+                = nodes.findNode {
+                    node = rootNode;
+                    tokens = null;
+                    startOffset = adjustedStart;
+                    endOffset = adjustedEnd;
+                };
         if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
             node = nodes.findNode(sl, null, offset, offset);
         }
-        if (tokenType == CeylonLexer.\iRBRACE && !(node is Tree.IterableType)
-                || tokenType == CeylonLexer.\iSEMICOLON) {
+        if (tokenType == CeylonLexer.\iRBRACE && !node is Tree.IterableType
+         || tokenType == CeylonLexer.\iSEMICOLON) {
             //We are to the right of a } or ;
             //so the returned node is the previous
             //statement/declaration. Look for the
@@ -447,7 +628,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     shared Proposals getProposals(Node node,
             Scope? scope, String prefix, Boolean memberOp,
-            Tree.CompilationUnit rootNode, Cancellable? cancellable) {
+            Tree.CompilationUnit rootNode, 
+            Cancellable? cancellable) {
 
         Unit? unit = node.unit;
 
@@ -496,7 +678,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                         .declaration
                         .getMatchingMemberDeclarations(
                             unit, scope, prefix, 0);
-            } else {
+            }
+            else {
                 switch (primary = node.primary)
                 case (is Tree.MemberOrTypeExpression) {
                     if (is TypeDeclaration td
@@ -507,57 +690,68 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                                 .getMatchingMemberDeclarations(
                                     unit, scope, prefix, 0)
                             else noProposals;
-                    } else {
+                    }
+                    else {
                         return noProposals;
                     }
-                } case (is Tree.Package) {
+                }
+                case (is Tree.Package) {
                     return unit.\ipackage
                             .getMatchingDirectDeclarations(
                                 prefix, 0);
-                } else {
+                }
+                else {
                     return noProposals;
                 }
             }
-        } case (is Tree.QualifiedType) {
+        }
+        case (is Tree.QualifiedType) {
             if (exists qt = node.outerType.typeModel) {
                 return qt.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
                             unit, scope, prefix, 0);
-            } else {
+            }
+            else {
                 return noProposals;
             }
-        } case (is Tree.BaseType) {
+        }
+        case (is Tree.BaseType) {
             if (node.packageQualified) {
                 return unit.\ipackage
                         .getMatchingDirectDeclarations(
                             prefix, 0);
-            } else if (exists scope) {
+            }
+            else if (exists scope) {
                 return scope.getMatchingDeclarations(
                     unit, prefix, 0, cancellable);
-            } else {
+            }
+            else {
                 return noProposals;
             }
-        } else {
+        }
+        else {
             if (memberOp, is Tree.Term|Tree.DocLink node) {
                 value type = switch (node)
                     case (is Tree.Term)
                         node.typeModel
                     case (is Tree.DocLink)
                         docLinkType(node);
-
                 if (exists type) {
                     return type.resolveAliases()
                             .declaration
                             .getMatchingMemberDeclarations(
                                 unit, scope, prefix, 0);
-                } else if (exists scope) {
+                }
+                else if (exists scope) {
                     return scope.getMatchingDeclarations(
                         unit, prefix, 0, cancellable);
-                } else {
+                }
+                else {
                     return noProposals;
                 }
-            } else if (exists scope) {
+            }
+            else if (exists scope) {
                 return scope.getMatchingDeclarations(
                     unit, prefix, 0, cancellable);
             }
@@ -586,7 +780,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
 
     Proposals getFunctionProposals(Node node,
-            Scope scope, String prefix, Boolean memberOp, Cancellable? cancellable)
+            Scope scope, String prefix, Boolean memberOp, 
+            Cancellable? cancellable)
             => if (exists type
                     = getFunctionProposalType(node, memberOp),
                     !isTypeUnknown(type))
@@ -650,15 +845,10 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
     }
 
-    Type? docLinkType(Tree.DocLink node) {
-        if (exists base = node.base) {
-            return resultType(base)
-                else base.reference.fullType;
-        }
-        else {
-            return null;
-        }
-    }
+    Type? docLinkType(Tree.DocLink node) 
+            => if (exists base = node.base) 
+            then (resultType(base)
+            else base.reference.fullType) else null;
 
     Type? resultType(Declaration declaration) {
         switch (declaration)
@@ -678,7 +868,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
     }
 
-    Proposals getUnparsedProposals(Node? node, String prefix, Cancellable? cancellable)
+    Proposals getUnparsedProposals(Node? node, String prefix, 
+        Cancellable? cancellable)
             => if (exists node,
                     exists pkg = node.unit?.\ipackage)
                 then pkg.\imodule
@@ -691,15 +882,16 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 else node is Tree.QualifiedType;
 
     // see CeylonCompletionProcess.constructCompletions(...)
-    shared CompletionResult[] constructCompletions(Integer offset, String prefix,
-            Collection<DeclarationWithProximity> sortedProposals,
-            Collection<DeclarationWithProximity> sortedFunctionProposals,
-            IdeComponent cmp, Scope scope,
-            Node node, CommonToken token,
-            Boolean memberOp, Document doc,
-            Boolean secondLevel, Boolean inDoc,
-            Type? requiredType, Integer previousTokenType,
-            Integer tokenType) {
+    shared CompletionResult[] constructCompletions(
+        Integer offset, String prefix,
+        Collection<DeclarationWithProximity> sortedProposals,
+        Collection<DeclarationWithProximity> sortedFunctionProposals,
+        IdeComponent cmp, Scope scope,
+        Node node, CommonToken token,
+        Boolean memberOp, Document doc,
+        Boolean secondLevel, Boolean inDoc,
+        Type? requiredType, Integer previousTokenType,
+        Integer tokenType) {
 
         value result = ArrayList<CompletionResult>();
         value cu = cmp.lastCompilationUnit;
@@ -709,13 +901,25 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 = cmp.options.parameterTypesInCompletion;
 
         if (is Tree.Term node) {
-            addParametersProposal(offset, prefix, node, result, cmp);
-        } else if (is Tree.ArgumentList node) {
+            addParametersProposal {
+                offset = offset;
+                prefix = prefix;
+                node = node;
+                result = result;
+                cmp = cmp;
+            };
+        }
+        else if (is Tree.ArgumentList node) {
             value fiv = FindInvocationVisitor(node);
             (fiv of Visitor).visit(cu);
-
             if (exists ie = fiv.result) {
-                addParametersProposal(offset, prefix, ie, result, cmp);
+                addParametersProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    node = ie;
+                    result = result;
+                    cmp = cmp;
+                };
             }
         }
 
@@ -727,22 +931,27 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                         result, dwp, null, scope, ol, false);
                 }
             }
-        } else if (prefix.empty, !isLocation(ol, OccurrenceLocation.\iIS),
-                isMemberNameProposable(offset, node, memberOp),
-                is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
+        }
+        else if (prefix.empty, 
+            !isLocation(ol, OccurrenceLocation.\iIS),
+            isMemberNameProposable(offset, node, memberOp),
+            is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
             
             //member names we can refine
-            if (exists t = switch (node)
-                case (is Tree.Type) node.typeModel
-                else node.target?.type) {
+            if (exists t 
+                    = switch (node)
+                    case (is Tree.Type) node.typeModel
+                    else node.target?.type) {
                 addRefinementProposals(offset,
                         sortedProposals, cmp, scope, node, doc,
                         secondLevel, result, ol, t, false);
             }
             //otherwise guess something from the type
             addMemberNameProposal(offset, prefix, node, result, cu);
-        } else if (is Tree.TypedDeclaration node, 
-            !(node is Tree.Variable && node.type is Tree.SyntheticVariable),
+        }
+        else if (is Tree.TypedDeclaration node, 
+            !(node is Tree.Variable 
+                && node.type is Tree.SyntheticVariable),
             //!(node is Tree.InitializerParameter),
             isMemberNameProposable(offset, node, memberOp)) {
             
@@ -760,11 +969,27 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 else node is Tree.QualifiedMemberOrTypeExpression|Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
-                addKeywordProposals(cmp.lastCompilationUnit, offset, prefix, result, node, ol, isMember, tokenType);
+                addKeywordProposals {
+                    cu = cmp.lastCompilationUnit;
+                    offset = offset;
+                    prefix = prefix;
+                    result = result;
+                    node = node;
+                    ol = ol;
+                    postfix = isMember;
+                    previousTokenType = tokenType;
+                };
             }
             if (!secondLevel, !inDoc, !isMember,
-                    prefix.empty, !ModelUtil.isTypeUnknown(requiredType), unit.isCallableType(requiredType)) {
-                addAnonFunctionProposal(offset, requiredType, result, unit);
+                    prefix.empty, 
+                    !ModelUtil.isTypeUnknown(requiredType), 
+                    unit.isCallableType(requiredType)) {
+                addAnonFunctionProposal {
+                    offset = offset;
+                    requiredType = requiredType;
+                    result = result;
+                    unit = unit;
+                };
             }
 
             value isPackageOrModuleDescriptor 
@@ -774,8 +999,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
 
-                if (!dec.toplevel, !dec.classOrInterfaceMember, dec.unit == unit, 
-                    exists decNode = nodes.getReferencedNodeInUnit(dec, cu),
+                if (!dec.toplevel, 
+                    !dec.classOrInterfaceMember, 
+                    dec.unit == unit, 
+                    exists decNode 
+                            = nodes.getReferencedNodeInUnit(dec, cu),
                     exists id = nodes.getIdentifyingNode(decNode), 
                     offset < id.startIndex.intValue()) {
                     continue;
@@ -791,59 +1019,144 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 if (!secondLevel,
                         isParameterOfNamedArgInvocation(scope, dwp),
                         isDirectlyInsideNamedArgumentList(cmp, node, token)) {
-                    addNamedArgumentProposal(offset, prefix, cmp, 
-                        result, dec, scope);
-                    addInlineFunctionProposal(offset, dec, scope,
-                        node, prefix, cmp, doc, result, indents);
+                    addNamedArgumentProposal {
+                        offset = offset;
+                        prefix = prefix;
+                        cpc = cmp;
+                        result = result;
+                        dec = dec;
+                        scope = scope;
+                    };
+                    addInlineFunctionProposal {
+                        offset = offset;
+                        dec = dec;
+                        scope = scope;
+                        node = node;
+                        prefix = prefix;
+                        cmp = cmp;
+                        doc = doc;
+                        result = result;
+                        indents = indents;
+                    };
                 }
 
                 value nextToken = getNextToken(cmp, token);
                 value noParamsFollow = noParametersFollow(nextToken);
-
-                if (!secondLevel, !inDoc, noParamsFollow, isInvocationProposable(dwp, ol, previousTokenType),
-                        !isQualifiedType(node) || ModelUtil.isConstructor(dec) || dec.staticallyImportable,
-                        if (is Constructor scope)
-                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) || isDelegatableConstructor(scope, dec)
+                
+                if (!secondLevel, !inDoc, noParamsFollow, 
+                    isInvocationProposable(dwp, ol, previousTokenType),
+                    !isQualifiedType(node) 
+                            || ModelUtil.isConstructor(dec) 
+                            || dec.staticallyImportable,
+                    if (is Constructor scope)
+                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                            || isDelegatableConstructor(scope, dec)
                         else true) {
                     for (d in overloads(dec)) {
-                        value pr = if (isMember)
-                            then getQualifiedProducedReference(node, d)
-                            else getRefinedProducedReference(scope, d);
-
-                        addInvocationProposals(offset, prefix, cmp, result, dwp, d, pr, scope, ol, null, isMember);
+                        addInvocationProposals {
+                            offset = offset;
+                            prefix = prefix;
+                            cmp = cmp;
+                            result = result;
+                            dwp = dwp;
+                            dec = d;
+                            pr = if (isMember)
+                                then getQualifiedProducedReference(node, d)
+                                else getRefinedProducedReference(scope, d);
+                            scope = scope;
+                            ol = ol;
+                            typeArgs = null;
+                            isMember = isMember;
+                        };
                     }
                 }
-                if (isProposable(dwp, ol, scope, unit, requiredType, previousTokenType),
+                if (isProposable {
+                        dwp = dwp;
+                        ol = ol;
+                        scope = scope;
+                        unit = unit;
+                        requiredType = requiredType;
+                        previousTokenType = previousTokenType;
+                    },
                     isProposableBis(node, ol, dec),
-                    (definitelyRequiresType(ol) || noParamsFollow || dec is Functional),
-                    (!scope is Constructor || !isLocation(ol, OccurrenceLocation.\iEXTENDS) || isDelegatableConstructor(scope, dec))) {
+                    (definitelyRequiresType(ol) 
+                        || noParamsFollow 
+                        || dec is Functional),
+                    (!scope is Constructor 
+                        || !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                        || isDelegatableConstructor(scope, dec))) {
 
                     if (isLocation(ol, OccurrenceLocation.\iDOCLINK)) {
                         addDocLinkProposal(offset, prefix, cmp, result, dec, scope);
-                    } else if (isLocation(ol, OccurrenceLocation.\iIMPORT)) {
+                    }
+                    else if (isLocation(ol, OccurrenceLocation.\iIMPORT)) {
                         addImportProposal(offset, prefix, cmp, result, dec, scope);
-                    } else if (ol?.reference else false) {
+                    }
+                    else if (ol?.reference else false) {
                         if (isReferenceProposable(ol, dec)) {
-                            addProgramElementReferenceProposal(offset, prefix, cmp, result, dec, scope, isMember);
+                            addProgramElementReferenceProposal {
+                                offset = offset;
+                                prefix = prefix;
+                                cpc = cmp;
+                                result = result;
+                                dec = dec;
+                                scope = scope;
+                                isMember = isMember;
+                            };
                         }
-                    } else {
-                        value pr = if (isMember)
+                    }
+                    else {
+                        if (secondLevel,
+                            exists pr = if (isMember)
+                                then getQualifiedProducedReference(node, dec)
+                                else getRefinedProducedReference(scope, dec)) {
+                            addSecondLevelProposal {
+                                offset = offset;
+                                prefix = prefix;
+                                controller = cmp;
+                                result = result;
+                                dec = dec;
+                                scope = scope;
+                                isMember = false;
+                                pr = pr;
+                                requiredType = requiredType;
+                                ol = ol;
+                            };
+                        }
+                        else if (!dec is Function 
+                                || !ModelUtil.isAbstraction(dec) 
+                                || !noParamsFollow) {
+                            addReferenceProposal {
+                                cu = cu;
+                                offset = offset;
+                                prefix = prefix;
+                                cmp = cmp;
+                                result = result;
+                                dwp = dwp;
+                                pr = if (isMember)
                             then getQualifiedProducedReference(node, dec)
                             else getRefinedProducedReference(scope, dec);
-
-                        if (secondLevel, exists pr) {
-                            addSecondLevelProposal(offset, prefix, cmp, result, dec, scope, false, pr, requiredType, ol);
-                        } else if (!dec is Function || !ModelUtil.isAbstraction(dec) || !noParamsFollow) {
-                            addReferenceProposal(cu, offset, prefix, cmp, result, dwp, pr, scope, ol, isMember);
+                                scope = scope;
+                                ol = ol;
+                                isMember = isMember;
+                            };
                         }
                     }
                 }
 
-                if (!memberOp, !secondLevel, isProposable(dwp, ol, scope, unit, requiredType, previousTokenType), 
-                        !isLocation(ol, OccurrenceLocation.\iIMPORT),
-                        !isLocation(ol, OccurrenceLocation.\iCASE),
-                        !isLocation(ol, OccurrenceLocation.\iCATCH),
-                        isDirectlyInsideBlock(node, cmp, scope, token)) {
+                if (!memberOp, !secondLevel, 
+                    isProposable {
+                        dwp = dwp;
+                        ol = ol;
+                        scope = scope;
+                        unit = unit;
+                        requiredType = requiredType;
+                        previousTokenType = previousTokenType;
+                    }, 
+                    !isLocation(ol, OccurrenceLocation.\iIMPORT),
+                    !isLocation(ol, OccurrenceLocation.\iCASE),
+                    !isLocation(ol, OccurrenceLocation.\iCATCH),
+                    isDirectlyInsideBlock(node, cmp, scope, token)) {
                     
                     addForProposal(offset, prefix, cmp, result, dwp, dec);
                     addIfExistsProposal(offset, prefix, cmp, result, dwp, dec);
@@ -856,9 +1169,22 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 
                 if (!memberOp, !isMember, !secondLevel) {
                     for (d in overloads(dec)) {
-                        if (isRefinementProposable(d, ol, scope), is ClassOrInterface scope) {
-                            addRefinementProposal(offset, d, scope, node, scope, prefix, cmp, result,
-                                true, indents, addParameterTypesInCompletions);
+                        if (isRefinementProposable(d, ol, scope), 
+                            is ClassOrInterface scope) {
+                            addRefinementProposal {
+                                offset = offset;
+                                dec = d;
+                                ci = scope;
+                                node = node;
+                                scope = scope;
+                                prefix = prefix;
+                                cpc = cmp;
+                                result = result;
+                                preamble = true;
+                                indents = indents;
+                                addParameterTypesInCompletions 
+                                        = addParameterTypesInCompletions;
+                            };
                         }
                     }
                 }
@@ -872,7 +1198,14 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             
             for (dwp in sortedFunctionProposals) {
                 value primary = node.primary;
-                addFunctionProposal(offset, cmp, primary, result, dwp.declaration, this);
+                addFunctionProposal {
+                    offset = offset;
+                    cpc = cmp;
+                    primary = primary;
+                    result = result;
+                    dec = dwp.declaration;
+                    cm = this;
+                };
             }
             
             if (is Tree.StaticMemberOrTypeExpression bme = node.primary) {
@@ -882,8 +1215,11 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 // the expression to wrap, may need to be assigned
                 value expr = (if (is Tree.BaseMemberExpression bme)
                              then "" else "val = ")
-                            + getDocumentSubstring(doc,
-                        bme.startIndex.intValue(), bme.distance.intValue());
+                            + getDocumentSubstring {
+                                doc = doc;
+                                start = bme.startIndex.intValue();
+                                length = bme.distance.intValue();
+                            };
                 
                 addIfExistsProposal(offset, textToReplace, cmp,
                     result, dwp, bme.declaration, bme, expr);
@@ -912,25 +1248,31 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         Node node, Boolean memberOp) {
         Token? token = node.endToken;
         return if(is CommonToken token, !memberOp,
-            token.stopIndex >= offset-2) then true else false;
+            token.stopIndex >= offset-2) 
+                then true else false;
     }
 
     Reference? getQualifiedProducedReference(Node node, Declaration d) {
         variable Type? pt;
-
-        if (is Tree.QualifiedMemberOrTypeExpression node) {
+        switch (node)
+        case (is Tree.QualifiedMemberOrTypeExpression) {
             pt = node.primary.typeModel;
-        } else if (is Tree.QualifiedType node) {
+        }
+        case (is Tree.QualifiedType) {
             pt = node.outerType.typeModel;
-        } else {
+        }
+        else {
             return null;
         }
 
-        if (exists p = pt, d.classOrInterfaceMember, is TypeDeclaration container = d.container) {
+        if (exists p = pt, 
+            d.classOrInterfaceMember, 
+            is TypeDeclaration container = d.container) {
             pt = p.getSupertype(container);
         }
 
-        return d.appliedReference(pt, Collections.emptyList<Type>());
+        return d.appliedReference(pt, 
+                Collections.emptyList<Type>());
     }
 
     Reference? getRefinedProducedReference(Type|Scope typeOrScope, Declaration d) {
@@ -938,32 +1280,35 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             value superType = typeOrScope;
             if (superType.intersection) {
                 for (pt in superType.satisfiedTypes) {
-                    Reference? result = getRefinedProducedReference(pt, d);
-                    if (exists result) {
+                    if (exists result 
+                            = getRefinedProducedReference(pt, d)) {
                         return result;
                     }
                 }
                 return null; //never happens?
             }
             else {
-                if (exists declaringType = superType.declaration.getDeclaringType(d)) {
-                    Type outerType = superType.getSupertype(declaringType.declaration);
+                if (exists declaringType 
+                        = superType.declaration.getDeclaringType(d)) {
+                    Type outerType 
+                            = superType.getSupertype(declaringType.declaration);
                     return refinedProducedReference(outerType, d);
                 }
                 return null;
             }
         } else {
             Type? outerType = typeOrScope.getDeclaringType(d);
-            JList<Type> params = JArrayList<Type>();
+            value params = JArrayList<Type>();
             if (is Generic d) {
-                CeylonIterable(d.typeParameters).each((tp) => params.add(tp.type));
+                CeylonIterable(d.typeParameters)
+                        .each((tp) => params.add(tp.type));
             }
             return d.appliedReference(outerType, params);
         }
     }
 
     Reference refinedProducedReference(Type outerType, Declaration d) {
-        JList<Type> params = JArrayList<Type>();
+        value params = JArrayList<Type>();
         if (is Generic d) {
             for (tp in d.typeParameters) {
                 params.add(tp.type);
@@ -984,7 +1329,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 return if (exists tcp = constraint.declarationModel, tpc==tcp.container) then true else false;
             }
         }
-
         return false;
     }
 
@@ -996,19 +1340,35 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         OccurrenceLocation? ol, Type t,
         Boolean preamble) {
 
-        value addParameterTypesInCompletions = cpc.options.parameterTypesInCompletion;
+        value addParameterTypesInCompletions 
+                = cpc.options.parameterTypesInCompletion;
         
         for (dwp in set) {
             value dec = dwp.declaration;
             if (!filter, is FunctionOrValue m = dec) {
                 for (d in overloads(dec)) {
                     if (isRefinementProposable(d, ol, scope),
-                        isReturnType(t, m, node), is ClassOrInterface scope) {
+                        isReturnType(t, m, node), 
+                        is ClassOrInterface scope) {
                         value start = node.startIndex.intValue();
-                        String pfx = getDocumentSubstring(doc, 0, offset - start);
-
-                        addRefinementProposal(offset, d, scope, node, scope, pfx, cpc,
-                            result, preamble, indents, addParameterTypesInCompletions);
+                        addRefinementProposal {
+                            offset = offset;
+                            dec = d;
+                            ci = scope;
+                            node = node;
+                            scope = scope;
+                            prefix = getDocumentSubstring {
+                                doc = doc;
+                                start = 0;
+                                length = offset - start;
+                            };
+                            cpc = cpc;
+                            result = result;
+                            preamble = preamble;
+                            indents = indents;
+                            addParameterTypesInCompletions 
+                                    = addParameterTypesInCompletions;
+                        };
                     }
                 }
             }
@@ -1019,7 +1379,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         return (ol is Null || isAnonymousClass(scope)) &&
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
-                (if (is ClassOrInterface scope) then scope.isInheritedFromSupertype(dec) else false);
+                (if (is ClassOrInterface scope) 
+                 then scope.isInheritedFromSupertype(dec) 
+                 else false);
     }
     
     Boolean isAnonymousClass(Scope scope)
@@ -1044,21 +1406,26 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             value tokenType = token.type;
             if (tokenType==CeylonLexer.\iLBRACE ||
                 tokenType==CeylonLexer.\iRBRACE ||
-                    tokenType==CeylonLexer.\iSEMICOLON) {
+                tokenType==CeylonLexer.\iSEMICOLON) {
                 return true;
             }
 
-            value previousTokenType = adjust(token.tokenIndex - 1,
-                token.startIndex, tokens).type;
+            value previousTokenType 
+                    = adjust {
+                        tokenIndex = token.tokenIndex - 1;
+                        offset = token.startIndex;
+                        tokens = tokens;
+                    }.type;
 
             return previousTokenType==CeylonLexer.\iLBRACE ||
-                    previousTokenType==CeylonLexer.\iRBRACE ||
-                    previousTokenType==CeylonLexer.\iSEMICOLON;
+                   previousTokenType==CeylonLexer.\iRBRACE ||
+                   previousTokenType==CeylonLexer.\iSEMICOLON;
         }
     }
 
     // see CeylonCompletionProcessor.adjust(...)
-    CommonToken adjust(variable Integer tokenIndex, Integer offset, JList<CommonToken> tokens) {
+    CommonToken adjust(variable Integer tokenIndex, Integer offset, 
+            JList<CommonToken> tokens) {
         variable CommonToken adjustedToken = tokens.get(tokenIndex);
         while (--tokenIndex >= 0,
                adjustedToken.type==CeylonLexer.\iWS //ignore whitespace
@@ -1066,9 +1433,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             || adjustedToken.startIndex==offset) { //don't consider the token to the right of the caret
 
             adjustedToken = tokens.get(tokenIndex);
-            if (adjustedToken.type!=CeylonLexer.\iWS &&
-                        adjustedToken.type!=CeylonLexer.\iEOF &&
-                        adjustedToken.channel!=Token.\iHIDDEN_CHANNEL) { //don't adjust to a ws token
+            if (adjustedToken.type!=CeylonLexer.\iWS
+             && adjustedToken.type!=CeylonLexer.\iEOF 
+             && adjustedToken.channel!=Token.\iHIDDEN_CHANNEL) { //don't adjust to a ws token
                 break;
             }
         }
@@ -1083,11 +1450,12 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
         
         if (is Tree.TypedDeclaration node) {
-            value td = node;
-            value container = td.declarationModel.container;
-            if (is ClassOrInterface container) {
-                value ci = container;
-                value type = ci.type.getTypedMember(m, noTypes).type;
+            if (is ClassOrInterface container 
+                    = node.declarationModel.container) {
+                value type 
+                        = container.type
+                            .getTypedMember(m, noTypes)
+                            .type;
                 if (t.isSubtypeOf(type)) {
                     return true;
                 }
@@ -1100,7 +1468,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     Boolean noParametersFollow(CommonToken? nextToken) {
         //should we disable this, since a statement
         //can in fact begin with an LPAREN??
-        return (nextToken?.type else CeylonLexer.\iEOF) != CeylonLexer.\iLPAREN;
+        return (nextToken?.type else CeylonLexer.\iEOF) 
+                != CeylonLexer.\iLPAREN;
         //disabled now because a declaration can
         //begin with an LBRACE (an Iterable type)
         /*&& nextToken.getType()!=CeylonLexer.LBRACE*/
@@ -1306,9 +1675,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     Boolean definitelyRequiresType(OccurrenceLocation? ol) {
         return isLocation(ol, OccurrenceLocation.\iSATISFIES)
-                || isLocation(ol, OccurrenceLocation.\iOF)
-                || isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
-                || isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS);
+            || isLocation(ol, OccurrenceLocation.\iOF)
+            || isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
+            || isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS);
     }
 
     Boolean isReferenceProposable(OccurrenceLocation? ol, Declaration dec) {
