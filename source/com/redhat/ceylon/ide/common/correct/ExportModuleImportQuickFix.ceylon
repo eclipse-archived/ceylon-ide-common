@@ -2,40 +2,31 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Unit,
-    Declaration
+import com.redhat.ceylon.ide.common.imports {
+    moduleImportUtil
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
-import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
+import com.redhat.ceylon.model.typechecker.model {
+    Unit,
+    Declaration
 }
 
-shared interface ExportModuleImportQuickFix<IFile, IDocument, InsertEdit, TextEdit, TextChange, Region, Project, Data, CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared object exportModuleImportQuickFix {
 
-    shared formal void newExportModuleImportProposal(Data data, Unit u, String desc,
-        String name, String version);
-
-    shared formal AbstractModuleImportUtil<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange> importUtil;
-    
-    shared void applyChanges(Project project, Unit u, String moduleName) {
-        importUtil.exportModuleImports(project, u.\ipackage.\imodule, moduleName);
+    shared void applyChanges(QuickFixData data, Unit u, String moduleName) {
+        moduleImportUtil.exportModuleImports(data, u.\ipackage.\imodule, moduleName);
     }
     
-    shared void addExportModuleImportProposal(Data data) {
+    shared void addExportModuleImportProposal(QuickFixData data) {
         if (is Tree.SimpleType node = data.node) {
             value dec = (node).declarationModel;
             addExportModuleImportProposalInternal(data, node.unit, dec);
         }
     }
 
-    shared void addExportModuleImportProposalForSupertypes(Data data) {
+    shared void addExportModuleImportProposalForSupertypes(QuickFixData data) {
         variable Node? node = data.node;
         value unit = data.node.unit;
         value rootNode = data.rootNode;
@@ -73,7 +64,7 @@ shared interface ExportModuleImportQuickFix<IFile, IDocument, InsertEdit, TextEd
         }
     }
 
-    void addExportModuleImportProposalInternal(Data data, Unit unit, Declaration dec) {
+    void addExportModuleImportProposalInternal(QuickFixData data, Unit unit, Declaration dec) {
         
         value decModule = dec.unit.\ipackage.\imodule;
         for (mi in unit.\ipackage.\imodule.imports) {
@@ -87,7 +78,7 @@ shared interface ExportModuleImportQuickFix<IFile, IDocument, InsertEdit, TextEd
         value desc = "Export 'import " + decModule.nameAsString + " \"" 
                 + decModule.version + "\"' to clients of module";
 
-        newExportModuleImportProposal(data, unit, desc, 
+        data.addExportModuleImportProposal(unit, desc, 
             decModule.nameAsString, decModule.version);
     }
 

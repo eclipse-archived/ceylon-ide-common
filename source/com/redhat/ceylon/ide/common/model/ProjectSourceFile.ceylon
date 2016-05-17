@@ -53,6 +53,9 @@ import java.lang.ref {
 
 DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
 
+shared alias AnyProjectSourceFile
+        => ProjectSourceFile<out Anything, out Anything, out Anything, out Anything>;
+
 shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>
         (ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> projectPhasedUnit)
         extends ModifiableSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>

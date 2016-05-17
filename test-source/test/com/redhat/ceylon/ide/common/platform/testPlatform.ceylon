@@ -1,9 +1,8 @@
-import ceylon.collection {
-    ArrayList
-}
-
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Node
 }
 import com.redhat.ceylon.ide.common.correct {
     ImportProposals
@@ -13,9 +12,6 @@ import com.redhat.ceylon.ide.common.platform {
     VfsServices,
     IdeUtils,
     ModelServices,
-    CompositeChange,
-    TextChange,
-    TextEdit,
     CommonDocument,
     DefaultDocument,
     DefaultTextChange,
@@ -25,8 +21,8 @@ import com.redhat.ceylon.ide.common.util {
     Indents,
     unsafeCast
 }
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Node
+import com.redhat.ceylon.model.typechecker.model {
+    Unit
 }
 
 shared object testPlatform satisfies PlatformServices {
@@ -46,6 +42,9 @@ shared object testPlatform satisfies PlatformServices {
     shared actual IdeUtils utils() => nothing;
     
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
+    
+    gotoLocation(Unit unit, Integer offset, Integer length) => noop();
+    
 }
 
 shared object testIndents satisfies Indents<DefaultDocument> {

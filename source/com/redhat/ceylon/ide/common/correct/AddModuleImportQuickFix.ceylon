@@ -9,7 +9,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil
 }
 import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
+    moduleImportUtil
+}
+import com.redhat.ceylon.ide.common.util {
+    moduleQueries
 }
 import com.redhat.ceylon.model.cmr {
     JDKUtils
@@ -26,28 +29,14 @@ import java.lang {
 import java.util {
     TreeSet
 }
-import com.redhat.ceylon.ide.common.util {
-    moduleQueries
-}
 
-shared interface AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object addModuleImportQuickFix {
     
-    shared formal void newProposal(Data data, String desc, Unit unit,
-        String name, String version);
-    
-    shared formal AbstractModuleImportUtil<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange> importUtil;
-    
-    shared void applyChanges(Project project, Unit unit, String name, String version) {
-        importUtil.addModuleImport(project, 
-            unit.\ipackage.\imodule, 
-            name, version);
+    shared void applyChanges(QuickFixData data, Unit unit, String name, String version) {
+        moduleImportUtil.addModuleImport(unit.\ipackage.\imodule, name, version);
     }
     
-    shared void addModuleImportProposals(Data data, TypeChecker typeChecker) {
+    shared void addModuleImportProposals(QuickFixData data, TypeChecker typeChecker) {
         variable value node = data.node;
         value unit = node.unit;
         
@@ -68,7 +57,7 @@ shared interface AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
                 if (JDKUtils.isJDKPackage(mod.string, pkg)) {
                     value desc = "Add 'import " + mod.string + " \"" + JDKUtils.jdk.version + "\"' to module descriptor";
                     
-                    newProposal(data, desc, unit, mod.string, JDKUtils.jdk.version);
+                    data.addModuleImportProposal(unit, desc, mod.string, JDKUtils.jdk.version);
                     return;
                 }
             }
@@ -91,7 +80,7 @@ shared interface AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,Tex
             value version = md.lastVersion.version;
             value desc = "Add 'import " + name + " \"" + version + "\"' to module descriptor";
             
-            newProposal(data, desc, unit, name, version);
+            data.addModuleImportProposal(unit, desc, name, version);
         }
     }
 }

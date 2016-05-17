@@ -10,7 +10,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
+    moduleImportUtil
 }
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor,
@@ -50,9 +50,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     shared formal void newAddAnnotationQuickFix(Referenceable dec, String text, String desc, Integer offset,
         TextChange change, Region? selection, Data data);
 
-    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection);
-    
-    shared formal AbstractModuleImportUtil<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange> moduleImportUtil;
+    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection,
+        Data data);
     
     value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
         "actual", "formal", "default", "variable"];
@@ -82,7 +81,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                     value annotation = StringBuilder();
                     moduleImportUtil.appendNative(annotation, backends);
                     addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                    newCorrectionQuickFix("Declare module '" + annotation.string + "'", change, null);
+                    newCorrectionQuickFix("Declare module '" + annotation.string + "'", change, null, data);
                     
                     super.visit(that);
                 }
@@ -95,7 +94,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                         value annotation = StringBuilder();
                         moduleImportUtil.appendNative(annotation, backends);
                         addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                        newCorrectionQuickFix("Declare import '" + annotation.string + "'", change, null);
+                        newCorrectionQuickFix("Declare import '" + annotation.string + "'", change, null, data);
                     }
                     
                     super.visit(that);

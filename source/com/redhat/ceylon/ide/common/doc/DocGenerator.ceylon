@@ -17,6 +17,13 @@ import com.redhat.ceylon.ide.common.completion {
     getDocDescriptionFor,
     getInitialValueDescription
 }
+import com.redhat.ceylon.ide.common.imports {
+    moduleImportUtil
+}
+import com.redhat.ceylon.ide.common.model {
+    CeylonUnit,
+    BaseCeylonProject
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
@@ -27,6 +34,24 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.model.cmr {
     JDKUtils
+}
+import com.redhat.ceylon.model.loader {
+    LanguageAnnotation
+}
+import com.redhat.ceylon.model.loader.mirror {
+    AnnotatedMirror,
+    AnnotationMirror
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyClass,
+    LazyInterface,
+    LazyClassAlias,
+    LazyInterfaceAlias,
+    LazyValue,
+    LazyFunction,
+    LazyTypeAlias,
+    JavaBeanValue,
+    JavaMethod
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -71,31 +96,6 @@ import java.util {
     ArrayList,
     JList=List
 }
-import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonUnit,
-    BaseCeylonProject
-}
-import com.redhat.ceylon.model.loader.mirror {
-    AnnotatedMirror,
-    AnnotationMirror
-}
-import com.redhat.ceylon.model.loader.model {
-    LazyClass,
-    LazyInterface,
-    LazyClassAlias,
-    LazyInterfaceAlias,
-    LazyValue,
-    LazyFunction,
-    LazyTypeAlias,
-    JavaBeanValue,
-    JavaMethod
-}
-import com.redhat.ceylon.model.loader {
-    LanguageAnnotation
-}
 
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
@@ -132,9 +132,6 @@ shared interface DocGenerator<Document> {
     "Get the Node referenced by the given model, searching
      in all relevant compilation units."
     shared formal Node? getReferencedNode(Declaration dec);
-    
-    shared formal AbstractModuleImportUtil<out Anything,out Anything,out Anything,
-            out Anything,out Anything,out Anything> moduleImportUtil;
     
     shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
         if (exists target) {
