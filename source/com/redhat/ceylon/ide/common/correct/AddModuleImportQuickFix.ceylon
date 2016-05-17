@@ -35,7 +35,7 @@ shared object addModuleImportQuickFix {
     shared void applyChanges(QuickFixData data, Unit unit, String name, String version) {
         moduleImportUtil.addModuleImport(unit.\ipackage.\imodule, name, version);
     }
-    
+        
     shared void addModuleImportProposals(QuickFixData data, TypeChecker typeChecker) {
         variable value node = data.node;
         value unit = node.unit;
@@ -63,8 +63,18 @@ shared object addModuleImportQuickFix {
             }
         }
         
-        value \imodule = unit.\ipackage.\imodule;
-        value query = moduleQueries.getModuleQuery("", \imodule, data.ceylonProject);
+        if (data.useLazyFixes) {
+            data.addQuickFix("Find modules containing '``pkg``'", () {
+                findCandidateModules(unit, data, pkg, typeChecker);
+            });
+        } else {
+            findCandidateModules(unit, data, pkg, typeChecker);
+        }
+    }
+
+    void findCandidateModules(Unit unit, QuickFixData data, String pkg, TypeChecker typeChecker) {
+        value mod = unit.\ipackage.\imodule;
+        value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
         query.memberName = pkg;
         query.memberSearchPackageOnly = true;
         query.memberSearchExact = true;

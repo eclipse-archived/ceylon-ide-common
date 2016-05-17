@@ -44,8 +44,11 @@ shared interface QuickFixData {
     shared formal PhasedUnit phasedUnit;
     shared formal BaseCeylonProject ceylonProject;
     shared formal CommonDocument document;
+    "Set this flag to [[true]] to avoid heavy computations and delay them
+     until the quick fix is called."
+    shared default Boolean useLazyFixes => false;
     
-    shared formal void addQuickFix(String description, TextChange change,
+    shared formal void addQuickFix(String description, TextChange|Callable<Anything, []> change,
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false);
     
