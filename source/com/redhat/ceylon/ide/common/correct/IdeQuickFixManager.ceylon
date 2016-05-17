@@ -9,6 +9,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
+import com.redhat.ceylon.ide.common.correct {
+    addAnnotations=addAnnotationQuickFix,
+    removeAnnotations=removeAnnotationQuickFix
+}
 import com.redhat.ceylon.ide.common.model {
     BaseCeylonProject
 }
@@ -22,7 +26,8 @@ import com.redhat.ceylon.ide.common.refactoring {
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
-    Scope
+    Scope,
+    Referenceable
 }
 
 import java.util {
@@ -54,14 +59,13 @@ shared interface QuickFixData {
         String name, String version);
     shared formal void addModuleImportProposal(Unit u, String description,
         String name, String version);
-
+    shared formal void addAnnotationProposal(Referenceable declaration, String text,
+        String description, TextChange change, DefaultRegion? selection);
 }
 
-shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,Project,IFile,ICompletionProposal,Data,LinkedMode>()
+shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,IFile,ICompletionProposal,Data,LinkedMode>()
         given Data satisfies QuickFixData {
     
-    shared formal AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionProposal> addAnnotations;
-    shared formal RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> removeAnnotations;
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
     shared formal CreateQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createQuickFix;
     shared CreateParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix
@@ -310,7 +314,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             changeToQuickFix.changeToFunction(data);
         }
         case (20000) {
-            addAnnotations.addMakeNativeProposal(node, file, data);
+            addAnnotations.addMakeNativeProposal(node, data);
         }
         case (20010) {
             addAnnotations.addMakeContainerNativeProposal(node, data);

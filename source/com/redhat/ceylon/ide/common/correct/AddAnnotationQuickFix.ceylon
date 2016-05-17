@@ -12,6 +12,17 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.imports {
     moduleImportUtil
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    TextChange,
+    ReplaceEdit,
+    TextEdit,
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor,
     types,
@@ -41,47 +52,43 @@ import org.antlr.runtime {
     CommonToken
 }
 
-shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object addAnnotationQuickFix {
     
-    shared formal void newAddAnnotationQuickFix(Referenceable dec, String text, String desc, Integer offset,
-        TextChange change, Region? selection, Data data);
-
-    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection,
-        Data data);
+    //    shared formal void newAddAnnotationQuickFix(Referenceable dec, String text, String desc, Integer offset,
+    //        TextChange change, Region? selection, Data data);
+    //
+    //    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection,
+    //        Data data);
     
     value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
-        "actual", "formal", "default", "variable"];
+    "actual", "formal", "default", "variable"];
     
     value annotationsOnSeparateLine => ["doc", "throws", "see", "tagged"];
     
-    shared void addMakeFormalDecProposal(Node node, Data data) {
+    shared void addMakeFormalDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
         value ann = if (dec.shared) then "formal" else "shared formal";
         value desc = if (dec.shared) then "Make Formal" else "Make Shared Formal";
         addAddAnnotationProposal(node, ann, desc, dec, data);
     }
-
-    shared void addMakeAbstractDecProposal(Node node, Data data) {
+    
+    shared void addMakeAbstractDecProposal(Node node, QuickFixData data) {
         if (is Class dec = annotatedNode(node)) {
             addAddAnnotationProposal(node, "abstract", "Make Abstract", dec, data);
         }
     }
     
-    shared void addMakeNativeProposal(Node node, IFile file, Data data) {
+    shared void addMakeNativeProposal(Node node, QuickFixData data) {
         if (is Tree.ImportPath node) {
             object extends Visitor() {
                 shared actual void visit(Tree.ModuleDescriptor that) {
                     assert(is Module m = node.model);
                     value backends = m.nativeBackends;
-                    value change = newTextChange("Declare Module Native", file);
+                    value change = platformServices.createTextChange("Declare Module Native", data.phasedUnit);
                     value annotation = StringBuilder();
                     moduleImportUtil.appendNative(annotation, backends);
-                    addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                    newCorrectionQuickFix("Declare module '" + annotation.string + "'", change, null, data);
+                    change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
+                    data.addQuickFix("Declare module '" + annotation.string + "'", change);
                     
                     super.visit(that);
                 }
@@ -90,11 +97,11 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                     if (that.importPath == node) {
                         assert (is Module m = that.importPath.model);
                         value backends = m.nativeBackends;
-                        value change = newTextChange("Declare Import Native", file);
+                        value change = platformServices.createTextChange("Declare Import Native", data.phasedUnit);
                         value annotation = StringBuilder();
                         moduleImportUtil.appendNative(annotation, backends);
-                        addEditToChange(change, newInsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                        newCorrectionQuickFix("Declare import '" + annotation.string + "'", change, null, data);
+                        change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
+                        data.addQuickFix("Declare import '" + annotation.string + "'", change);
                     }
                     
                     super.visit(that);
@@ -102,12 +109,12 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             }.visit(data.rootNode);
         }
     }
-
-    shared void addMakeContainerAbstractProposal(Node node, Data data) {
+    
+    shared void addMakeContainerAbstractProposal(Node node, QuickFixData data) {
         Declaration dec;
         if (is Tree.Declaration node) {
             if (is Declaration container 
-                    = node.declarationModel.container) {
+                = node.declarationModel.container) {
                 dec = container;
             } else {
                 return;
@@ -119,7 +126,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         addAddAnnotationProposal(node, "abstract", "Make Abstract", dec, data);
     }
     
-    shared void addMakeContainerNativeProposal(Node node, Data data) {
+    shared void addMakeContainerNativeProposal(Node node, QuickFixData data) {
         if (is Declaration dec = node.scope) {
             Backends backends;
             if (is Tree.MemberOrTypeExpression node) {
@@ -137,7 +144,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    shared void addMakeVariableProposal(Node node, Data data) {
+    shared void addMakeVariableProposal(Node node, QuickFixData data) {
         Tree.Term term;
         switch (node)
         case (is Tree.AssignmentOp) {
@@ -161,21 +168,21 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             }
         }
     }
-
-    shared void addMakeVariableDeclarationProposal(Data data,
+    
+    shared void addMakeVariableDeclarationProposal(QuickFixData data,
         Tree.Declaration node) {
         
         if (is Value dec = node.declarationModel,
             is Tree.AttributeDeclaration node,
             !dec.variable,
             !dec.transient) {
-
+            
             addAddAnnotationProposal(node, "variable", "Make Variable",
-                    dec, data);
+                dec, data);
         }
     }
     
-    shared void addMakeVariableDecProposal(Data data) {
+    shared void addMakeVariableDecProposal(QuickFixData data) {
         assert (is Tree.SpecifierOrInitializerExpression sie = data.node);
         variable Value? dec = null;
         object extends Visitor() {
@@ -198,7 +205,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    shared void addMakeDefaultProposal(Node node, Data data) {
+    shared void addMakeDefaultProposal(Node node, QuickFixData data) {
         variable Declaration? d;
         switch (node)
         case (is Tree.Declaration) {
@@ -218,7 +225,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         if (exists _d = d, _d.classOrInterfaceMember) {
             addAddAnnotationProposal(node, "default",
                 "Make default", d, data);
-
+            
             //assert (is ClassOrInterface container = d.container);
             //value rds = container.getInheritedMembers(d.name);
             //variable Declaration? rd = null;
@@ -238,53 +245,56 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    shared void addMakeDefaultDecProposal(Node node, Data data) {
+    shared void addMakeDefaultDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
         addAddAnnotationProposal(node,
             dec.shared then "default" else "shared default",
             dec.shared then "Make Default" else "Make Shared Default",
             dec, data);
     }
-
+    
     
     void addAddAnnotationProposal(Node? node, String annotation, String desc,
-        Referenceable? dec, Data data) {
+        Referenceable? dec, QuickFixData data) {
         
-        if (exists dec, !(node is Tree.MissingDeclaration),
-            exists phasedUnit = getPhasedUnit(dec.unit, data)) {
-
+        if (exists dec, !(node is Tree.MissingDeclaration)) {
+            
             value fdv = FindDeclarationNodeVisitor(dec);
-            phasedUnit.compilationUnit.visit(fdv);
+            data.phasedUnit.compilationUnit.visit(fdv);
             value decNode = fdv.declarationNode;
             if (exists decNode) {
-                addAddAnnotationProposal2(annotation, desc, dec, phasedUnit,
+                addAddAnnotationProposal2(annotation, desc, dec, data.phasedUnit,
                     node, decNode, data);
             }
         }
     }
     
     void addAddAnnotationProposal2(String annotation, String desc, Referenceable dec,
-        PhasedUnit unit, Node? node, Tree.StatementOrArgument decNode, Data data) {
-        value change = newTextChange(desc, unit);
-        initMultiEditChange(change);
+        PhasedUnit unit, Node? node, Tree.StatementOrArgument decNode, QuickFixData data) {
+        value change = platformServices.createTextChange(desc, unit);
+        change.initMultiEdit();
         
-        TextEdit edit = createReplaceAnnotationEdit(annotation, node, change)
-                else createInsertAnnotationEdit(annotation, decNode,
-                        getDocumentForChange(change));
+        value edit = createReplaceAnnotationEdit(annotation, node, change)
+        else createInsertAnnotationEdit(annotation, decNode,
+            change.document);
         
-        addEditToChange(change, edit);
+        change.addEdit(edit);
         
         createExplicitTypeEdit(decNode, change);
         
-        value startOffset = getTextEditOffset(edit);
+        value startOffset = edit.start;
         value selection = 
                 if (exists node, node.unit==decNode.unit) 
-                then newRegion(startOffset, annotation.size) 
-                else null;
+        then DefaultRegion(startOffset, annotation.size) 
+        else null;
         
-        newAddAnnotationQuickFix(dec, annotation, 
-            description(annotation, dec), 
-            startOffset, change, selection, data);
+        data.addAnnotationProposal {
+            declaration = dec;
+            text = annotation;
+            description = description(annotation, dec);
+            change = change;
+            selection = selection;
+        };
     }
     
     void createExplicitTypeEdit(Tree.StatementOrArgument decNode, TextChange change) {
@@ -294,8 +304,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                 type is Tree.FunctionModifier|Tree.ValueModifier, 
                 exists it = type.typeModel, !it.unknown) {
                 value explicitType = it.asString();
-                addEditToChange(change, newReplaceEdit(type.startIndex.intValue(),
-                        type.text.size, explicitType));
+                change.addEdit(ReplaceEdit(type.startIndex.intValue(),
+                    type.text.size, explicitType));
             }
         }
     }
@@ -343,14 +353,14 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                 if (exists id = getAnnotationIdentifier(ann), id == toRemove) {
                     value start = ann.startIndex.intValue();
                     value length = ann.endIndex.intValue() - start;
-                    return newReplaceEdit(start, length, annotation);
+                    return ReplaceEdit(start, length, annotation);
                 }
             }
         }
         return null;
     }
     
-    shared InsertEdit createInsertAnnotationEdit(String newAnnotation, Node node, IDocument doc) {
+    shared InsertEdit createInsertAnnotationEdit(String newAnnotation, Node node, CommonDocument doc) {
         value newAnnotationName = getAnnotationWithoutParam(newAnnotation);
         variable Tree.Annotation? prevAnnotation = null;
         variable Tree.Annotation? nextAnnotation = null;
@@ -388,21 +398,21 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
                 isAnnotationOnSeparateLine(id)) {
                 
                 newAnnotationOffset = ann.endIndex.intValue();
-                newAnnotationText.append(indents.getDefaultLineDelimiter(doc));
-                newAnnotationText.append(indents.getIndent(node, doc));
+                newAnnotationText.append(doc.defaultLineDelimiter);
+                newAnnotationText.append(doc.getIndent(node));
                 newAnnotationText.append(newAnnotation);
             } else {
                 newAnnotationOffset = nextNodeStartIndex;
                 newAnnotationText.append(newAnnotation);
-                newAnnotationText.append(indents.getDefaultLineDelimiter(doc));
-                newAnnotationText.append(indents.getIndent(node, doc));
+                newAnnotationText.append(doc.defaultLineDelimiter);
+                newAnnotationText.append(doc.getIndent(node));
             }
         } else {
             newAnnotationOffset = nextNodeStartIndex;
             newAnnotationText.append(newAnnotation);
             newAnnotationText.append(" ");
         }
-        return newInsertEdit(newAnnotationOffset, newAnnotationText.string);
+        return InsertEdit(newAnnotationOffset, newAnnotationText.string);
     }
     
     shared Tree.AnnotationList? getAnnotationList(Node? node) {
@@ -421,9 +431,9 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     
     shared String? getAnnotationIdentifier(Tree.Annotation? annotation) {
         return if (exists annotation,
-                   is Tree.BaseMemberExpression primary = annotation.primary)
-               then primary.identifier.text
-               else null;
+            is Tree.BaseMemberExpression primary = annotation.primary)
+        then primary.identifier.text
+        else null;
     }
     
     String getAnnotationWithoutParam(String annotation) {
@@ -450,14 +460,14 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
     Boolean isAnnotationOnSeparateLine(String annotation) 
             => annotation in annotationsOnSeparateLine;
     
-    shared void addMakeActualDecProposal(Node node, Data data) {
+    shared void addMakeActualDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
         value shared = dec.shared;
         addAddAnnotationProposal(node, if (shared) then "actual" else "shared actual",
             if (shared) then "Make Actual" else "Make Shared Actual", dec, data);
     }
     
-    shared void addMakeSharedProposalForSupertypes(Node node, Data data) {
+    shared void addMakeSharedProposalForSupertypes(Node node, QuickFixData data) {
         if (is Tree.ClassOrInterface node) {
             value ci = node.declarationModel;
             if (exists extendedType = ci.extendedType) {
@@ -477,7 +487,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    shared void addMakeRefinedSharedProposal(Node node, Data data) {
+    shared void addMakeRefinedSharedProposal(Node node, QuickFixData data) {
         if (is Tree.Declaration node) {
             value refined = node.declarationModel.refinedDeclaration;
             if (refined.default || refined.formal) {
@@ -487,8 +497,8 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
             }
         }
     }
-
-    shared void addMakeSharedProposal(Node node, Data data) {
+    
+    shared void addMakeSharedProposal(Node node, QuickFixData data) {
         variable Referenceable? dec = null;
         variable JList<Type>? typeArgumentList = null;
         switch (node)
@@ -534,7 +544,7 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    void addMakeSharedProposal2(Referenceable? ref, Data data) {
+    void addMakeSharedProposal2(Referenceable? ref, QuickFixData data) {
         if (exists ref) {
             if (is TypedDeclaration|ClassOrInterface|TypeAlias ref) {
                 if (!ref.shared) {
@@ -548,22 +558,24 @@ shared interface AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
     }
     
-    shared void addMakeSharedDecProposal(Node node, Data data) {
+    shared void addMakeSharedDecProposal(Node node, QuickFixData data) {
         if (is Tree.Declaration node) {
             addAddAnnotationProposal(node, "shared", "Make Shared", node.declarationModel, data);
         }
     }
     
-    shared void addContextualAnnotationProposals(Data data, Tree.Declaration? decNode, 
-        IDocument doc, Integer offset) {
+    shared void addContextualAnnotationProposals(QuickFixData data, Tree.Declaration? decNode, 
+        Integer offset) {
+        
+        value doc = data.document;
         
         if (exists decNode) {
             value idNode = nodes.getIdentifyingNode(decNode);
             if (!exists idNode) {
                 return;
             }
-            if (getLineOfOffset(doc, idNode.startIndex.intValue())
-                != getLineOfOffset(doc, offset)) {
+            if (doc.getLineOfOffset(idNode.startIndex.intValue())
+                != doc.getLineOfOffset(offset)) {
                 
                 return;
             }

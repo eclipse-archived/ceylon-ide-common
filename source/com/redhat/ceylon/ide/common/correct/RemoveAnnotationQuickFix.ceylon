@@ -14,23 +14,26 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     ClassOrInterface
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.model {
+    AnyProjectSourceFile
+}
 
-shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared object removeAnnotationQuickFix {
     
-    shared formal void newRemoveAnnotationQuickFix(Declaration dec, String annotation,
-            String desc, Integer offset, TextChange change, Region selection, Data data);
-    
-    shared void addRemoveAnnotationProposal(Node node, String annotation, Data data) {
+    shared void addRemoveAnnotationProposal(Node node, String annotation, QuickFixData data) {
         if (is Declaration dec = nodes.getReferencedDeclaration(node)) {
             addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, dec, data);
         }
     }
     
-    shared void addMakeContainerNonfinalProposal(Node node, Data data) {
+    shared void addMakeContainerNonfinalProposal(Node node, QuickFixData data) {
         Declaration dec;
         if (is Tree.Declaration node) {
             if (is Declaration container = node.declarationModel.container) {
@@ -46,10 +49,12 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     }
     
     void addRemoveAnnotationProposal2(Node node, String annotation, String desc,
-        Declaration? dec, Data data) {
+        Declaration? dec, QuickFixData data) {
         
-        if (exists dec, exists d = dec.name,
-            exists phasedUnit = getPhasedUnit(dec.unit, data)) {
+        if (exists dec,
+            exists d = dec.name,
+            is AnyProjectSourceFile unit = dec.unit,
+            exists phasedUnit = unit.phasedUnit) {
 
             //TODO: "object" declarations?
             value fdv = FindDeclarationNodeVisitor(dec);
@@ -63,9 +68,9 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     }
     
     void addRemoveAnnotationProposalInternal(String annotation, String desc,
-        Declaration dec, PhasedUnit unit, Tree.Declaration decNode, Data data) {
-        value change = newTextChange(desc, unit);
-        initMultiEditChange(change);
+        Declaration dec, PhasedUnit unit, Tree.Declaration decNode, QuickFixData data) {
+        value change = platformServices.createTextChange(desc, unit);
+        change.initMultiEdit();
 
         value offset = decNode.startIndex;
         for (a in decNode.annotationList.annotations) {
@@ -73,7 +78,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             if (exists id = bme.identifier) {
                 if (id.text.equals(annotation)) {
                     value args = a.positionalArgumentList?.token exists || a.namedArgumentList exists;
-                    addEditToChange(change, newDeleteEdit(a.startIndex.intValue(),
+                    change.addEdit(DeleteEdit(a.startIndex.intValue(),
                         a.endIndex.intValue() - a.startIndex.intValue()
                                  + (if (args) then 0 else 1))); //get rid of the trailing space
                 }
@@ -81,9 +86,8 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         }
         
         value newDesc = description(annotation, dec);
-        value selection = newRegion(offset.intValue(), 0);
-        newRemoveAnnotationQuickFix(dec, annotation, 
-            newDesc, offset.intValue(), change, selection, data);
+        value selection = DefaultRegion(offset.intValue(), 0);
+        data.addAnnotationProposal(dec, annotation, newDesc, change, selection);
     }
     
     String description(String annotation, Declaration dec) {
@@ -111,7 +115,7 @@ shared interface RemoveAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     }
 
     
-    shared void addRemoveAnnotationDecProposal(String annotation, Node node, Data data) {
+    shared void addRemoveAnnotationDecProposal(String annotation, Node node, QuickFixData data) {
         if (is Tree.Declaration node) {
             addRemoveAnnotationProposal2(node, annotation, "Make Non" + annotation, node.declarationModel, data);
         }
