@@ -19,12 +19,12 @@ import com.redhat.ceylon.ide.common.refactoring {
 shared object invertIfElseQuickFix {
     
     shared void addInvertIfElseProposal(QuickFixData data, 
-            CommonDocument doc, Tree.Statement? statement) {
-        addInvertIfElseExpressionProposal(data, doc);
-        addInvertIfElseStatementProposal(data, doc, statement);
+            Tree.Statement? statement) {
+        addInvertIfElseExpressionProposal(data);
+        addInvertIfElseStatementProposal(data, statement);
     }
     
-    void addInvertIfElseExpressionProposal(QuickFixData data, CommonDocument doc) {
+    void addInvertIfElseExpressionProposal(QuickFixData data) {
         try {
             variable Tree.IfExpression? result = null;
             
@@ -58,6 +58,7 @@ shared object invertIfElseQuickFix {
             }
             
             value ifCondition = conditions.get(0);
+            value doc = data.document;
             value test = invertCondition(doc, ifCondition);
             
             value elseIndent = doc.getIndent(elseBlock);
@@ -109,7 +110,7 @@ shared object invertIfElseQuickFix {
     }
     
     void addInvertIfElseStatementProposal(QuickFixData data, 
-        CommonDocument doc, Tree.Statement? statement) {
+        Tree.Statement? statement) {
         
         if (!exists statement) {
             return;
@@ -155,6 +156,7 @@ shared object invertIfElseQuickFix {
         }
         
         value ifCondition = conditions.get(0);
+        value doc = data.document;
         value test = invertCondition(doc, ifCondition);
         
         value baseIndent = doc.getIndent(ifStmt);

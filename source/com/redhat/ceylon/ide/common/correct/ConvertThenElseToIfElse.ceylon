@@ -4,7 +4,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil
 }
 import com.redhat.ceylon.ide.common.platform {
-    CommonDocument,
     platformServices,
     ReplaceEdit
 }
@@ -18,8 +17,9 @@ import com.redhat.ceylon.ide.common.util {
 shared object convertThenElseToIfElse {
     
     shared void addConvertToIfElseProposal(QuickFixData data, 
-        CommonDocument doc, Tree.Statement? statement) {
+        Tree.Statement? statement) {
              
+        value doc = data.document;
         String action;
         String? declaration;
         Tree.Term operation;

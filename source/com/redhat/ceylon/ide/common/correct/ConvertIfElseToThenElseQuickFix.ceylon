@@ -25,9 +25,9 @@ import java.util.regex {
 shared object convertIfElseToThenElseQuickFix {
     
     shared void addConvertToThenElseProposal(QuickFixData data, 
-        CommonDocument doc, Tree.Statement? statement) {
+        Tree.Statement? statement) {
         if (exists [text, offset, change] 
-                = createTextChange(data, doc, statement)) {
+                = createTextChange(data, statement)) {
             value desc 
                     = text.replace("If", "'if'")
                           .replace("Then", "'then'")
@@ -42,7 +42,9 @@ shared object convertIfElseToThenElseQuickFix {
     }
     
     [String, Integer, TextChange]? createTextChange(QuickFixData data, 
-        CommonDocument doc, Tree.Statement? statement) {
+        Tree.Statement? statement) {
+        
+        value doc = data.document;
         
         if (!is Tree.IfStatement statement) {
             return null;
