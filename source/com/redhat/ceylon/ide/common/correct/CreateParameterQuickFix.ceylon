@@ -12,6 +12,13 @@ import com.redhat.ceylon.ide.common.doc {
 import com.redhat.ceylon.ide.common.model {
     AnyModifiableSourceFile
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.util {
     nodes,
     FindDeclarationNodeVisitor
@@ -23,76 +30,62 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface
 }
 
-import java.util {
-    Set,
-    HashSet
-}
-
 // TODO extends InitializerProposal
-shared interface CreateParameterQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> 
-                & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared object createParameterQuickFix {
     
-    shared formal void newCreateParameterProposal(Data data, String desc, Declaration dec, 
-        Type? type, Region selection, Icons image, TextChange change, Integer exitPos);
-    
-    void addCreateParameterProposalInternal(Data data, String def, String desc, Icons image, Declaration dec,
+    void addCreateParameterProposalInternal(QuickFixData data, String def, String desc, Icons image, Declaration dec,
         PhasedUnit unit, Tree.Declaration decNode, Tree.ParameterList paramList,
-        Type? returnType, Set<Declaration> imports, Node node) {
+        Type? returnType, CommonImportProposals importProposals, Node node) {
         
-        value change = newTextChange("Add Parameter", unit);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
+        value change = platformServices.createTextChange("Add Parameter", unit);
+        change.initMultiEdit();
         value offset = paramList.stopIndex.intValue();
-        value il = importProposals.applyImports(change, imports, unit.compilationUnit, doc);
-        addEditToChange(change, newInsertEdit(offset, def));
+        value il = importProposals.apply(change);
+        change.addEdit(InsertEdit(offset, def));
         value exitPos = node.endIndex.intValue();
         
-        value selection = correctionUtil.computeSelection(offset + il, def, newRegion);
+        value selection = correctionUtil.computeSelection(offset + il, def, DefaultRegion);
         
-        newCreateParameterProposal(data, "Add " + desc + " to '" + dec.name + "'",
+        data.addCreateParameterProposal("Add " + desc + " to '" + dec.name + "'",
             dec, returnType, selection, image, change, exitPos);
     }
     
-    void addCreateParameterAndAttributeProposal(Data data, String pdef, String adef, String desc,
+    void addCreateParameterAndAttributeProposal(QuickFixData data, String pdef, String adef, String desc,
         Icons image, Declaration dec, PhasedUnit unit, Tree.Declaration decNode,
         Tree.ParameterList paramList, Tree.Body body, Type returnType) {
         
-        value change = newTextChange("Add Attribute", unit);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
+        value change = platformServices.createTextChange("Add Attribute", unit);
+        change.initMultiEdit();
+        value doc = change.document;
         value offset = paramList.stopIndex.intValue();
         String indent;
         String indentAfter;
         Integer offset2;
         value statements = body.statements;
         if (statements.empty) {
-            indentAfter = indents.getDefaultLineDelimiter(doc) + indents.getIndent(decNode, doc);
-            indent = indentAfter + indents.defaultIndent;
+            indentAfter = doc.defaultLineDelimiter + doc.getIndent(decNode);
+            indent = indentAfter + doc.defaultIndent;
             offset2 = body.startIndex.intValue() + 1;
         } else {
             value statement = statements.get(statements.size() - 1);
-            indent = indents.getDefaultLineDelimiter(doc) + indents.getIndent(statement, doc);
+            indent = doc.defaultLineDelimiter + doc.getIndent(statement);
             offset2 = statement.endIndex.intValue();
             indentAfter = "";
         }
-        value decs = HashSet<Declaration>();
-        value cu = unit.compilationUnit;
-        importProposals.importType(decs, returnType, cu);
-        value il = importProposals.applyImports(change, decs, cu, doc);
-        addEditToChange(change, newInsertEdit(offset, pdef));
-        addEditToChange(change, newInsertEdit(offset2, indent + adef + indentAfter));
+        value importProposals = CommonImportProposals(doc, data.rootNode);
+        importProposals.importType(returnType);
+        value il = importProposals.apply(change);
+        change.addEdit(InsertEdit(offset, pdef));
+        change.addEdit(InsertEdit(offset2, indent + adef + indentAfter));
         value exitPos = data.node.endIndex.intValue();
         
-        value selection = correctionUtil.computeSelection(offset + il, pdef, newRegion);
+        value selection = correctionUtil.computeSelection(offset + il, pdef, DefaultRegion);
 
-        newCreateParameterProposal(data, "Add " + desc + " to '" + dec.name + "'", dec,
+        data.addCreateParameterProposal("Add " + desc + " to '" + dec.name + "'", dec,
             returnType, selection, image, change, exitPos);
     }
     
-    shared void addCreateParameterProposal(Data data, ValueFunctionDefinitionGenerator dg) {
+    shared void addCreateParameterProposal(QuickFixData data, ValueFunctionDefinitionGenerator dg) {
         if (dg.brokenName.first?.lowercase else false, 
             exists decl = nodes.findDeclarationWithBody(dg.rootNode, dg.node), 
             exists dm = decl.declarationModel, !dm.actual, 
@@ -105,13 +98,15 @@ shared interface CreateParameterQuickFix<IFile,Document,InsertEdit,TextEdit,Text
             value u = dg.rootNode.unit;
             if (is AnyModifiableSourceFile u, 
                 exists phasedUnit = u.phasedUnit) {
+                value importProposals = CommonImportProposals(data.document, data.rootNode);
+                dg.generateImports(importProposals);
                 addCreateParameterProposalInternal(data, paramDef, paramDesc, Icons.addCorrection,
-                    decl.declarationModel, phasedUnit, decl, paramList, dg.returnType, dg.getImports(), dg.node);
+                    decl.declarationModel, phasedUnit, decl, paramList, dg.returnType, importProposals, dg.node);
             }
         }
     }
     
-    shared void addCreateParameterProposals(Data data) {
+    shared void addCreateParameterProposals(QuickFixData data) {
         value fav = FindInvocationVisitor(data.node);
         (fav of Visitor).visit(data.rootNode);
         if (is Tree.MemberOrTypeExpression prim 
@@ -190,7 +185,7 @@ shared interface CreateParameterQuickFix<IFile,Document,InsertEdit,TextEdit,Text
         return null;
     }
 
-    void addCreateParameterProposalsInternal(Data data, variable String def, String desc, Declaration? typeDec, Type t) {
+    void addCreateParameterProposalsInternal(QuickFixData data, variable String def, String desc, Declaration? typeDec, Type t) {
         if (exists typeDec, is Functional typeDec, 
             is AnyModifiableSourceFile unit 
                     = (typeDec of Declaration).unit, 
@@ -202,15 +197,15 @@ shared interface CreateParameterQuickFix<IFile,Document,InsertEdit,TextEdit,Text
                 if (!paramList.parameters.empty) {
                     def = ", " + def;
                 }
-                value imports = HashSet<Declaration>();
-                importProposals.importType(imports, t, phasedUnit.compilationUnit);
+                value importProposals = CommonImportProposals(data.document, phasedUnit.compilationUnit);
+                importProposals.importType(t);
                 addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
-                    phasedUnit, decNode, paramList, t, imports, data.node);
+                    phasedUnit, decNode, paramList, t, importProposals, data.node);
             }
         }
     }
     
-    void addCreateParameterAndAttributeProposals(Data data, variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
+    void addCreateParameterAndAttributeProposals(QuickFixData data, variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
         if (is ClassOrInterface typeDec, 
             is AnyModifiableSourceFile unit 
                     = (typeDec of Declaration).unit, 

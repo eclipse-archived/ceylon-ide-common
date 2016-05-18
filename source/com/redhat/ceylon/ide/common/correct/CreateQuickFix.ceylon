@@ -8,11 +8,15 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.ide.common.doc {
-    Icons
-}
 import com.redhat.ceylon.ide.common.model {
     AnyModifiableSourceFile
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -22,48 +26,34 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
-    Scope,
-    Unit,
-    Type,
     Interface,
     Class
 }
 
 // TODO extends InitializerProposal
-shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-                & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared object createQuickFix {
 
-    shared formal CreateParameterQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult> 
-            createParameterQuickFix;
-
-    shared formal void newCreateQuickFix(Data data, String desc,
-        Scope scope, Unit unit, Type? returnType, Icons image,
-        TextChange change, Integer exitPos, Region selection);
-    
-    void addCreateMemberProposal(Data data, DefinitionGenerator dg, 
+    void addCreateMemberProposal(QuickFixData data, DefinitionGenerator dg, 
         Declaration typeDec, PhasedUnit unit, Tree.Declaration decNode, 
         Tree.Body body, Tree.Statement? statement) {
         
-        value change = newTextChange("Create Member", unit);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
+        value change = platformServices.createTextChange("Create Member", unit);
+        change.initMultiEdit();
+        value doc = change.document;
         String indentBefore;
         variable String indentAfter;
         String indent;
         Integer offset;
         value statements = body.statements;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value delim = doc.defaultLineDelimiter;
         if (statements.empty) {
-            value bodyIndent = indents.getIndent(decNode, doc);
-            indent = bodyIndent + indents.defaultIndent;
+            value bodyIndent = doc.getIndent(decNode);
+            indent = bodyIndent + doc.defaultIndent;
             indentBefore = delim + indent;
             try {
                 value singleLineBody = 
-                        getLineOfOffset(doc, body.startIndex.intValue())
-                        == getLineOfOffset(doc, body.stopIndex.intValue());
+                        doc.getLineOfOffset(body.startIndex.intValue())
+                        == doc.getLineOfOffset(body.stopIndex.intValue());
                 indentAfter = 
                         singleLineBody then delim + bodyIndent else "";
             } catch (e) {
@@ -87,13 +77,13 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
                         st = s;
                     }
                 }
-                indent = indents.getIndent(st, doc);
+                indent = doc.getIndent(st);
                 indentBefore = "";
                 indentAfter = delim + indent;
                 offset = st.startIndex.intValue();
             } else {
                 st = statements.get(statements.size() - 1);
-                indent = indents.getIndent(st, doc);
+                indent = doc.getIndent(st);
                 indentBefore = delim + indent;
                 indentAfter = "";
                 offset = st.endIndex.intValue();
@@ -103,17 +93,13 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         then dg.generateSharedFormal(indent, delim)
         else dg.generateShared(indent, delim);
         value def = indentBefore + generated + indentAfter;
-        value il = importProposals.applyImports {
-            change = change;
-            declarations = dg.getImports();
-            rootNode = unit.compilationUnit;
-            doc = doc;
-        };
-        addEditToChange(change, newInsertEdit(offset, def));
+        value importProposals = CommonImportProposals(doc, unit.compilationUnit);
+        dg.generateImports(importProposals);
+        value il = importProposals.apply(change);
+        change.addEdit(InsertEdit(offset, def));
         
-        newCreateQuickFix {
-            data = data;
-            desc = "Create " + memberKind(dg) + 
+        data.addCreateQuickFix {
+            description = "Create " + memberKind(dg) + 
                     " in '" + typeDec.name + "'";
             scope = body.scope;
             unit = body.unit;
@@ -123,11 +109,11 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
             exitPos = dg.node.endIndex.intValue();
             selection 
                     = if (dg is ObjectClassDefinitionGenerator)
-                    then newRegion(offset + il, 0)
+                    then DefaultRegion(offset + il, 0)
                     else correctionUtil.computeSelection {
                         offset = offset + il;
                         def = def;
-                        newRegion = newRegion;
+                        newRegion = DefaultRegion;
                     };
         };
     }
@@ -149,42 +135,34 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         return desc;
     }
     
-    void addCreateProposal(Data data, Boolean local, 
+    void addCreateProposal(QuickFixData data, Boolean local, 
         DefinitionGenerator dg, PhasedUnit unit, 
         Tree.Statement statement) {
         
-        value change = newTextChange {
-            desc = local then "Create Local" else "Create Toplevel";
-            u = unit;
+        value change = platformServices.createTextChange {
+            name = local then "Create Local" else "Create Toplevel";
+            input = unit;
         };
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
-        value indent = indents.getIndent(statement, doc);
+        change.initMultiEdit();
+        value doc = change.document;
+        value indent = doc.getIndent(statement);
         value offset = statement.startIndex.intValue();
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value delim = doc.defaultLineDelimiter;
         value rootNode = unit.compilationUnit;
-        value il = importProposals.applyImports {
-            change = change;
-            declarations = dg.getImports();
-            rootNode = rootNode;
-            doc = doc;
-        };
+        value importProposals = CommonImportProposals(doc, rootNode);
+        dg.generateImports(importProposals);
+        value il = importProposals.apply(change);
         value gen = dg.generate(indent, delim) + delim + indent;
         value def = local then gen else gen + delim;
-        addEditToChange(change, 
-            newInsertEdit {
-                position = offset;
-                text = def;
-            });
+        change.addEdit(InsertEdit(offset, def));
         value desc = 
                 (local then "Create local " else "Create toplevel ") 
                     + dg.description;
         value scope = 
                 local then statement.scope else rootNode.unit.\ipackage;
         
-        newCreateQuickFix {
-            data = data;
-            desc = desc;
+        data.addCreateQuickFix {
+            description = desc;
             scope = scope;
             unit = rootNode.unit;
             returnType = dg.returnType;
@@ -193,16 +171,16 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
             exitPos = dg.node.endIndex.intValue();
             selection 
                     = if (dg is ObjectClassDefinitionGenerator)
-                    then newRegion(offset + il, 0)
+                    then DefaultRegion(offset + il, 0)
                     else correctionUtil.computeSelection {
                         offset = offset + il;
                         def = def;
-                        newRegion = newRegion;
+                        newRegion = DefaultRegion;
                     };
         };
     }
     
-    void addCreateMemberProposals(Data data, DefinitionGenerator dg,
+    void addCreateMemberProposals(QuickFixData data, DefinitionGenerator dg,
         Tree.QualifiedMemberOrTypeExpression qmte, Tree.Statement? statement) {
         
         if (exists typeDec
@@ -214,7 +192,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         }
     }
     
-    void addCreateMemberProposals2(Data data, DefinitionGenerator dg,
+    void addCreateMemberProposals2(QuickFixData data, DefinitionGenerator dg,
         Declaration? typeDec, Tree.Statement? statement) {
         
         if (exists typeDec, 
@@ -232,7 +210,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         }
     }
     
-    void addCreateLocalProposals(Data data, DefinitionGenerator dg) {
+    void addCreateLocalProposals(QuickFixData data, DefinitionGenerator dg) {
         if (exists statement 
                 = nodes.findStatement(dg.rootNode, dg.node), 
             is AnyModifiableSourceFile unit = dg.rootNode.unit, 
@@ -241,7 +219,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         }
     }
 
-    void addCreateToplevelProposals(Data data, DefinitionGenerator dg) {
+    void addCreateToplevelProposals(QuickFixData data, DefinitionGenerator dg) {
         if (exists statement 
                 = nodes.findTopLevelStatement(dg.rootNode, dg.node), 
             is AnyModifiableSourceFile unit = dg.rootNode.unit, 
@@ -250,7 +228,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         }
     }
     
-    shared void addCreateProposals(Data data, IFile file, Node node = data.node) {
+    shared void addCreateProposals(QuickFixData data, Node node = data.node) {
         assert (is Tree.MemberOrTypeExpression node);
         
         if (exists idNode = nodes.getIdentifyingNode(node), 
@@ -260,7 +238,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
                 brokenName = brokenName;
                 node = node;
                 rootNode = data.rootNode;
-                importProposals = importProposals;
+                document = data.document;
             }) {
                 if (is Tree.BaseMemberExpression node, 
                     node.identifier.token.type != CeylonLexer.\iAIDENTIFIER) {
@@ -268,7 +246,6 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
                 }
                 addCreateProposalsInternal {
                     data = data;
-                    file = file;
                     smte = node;
                     dg = vfdg;
                 };
@@ -277,13 +254,10 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
                 brokenName = brokenName;
                 node = node;
                 rootNode = data.rootNode;
-                importProposals = importProposals;
-                indents = indents;
-                completionManager = completionManager;
+                document = data.document;
             }) {
                 addCreateProposalsInternal {
                     data = data;
-                    file = file;
                     smte = node;
                     dg = ocdg;
                 };
@@ -291,7 +265,7 @@ shared interface CreateQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Re
         }
     }
     
-    void addCreateProposalsInternal(Data data, IFile file, 
+    void addCreateProposalsInternal(QuickFixData data, 
         Tree.MemberOrTypeExpression smte, DefinitionGenerator dg) {
         if (is Tree.QualifiedMemberOrTypeExpression smte) {
             addCreateMemberProposals(data, dg, smte, 

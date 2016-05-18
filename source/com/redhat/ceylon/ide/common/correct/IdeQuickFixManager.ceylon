@@ -28,7 +28,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Scope,
     Referenceable,
-    TypeDeclaration
+    TypeDeclaration,
+    Declaration
 }
 
 import java.util {
@@ -76,15 +77,17 @@ shared interface QuickFixData {
         TextChange change, DefaultRegion selection, Unit unit);
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);
+    shared formal void addCreateParameterProposal(String description, Declaration dec,
+        Type? type, DefaultRegion selection, Icons image, TextChange change, Integer exitPos);
+    shared formal void addCreateQuickFix(String description,
+        Scope scope, Unit unit, Type? returnType, Icons image,
+        TextChange change, Integer exitPos, DefaultRegion selection);
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,IFile,ICompletionProposal,Data,LinkedMode>()
         given Data satisfies QuickFixData {
     
     shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
-    shared formal CreateQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createQuickFix;
-    shared CreateParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix
-            => createQuickFix.createParameterQuickFix;
     shared formal DeclareLocalQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,LinkedMode,ICompletionProposal,Data,Region> declareLocalQuickFix;
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
@@ -339,14 +342,14 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         
         switch (node)
         case (is Tree.MemberOrTypeExpression) {
-            createQuickFix.addCreateProposals(data, file);
+            createQuickFix.addCreateProposals(data);
         }
         case (is Tree.SimpleType) {
             object extends Visitor() {
                 shared actual void visit(Tree.ExtendedType that) {
                     super.visit(that);
                     if (that.type == node) {
-                        createQuickFix.addCreateProposals(data, file, 
+                        createQuickFix.addCreateProposals(data, 
                             that.invocationExpression.primary);
                     }
                 }

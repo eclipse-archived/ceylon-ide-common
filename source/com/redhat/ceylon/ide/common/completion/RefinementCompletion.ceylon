@@ -41,6 +41,42 @@ import java.util {
     HashSet
 }
 
+// see getRefinedProducedReference(Scope scope, Declaration d)
+shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
+    if (is Type scope) {
+        value superType = scope;
+        if (superType.intersection) {
+            for (pt in superType.satisfiedTypes) {
+                if (exists result = getRefinedProducedReference(pt, d)) {
+                    return result;
+                }
+            }
+            return null;
+        } else {
+            if (exists declaringType = superType.declaration.getDeclaringType(d)) {
+                value outerType = superType.getSupertype(declaringType.declaration);
+                return refinedProducedReference(outerType, d);
+            } else {
+                return null;
+            }
+        }
+    } else {
+        return refinedProducedReference(scope.getDeclaringType(d), d);
+    }
+}
+
+// see refinedProducedReference(Type outerType, Declaration d)
+Reference refinedProducedReference(Type outerType, 
+    Declaration d) {
+    value params = JArrayList<Type>();
+    if (is Generic d) {
+        for (tp in d.typeParameters) {
+            params.add(tp.type);
+        }
+    }
+    return d.appliedReference(outerType, params);
+}
+
 // see RefinementCompletionProposal
 shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {
@@ -100,42 +136,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
                 desc, text, cmp, dec, scope, false, false));
         }
     }
-    
-    // see getRefinedProducedReference(Scope scope, Declaration d)
-    shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
-        if (is Type scope) {
-            value superType = scope;
-            if (superType.intersection) {
-                for (pt in superType.satisfiedTypes) {
-                    if (exists result = getRefinedProducedReference(pt, d)) {
-                        return result;
-                    }
-                }
-                return null;
-            } else {
-                if (exists declaringType = superType.declaration.getDeclaringType(d)) {
-                    value outerType = superType.getSupertype(declaringType.declaration);
-                    return refinedProducedReference(outerType, d);
-                } else {
-                    return null;
-                }
-            }
-        } else {
-            return refinedProducedReference(scope.getDeclaringType(d), d);
-        }
-    }
 
-    // see refinedProducedReference(Type outerType, Declaration d)
-    Reference refinedProducedReference(Type outerType, 
-        Declaration d) {
-        value params = JArrayList<Type>();
-        if (is Generic d) {
-            for (tp in d.typeParameters) {
-                params.add(tp.type);
-            }
-        }
-        return d.appliedReference(outerType, params);
-    }
 }
 
 shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>

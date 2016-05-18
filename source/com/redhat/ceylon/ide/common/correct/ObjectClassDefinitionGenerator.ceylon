@@ -1,16 +1,21 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.completion {
-    IdeCompletionManager,
     getRefinementTextFor,
-    overloads
+    overloads,
+    getRefinedProducedReference
 }
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
-import com.redhat.ceylon.ide.common.util {
-    Indents
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -23,13 +28,11 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     LinkedHashMap,
     ArrayList,
-    HashSet,
-    Set
+    HashSet
 }
 
 shared class ObjectClassDefinitionGenerator(
-    brokenName, node, rootNode, image, returnType, parameters,
-    importProposals, indents, completionManager)
+    brokenName, node, rootNode, image, returnType, parameters, document)
         extends DefinitionGenerator() {
     
     shared actual String brokenName;
@@ -38,11 +41,7 @@ shared class ObjectClassDefinitionGenerator(
     shared actual Icons image;
     shared actual Type? returnType;
     shared actual LinkedHashMap<String,Type>? parameters;
-    
-    Indents<out Anything> indents;
-    ImpProposals importProposals;    
-    IdeCompletionManager<out Anything,out Anything,out Anything> 
-            completionManager;
+    CommonDocument document;
     
     shared actual Boolean isFormalSupported => classGenerator;
     
@@ -80,7 +79,7 @@ shared class ObjectClassDefinitionGenerator(
                 typeParamDef.deleteTerminal(1);
                 typeParamDef.append(">");
             }
-            value defIndent = indents.defaultIndent;
+            value defIndent = document.defaultIndent;
             value supertype 
                     = if (isVoid) then null 
                     else supertypeDeclaration(returnType);
@@ -104,7 +103,7 @@ shared class ObjectClassDefinitionGenerator(
             }
             def.append(indent).append("}");
         } else if (objectGenerator) {
-            value defIndent = indents.defaultIndent;
+            value defIndent = document.defaultIndent;
             value supertype = 
                     if (isVoid) then null 
                     else supertypeDeclaration(returnType);
@@ -136,27 +135,19 @@ shared class ObjectClassDefinitionGenerator(
         return !isUpperCase && !parameters exists;
     }
     
-    shared actual Set<Declaration> getImports() {
-        value imports = HashSet<Declaration>();
+    shared actual void generateImports(CommonImportProposals importProposals) {
         importProposals.importType {
-            declarations = imports;
             type = returnType;
-            rootNode = rootNode;
         };
         if (exists parameters) {
-            importProposals.importTypes {
-                declarations = imports;
-                types = parameters.values();
-                rootNode = rootNode;
-            };
+            importProposals.importTypes(CeylonIterable(parameters.values()));
         }
         if (exists returnType) {
-            importMembers(imports);
+            importMembers(importProposals);
         }
-        return imports;
     }
     
-    void importMembers(Set<Declaration> imports) {
+    void importMembers(CommonImportProposals importProposals) {
         //TODO: this is a major copy/paste from appendMembers() below
         value td = defaultedSupertype;
         value ambiguousNames = HashSet<String>();
@@ -168,8 +159,6 @@ shared class ObjectClassDefinitionGenerator(
                 if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
                     importProposals.importSignatureTypes {
                         declaration = d;
-                        rootNode = rootNode;
-                        declarations = imports;
                     };
                     ambiguousNames.add(d.name);
                 }
@@ -184,8 +173,6 @@ shared class ObjectClassDefinitionGenerator(
                         !ambiguousNames.add(m.name)) {
                         importProposals.importSignatureTypes {
                             declaration = m;
-                            rootNode = rootNode;
-                            declarations = imports;
                         };
                     }
                 }
@@ -247,7 +234,7 @@ shared class ObjectClassDefinitionGenerator(
     
     void appendRefinementText(String indent, String delim, StringBuilder def, String defIndent, Declaration d) {
         assert (exists returnType);
-        value pr = completionManager.getRefinedProducedReference(returnType, d);
+        value pr = getRefinedProducedReference(returnType, d);
         value unit = node.unit;
         variable value text 
                 = getRefinementTextFor {
@@ -259,7 +246,7 @@ shared class ObjectClassDefinitionGenerator(
             indent = "";
             containsNewline = false;
             preamble = true;
-            indents = indents;
+            indents = platformServices.indents<Nothing>();
             addParameterTypesInCompletions = false;
         };
         if (exists parameters, parameters.containsKey(d.name)) {
@@ -352,16 +339,12 @@ Boolean isValidSupertype(Type? returnType) {
 }
 
 ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
-    brokenName, node, rootNode, importProposals, indents,
-    completionManager) {
+    brokenName, node, rootNode, document) {
     
     String brokenName;
     Tree.MemberOrTypeExpression node;
     Tree.CompilationUnit rootNode;
-    DefinitionGenerator.ImpProposals importProposals;
-    Indents<out Anything> indents;
-    IdeCompletionManager<out Anything,out Anything,out Anything> 
-            completionManager;
+    CommonDocument document;
     
     value isUpperCase 
             = brokenName.first?.uppercase else false;
@@ -390,11 +373,9 @@ ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
     return 
     if (exists paramTypes, isUpperCase)
         then ObjectClassDefinitionGenerator(brokenName, node, 
-            rootNode, Icons.localClass, returnType, paramTypes,
-            importProposals, indents, completionManager)
+            rootNode, Icons.localClass, returnType, paramTypes, document)
     else if (!exists paramTypes, !isUpperCase)
         then ObjectClassDefinitionGenerator(brokenName, node, 
-            rootNode, Icons.localAttribute, returnType, null,
-            importProposals, indents, completionManager)
+            rootNode, Icons.localAttribute, returnType, null, document)
     else null;
 }

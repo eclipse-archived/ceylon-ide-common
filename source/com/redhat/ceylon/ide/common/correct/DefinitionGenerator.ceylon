@@ -19,14 +19,10 @@ import java.util {
     Collection,
     LinkedHashMap,
     List,
-    Map,
-    Set
+    Map
 }
 
 shared abstract class DefinitionGenerator() {
-    
-    shared alias ImpProposals 
-            => ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything>;
     
     shared String generateShared(String indent, String delim) 
             => "shared " + generateInternal(indent, delim, false);
@@ -41,7 +37,7 @@ shared abstract class DefinitionGenerator() {
         
     shared formal Boolean isFormalSupported;
     
-    shared formal Set<Declaration> getImports();
+    shared formal void generateImports(CommonImportProposals importProposals);
     
     shared formal String brokenName;
     

@@ -4,7 +4,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.completion {
     overloads,
-    getRefinementTextFor
+    getRefinementTextFor,
+    getRefinedProducedReference
 }
 import com.redhat.ceylon.ide.common.util {
     FindBodyContainerVisitor
@@ -107,7 +108,7 @@ shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
     void appendRefinementText(Boolean isInterface, String indent, StringBuilder result,
         ClassOrInterface ci, Unit unit, Declaration member) {
         
-        value pr = completionManager.getRefinedProducedReference(ci, member);
+        value pr = getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface, ci,
             indent, true, true, indents, false);
         result.append(indent).append(rtext).append(indent);

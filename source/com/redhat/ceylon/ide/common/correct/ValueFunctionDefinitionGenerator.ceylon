@@ -1,8 +1,17 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
 import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
     Type,
     TypeParameter,
     ModelUtil {
@@ -12,17 +21,12 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     ArrayList,
-    HashSet,
-    LinkedHashMap,
-    Set
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
+    LinkedHashMap
 }
 
 shared class ValueFunctionDefinitionGenerator(
     brokenName, node, rootNode, image, returnType, parameters, 
-    isVariable, importProposals)
+    isVariable, document)
         extends DefinitionGenerator() {
     
     shared actual String brokenName;
@@ -32,7 +36,7 @@ shared class ValueFunctionDefinitionGenerator(
     shared actual Type? returnType;
     shared actual LinkedHashMap<String,Type>? parameters;
     Boolean isVariable;
-    ImpProposals importProposals;
+    CommonDocument document;
     
     value isVoid = !returnType exists;
     value isNew 
@@ -124,21 +128,13 @@ shared class ValueFunctionDefinitionGenerator(
         return def.string;
     }
     
-    shared actual Set<Declaration> getImports() {
-        value imports = HashSet<Declaration>();
+    shared actual void generateImports(CommonImportProposals importProposals) {
         importProposals.importType {
-            declarations = imports;
             type = returnType;
-            rootNode = rootNode;
         };
         if (exists parameters) {
-            importProposals.importTypes {
-                declarations = imports;
-                types = parameters.values();
-                rootNode = rootNode;
-            };
+            importProposals.importTypes(CeylonIterable(parameters.values()));
         }
-        return imports;
     }
 }
 
@@ -164,12 +160,12 @@ class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte)
 }
 
 ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
-    brokenName, node, rootNode, importProposals) {
+    brokenName, node, rootNode, document) {
     
     String brokenName;
     Tree.MemberOrTypeExpression node;
     Tree.CompilationUnit rootNode;
-    DefinitionGenerator.ImpProposals importProposals;
+    CommonDocument document;
     
     value isUpperCase 
             = brokenName.first?.uppercase else false;
@@ -188,8 +184,8 @@ ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
     return if (exists paramTypes) 
     then ValueFunctionDefinitionGenerator(brokenName, node, rootNode,  
             Icons.localMethod, returnType, paramTypes, false, 
-            importProposals) 
+            document) 
     else ValueFunctionDefinitionGenerator(brokenName, node, rootNode,
-            Icons.localAttribute, returnType, null, fav.isVariable, 
-            importProposals);
+            Icons.localAttribute, returnType, null, fav.isVariable,
+            document);
 }

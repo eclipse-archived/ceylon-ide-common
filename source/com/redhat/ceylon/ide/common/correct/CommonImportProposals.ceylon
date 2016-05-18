@@ -25,7 +25,8 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     JHashSet=HashSet,
-    JList=List
+    JList=List,
+    JSet=Set
 }
 import com.redhat.ceylon.ide.common.util {
     Indents
@@ -133,4 +134,6 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
     shared Integer apply(TextChange change) 
             => delegate.applyImports(change, imports, rootNode, document);
     
+    shared void addAll(JSet<Declaration> imports)
+            => imports.addAll(imports);
 }
