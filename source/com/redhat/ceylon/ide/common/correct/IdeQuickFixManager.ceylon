@@ -35,6 +35,9 @@ import java.util {
     ArrayList,
     Collection
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared interface QuickFixData {
     shared formal Integer errorCode;
@@ -51,7 +54,8 @@ shared interface QuickFixData {
     
     shared formal void addQuickFix(String description, TextChange|Callable<Anything, []> change,
         DefaultRegion? selection = null, 
-        Boolean qualifiedNameIsPath = false);
+        Boolean qualifiedNameIsPath = false,
+        Icons? image = null);
     
     shared formal void addInitializerQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type);
@@ -67,7 +71,11 @@ shared interface QuickFixData {
         String description, TextChange change, DefaultRegion? selection);
     shared formal void addSatisfiesProposal(TypeDeclaration typeParam,
         String description, String missingSatisfiedTypeText, TextChange change, 
-        DefaultRegion? region);
+        DefaultRegion? selection);
+    shared formal void addChangeTypeProposal(String description, 
+        TextChange change, DefaultRegion selection, Unit unit);
+    shared formal void addConvertToClassProposal(String description,
+        Tree.ObjectDefinition declaration);
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,IFile,ICompletionProposal,Data,LinkedMode>()
@@ -78,10 +86,8 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared CreateParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix
             => createQuickFix.createParameterQuickFix;
     shared formal DeclareLocalQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,LinkedMode,ICompletionProposal,Data,Region> declareLocalQuickFix;
-    shared formal CreateEnumQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createEnumQuickFix;
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
-    shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
     shared formal AssignToLocalQuickFix<IFile,Data> assignToLocalQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
@@ -261,11 +267,11 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
         case (2100) {
             appendMemberReferenceQuickFix.addAppendMemberReferenceProposals(data);
-            changeTypeQuickFix.addChangeTypeProposals(data, file);
+            changeTypeQuickFix.addChangeTypeProposals(data);
             addSatisfiesQuickFix.addSatisfiesProposals(data);
         }
         case (2102) {
-            changeTypeQuickFix.addChangeTypeArgProposals(data, file);
+            changeTypeQuickFix.addChangeTypeArgProposals(data);
             addSatisfiesQuickFix.addSatisfiesProposals(data);
         }
         case (2101) {

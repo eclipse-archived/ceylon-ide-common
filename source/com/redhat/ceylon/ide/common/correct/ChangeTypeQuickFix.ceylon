@@ -6,6 +6,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     AnyModifiableSourceFile
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor
 }
@@ -14,27 +18,19 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Generic,
     IntersectionType,
-    Unit,
     Type,
     TypedDeclaration,
     Function,
     ModelUtil,
     ClassOrInterface
 }
-
-import java.util {
-    HashSet
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
-shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+
+shared object changeTypeQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        Integer offset, Integer length, Unit unit);
-    
-    shared void addChangeTypeArgProposals(Data data, IFile file) {
+    shared void addChangeTypeArgProposals(QuickFixData data) {
         if (is Tree.SimpleType stn = data.node,
             is TypeParameter dec = stn.declarationModel) {
             
@@ -85,14 +81,14 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
                         it.satisfiedTypes = sts;
                         
                         addChangeTypeProposalsInternal(data, data.node, 
-                            it.canonicalize().type, dec, true, file);
+                            it.canonicalize().type, dec, true);
                     }
                 }
             }
         }
     }
     
-    shared void addChangeTypeProposals(Data data, IFile file) {
+    shared void addChangeTypeProposals(QuickFixData data) {
         variable Node node = data.node;
         
         if (is Tree.SpecifierExpression se = data.node) {
@@ -122,21 +118,21 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
                 
                 if (is Tree.BaseMemberExpression bme = node) {
                     addChangeTypeProposalsInternal(data, node, td.type, 
-                        bme.declaration, true, file);
+                        bme.declaration, true);
                 }
                 
                 if (is Tree.QualifiedMemberExpression qme = node) {
                     addChangeTypeProposalsInternal(data, node, td.type, 
-                        qme.declaration, true, file);
+                        qme.declaration, true);
                 }
                 
-                addChangeTypeProposalsInternal(data, node, type, td, false, file);
+                addChangeTypeProposalsInternal(data, node, type, td, false);
             }
         }
     }
 
-    void addChangeTypeProposalsInternal(Data data, Node node, variable Type type,
-        Declaration? dec, Boolean intersect, IFile file) {
+    void addChangeTypeProposalsInternal(QuickFixData data, Node node, variable Type type,
+        Declaration? dec, Boolean intersect) {
         
         if (exists dec, 
             is AnyModifiableSourceFile u = dec.unit, 
@@ -173,7 +169,7 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
                 !ModelUtil.isTypeUnknown(type)) {
                 
                 value rootNode = phasedUnit.compilationUnit;
-                addChangeTypeProposal(tn, data, dec, type, file, rootNode);
+                addChangeTypeProposal(tn, data, dec, type, rootNode);
                 
                 if (exists _t = t) {
                     value newType = if (intersect)
@@ -182,15 +178,15 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
                     
                     if (!newType.isExactly(t),
                         !newType.isExactly(type)) {
-                        addChangeTypeProposal(tn, data, dec, newType, file, rootNode);
+                        addChangeTypeProposal(tn, data, dec, newType, rootNode);
                     }
                 }
             }
         }
     }
 
-    void addChangeTypeProposal(Node node, Data data, Declaration dec, Type newType,
-        IFile file, Tree.CompilationUnit cu) {
+    void addChangeTypeProposal(Node node, QuickFixData data, Declaration dec, Type newType,
+        Tree.CompilationUnit cu) {
         
         if (!node.startIndex exists || !node.endIndex exists) {
             return;
@@ -204,17 +200,17 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
             return;
         }
         
-        value change = newTextChange("Change Type", file);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
+        value change = platformServices.createTextChange("Change Type", data.phasedUnit);
+        change.initMultiEdit();
+        value doc = change.document;
         value offset = node.startIndex.intValue();
         value length = node.distance.intValue();
-        value decs = HashSet<Declaration>();
-        importProposals.importType(decs, newType, cu);
-        value il = importProposals.applyImports(change, decs, cu, doc);
+        value importProposals = CommonImportProposals(doc, data.rootNode);
+        importProposals.importType(newType);
+        value il = importProposals.apply(change);
         value unit = cu.unit;
         value newTypeName = newType.asSourceCodeString(unit);
-        addEditToChange(change, newReplaceEdit(offset, length, newTypeName));
+        change.addEdit(ReplaceEdit(offset, length, newTypeName));
         
         String name;
         if (dec.parameter) {
@@ -228,6 +224,8 @@ shared interface ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
         }
         
         value desc = "Change type of ``name`` to '``newType.asString(unit)``'";
-        newProposal(data, desc, change, offset + il, newTypeName.size, unit);
+        value selection = DefaultRegion(offset + il, newTypeName.size);
+        
+        data.addChangeTypeProposal(desc, change, selection, unit);
     }
 }

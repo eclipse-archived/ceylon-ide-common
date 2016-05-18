@@ -74,7 +74,8 @@ shared interface CommonDocument {
         offset = node.startIndex.intValue();
         length = node.distance.intValue();
     };
-
+    
+    shared formal Integer size;
 }
 
 shared class DefaultDocument(_text) 
@@ -125,4 +126,5 @@ shared class DefaultDocument(_text)
     
     indentWithSpaces => true;
     
+    size => text.size;
 }
