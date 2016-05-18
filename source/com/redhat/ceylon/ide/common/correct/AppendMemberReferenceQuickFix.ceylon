@@ -1,3 +1,7 @@
+import ceylon.interop.java {
+    javaString
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -25,10 +29,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import ceylon.interop.java {
-    CeylonMap,
-    javaString
 }
 
 shared object appendMemberReferenceQuickFix {

@@ -5,7 +5,8 @@ import com.redhat.ceylon.compiler.typechecker.util {
     NormalizedLevenshtein
 }
 import com.redhat.ceylon.ide.common.completion {
-    isLocation
+    isLocation,
+    proposalsFinder
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -20,64 +21,82 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     Collections
 }
-shared interface ChangeReferenceQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Data,Region,CompletionResult>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
-   
-    shared formal void newChangeReferenceProposal(Data data, String desc, TextChange change, Region selection);
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-    void addChangeReferenceProposal(Data data, IFile file, String brokenName, Declaration dec) {
-        value change = newTextChange("Change Reference", file);
-        initMultiEditChange(change);
-        value doc = getDocumentForChange(change);
+shared object changeReferenceQuickFix {
+   
+    void addChangeReferenceProposal(QuickFixData data, String brokenName,
+        Declaration dec) {
+       
+        value change = platformServices.createTextChange("Change Reference", data.phasedUnit);
+        change.initMultiEdit();
         variable value pkg = "";
         value problemOffset = data.problemOffset;
         variable value importsLength = 0;
         
-        if (dec.toplevel, !importProposals.isImported(dec, data.rootNode), isInPackage(data.rootNode, dec)) {
+        value importProposals = CommonImportProposals {
+            document = data.document;
+            rootNode = data.rootNode;
+        };
+
+        if (dec.toplevel,
+            !importProposals.isImported(dec),
+            isInPackage(data.rootNode, dec)) {
+            
             value pn = dec.container.qualifiedNameString;
             pkg = " in '" + pn + "'";
-            if (!pn.empty, !pn.equals(Module.\iLANGUAGE_MODULE_NAME),
+            if (!pn.empty,
+                !pn.equals(Module.\iLANGUAGE_MODULE_NAME),
                 exists node = nodes.findNode(data.rootNode, null, problemOffset)) {
                 
                 value ol = nodes.getOccurrenceLocation(data.rootNode, node, problemOffset);
                 if (!isLocation(ol, OccurrenceLocation.\iIMPORT)) {
-                    value ies = importProposals.importEdits(data.rootNode, Collections.singleton(dec), null, null, doc);
+                    value ies = importProposals.importEdits(Collections.singleton(dec));
                     for (ie in ies) {
-                        importsLength += getInsertedText(ie).size;
-                        addEditToChange(change, ie);
+                        importsLength += ie.text.size;
+                        change.addEdit(ie);
                     }
                 }
             }
         }
         
         //Note: don't use problem.getLength() because it's wrong from the problem list
-        addEditToChange(change, newReplaceEdit(problemOffset, brokenName.size, dec.name));
+        change.addEdit(ReplaceEdit(problemOffset, brokenName.size, dec.name));
         
         value desc = "Change reference to '" + dec.name + "'" + pkg;
-        value selection = newRegion(problemOffset + importsLength, dec.name.size);
-        newChangeReferenceProposal(data, desc, change, selection);
+        value selection = DefaultRegion(problemOffset + importsLength, dec.name.size);
+        data.addQuickFix(desc, change, selection);
     }
     
     Boolean isInPackage(Tree.CompilationUnit cu, Declaration dec) {
         return !dec.unit.\ipackage.equals(cu.unit.\ipackage);
     }
 
-    shared void addChangeReferenceProposals(Data data, IFile file) {
+    shared void addChangeReferenceProposals(QuickFixData data) {
         if (exists id = nodes.getIdentifyingNode(data.node)) {
             if (exists brokenName = id.text, !brokenName.empty) {
                 value scope = data.node.scope; //for declaration-style named args
-                value dwps = completionManager.getProposals(data.node, scope, "", false, data.rootNode, null).values();
+                value dwps = proposalsFinder.getProposals {
+                    node = data.node;
+                    scope = scope;
+                    prefix = "";
+                    memberOp = false;
+                    rootNode = data.rootNode;
+                }.values();
                 for (dwp in dwps) {
-                    processProposal(data, file, brokenName, dwp.declaration);
+                    processProposal(data, brokenName, dwp.declaration);
                 }
             }
         }
     }
     
-    shared void addChangeArgumentReferenceProposals(Data data, IFile file) {
+    shared void addChangeArgumentReferenceProposals(QuickFixData data) {
         assert(exists id = nodes.getIdentifyingNode(data.node));
         String? brokenName = id.text;
         
@@ -91,7 +110,7 @@ shared interface ChangeReferenceQuickFix<IFile,Document,InsertEdit,TextEdit,Text
                 if (exists parameterList = namedArgumentList.parameterList) {
                     for (parameter in parameterList.parameters) {
                         if (exists declaration = parameter.model) {
-                            processProposal(data, file, brokenName, declaration);
+                            processProposal(data, brokenName, declaration);
                         }
                     }
                 }
@@ -99,7 +118,7 @@ shared interface ChangeReferenceQuickFix<IFile,Document,InsertEdit,TextEdit,Text
         }
     }
 
-    void processProposal(Data data, IFile file, String brokenName, Declaration declaration) {
+    void processProposal(QuickFixData data, String brokenName, Declaration declaration) {
         value name = declaration.name;
         if (!brokenName.equals(name)) {
             value nuc = name.first?.uppercase else false;
@@ -109,7 +128,7 @@ shared interface ChangeReferenceQuickFix<IFile,Document,InsertEdit,TextEdit,Text
                 //TODO: would it be better to just sort by distance, 
                 //      and then select the 3 closest possibilities?
                 if (similarity > 0.6) {
-                    addChangeReferenceProposal(data, file, brokenName, declaration);
+                    addChangeReferenceProposal(data, brokenName, declaration);
                 }
             }
         }

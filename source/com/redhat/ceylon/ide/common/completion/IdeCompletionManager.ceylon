@@ -75,6 +75,199 @@ import org.antlr.runtime {
     Token
 }
 
+shared alias Proposals
+        => Map<JString,DeclarationWithProximity>;
+
+shared object proposalsFinder {
+    
+    shared Proposals noProposals
+            = HashMap<JString,DeclarationWithProximity>();
+
+    shared Proposals getProposals(Node node,
+        Scope? scope, String prefix, Boolean memberOp,
+        Tree.CompilationUnit rootNode, 
+        Cancellable? cancellable = null) {
+        
+        Unit? unit = node.unit;
+        
+        if (!exists unit) {
+            return noProposals;
+        }
+        
+        switch (node)
+        case (is Tree.MemberLiteral) {
+            if (exists mlt = node.type) {
+                return if (exists type = mlt.typeModel)
+                then type.resolveAliases()
+                        .declaration
+                        .getMatchingMemberDeclarations(
+                    unit, scope, prefix, 0)
+                else noProposals;
+            }
+        } case (is Tree.TypeLiteral) {
+            if (is Tree.BaseType bt = node.type) {
+                if (bt.packageQualified) {
+                    return unit.\ipackage
+                            .getMatchingDirectDeclarations(
+                        prefix, 0);
+                }
+            }
+            if (exists tlt = node.type) {
+                return if (exists type = tlt.typeModel)
+                then type.resolveAliases()
+                        .declaration
+                        .getMatchingMemberDeclarations(
+                    unit, scope, prefix, 0)
+                else noProposals;
+            }
+        }
+        else {}
+        
+        switch (node)
+        case (is Tree.QualifiedMemberOrTypeExpression) {
+            value type = let (pt = getPrimaryType(node))
+            if (node.staticMethodReference)
+            then unit.getCallableReturnType(pt)
+            else pt;
+            
+            if (exists type, !type.unknown) {
+                return type.resolveAliases()
+                        .declaration
+                        .getMatchingMemberDeclarations(
+                    unit, scope, prefix, 0);
+            }
+            else {
+                switch (primary = node.primary)
+                case (is Tree.MemberOrTypeExpression) {
+                    if (is TypeDeclaration td
+                        = primary.declaration) {
+                        return if (exists t = td.type)
+                        then t.resolveAliases()
+                                .declaration
+                                .getMatchingMemberDeclarations(
+                            unit, scope, prefix, 0)
+                        else noProposals;
+                    }
+                    else {
+                        return noProposals;
+                    }
+                }
+                case (is Tree.Package) {
+                    return unit.\ipackage
+                            .getMatchingDirectDeclarations(
+                        prefix, 0);
+                }
+                else {
+                    return noProposals;
+                }
+            }
+        }
+        case (is Tree.QualifiedType) {
+            if (exists qt = node.outerType.typeModel) {
+                return qt.resolveAliases()
+                        .declaration
+                        .getMatchingMemberDeclarations(
+                    unit, scope, prefix, 0);
+            }
+            else {
+                return noProposals;
+            }
+        }
+        case (is Tree.BaseType) {
+            if (node.packageQualified) {
+                return unit.\ipackage
+                        .getMatchingDirectDeclarations(
+                    prefix, 0);
+            }
+            else if (exists scope) {
+                return scope.getMatchingDeclarations(
+                    unit, prefix, 0, cancellable);
+            }
+            else {
+                return noProposals;
+            }
+        }
+        else {
+            if (memberOp, is Tree.Term|Tree.DocLink node) {
+                value type = switch (node)
+                case (is Tree.Term)
+                node.typeModel
+                case (is Tree.DocLink)
+                docLinkType(node);
+                if (exists type) {
+                    return type.resolveAliases()
+                            .declaration
+                            .getMatchingMemberDeclarations(
+                        unit, scope, prefix, 0);
+                }
+                else if (exists scope) {
+                    return scope.getMatchingDeclarations(
+                        unit, prefix, 0, cancellable);
+                }
+                else {
+                    return noProposals;
+                }
+            }
+            else if (exists scope) {
+                return scope.getMatchingDeclarations(
+                    unit, prefix, 0, cancellable);
+            }
+            else {
+                return getUnparsedProposals(
+                    rootNode, prefix, cancellable);
+            }
+        }
+    }
+    
+    shared Type? getPrimaryType(
+        Tree.QualifiedMemberOrTypeExpression qme) {
+        if (exists type = qme.primary.typeModel) {
+            value unit = qme.unit;
+            return switch (mo = qme.memberOperator)
+            case (is Tree.SafeMemberOp)
+            unit.getDefiniteType(type)
+            case (is Tree.SpreadOp)
+            unit.getIteratedType(type)
+            else type;
+        }
+        else {
+            return null;
+        }
+    }
+    
+    Type? docLinkType(Tree.DocLink node) 
+            => if (exists base = node.base) 
+    then (resultType(base)
+        else base.reference.fullType) else null;
+    
+    Type? resultType(Declaration declaration) {
+        switch (declaration)
+        case (is TypedDeclaration) {
+            return declaration.type;
+        }
+        case (is TypeDeclaration) {
+            if (is Class declaration) {
+                if (!declaration.abstract) {
+                    return declaration.type;
+                }
+            }
+            return null;
+        }
+        else {
+            return null;
+        }
+    }
+    
+    Proposals getUnparsedProposals(Node? node, String prefix, 
+        Cancellable? cancellable)
+            => if (exists node,
+            exists pkg = node.unit?.\ipackage)
+    then pkg.\imodule
+            .getAvailableDeclarations(prefix, 0, cancellable)
+    else noProposals;
+}
+
+
 shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Document>()
         satisfies InvocationCompletion<IdeComponent,CompletionResult,Document>
                 & ParametersCompletion<IdeComponent,CompletionResult,Document>
@@ -92,16 +285,10 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         given CompletionResult satisfies Object
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
-    shared alias Proposals
-            => Map<JString,DeclarationWithProximity>;
-
-    Proposals noProposals
-            = HashMap<JString,DeclarationWithProximity>();
-
     shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
     
     shared formal Indents<Document> indents;
-
+    
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
         RequiredType required, Proposals proposals) {
@@ -263,7 +450,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         }
         else {
             Proposals proposals 
-                    = getProposals {
+                    = proposalsFinder.getProposals {
                         node = node;
                         scope = scope;
                         prefix = prefix;
@@ -626,147 +813,12 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         return adjustedToken.type == CeylonLexer.\iLINE_COMMENT;
     }
 
-    shared Proposals getProposals(Node node,
-            Scope? scope, String prefix, Boolean memberOp,
-            Tree.CompilationUnit rootNode, 
-            Cancellable? cancellable) {
-
-        Unit? unit = node.unit;
-
-        if (!exists unit) {
-            return noProposals;
-        }
-
-        switch (node)
-        case (is Tree.MemberLiteral) {
-            if (exists mlt = node.type) {
-                return if (exists type = mlt.typeModel)
-                    then type.resolveAliases()
-                        .declaration
-                        .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0)
-                    else noProposals;
-            }
-        } case (is Tree.TypeLiteral) {
-            if (is Tree.BaseType bt = node.type) {
-                if (bt.packageQualified) {
-                    return unit.\ipackage
-                        .getMatchingDirectDeclarations(
-                            prefix, 0);
-                }
-            }
-            if (exists tlt = node.type) {
-                return if (exists type = tlt.typeModel)
-                    then type.resolveAliases()
-                        .declaration
-                        .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0)
-                    else noProposals;
-            }
-        }
-        else {}
-
-        switch (node)
-        case (is Tree.QualifiedMemberOrTypeExpression) {
-            value type = let (pt = getPrimaryType(node))
-                if (node.staticMethodReference)
-                    then unit.getCallableReturnType(pt)
-                    else pt;
-
-            if (exists type, !type.unknown) {
-                return type.resolveAliases()
-                        .declaration
-                        .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0);
-            }
-            else {
-                switch (primary = node.primary)
-                case (is Tree.MemberOrTypeExpression) {
-                    if (is TypeDeclaration td
-                            = primary.declaration) {
-                        return if (exists t = td.type)
-                            then t.resolveAliases()
-                                .declaration
-                                .getMatchingMemberDeclarations(
-                                    unit, scope, prefix, 0)
-                            else noProposals;
-                    }
-                    else {
-                        return noProposals;
-                    }
-                }
-                case (is Tree.Package) {
-                    return unit.\ipackage
-                            .getMatchingDirectDeclarations(
-                                prefix, 0);
-                }
-                else {
-                    return noProposals;
-                }
-            }
-        }
-        case (is Tree.QualifiedType) {
-            if (exists qt = node.outerType.typeModel) {
-                return qt.resolveAliases()
-                        .declaration
-                        .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0);
-            }
-            else {
-                return noProposals;
-            }
-        }
-        case (is Tree.BaseType) {
-            if (node.packageQualified) {
-                return unit.\ipackage
-                        .getMatchingDirectDeclarations(
-                            prefix, 0);
-            }
-            else if (exists scope) {
-                return scope.getMatchingDeclarations(
-                    unit, prefix, 0, cancellable);
-            }
-            else {
-                return noProposals;
-            }
-        }
-        else {
-            if (memberOp, is Tree.Term|Tree.DocLink node) {
-                value type = switch (node)
-                    case (is Tree.Term)
-                        node.typeModel
-                    case (is Tree.DocLink)
-                        docLinkType(node);
-                if (exists type) {
-                    return type.resolveAliases()
-                            .declaration
-                            .getMatchingMemberDeclarations(
-                                unit, scope, prefix, 0);
-                }
-                else if (exists scope) {
-                    return scope.getMatchingDeclarations(
-                        unit, prefix, 0, cancellable);
-                }
-                else {
-                    return noProposals;
-                }
-            }
-            else if (exists scope) {
-                return scope.getMatchingDeclarations(
-                    unit, prefix, 0, cancellable);
-            }
-            else {
-                return getUnparsedProposals(
-                    rootNode, prefix, cancellable);
-            }
-        }
-    }
 
     Type? getFunctionProposalType(Node node,
             Boolean memberOp) {
         if (is Tree.QualifiedMemberOrTypeExpression node,
             !node.staticMethodReference,
-            exists type = getPrimaryType(node)) {
+            exists type = proposalsFinder.getPrimaryType(node)) {
             return type;
         }
         else if (memberOp,
@@ -788,7 +840,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
             then collectUnaryFunctions(type,
                 scope.getMatchingDeclarations(node.unit,
                     prefix, 0, cancellable))
-            else noProposals;
+            else proposalsFinder.noProposals;
 
     Proposals collectUnaryFunctions(Type type,
             Proposals candidates) {
@@ -829,52 +881,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         return matches;
     }
 
-    Type? getPrimaryType(
-            Tree.QualifiedMemberOrTypeExpression qme) {
-        if (exists type = qme.primary.typeModel) {
-            value unit = qme.unit;
-            return switch (mo = qme.memberOperator)
-                case (is Tree.SafeMemberOp)
-                    unit.getDefiniteType(type)
-                case (is Tree.SpreadOp)
-                    unit.getIteratedType(type)
-                else type;
-        }
-        else {
-            return null;
-        }
-    }
-
-    Type? docLinkType(Tree.DocLink node) 
-            => if (exists base = node.base) 
-            then (resultType(base)
-            else base.reference.fullType) else null;
-
-    Type? resultType(Declaration declaration) {
-        switch (declaration)
-        case (is TypedDeclaration) {
-            return declaration.type;
-        }
-        case (is TypeDeclaration) {
-            if (is Class declaration) {
-                if (!declaration.abstract) {
-                    return declaration.type;
-                }
-            }
-            return null;
-        }
-        else {
-            return null;
-        }
-    }
-
-    Proposals getUnparsedProposals(Node? node, String prefix, 
-        Cancellable? cancellable)
-            => if (exists node,
-                    exists pkg = node.unit?.\ipackage)
-                then pkg.\imodule
-                    .getAvailableDeclarations(prefix, 0, cancellable)
-                else noProposals;
 
     shared Boolean isQualifiedType(Node node)
             => if (is Tree.QualifiedMemberOrTypeExpression node)

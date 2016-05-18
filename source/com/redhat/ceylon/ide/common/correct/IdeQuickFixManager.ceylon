@@ -27,7 +27,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
     Scope,
-    Referenceable
+    Referenceable,
+    TypeDeclaration
 }
 
 import java.util {
@@ -64,6 +65,9 @@ shared interface QuickFixData {
         String name, String version);
     shared formal void addAnnotationProposal(Referenceable declaration, String text,
         String description, TextChange change, DefaultRegion? selection);
+    shared formal void addSatisfiesProposal(TypeDeclaration typeParam,
+        String description, String missingSatisfiedTypeText, TextChange change, 
+        DefaultRegion? region);
 }
 
 shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,IFile,ICompletionProposal,Data,LinkedMode>()
@@ -73,13 +77,11 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
     shared formal CreateQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createQuickFix;
     shared CreateParameterQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createParameterQuickFix
             => createQuickFix.createParameterQuickFix;
-    shared formal ChangeReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Data,Region,ICompletionProposal> changeReferenceQuickFix;
     shared formal DeclareLocalQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,LinkedMode,ICompletionProposal,Data,Region> declareLocalQuickFix;
     shared formal CreateEnumQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> createEnumQuickFix;
     shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
     shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
     shared formal ChangeTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> changeTypeQuickFix;
-    shared formal AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> addSatisfiesQuickFix;
     shared formal AssignToLocalQuickFix<IFile,Data> assignToLocalQuickFix;
     
     shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
@@ -107,13 +109,13 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             createEnumQuickFix.addCreateEnumProposal(data);
             addCreationProposals(data, file);
             if (exists tc) {
-                changeReferenceQuickFix.addChangeReferenceProposals(data, file);
+                changeReferenceQuickFix.addChangeReferenceProposals(data);
             }
         }
         case (101) {
             createParameterQuickFix.addCreateParameterProposals(data);
             if (exists tc) {
-                changeReferenceQuickFix.addChangeArgumentReferenceProposals(data, file);
+                changeReferenceQuickFix.addChangeArgumentReferenceProposals(data);
             }
         }
         case (200|210) {

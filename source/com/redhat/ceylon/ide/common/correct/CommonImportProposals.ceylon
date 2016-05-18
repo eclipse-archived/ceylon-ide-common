@@ -24,10 +24,15 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    JHashSet=HashSet
+    JHashSet=HashSet,
+    JList=List
 }
 import com.redhat.ceylon.ide.common.util {
     Indents
+}
+import java.lang {
+    JString=String,
+    JIterable=Iterable
 }
 
 shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit rootNode) {
@@ -86,6 +91,16 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
                 => ReplaceEdit(start, length, text);
         
     }
+    
+    shared Boolean isImported(Declaration declaration)
+            => delegate.isImported(declaration, rootNode);
+
+    shared JList<InsertEdit> importEdits(
+        JIterable<Declaration> declarations,
+        JIterable<JString>? aliases = null,
+        Declaration? declarationBeingDeleted = null)
+            => delegate.importEdits(rootNode, declarations, aliases,
+                declarationBeingDeleted, document);
     
     shared void importDeclaration(Declaration declaration)
             => delegate.importDeclaration {
