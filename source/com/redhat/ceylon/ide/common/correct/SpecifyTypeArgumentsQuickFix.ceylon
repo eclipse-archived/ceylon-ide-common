@@ -4,18 +4,16 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
 
-shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
-    
-    shared formal void newProposal(Data data, String desc, TextChange change);
+shared object specifyTypeArgumentsQuickFix {
     
     shared void addSpecifyTypeArgumentsProposal(
         Tree.MemberOrTypeExpression ref, 
-        Data data, IFile file) {
+        QuickFixData data) {
         
         Tree.Identifier identifier;
         Tree.TypeArguments typeArguments;
@@ -47,19 +45,16 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
             }
             
             builder.append(">");
-            value change 
-                    = newTextChange("Specify Explicit Type Arguments", 
-                                    file);
-            addEditToChange(change, 
-                newInsertEdit {
-                    position = identifier.endIndex.intValue();
+            value change = platformServices.createTextChange {
+                name = "Specify Explicit Type Arguments";
+                input = data.phasedUnit;
+            };
+            change.addEdit( 
+                InsertEdit {
+                    start = identifier.endIndex.intValue();
                     text = builder.string;
                 });
-            newProposal {
-                data = data;
-                desc = "Specify explicit type arguments '``builder``'";
-                change = change;
-            };
+            data.addQuickFix("Specify explicit type arguments '``builder``'", change);
         }
     }
 }

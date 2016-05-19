@@ -17,15 +17,17 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    CommonDocument,
+    platformServices,
+    ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
-    Indents
+    nodes
 }
 
 import java.lang {
@@ -42,20 +44,14 @@ import org.antlr.runtime {
     BufferedTokenStream
 }
 
-shared interface AbstractFormatAction<IDocument, InsertEdit, TextEdit, TextChange>
-        satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
-    
-    shared formal Indents<IDocument> indents;
-    
-    shared formal TextChange newTextChange(String desc, IDocument doc);
+shared object formatAction {
     
     // TODO this could be a tuple I guess
     class FormattingUnit(shared Node node, shared CommonToken startToken, shared CommonToken endToken) {
     }
     
     shared TextChange? format(Tree.CompilationUnit rootNode, List<CommonToken> tokenList,
-        IDocument document, Integer docLength, DefaultRegion selection,
+        CommonDocument document, Integer docLength, DefaultRegion selection,
         SparseFormattingOptions options, FormattingOptions formatterProfile) {
         
         value formattingUnits = ArrayList<FormattingUnit>();
@@ -143,9 +139,9 @@ shared interface AbstractFormatAction<IDocument, InsertEdit, TextEdit, TextChang
             };
             
             if (exists indentMode = options.indentMode) {
-                value indentLevel = indents.getIndent(unit.node, document)
+                value indentLevel = document.getIndent(unit.node)
                     .replace("\t", indentMode.indent(1)).size
-                        / indents.indentSpaces;
+                        / document.indentSpaces;
                 
                 if (unit != firstUnit) {
                     // add indentation
@@ -202,8 +198,8 @@ shared interface AbstractFormatAction<IDocument, InsertEdit, TextEdit, TextChang
         value length = if (formatAll) then docLength else stopIndex - startIndex + 1;
         
         //if (!document.get(from, length).equals(text)) {
-        value change = newTextChange("Format", document);
-        addEditToChange(change, newReplaceEdit(from, length, text));
+        value change = platformServices.createTextChange("Format", document);
+        change.addEdit(ReplaceEdit(from, length, text));
         
         return change;
         //}

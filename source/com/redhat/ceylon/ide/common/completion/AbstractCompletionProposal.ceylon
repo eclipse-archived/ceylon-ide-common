@@ -1,17 +1,19 @@
-import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges,
-    ImportProposals
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    TextEdit,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 
 import java.lang {
     Character
 }
 
-shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Document,InsertEdit,TextEdit,TextChange,Region>
+shared abstract class AbstractCompletionProposal
         (offset, prefix, /*Image image,*/ description, text)
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & CommonCompletionProposal<Document,Region>
-        given InsertEdit satisfies TextEdit {
+        satisfies CommonCompletionProposal {
     
     shared actual variable Integer offset;
     shared actual String prefix;
@@ -20,17 +22,16 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
     
     shared actual variable Integer length = prefix.size;
     shared formal Boolean toggleOverwrite;
-    shared formal ImportProposals<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange> importProposals;
     
     start() => offset - prefix.size;
     
-    shared actual default Region getSelectionInternal(Document document) 
-            => newRegion {
+    shared actual default DefaultRegion getSelectionInternal(CommonDocument document) 
+            => DefaultRegion {
                 start = start() + text.size;
                 length = 0;
             };
     
-    shared default void applyInternal(Document document) 
+    shared default void applyInternal(CommonDocument document) 
             => replaceInDoc {
                 doc = document;
                 start = start();
@@ -38,20 +39,20 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
                 newText = withoutDupeSemi(document);
             };
     
-    shared TextEdit createEdit(Document document) 
-            => newReplaceEdit {
+    shared TextEdit createEdit(CommonDocument document) 
+            => ReplaceEdit {
                 start = start();
                 length = lengthOf(document);
                 text = withoutDupeSemi(document);
             };
     
-    shared Integer lengthOf(Document document) {
+    shared Integer lengthOf(CommonDocument document) {
         if (("overwrite"==completionMode) != toggleOverwrite) {
             variable value length = prefix.size;
             variable value i = offset;
-            value doclen = getDocLength(document);
+            value doclen = document.size;
             while (i < doclen
-                && Character.isJavaIdentifierPart(getDocChar(document, i))) {
+                && Character.isJavaIdentifierPart(document.getChar(i))) {
                 length++;
                 i++;
             }
@@ -61,10 +62,10 @@ shared abstract class AbstractCompletionProposal<IFile, CompletionResult, Docume
         }
     }
     
-    shared actual String withoutDupeSemi(Document document) {
+    shared actual String withoutDupeSemi(CommonDocument document) {
         if (text.endsWith(";"), 
-            getDocLength(document)>offset && 
-                    getDocChar(document, offset) == ';') {
+            document.size>offset && 
+                    document.getChar(offset) == ';') {
             return text.initial(text.size - 1);
         }
         return text;

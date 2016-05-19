@@ -42,6 +42,12 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {
@@ -157,29 +163,28 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
 
 }
 
-shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent>
+shared abstract class ModuleProposal<CompletionResult,Document,LinkedMode,IdeComponent>
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
          Boolean withBody, ModuleVersionDetails version, String name, Node node, IdeComponent cpc)
-        extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
+        extends AbstractCompletionProposal
         (offset, prefix, versioned, versioned.spanFrom(len))
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
-    shared actual Region getSelectionInternal(Document document) {
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value off = offset + versioned.size - prefix.size - len;
         if (withBody) {
             value verlen = version.version.size;
-            return newRegion(off-verlen-2, verlen);
+            return DefaultRegion(off-verlen-2, verlen);
         }
         else {
-            return newRegion(off, 0);
+            return DefaultRegion(off, 0);
         }
     }
     
-    shared formal CompletionResult newModuleProposal(ModuleVersionDetails d, Region selection, LinkedMode lm);
+    shared formal CompletionResult newModuleProposal(ModuleVersionDetails d, DefaultRegion selection, LinkedMode lm);
 
-    shared actual void applyInternal(Document document) {
+    shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
         
         if (withBody, //module.getVersions().size()>1 && //TODO: put this back in when sure it works
@@ -193,11 +198,11 @@ shared abstract class ModuleProposal<IFile,CompletionResult,Document,InsertEdit,
                 proposals.add(newModuleProposal(d, selection, linkedMode));
             }
             
-            value x = getRegionStart(selection);
-            value y = getRegionLength(selection);
-            addEditableRegion(linkedMode, document, x, y, 0, proposals.sequence());
+            value x = selection.start;
+            value y = selection.length;
+            addEditableRegion(linkedMode, cpc.document, x, y, 0, proposals.sequence());
             
-            installLinkedMode(document, linkedMode, this, 1, x + y + 2);
+            installLinkedMode(cpc.document, linkedMode, this, 1, x + y + 2);
         }
     }
 }

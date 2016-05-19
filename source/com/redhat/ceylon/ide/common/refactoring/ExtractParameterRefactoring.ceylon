@@ -9,8 +9,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    DocumentChanges
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    ReplaceEdit,
+    InsertEdit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -25,15 +29,11 @@ import java.util {
 }
 
 
-shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, IRegion=DefaultRegion>
+shared interface ExtractParameterRefactoring<IRegion>
         satisfies ExtractInferrableTypedRefactoring<TextChange>
         & NewNameRefactoring
-        & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        & ExtractLinkedModeEnabled<IRegion>
-        given InsertEdit satisfies TextEdit {
+        & ExtractLinkedModeEnabled<IRegion> {
 
-    shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-    
     initialNewName => nameProposals[0];
     
     affectsOtherFiles => false;
@@ -90,8 +90,8 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
         assert (exists sourceFile = editorData.sourceVirtualFile,
                 is Tree.Term term = editorData.node);
         
-        initMultiEditChange(tfc);
-        value doc = getDocumentForChange(tfc);
+        tfc.initMultiEdit();
+        value doc = tfc.document;
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
         value unit = term.unit;
@@ -206,8 +206,8 @@ shared interface ExtractParameterRefactoring<IFile, ICompletionProposal, IDocume
         value termStart = term.startIndex.intValue();
         value termLength = term.distance.intValue();
         
-        addEditToChange(tfc, newInsertEdit(start, comma + definition));
-        addEditToChange(tfc, newReplaceEdit(termStart, termLength, call));
+        tfc.addEdit(InsertEdit(start, comma + definition));
+        tfc.addEdit(ReplaceEdit(termStart, termLength, call));
         decRegion = newRegion(start + shift + typeDec.size + comma.size + 1, newName.size);
         refRegion = newRegion(termStart + shift + definition.size + comma.size + refStart, newName.size);
         typeRegion = newRegion(start + shift + comma.size, typeDec.size);

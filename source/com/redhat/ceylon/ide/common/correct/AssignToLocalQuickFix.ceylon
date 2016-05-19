@@ -15,30 +15,33 @@ import ceylon.interop.java {
 import ceylon.collection {
     ArrayList
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    TextChange,
+    InsertEdit
+}
 
-shared interface AssignToLocalQuickFix<IFile,Data>
-        satisfies LocalQuickFix<IFile,Data>
+shared interface AssignToLocalQuickFix<in Data>
+        satisfies LocalQuickFix<Data>
         given Data satisfies QuickFixData {
 
     desc => "Assign expression to new local";
 
 }
 
-shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
-        satisfies AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
-                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared interface AssignToLocalProposal<IDocument,CompletionResult,LinkedMode>
+        satisfies AbstractLocalProposal<IDocument,LinkedMode>
+                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult> {
 
-    shared actual TextChange createChange(IFile file, Node expanse, Integer endIndex) {
-        value change = newTextChange("Assign to Local", file);
-        initMultiEditChange(change);
+    shared actual TextChange createChange(QuickFixData data, Node expanse, Integer endIndex) {
+        value change = platformServices.createTextChange("Assign to Local", data.phasedUnit);
+        change.initMultiEdit();
         value name = names.first else "<unknown>";
-        addEditToChange(change, newInsertEdit(offset, "value " + name + " = "));
+        change.addEdit(InsertEdit(offset, "value " + name + " = "));
         value terminal = expanse.endToken.text;
         
         if (!terminal.equals(";")) {
-            addEditToChange(change, newInsertEdit(endIndex, ";"));
+            change.addEdit(InsertEdit(endIndex, ";"));
             exitPos = endIndex + 1;
         } else {
             exitPos = endIndex;

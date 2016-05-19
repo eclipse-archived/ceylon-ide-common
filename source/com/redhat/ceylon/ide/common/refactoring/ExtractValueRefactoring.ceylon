@@ -2,9 +2,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    DocumentChanges
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    ReplaceEdit,
+    InsertEdit,
+    DeleteEdit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -22,18 +24,16 @@ import java.util {
     HashSet,
     JList=List
 }
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
 
 
-shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, IRegion=DefaultRegion>
+shared interface ExtractValueRefactoring<IRegion>
         satisfies ExtractInferrableTypedRefactoring<TextChange>
         & NewNameRefactoring
-        & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        & ExtractLinkedModeEnabled<IRegion>
-        given InsertEdit satisfies TextEdit {
+        & ExtractLinkedModeEnabled<IRegion> {
 
-    shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-    value indents => importProposals.indents;
-    
     initialNewName => nameProposals[0];
     
     affectsOtherFiles => false;
@@ -67,8 +67,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         assert (exists sourceFile = editorData.sourceVirtualFile,
                 is Tree.Term term = editorData.node);
         
-        initMultiEditChange(tfc);
-        value doc = getDocumentForChange(tfc);
+        tfc.initMultiEdit();
+        value doc = tfc.document;
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
         value unit = term.unit;
@@ -88,8 +88,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         }.visit(statement);
 
         value indent = 
-                indents.getDefaultLineDelimiter(doc) + 
-                indents.getIndent(statement, doc);     
+                doc.defaultLineDelimiter + 
+                doc.getIndent(statement);     
         Boolean toplevel;
         Integer adjustment;
         Integer start;
@@ -108,8 +108,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             value loc = pl.endIndex.intValue();
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
-            addEditToChange(tfc, newReplaceEdit(loc, len, " { "));
-            addEditToChange(tfc, newInsertEdit(end, "; }"));
+            tfc.addEdit(ReplaceEdit(loc, len, " { "));
+            tfc.addEdit(InsertEdit(end, "; }"));
             adjustment = 3-len;
             newLineOrReturn = 
                     if (anon.declarationModel.declaredVoid) 
@@ -132,14 +132,14 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
             value semi = fun.endIndex.intValue()-1;
-            String starting = " {" + indent + indents.defaultIndent;
+            String starting = " {" + indent + doc.defaultIndent;
             String ending = ";" + indent + "}";
-            addEditToChange(tfc, newReplaceEdit(loc, len, starting));
-            addEditToChange(tfc, newInsertEdit(end, ending));
-            addEditToChange(tfc, newDeleteEdit(semi, 1));
+            tfc.addEdit(ReplaceEdit(loc, len, starting));
+            tfc.addEdit(InsertEdit(end, ending));
+            tfc.addEdit(DeleteEdit(semi, 1));
             adjustment = starting.size-len;
             newLineOrReturn = 
-                    indent + indents.defaultIndent +
+                    indent + doc.defaultIndent +
                     (!fun.declarationModel.declaredVoid then "return " else "");
             toplevel = false;
         }
@@ -236,8 +236,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         value nlength = term.distance.intValue();
 
         if (isReplacingStatement) {
-            addEditToChange(tfc, 
-                newReplaceEdit {
+            tfc.addEdit( 
+                ReplaceEdit {
                     start = statement.startIndex.intValue();
                     length = statement.distance.intValue();
                     text = definition;
@@ -251,13 +251,13 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                 length = newName.size;
             };
         } else {
-            addEditToChange(tfc, 
-                newInsertEdit {
-                    position = start;
+            tfc.addEdit( 
+                InsertEdit {
+                    start = start;
                     text = definition;
                 });
-            addEditToChange(tfc, 
-                newReplaceEdit {
+            tfc.addEdit( 
+                ReplaceEdit {
                     start = nstart;
                     length = nlength;
                     text = newName;
@@ -289,8 +289,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
                     && start > nstart + nlength
                     && t!=term
                     && !different(term, t)) {
-                    addEditToChange(tfc, 
-                        newReplaceEdit {
+                    tfc.addEdit( 
+                        ReplaceEdit {
                             start = start;
                             length = length;
                             text = newName;

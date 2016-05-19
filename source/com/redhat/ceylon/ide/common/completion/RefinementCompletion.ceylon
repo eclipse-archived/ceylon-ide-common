@@ -40,6 +40,17 @@ import java.util {
     JArrayList=ArrayList,
     HashSet
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    TextChange,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
 
 // see getRefinedProducedReference(Scope scope, Declaration d)
 shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
@@ -139,14 +150,13 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
 
 }
 
-shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,Document,LinkedMode>
         (Integer _offset, String prefix, Reference pr, String desc, 
         String text, IdeComponent cpc, Declaration declaration, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
+        extends AbstractCompletionProposal
         (_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc);
@@ -163,7 +173,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
 
     Type? type => if (fullType) then pr.fullType else pr.type;
 
-    shared actual Region getSelectionInternal(Document document) {
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value loc = text.firstInclusion("nothing;");
         Integer length;
         variable Integer start;
@@ -179,11 +189,11 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             length = 7;
         }
 
-        return newRegion(start, length);
+        return DefaultRegion(start, length);
     }
 
-    shared TextChange createChange(TextChange change, Document document) {
-        initMultiEditChange(change);
+    shared TextChange createChange(CommonDocument document) {
+        value change = platformServices.createTextChange("Add Refinement", document);
         value decs = HashSet<Declaration>();
         value cu = cpc.lastCompilationUnit;
         if (explicitReturnType) {
@@ -193,7 +203,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         }
         
         value il = importProposals.applyImports(change, decs, cu, document);
-        addEditToChange(change, createEdit(document));
+        change.addEdit(createEdit(document));
         offset += il;
         return change;
     }

@@ -3,7 +3,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+    LinkedModeSupport,
+    TypeCompletion
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -19,24 +20,23 @@ import java.util {
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    CommonDocument,
+    ReplaceEdit
+}
 
-shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Data,CompletionResult,LinkedMode>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
-        Region,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared interface SpecifyTypeQuickFix<IDocument,CompletionResult,LinkedMode>
+        satisfies LinkedModeSupport<LinkedMode,IDocument,CompletionResult> {
     
-    shared formal void newSpecifyTypeProposal(String desc,
-        Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);
-
-    shared formal SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Data,CompletionResult> specifyTypeArgumentsQuickFix;
-    //shared formal void applyChange(TextChange change);
+    shared formal IDocument getNativeDocument(CommonDocument doc);
     
-    shared Region? specifyType(IDocument document, Tree.Type typeNode,
+    shared formal TypeCompletion<CompletionResult,IDocument> completionManager;
+    
+    shared DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
         Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
         
         value offset = typeNode.startIndex.intValue();
@@ -46,10 +46,9 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         
         if (!inEditor) {
             if (is Tree.LocalModifier typeNode) {
-                value change 
-                        = newTextChange("Specify Type", 
+                value change = platformServices.createTextChange("Specify Type", 
                                         document);
-                initMultiEditChange(change);
+                change.initMultiEdit();
                 value decs = HashSet<Declaration>();
                 importProposals.importType {
                     declarations = decs;
@@ -64,8 +63,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                 };
                 value typeName 
                         = infType.asSourceCodeString(unit);
-                addEditToChange(change, 
-                    newReplaceEdit {
+                change.addEdit(ReplaceEdit {
                         start = offset;
                         length = length;
                         text = typeName;
@@ -73,16 +71,17 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                 
                 //applyChange(change);
                 
-                return newRegion {
+                return DefaultRegion {
                     start = offset + il;
                     length = typeName.size;
                 };
             }
         } else {
             value lm = newLinkedMode();
+            value nativeDoc = getNativeDocument(document);
             value proposals 
                     = completionManager.getTypeProposals {
-                document = document;
+                document = nativeDoc;
                 offset = offset;
                 length = length;
                 infType = infType;
@@ -91,22 +90,22 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
             };
             addEditableRegion {
                 lm = lm;
-                doc = document;
+                doc = nativeDoc;
                 start = offset;
                 len = length;
                 exitSeqNumber = 0;
                 proposals = proposals;
             };
-            installLinkedMode(document, lm, this, -1, -1);
+            installLinkedMode(nativeDoc, lm, this, -1, -1);
         }
         
         return null;
     }
     
-    shared void addSpecifyTypeProposal(Node node, Data data) 
+    shared void addSpecifyTypeProposal(Node node, QuickFixData data) 
             => createProposals(node, data);
 
-    shared void createProposal(Tree.Type type, Data data) 
+    shared void createProposal(Tree.Type type, QuickFixData data) 
             => newProposal {
                 desc = "Declare explicit type";
                 type = type;
@@ -115,7 +114,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
                 data = data;
             };
 
-    void createProposals(Node node, Data data) {
+    void createProposals(Node node, QuickFixData data) {
         Tree.Type type;
         switch (node)
         case (is Tree.Type) {
@@ -192,7 +191,7 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         return itv.result;
     }
 
-    shared void addTypingProposals(Data data, IFile file, Tree.Declaration? decNode) {
+    shared void addTypingProposals(QuickFixData data, Tree.Declaration? decNode) {
         if (is Tree.TypedDeclaration decNode, 
             !(decNode is Tree.ObjectDefinition|Tree.Variable)) {
             value type = decNode.type;
@@ -204,18 +203,16 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         }
         
         if (is Tree.MemberOrTypeExpression node = data.node) {
-            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data, file);
+            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data);
         }
     }
     
     void newProposal(String desc, Tree.Type type, 
-        Tree.CompilationUnit rootNode, Type infType, Data data) 
-            => newSpecifyTypeProposal {
-        desc = "``desc`` '``infType.asString(data.rootNode.unit)``'";
-        type = type;
-        cu = rootNode;
-        infType = infType;
-        data = data;
-    };
-    
+        Tree.CompilationUnit rootNode, Type infType, QuickFixData data) 
+            => data.addSpecifyTypeProposal {
+                description = "``desc`` '``infType.asString(data.rootNode.unit)``'";
+                type = type;
+                cu = rootNode;
+                infType = infType;
+            };    
 }

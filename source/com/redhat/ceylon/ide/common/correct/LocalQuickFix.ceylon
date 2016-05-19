@@ -10,8 +10,11 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit
 }
+import com.redhat.ceylon.ide.common.platform {
+    TextChange
+}
 
-shared interface LocalQuickFix<IFile,Data>
+shared interface LocalQuickFix<in Data>
         given Data satisfies QuickFixData {
 
     shared formal void newProposal(Data data, String desc);
@@ -19,7 +22,7 @@ shared interface LocalQuickFix<IFile,Data>
     shared formal String desc;
     shared default Boolean isEnabled(Type type) => true;
 
-    shared void addProposal(Data data, IFile file, Integer currentOffset = data.problemOffset) {
+    shared void addProposal(Data data, Integer currentOffset = data.problemOffset) {
         if (enabled(data, currentOffset)) {
             newProposal(data, desc);
         }
@@ -111,13 +114,9 @@ shared interface LocalQuickFix<IFile,Data>
     }
 }
 
-shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult,LinkedMode>
-        satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange> 
-                & AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared interface AbstractLocalProposal<IDocument,LinkedMode> {
 
-    shared formal TextChange createChange(IFile file, Node expanse, Integer endIndex);
+    shared formal TextChange createChange(QuickFixData file, Node expanse, Integer endIndex);
     shared formal LinkedMode? addLinkedPositions(IDocument document, Unit unit);
 
     shared formal variable {String*} names;
@@ -128,7 +127,7 @@ shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
     
     shared String initialName => names.first else "<unknown>";
 
-    shared TextChange? performInitialChange(Data data, IFile file, Integer currentOffset) {
+    shared TextChange? performInitialChange(QuickFixData data, Integer currentOffset) {
         value st = nodes.findStatement(data.rootNode, data.node);
         variable Node expression;
         variable Node expanse;
@@ -218,7 +217,7 @@ shared interface AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
         type = unit.denotableType(resultType);
         this.currentOffset = currentOffset;
         
-        return createChange(file, expanse, endIndex);
+        return createChange(data, expanse, endIndex);
     }
 
 }

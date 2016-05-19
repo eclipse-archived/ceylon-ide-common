@@ -19,18 +19,15 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashSet
 }
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    platformServices,
+    InsertEdit
+}
 
-shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionResult>
-        satisfies AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionResult> 
-                & DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData {
+shared object refineFormalMembersQuickFix {
     
-    shared formal Character getDocChar(Document doc, Integer offset);
-    
-    shared formal void newRefineFormalMembersProposal(Data data, String desc);
-    
-    shared void addRefineFormalMembersProposal(Data data, Boolean ambiguousError) {
+    shared void addRefineFormalMembersProposal(QuickFixData data, Boolean ambiguousError) {
         value n = data.node;
         Node? node;
         if (n is Tree.ClassBody
@@ -59,18 +56,17 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
                           then "Refine inherited ambiguous and formal members of " + name
                           else "Refine inherited formal members of " + name;
             
-            newRefineFormalMembersProposal(data, desc);
+            data.addRefineFormalMembersProposal(desc);
         }
     }
     
-    shared TextChange? refineFormalMembers(Data data, Document document,
-        Integer editorOffset) {
+    shared TextChange? refineFormalMembers(QuickFixData data, Integer editorOffset) {
         
         value rootNode = data.rootNode;
         value node = data.node;
-        value change = newTextChange("Refine Members", document);
+        value change = platformServices.createTextChange("Refine Members", data.document);
 
-        initMultiEditChange(change);
+        change.initMultiEdit();
         
         //TODO: copy/pasted from CeylonQuickFixAssistant
         Tree.Body? body;
@@ -98,17 +94,18 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
         }
         value isInterface = body is Tree.InterfaceBody;
         value statements = body.statements;
+        value document = data.document;
         String indent;
-        value bodyIndent = indents.getIndent(node, document);
-        value delim = indents.getDefaultLineDelimiter(document);
+        value bodyIndent = document.getIndent(node);
+        value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + indents.defaultIndent;
+            indent = delim + bodyIndent + document.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }
         } else {
             value statement = statements.get(statements.size() - 1);
-            indent = delim + indents.getIndent(statement, document);
+            indent = delim + document.getIndent(statement);
             if (offset < 0) {
                 offset = statement.endIndex.intValue();
             }
@@ -159,12 +156,12 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
             }
         }
         
-        if (getDocChar(document, offset) == '}', result.size > 0) {
+        if (document.getChar(offset) == '}', result.size > 0) {
             result.append(delim).append(bodyIndent);
         }
         
         importProposals.applyImports(change, already, rootNode, document);
-        addEditToChange(change, newInsertEdit(offset, result.string));
+        change.addEdit(InsertEdit(offset, result.string));
         
         return change;
     }
@@ -174,7 +171,7 @@ shared interface RefineFormalMembersQuickFix<IFile,Document,InsertEdit,TextEdit,
         
         value pr = getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface,
-            ci, indent, true, true, indents, true);
+            ci, indent, true, true, platformServices.indents<Nothing>(), true);
         
         result.append(indent).append(rtext).append(indent);
     }

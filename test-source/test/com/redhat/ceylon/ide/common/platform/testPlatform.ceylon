@@ -4,9 +4,6 @@ import com.redhat.ceylon.compiler.typechecker.context {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
-import com.redhat.ceylon.ide.common.correct {
-    ImportProposals
-}
 import com.redhat.ceylon.ide.common.platform {
     PlatformServices,
     VfsServices,
@@ -31,8 +28,6 @@ shared object testPlatform satisfies PlatformServices {
     
     createTextChange(String desc, CommonDocument|PhasedUnit input)
             => if (is DefaultDocument input) then DefaultTextChange(input) else nothing;
-    
-    shared actual ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>() => nothing;
     
     shared actual Indents<IDocument> indents<IDocument>()
             => unsafeCast<Indents<IDocument>>(testIndents);

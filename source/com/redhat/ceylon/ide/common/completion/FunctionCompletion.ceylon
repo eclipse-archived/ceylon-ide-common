@@ -15,6 +15,14 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashSet
 }
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    TextChange
+}
 shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
@@ -47,18 +55,16 @@ shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
     }
 }
 
-shared abstract class FunctionCompletionProposal<CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region>  
+shared abstract class FunctionCompletionProposal  
         (Integer _offset, String prefix, String desc, String text, Declaration declaration, Tree.CompilationUnit rootNode)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
-        (_offset, prefix, desc, text)
-        given InsertEdit satisfies TextEdit {
+        extends AbstractCompletionProposal(_offset, prefix, desc, text) {
     
-    shared TextChange createChange(TextChange change, Document document) {
-        initMultiEditChange(change);
+    shared TextChange createChange(CommonDocument document) {
+        value change = platformServices.createTextChange("Complete Invocation", document);
         value decs = HashSet<Declaration>();
         importProposals.importDeclaration(decs, declaration, rootNode);
         value il = importProposals.applyImports(change, decs, rootNode, document);
-        addEditToChange(change, createEdit(document));
+        change.addEdit(createEdit(document));
         offset += il;
         return change;
     }

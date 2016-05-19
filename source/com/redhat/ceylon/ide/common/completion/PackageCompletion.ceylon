@@ -37,6 +37,12 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface PackageCompletion<IdeComponent,CompletionResult,Document> 
         given IdeComponent satisfies LocalAnalysisResult<Document> {
@@ -153,34 +159,32 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
 
 }
 
-shared abstract class PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+shared abstract class PackageCompletionProposal<CompletionResult,Document,LinkedMode>
         (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName)
-        extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
+        extends AbstractCompletionProposal
         (offset, prefix, fullPackageName + (withBody then " { ... }" else ""),
         memberPackageSubname + (withBody then " { ... }" else ""))
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit {
+        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>{
 
-    shared actual Region getSelectionInternal(Document document) {
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         if (withBody) {
-            return newRegion(offset + (text.firstInclusion("...") else 0) - prefix.size, 3);
+            return DefaultRegion(offset + (text.firstInclusion("...") else 0) - prefix.size, 3);
         } else {
             return super.getSelectionInternal(document);
         }
     }
 }
 
-shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode,IdeComponent>
+shared abstract class ImportedModulePackageProposal<CompletionResult,Document,LinkedMode,IdeComponent>
         (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, IdeComponent cpc)
-        extends PackageCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region, LinkedMode>
+        extends PackageCompletionProposal<CompletionResult,Document,LinkedMode>
         (offset, prefix, memberPackageSubname, withBody, fullPackageName)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document> {
     
-    shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, Region selection, LinkedMode lm);
+    shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, DefaultRegion selection, LinkedMode lm);
     
-    shared actual void applyInternal(Document document) {
+    shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
         
         if (withBody, cpc.options.linkedModeArguments) {
@@ -195,10 +199,10 @@ shared abstract class ImportedModulePackageProposal<IFile,CompletionResult,Docum
             }
             
             if (!proposals.empty) {
-                addEditableRegion(linkedMode, document, getRegionStart(selection),
-                    getRegionLength(selection), 0, proposals.sequence());
+                addEditableRegion(linkedMode, cpc.document, selection.start,
+                    selection.length, 0, proposals.sequence());
                 
-                installLinkedMode(document, linkedMode, this, -1, 0);
+                installLinkedMode(cpc.document, linkedMode, this, -1, 0);
             }
         }
     }

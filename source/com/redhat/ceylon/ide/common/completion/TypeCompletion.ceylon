@@ -21,6 +21,17 @@ import java.lang {
 import java.util {
     HashSet
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
 
 // TODO should be in package correct
 shared interface TypeCompletion<CompletionResult,Document> {
@@ -82,30 +93,29 @@ shared interface TypeCompletion<CompletionResult,Document> {
 }
 
 
-shared abstract class TypeProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
+shared abstract class TypeProposal
         (Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
-        extends AbstractCompletionProposal<IFile, CompletionResult, Document, InsertEdit, TextEdit, TextChange, Region>
-        (offset, "", desc, text)
-        given InsertEdit satisfies TextEdit {
+        extends AbstractCompletionProposal(offset, "", desc, text) {
     
-    shared Region applyChange(TextChange change, Document document) {
-        initMultiEditChange(change);
+    shared DefaultRegion applyChange(CommonDocument document) {
+        value change = platformServices.createTextChange("Specify Type", document);
+        change.initMultiEdit();
         value decs = HashSet<Declaration>();
         if (exists type) {
             importProposals.importType(decs, type, rootNode);
         }
         
         value il = importProposals.applyImports(change, decs, rootNode, document);
-        addEditToChange(change, newReplaceEdit(offset, getCurrentLength(document), text));
+        change.addEdit(ReplaceEdit(offset, getCurrentLength(document), text));
 
-        return newRegion(offset+il, text.size);
+        return DefaultRegion(offset+il, text.size);
     }
     
-    Integer getCurrentLength(Document document) {
+    Integer getCurrentLength(CommonDocument document) {
         variable value length = 0;
         variable value i = offset;
-        while (i < getDocLength(document)) {
-            if (Character.isWhitespace(getDocChar(document, i))) {
+        while (i < document.size) {
+            if (Character.isWhitespace(document.getChar(i))) {
                 break;
             }
             length++;

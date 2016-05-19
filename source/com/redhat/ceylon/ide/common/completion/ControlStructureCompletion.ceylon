@@ -18,6 +18,12 @@ import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
     Value
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {
@@ -174,25 +180,20 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
     }
 }
 
-shared abstract class ControlStructureProposal<IdeComponent,
-        IFile,CompletionResult,Document, InsertEdit,TextEdit,TextChange,
-        Region,LinkedMode>
+shared abstract class ControlStructureProposal<IdeComponent,CompletionResult,Document,LinkedMode>
         (Integer offset, String prefix, String desc, String text,
             Node? node, Declaration dec, IdeComponent cpc)
         
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,
-                InsertEdit,TextEdit,TextChange,Region>
-        (offset, prefix, desc, text)
+        extends AbstractCompletionProposal(offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal CompletionResult newNameCompletion(String? name);
     
-    shared actual void applyInternal(Document document) {
+    shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
 
-        enterLinkedMode(document);
+        enterLinkedMode(cpc.document);
     }
     
     shared void enterLinkedMode(Document doc) {
@@ -216,13 +217,13 @@ shared abstract class ControlStructureProposal<IdeComponent,
         }
     }
     
-    shared actual Region getSelectionInternal(Document document) {
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         if (exists loc = text.firstInclusion(" val =")) {
-            return newRegion(offset + loc + 1 - prefix.size, 3);
+            return DefaultRegion(offset + loc + 1 - prefix.size, 3);
         } else {
             value loc = text.firstOccurrence('}') 
                         else ((text.firstOccurrence(';') else - 1) + 1);
-            return newRegion(offset + loc - prefix.size, 0);
+            return DefaultRegion(offset + loc - prefix.size, 0);
         }
     }
 }

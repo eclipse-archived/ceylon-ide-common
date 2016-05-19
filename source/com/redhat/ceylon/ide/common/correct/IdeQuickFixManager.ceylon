@@ -82,41 +82,45 @@ shared interface QuickFixData {
     shared formal void addCreateQuickFix(String description,
         Scope scope, Unit unit, Type? returnType, Icons image,
         TextChange change, Integer exitPos, DefaultRegion selection);
+    shared formal void addDeclareLocalProposal(String description,
+        TextChange change, Tree.Term term, Tree.BaseMemberExpression bme);
+    shared formal void addRefineFormalMembersProposal(String description);
+    shared formal void addRefineEqualsHashProposal(String description, TextChange change);
+    shared formal void addSpecifyTypeProposal(String description,
+        Tree.Type type, Tree.CompilationUnit cu, Type infType);
 }
 
-shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChange,Region,IFile,ICompletionProposal,Data,LinkedMode>()
+shared abstract class IdeQuickFixManager<IDocument,ICompletionProposal,LinkedMode,Data>()
         given Data satisfies QuickFixData {
     
-    shared formal ImportProposals<IFile,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange> importProposals;
-    shared formal DeclareLocalQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,LinkedMode,ICompletionProposal,Data,Region> declareLocalQuickFix;
-    shared formal RefineFormalMembersQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal> refineFormalMembersQuickFix;
-    shared formal SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
-    shared formal AssignToLocalQuickFix<IFile,Data> assignToLocalQuickFix;
+    shared formal DeclareLocalQuickFix<IDocument,LinkedMode,ICompletionProposal> declareLocalQuickFix;
+    shared formal SpecifyTypeQuickFix<IDocument,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
+    shared formal AssignToLocalQuickFix<Data> assignToLocalQuickFix;
     
-    shared formal void addImportProposals(Collection<ICompletionProposal> proposals, Data quickFixData);
+    shared formal void addImportProposals(Collection<ICompletionProposal> proposals, QuickFixData quickFixData);
     
     // temporary
     shared formal void addCreateTypeParameterProposal<Data>(Data data,
         Tree.BaseType bt, String brokenName)
             given Data satisfies QuickFixData;
 
-    shared void addQuickFixes(Data data, TypeChecker? tc, IFile file) {
+    shared void addQuickFixes(Data data, TypeChecker? tc) {
         
         value node = data.node;
         
         switch (data.errorCode)
         case (100|102) {
             if (data.errorCode == 100) {
-                declareLocalQuickFix.addDeclareLocalProposal(data, file);
+                declareLocalQuickFix.addDeclareLocalProposal(data);
             }
 
             if (exists tc) {
                 value proposals = ArrayList<ICompletionProposal>();
-                importProposals.addImportProposals(data.rootNode, data.node, proposals, file);
+                importProposals.addImportProposals(data);
                 addImportProposals(proposals, data);
             }
             createEnumQuickFix.addCreateEnumProposal(data);
-            addCreationProposals(data, file);
+            addCreationProposals(data);
             if (exists tc) {
                 changeReferenceQuickFix.addChangeReferenceProposals(data);
             }
@@ -284,7 +288,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
             addTypeParameterQuickFix.addTypeParameterProposal(data);
         }
         case (3000) {
-            assignToLocalQuickFix.addProposal(data, file);
+            assignToLocalQuickFix.addProposal(data);
             // TODO
         }
         case (3100) {
@@ -337,7 +341,7 @@ shared abstract class IdeQuickFixManager<IDocument,InsertEdit,TextEdit,TextChang
         }
     }
     
-    void addCreationProposals(Data data, IFile file) {
+    void addCreationProposals(QuickFixData data) {
         value node = data.node;
         
         switch (node)

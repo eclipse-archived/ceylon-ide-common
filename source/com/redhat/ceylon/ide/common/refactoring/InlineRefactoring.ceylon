@@ -3,9 +3,6 @@ import ceylon.collection {
     HashMap
 }
 
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -15,14 +12,20 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
+    importProposals
 }
 import com.redhat.ceylon.ide.common.model {
     CeylonUnit,
     SourceFile
 }
 import com.redhat.ceylon.ide.common.platform {
-    ImportProposalServicesConsumer
+    CompositeChange,
+    CommonDocument,
+    TextChange,
+    platformServices,
+    DeleteEdit,
+    InsertEdit,
+    ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -104,23 +107,16 @@ Declaration original(Declaration d) {
     return d;
 }
 
-shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change>
-        satisfies AbstractRefactoring<Change>
-                & ImportProposalServicesConsumer<Nothing, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange>
-                & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        given InsertEdit satisfies TextEdit {
+shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange> {
     
     shared interface InlineData satisfies EditorData {
         shared formal Declaration declaration;
         shared formal Boolean justOne;
         shared formal Boolean delete;
-        shared formal IDocument doc;
+        shared formal CommonDocument doc;
     }
     
     shared formal actual InlineData editorData;
-    shared formal TextChange newFileChange(PhasedUnit pu);
-    shared formal TextChange newDocChange(IDocument doc);
-    shared formal void addChangeToChange(Change change, TextChange tc);
 
     shared Boolean isReference 
             => let (node = editorData.node)
@@ -265,7 +261,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
 
     void inlineInFiles(
         Tree.Declaration declarationNode, 
-        Change change, 
+        CompositeChange change, 
         Tree.CompilationUnit declarationRootNode, 
         JList<CommonToken> declarationTokens, 
         Unit editorUnit) {
@@ -278,7 +274,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 if (searchInFile(phasedUnit)
                         && affectsUnit(phasedUnit.unit)) {
                     inlineInFile {
-                        textChange = newFileChange(phasedUnit);
+                        textChange = platformServices.createTextChange("Inline", phasedUnit);
                         parentChange = change;
                         declarationNode = declarationNode;
                         declarationRootNode = declarationRootNode;
@@ -295,7 +291,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             if (searchInFile(phasedUnit)
                     && affectsUnit(phasedUnit.unit)) {
                 inlineInFile {
-                    textChange = newFileChange(phasedUnit);
+                    textChange = platformServices.createTextChange("Inline", phasedUnit);
                     parentChange = change;
                     declarationNode = declarationNode;
                     declarationRootNode = declarationRootNode;
@@ -310,7 +306,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         if (searchInEditor() 
                 && affectsUnit(editorUnit)) {
             inlineInFile {
-                textChange = newDocChange(editorData.doc);
+                textChange = platformServices.createTextChange("Inline", editorData.doc);
                 parentChange = change;
                 declarationNode = declarationNode;
                 declarationRootNode = declarationRootNode;
@@ -325,7 +321,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     void inlineIfDeclaration(
         Tree.CompilationUnit rootNode, 
         Declaration dec, 
-        Change change, 
+        CompositeChange change, 
         Unit editorUnit, 
         JList<CommonToken> tokens) {
         if (is Tree.Declaration declarationNode 
@@ -343,7 +339,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
     }
     
-    shared actual Change build(Change change) {
+    shared actual CompositeChange build(CompositeChange change) {
         value declarationUnit = editorData.declaration.unit;
         value editorUnit = editorData.rootNode.unit;
         
@@ -415,13 +411,13 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         return importedFromDeclarationPackage;
     }
 
-    void inlineInFile(TextChange textChange, Change parentChange, 
+    void inlineInFile(TextChange textChange, CompositeChange parentChange, 
         Tree.Declaration declarationNode, Tree.CompilationUnit declarationRootNode, 
         Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition definition, 
         JList<CommonToken> declarationTokens, Tree.CompilationUnit rootNode,
         JList<CommonToken> tokens) {
         
-        initMultiEditChange(textChange);
+        textChange.initMultiEdit();
         inlineReferences {
             declarationNode = declarationNode;
             declarationUnit = declarationRootNode;
@@ -431,7 +427,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             tokens = tokens;
             textChange = textChange;
         };
-        value inlined = hasChildren(textChange);
+        value inlined = textChange.hasEdits;
         deleteDeclaration {
             declarationNode = declarationNode;
             declarationUnit = declarationRootNode;
@@ -452,8 +448,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             tokens = tokens;
             importsAddedToDeclarationPackage = importsAdded;
         };
-        if (hasChildren(textChange)) {
-            addChangeToChange(parentChange, textChange);
+        if (textChange.hasEdits) {
+            parentChange.addTextChange(textChange);
         }
     }
 
@@ -470,15 +466,15 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         if (list.size() == 1 
                             && !importsAddedToDeclarationPackage) {
                             //delete the whole import statement
-                            addEditToChange(textChange, 
-                                newDeleteEdit {
+                            textChange.addEdit( 
+                                DeleteEdit {
                                     start = i.startIndex.intValue();
                                     length = i.distance.intValue();
                                 });
                         } else {
                             //delete just the item in the import statement...
-                            addEditToChange(textChange, 
-                                newDeleteEdit {
+                            textChange.addEdit( 
+                                DeleteEdit {
                                     start = imt.startIndex.intValue();
                                     length = imt.distance.intValue();
                                 });
@@ -497,14 +493,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                             }
                             
                             if (prev.type == CeylonLexer.\iCOMMA) {
-                                addEditToChange(textChange, 
-                                    newDeleteEdit {
+                                textChange.addEdit( 
+                                    DeleteEdit {
                                         start = prev.startIndex;
                                         length = imt.startIndex.intValue() - prev.startIndex;
                                     });
                             } else if (next.type == CeylonLexer.\iCOMMA) {
-                                addEditToChange(textChange, 
-                                    newDeleteEdit {
+                                textChange.addEdit( 
+                                    DeleteEdit {
                                         start = imt.endIndex.intValue();
                                         length = next.stopIndex - imt.endIndex.intValue() + 1;
                                     });
@@ -537,8 +533,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             }
             
             if (is CommonToken t = from) {
-                addEditToChange(textChange, 
-                    newDeleteEdit {
+                textChange.addEdit( 
+                    DeleteEdit {
                         start = t.startIndex;
                         length = declarationNode.endIndex.intValue() - t.startIndex;
                     });
@@ -731,8 +727,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     is Tree.MemberOrTypeExpression primary = ie.primary,
                     inlineRef(primary, primary.declaration)) {
                     //delete the fat arrow
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = se.startIndex.intValue();
                             length = 2;
                         });
@@ -749,8 +745,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         inlinedScope = decNode.declarationModel;
                     };
                     //delete the semicolon
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = that.stopIndex.intValue();
                             length = 1;
                         });
@@ -768,8 +764,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     is Tree.MemberOrTypeExpression primary = ie.primary,
                     inlineRef(primary, primary.declaration)) {
                     //delete the fat arrow
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = se.startIndex.intValue();
                             length = 2;
                         });
@@ -786,8 +782,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         inlinedScope = null;
                     };
                     //delete the semicolon
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = that.stopIndex.intValue();
                             length = 1;
                         });
@@ -806,14 +802,14 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     is Tree.MemberOrTypeExpression primary = ie.primary,
                     inlineRef(primary, primary.declaration)) {
                     //convert from shortcut refinement
-                    addEditToChange(textChange, 
-                        newInsertEdit {
-                            position = that.startIndex.intValue();
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = that.startIndex.intValue();
                             text = "shared actual void ";
                         });
                     //delete the fat arrow
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = se.startIndex.intValue();
                             length = 2;
                         });
@@ -830,8 +826,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = that.stopIndex.intValue();
                             length = 1;
                         });
@@ -859,8 +855,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         defaultArgs = defaultArgs;
                     };
                     //delete the semicolon
-                    addEditToChange(textChange,
-                        newDeleteEdit {
+                    textChange.addEdit( 
+                        DeleteEdit {
                             start = that.stopIndex.intValue();
                             length = 1;
                         });
@@ -913,9 +909,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     if (!definition is Tree.Block) {
                         text.append("=> ");
                     }
-                    addEditToChange(textChange,
-                        newInsertEdit {
-                            position = that.startIndex.intValue();
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = that.startIndex.intValue();
                             text = text.string;
                         });
                     //now inline the body of the function
@@ -932,9 +928,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                         defaultArgs = defaultArgs;
                     };
                     if (that.directlyInvoked) {
-                        addEditToChange(textChange,
-                            newInsertEdit {
-                                position = that.endIndex.intValue();
+                        textChange.addEdit( 
+                            InsertEdit {
+                                start = that.endIndex.intValue();
                                 text = ")";
                             });
                     }
@@ -1063,8 +1059,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     text.append(nodes.text(declarationTokens, declarationNode.parameterList))
                         .append(" => ")
                         .append(nodes.text(declarationTokens, term));
-                    addEditToChange(textChange, 
-                        newReplaceEdit {
+                    textChange.addEdit( 
+                        ReplaceEdit {
                             start = that.startIndex.intValue();
                             length = that.distance.intValue();
                             text = text.string;
@@ -1112,9 +1108,9 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     original(dec) == editorData.declaration,
                     editorData.delete) {
                     disabled = true;
-                    addEditToChange(textChange, 
-                        newInsertEdit {
-                            position = id.startIndex.intValue();
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = id.startIndex.intValue();
                             text = id.text + " = ";
                         });
                 }
@@ -1474,8 +1470,8 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             
             value node = invocation else reference;
             
-            addEditToChange(textChange, 
-                newReplaceEdit {
+            textChange.addEdit( 
+                ReplaceEdit {
                     start = node.startIndex.intValue();
                     length = node.distance.intValue();
                     text = result.string;

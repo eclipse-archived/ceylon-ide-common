@@ -19,16 +19,18 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashSet
 }
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    platformServices,
+    InsertEdit
+}
 
-shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData {
+shared object refineEqualsHashQuickFix {
 
-    TextChange? refineEqualsHash(Data data, IFile file, Integer currentOffset) {
+    TextChange? refineEqualsHash(QuickFixData data, Integer currentOffset) {
 
-        value change = newTextChange("Refine Equals and Hash", file);
-        initMultiEditChange(change);
+        value change = platformServices.createTextChange("Refine Equals and Hash", data.phasedUnit);
+        change.initMultiEdit();
         
         value node = data.node;
         
@@ -64,17 +66,17 @@ shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         value isInterface = body is Tree.InterfaceBody;
         value statements = body.statements;
         String indent;
-        value document = getDocumentForChange(change);
-        value bodyIndent = indents.getIndent(node, document);
-        value delim = indents.getDefaultLineDelimiter(document);
+        value document = change.document;
+        value bodyIndent = document.getIndent(node);
+        value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + indents.defaultIndent;
+            indent = delim + bodyIndent + document.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }
         } else {
             value statement = statements.get(statements.size() - 1);
-            indent = delim + indents.getIndent(statement, document);
+            indent = delim + document.getIndent(statement);
             if (offset < 0) {
                 offset = statement.endIndex.intValue();
             }
@@ -95,12 +97,12 @@ shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             }
         }
         
-        if (getDocContent(document, offset, 1) == "}", result.size > 0) {
+        if (document.getText(offset, 1) == "}", result.size > 0) {
             result.append(delim).append(bodyIndent);
         }
         
         importProposals.applyImports(change, already, data.rootNode, document);
-        addEditToChange(change, newInsertEdit(offset, result.string));
+        change.addEdit(InsertEdit(offset, result.string));
         
         return change;
     }
@@ -110,11 +112,11 @@ shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
         
         value pr = getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface, ci,
-            indent, true, true, indents, false);
+            indent, true, true, platformServices.indents<Nothing>(), false);
         result.append(indent).append(rtext).append(indent);
     }
     
-    shared void addRefineEqualsHashProposal(Data data, IFile file, Integer currentOffset) {
+    shared void addRefineEqualsHashProposal(QuickFixData data, Integer currentOffset) {
         Node? node;
         if (is Tree.ClassBody|Tree.InterfaceBody|Tree.ClassDefinition
             |Tree.InterfaceDefinition|Tree.ObjectDefinition
@@ -166,10 +168,10 @@ shared interface RefineEqualsHashQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                     desc = "Refine 'equals()' and 'hash' of " + name;
                 }
                 
-                value change = refineEqualsHash(data, file, currentOffset);
+                value change = refineEqualsHash(data, currentOffset);
                 
                 if (exists change) {
-                    newProposal(data, desc, change);
+                    data.addRefineEqualsHashProposal(desc, change);
                 }
             }
         }

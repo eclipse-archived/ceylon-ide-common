@@ -43,6 +43,17 @@ import java.util {
     HashSet,
     JList=List
 }
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    TextChange
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         given IdeComponent satisfies LocalAnalysisResult<Document> {
@@ -548,17 +559,15 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
 }
 
 shared abstract class InvocationCompletionProposal
-        <IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+        <IdeComponent,CompletionResult,Document,LinkedMode>
     (variable Integer _offset, String prefix, String desc, String text,
     Declaration declaration, Reference? producedReference, Scope scope,
     Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
     Boolean namedInvocation, Boolean inheritance, Boolean qualified,
     Declaration? qualifyingValue, 
     InvocationCompletion<IdeComponent,CompletionResult,Document> completionManager)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
-        (_offset, prefix, desc, text)
+        extends AbstractCompletionProposal(_offset, prefix, desc, text)
         satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
         given IdeComponent satisfies LocalAnalysisResult<Document> {
     
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val,
@@ -580,9 +589,10 @@ shared abstract class InvocationCompletionProposal
 
     shared Integer adjustedOffset => offset;
     
-    shared TextChange createChange(TextChange change, Document document) {
+    shared TextChange createChange(CommonDocument document) {
         HashSet<Declaration> decs = HashSet<Declaration>();
-        initMultiEditChange(change);
+        value change = platformServices.createTextChange("Complete Invocation", document);
+        change.initMultiEdit();
         
         if (exists qualifyingValue) {
             importProposals.importDeclaration(decs, qualifyingValue, cu);
@@ -594,12 +604,12 @@ shared abstract class InvocationCompletionProposal
             importProposals.importCallableParameterParamTypes(declaration, decs, cu);
         }
         value il = importProposals.applyImports(change, decs, cu, document);
-        addEditToChange(change, createEdit(document));
+        change.addEdit(createEdit(document));
         offset += il;
         return change;
     }
     
-    shared void activeLinkedMode(Document document, IdeComponent cpc) {
+    shared void activeLinkedMode(CommonDocument document, IdeComponent cpc) {
         if (is Generic declaration) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
@@ -626,7 +636,7 @@ shared abstract class InvocationCompletionProposal
         }
     }
     
-    shared actual Region getSelectionInternal(Document document) {
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value first = getFirstPosition();
         if (first <= 0) {
             //no arg list
@@ -640,12 +650,12 @@ shared abstract class InvocationCompletionProposal
         value middle = getCompletionPosition(first, next);
         variable value start = offset - prefix.size + first + middle;
         variable value len = next - middle;
-        if (getDocSpan(document, start, len).trimmed=="{}") {
+        if (document.getText(start, len).trimmed=="{}") {
             start++;
             len = 0;
         }
         
-        return newRegion(start, len);
+        return DefaultRegion(start, len);
     }
     
     Integer getCompletionPosition(Integer first, Integer next) 
@@ -661,7 +671,7 @@ shared abstract class InvocationCompletionProposal
         return (index else -1) + 1;
     }
     
-    shared Integer getNextPosition(Document document, Integer lastOffset) {
+    shared Integer getNextPosition(CommonDocument document, Integer lastOffset) {
         value loc = offset - prefix.size;
         variable value comma = -1;
         value start = loc + lastOffset;
@@ -669,7 +679,7 @@ shared abstract class InvocationCompletionProposal
         if (text.endsWith(";")) {
             end--;
         }
-        comma = findCharCount(1, document, start, end, ",;", "", true, getDocChar)
+        comma = findCharCount(1, document, start, end, ",;", "", true, uncurry(CommonDocument.getChar))
                 - start;
         
         if (comma < 0) {
@@ -684,7 +694,7 @@ shared abstract class InvocationCompletionProposal
         return comma;
     }
     
-    shared void enterLinkedMode(Document document, 
+    shared void enterLinkedMode(CommonDocument document, 
         JList<Parameter>? params, 
         JList<TypeParameter>? typeParams, 
         IdeComponent cpc) {
@@ -755,7 +765,7 @@ shared abstract class InvocationCompletionProposal
                     }
                     addEditableRegion {
                         lm = linkedMode;
-                        doc = document;
+                        doc = cpc.document;
                         start = start;
                         len = len;
                         exitSeqNumber = seq;
@@ -769,7 +779,7 @@ shared abstract class InvocationCompletionProposal
             }
             if (seq > 0) {
                 installLinkedMode {
-                    doc = document;
+                    doc = cpc.document;
                     lm = linkedMode;
                     owner = this;
                     exitSeqNumber = seq;

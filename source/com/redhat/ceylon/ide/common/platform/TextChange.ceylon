@@ -39,6 +39,8 @@ shared interface TextChange {
     shared formal void apply();
  
     shared formal Integer offset;
+ 
+    shared formal Integer length;
 }
 
 shared class DefaultTextChange(shared actual DefaultDocument document) satisfies TextChange {
@@ -92,6 +94,7 @@ shared class DefaultTextChange(shared actual DefaultDocument document) satisfies
     shared actual void initMultiEdit() {}
     
     offset => if (exists e = edits.first) then e.start else 0;
+    length => if (exists e = edits.first) then e.length else 0;
 }
 
 shared interface CompositeChange {
