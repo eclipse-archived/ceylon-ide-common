@@ -21,12 +21,11 @@ import com.redhat.ceylon.ide.common.platform {
     InsertEdit
 }
 
-shared interface AssignToLocalQuickFix<in Data>
-        satisfies LocalQuickFix<Data>
-        given Data satisfies QuickFixData {
+shared object assignToLocalQuickFix satisfies LocalQuickFix<QuickFixData> {
 
     desc => "Assign expression to new local";
-
+    
+    newProposal(QuickFixData data, String desc) => data.addAssignToLocalProposal(desc);
 }
 
 shared interface AssignToLocalProposal<IDocument,CompletionResult,LinkedMode>

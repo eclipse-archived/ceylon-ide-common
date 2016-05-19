@@ -1,11 +1,7 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node,
     Tree,
     Visitor
 }
@@ -13,97 +9,13 @@ import com.redhat.ceylon.ide.common.correct {
     addAnnotations=addAnnotationQuickFix,
     removeAnnotations=removeAnnotationQuickFix
 }
-import com.redhat.ceylon.ide.common.model {
-    BaseCeylonProject
-}
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument,
-    TextChange
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Unit,
-    Type,
-    Scope,
-    Referenceable,
-    TypeDeclaration,
-    Declaration
-}
-
-import java.util {
-    ArrayList,
-    Collection
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
-}
-
-shared interface QuickFixData {
-    shared formal Integer errorCode;
-    shared formal Integer problemOffset;
-    shared formal Integer problemLength;
-    shared formal Node node;
-    shared formal Tree.CompilationUnit rootNode;
-    shared formal PhasedUnit phasedUnit;
-    shared formal BaseCeylonProject ceylonProject;
-    shared formal CommonDocument document;
-    "Set this flag to [[true]] to avoid heavy computations and delay them
-     until the quick fix is called."
-    shared default Boolean useLazyFixes => false;
-    
-    shared formal void addQuickFix(String description, TextChange|Callable<Anything, []> change,
-        DefaultRegion? selection = null, 
-        Boolean qualifiedNameIsPath = false,
-        Icons? image = null);
-    
-    shared formal void addInitializerQuickFix(String description, TextChange change,
-        DefaultRegion selection, Unit unit, Scope scope, Type? type);
-    shared formal void addParameterQuickFix(String description, TextChange change,
-        DefaultRegion selection, Unit unit, Scope scope, Type? type, Integer exitPos);
-    shared formal void addParameterListQuickFix(String description, TextChange change,
-        DefaultRegion selection);
-    shared formal void addExportModuleImportProposal(Unit u, String description,
-        String name, String version);
-    shared formal void addModuleImportProposal(Unit u, String description,
-        String name, String version);
-    shared formal void addAnnotationProposal(Referenceable declaration, String text,
-        String description, TextChange change, DefaultRegion? selection);
-    shared formal void addSatisfiesProposal(TypeDeclaration typeParam,
-        String description, String missingSatisfiedTypeText, TextChange change, 
-        DefaultRegion? selection);
-    shared formal void addChangeTypeProposal(String description, 
-        TextChange change, DefaultRegion selection, Unit unit);
-    shared formal void addConvertToClassProposal(String description,
-        Tree.ObjectDefinition declaration);
-    shared formal void addCreateParameterProposal(String description, Declaration dec,
-        Type? type, DefaultRegion selection, Icons image, TextChange change, Integer exitPos);
-    shared formal void addCreateQuickFix(String description,
-        Scope scope, Unit unit, Type? returnType, Icons image,
-        TextChange change, Integer exitPos, DefaultRegion selection);
-    shared formal void addDeclareLocalProposal(String description,
-        TextChange change, Tree.Term term, Tree.BaseMemberExpression bme);
-    shared formal void addRefineFormalMembersProposal(String description);
-    shared formal void addRefineEqualsHashProposal(String description, TextChange change);
-    shared formal void addSpecifyTypeProposal(String description,
-        Tree.Type type, Tree.CompilationUnit cu, Type infType);
-}
 
 shared abstract class IdeQuickFixManager<IDocument,ICompletionProposal,LinkedMode,Data>()
         given Data satisfies QuickFixData {
     
     shared formal DeclareLocalQuickFix<IDocument,LinkedMode,ICompletionProposal> declareLocalQuickFix;
     shared formal SpecifyTypeQuickFix<IDocument,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
-    shared formal AssignToLocalQuickFix<Data> assignToLocalQuickFix;
     
-    shared formal void addImportProposals(Collection<ICompletionProposal> proposals, QuickFixData quickFixData);
-    
-    // temporary
-    shared formal void addCreateTypeParameterProposal<Data>(Data data,
-        Tree.BaseType bt, String brokenName)
-            given Data satisfies QuickFixData;
-
     shared void addQuickFixes(Data data, TypeChecker? tc) {
         
         value node = data.node;
@@ -115,9 +27,7 @@ shared abstract class IdeQuickFixManager<IDocument,ICompletionProposal,LinkedMod
             }
 
             if (exists tc) {
-                value proposals = ArrayList<ICompletionProposal>();
                 importProposals.addImportProposals(data);
-                addImportProposals(proposals, data);
             }
             createEnumQuickFix.addCreateEnumProposal(data);
             addCreationProposals(data);
@@ -382,7 +292,75 @@ shared abstract class IdeQuickFixManager<IDocument,ICompletionProposal,LinkedMod
 
         if (is Tree.BaseType node, 
             exists id = node.identifier) {
-            addCreateTypeParameterProposal(data, node, id.text);
+            createTypeParameterQuickFix.addCreateTypeParameterProposal(data, node, id.text);
         }
+    }
+
+    shared void addQuickAssists(QuickFixData data, Tree.Statement? statement,
+        Tree.Declaration? declaration, Tree.NamedArgument? namedArgument,
+        Tree.ImportMemberOrType? imp, Tree.OperatorExpression? oe,
+        Integer currentOffset) {
+        
+        assignToLocalQuickFix.addProposal(data, currentOffset);
+        
+        if (is Tree.BinaryOperatorExpression oe) {
+            operatorQuickFix.addReverseOperatorProposal(data,  oe);
+            operatorQuickFix.addInvertOperatorProposal(data, oe);
+            operatorQuickFix.addSwapBinaryOperandsProposal(data, oe);
+        }
+        operatorQuickFix.addParenthesesProposals(data, oe);
+        
+        verboseRefinementQuickFix.addVerboseRefinementProposal(data, statement);
+        verboseRefinementQuickFix.addShortcutRefinementProposal(data, statement);
+        
+        addAnnotationQuickFix.addContextualAnnotationProposals(data, declaration, currentOffset);
+        specifyTypeQuickFix.addTypingProposals(data, declaration);
+        
+        miscQuickFixes.addAnonymousFunctionProposals(data);
+        
+        miscQuickFixes.addDeclarationProposals(data, declaration, currentOffset);
+        
+        assignToFieldQuickFix.addAssignToFieldProposal(data, statement, declaration);
+        
+        changeToIfQuickFix.addChangeToIfProposal(data, statement);
+        
+        convertToDefaultConstructorQuickFix.addConvertToDefaultConstructorProposal(data, statement);
+        
+        convertToClassQuickFix.addConvertToClassProposal(data, declaration);
+        assertExistsDeclarationQuickFix.addAssertExistsDeclarationProposals(data, declaration);
+        splitDeclarationQuickFix.addSplitDeclarationProposals(data, declaration, statement);
+        joinDeclarationQuickFix.addJoinDeclarationProposal(data, statement);
+        addParameterQuickFix.addParameterProposals(data);
+        
+        miscQuickFixes.addArgumentProposals(data, namedArgument);
+        
+        convertThenElseToIfElse.addConvertToIfElseProposal(data, statement);
+        convertIfElseToThenElseQuickFix.addConvertToThenElseProposal(data, statement);
+        invertIfElseQuickFix.addInvertIfElseProposal(data, statement);
+        
+        convertSwitchToIfQuickFix.addConvertSwitchToIfProposal(data, statement);
+        convertSwitchToIfQuickFix.addConvertIfToSwitchProposal(data, statement);
+        
+        splitIfStatementQuickFix.addSplitIfStatementProposal(data, statement);
+        joinIfStatementsQuickFix.addJoinIfStatementsProposal(data, statement);
+        
+        convertForToWhileQuickFix.addConvertForToWhileProposal(data, statement);
+        
+        addThrowsAnnotationQuickFix.addThrowsAnnotationProposal(data, statement);
+        
+        refineFormalMembersQuickFix.addRefineFormalMembersProposal(data, false);
+        refineEqualsHashQuickFix.addRefineEqualsHashProposal(data, currentOffset);
+        
+        convertStringQuickFix.addConvertToVerbatimProposal(data);
+        convertStringQuickFix.addConvertFromVerbatimProposal(data);
+        convertStringQuickFix.addConvertToConcatenationProposal(data);
+        convertStringQuickFix.addConvertToInterpolationProposal(data);
+        
+        expandTypeQuickFix.addExpandTypeProposal {
+            data = data;
+            node = statement;
+            selectionStart = data.editorSelection.start;
+            selectionStop = data.editorSelection.end;
+        };
     }
 }
