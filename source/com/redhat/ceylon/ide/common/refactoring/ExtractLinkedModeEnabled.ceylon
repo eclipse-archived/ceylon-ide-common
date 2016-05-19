@@ -3,7 +3,8 @@
 shared class DefaultRegion(start, length=0) {
     shared Integer start;
     shared Integer length;
-    
+    shared Integer end => start + length;
+
     string => "[``start``-``length``]";
 }
 
