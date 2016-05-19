@@ -9,7 +9,8 @@ import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
     DefaultDocument,
     DefaultTextChange,
-    DefaultCompositeChange
+    DefaultCompositeChange,
+    NoopLinkedMode
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit
@@ -32,4 +33,6 @@ shared object testPlatform satisfies PlatformServices {
     
     indentSpaces => 4;
     indentWithSpaces => true;
+    createLinkedMode(CommonDocument document)
+            => NoopLinkedMode(document);
 }

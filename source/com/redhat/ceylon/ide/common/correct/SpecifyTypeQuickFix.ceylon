@@ -3,8 +3,18 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport,
     TypeCompletion
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    CommonDocument,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -17,27 +27,13 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashSet
 }
-import com.redhat.ceylon.ide.common.util {
-    nodes
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    CommonDocument,
-    ReplaceEdit
-}
 
-shared interface SpecifyTypeQuickFix<IDocument,CompletionResult,LinkedMode>
-        satisfies LinkedModeSupport<LinkedMode,IDocument,CompletionResult> {
+shared object specifyTypeQuickFix {
     
-    shared formal IDocument getNativeDocument(CommonDocument doc);
-    
-    shared formal TypeCompletion<CompletionResult,IDocument> completionManager;
-    
-    shared DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
-        Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
+    shared DefaultRegion? specifyType<CompletionResult,IDocument>(CommonDocument document,
+        Tree.Type typeNode, Boolean inEditor, Tree.CompilationUnit rootNode,
+        Type _infType, IDocument nativeDocument,
+        TypeCompletion<CompletionResult,IDocument> completionManager) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
@@ -77,26 +73,23 @@ shared interface SpecifyTypeQuickFix<IDocument,CompletionResult,LinkedMode>
                 };
             }
         } else {
-            value lm = newLinkedMode();
-            value nativeDoc = getNativeDocument(document);
+            value lm = platformServices.createLinkedMode(document);
             value proposals 
                     = completionManager.getTypeProposals {
-                document = nativeDoc;
+                document = nativeDocument;
                 offset = offset;
                 length = length;
                 infType = infType;
                 rootNode = rootNode;
                 kind = null;
             };
-            addEditableRegion {
-                lm = lm;
-                doc = nativeDoc;
+            lm.addEditableRegion {
                 start = offset;
-                len = length;
+                length = length;
                 exitSeqNumber = 0;
                 proposals = proposals;
             };
-            installLinkedMode(nativeDoc, lm, this, -1, -1);
+            lm.install(this, -1, -1);
         }
         
         return null;

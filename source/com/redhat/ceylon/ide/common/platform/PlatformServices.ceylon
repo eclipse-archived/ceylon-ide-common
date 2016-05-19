@@ -41,6 +41,8 @@ shared interface PlatformServices {
             buf.append('\t');
         }
     }
+    
+    shared formal LinkedMode createLinkedMode(CommonDocument document);
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -60,6 +62,7 @@ variable PlatformServices _platformServices
     indentSpaces => 4;
     indentWithSpaces => true;
     gotoLocation(Unit unit, Integer offset, Integer length) => noop();
+    createLinkedMode(CommonDocument document) => NoopLinkedMode(document);
 };
 
 shared PlatformServices platformServices => _platformServices;

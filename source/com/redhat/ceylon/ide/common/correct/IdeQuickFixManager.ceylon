@@ -10,13 +10,9 @@ import com.redhat.ceylon.ide.common.correct {
     removeAnnotations=removeAnnotationQuickFix
 }
 
-shared abstract class IdeQuickFixManager<IDocument,ICompletionProposal,LinkedMode,Data>()
-        given Data satisfies QuickFixData {
+shared object ideQuickFixManager {
     
-    shared formal DeclareLocalQuickFix<IDocument,LinkedMode,ICompletionProposal> declareLocalQuickFix;
-    shared formal SpecifyTypeQuickFix<IDocument,ICompletionProposal,LinkedMode> specifyTypeQuickFix;
-    
-    shared void addQuickFixes(Data data, TypeChecker? tc) {
+    shared void addQuickFixes(QuickFixData data, TypeChecker? tc) {
         
         value node = data.node;
         
