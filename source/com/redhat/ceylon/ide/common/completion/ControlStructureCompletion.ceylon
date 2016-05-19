@@ -5,11 +5,16 @@ import ceylon.collection {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    Indents,
     nodes,
     singularize
 }
@@ -17,12 +22,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     DeclarationWithProximity,
     Value
-}
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
 }
 
 shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
@@ -147,13 +146,13 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
     }
     
     shared void addSwitchProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
-        DeclarationWithProximity dwp, Declaration d, Node node, Indents<Document> indents) {
+        DeclarationWithProximity dwp, Declaration d, Node node) {
         
         if (!dwp.unimported) {
             if (is Value v = d) {
                 if (exists type = v.type, exists caseTypes = v.type.caseTypes, !v.variable) {
                     value body = StringBuilder();
-                    value indent = indents.getIndent(node, cpc.document);
+                    value indent = cpc.commonDocument.getIndent(node);
                     value unit = node.unit;
                     for (pt in caseTypes) {
                         body.append(indent).append("case (");
@@ -166,13 +165,13 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
                         } else {
                             body.append("is ").append(pt.asSourceCodeString(unit));
                         }
-                        body.append(") {}").append(indents.getDefaultLineDelimiter(cpc.document));
+                        body.append(") {}").append(cpc.commonDocument.defaultLineDelimiter);
                     }
                     body.append(indent);
                     value u = cpc.lastCompilationUnit.unit;
                     value desc = "switch (" + getDescriptionFor(d, u) + ")";
                     value text = "switch (" + getTextFor(d, u) + ")"
-                            + indents.getDefaultLineDelimiter(cpc.document) + body.string;
+                            + cpc.commonDocument.defaultLineDelimiter + body.string;
                     result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
                 }
             }

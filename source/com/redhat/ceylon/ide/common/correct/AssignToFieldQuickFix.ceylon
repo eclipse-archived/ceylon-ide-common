@@ -95,7 +95,7 @@ shared object assignToFieldQuickFix {
                 start = constructor.block.startIndex.intValue() + 1;
                 text 
                     = indent 
-                    + document.defaultIndent 
+                    + platformServices.defaultIndent 
                     + "this.``name`` = ``name``;";
             });
             

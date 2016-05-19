@@ -152,7 +152,7 @@ shared object convertToBlockQuickFix {
         
         value doc = change.document;
         value baseIndent = doc.getIndent(decNode);
-        value indent = doc.defaultIndent;
+        value indent = platformServices.defaultIndent;
         value nl = doc.defaultLineDelimiter;
         change.addEdit(ReplaceEdit {
             start = offset;

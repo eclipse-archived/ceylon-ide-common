@@ -423,8 +423,8 @@ shared class ExtractFunctionRefactoring(
                 + document.getIndent(decNode);
         value extraIndent 
                 = indent 
-                + document.defaultIndent 
-                + document.defaultIndent;
+                + platformServices.defaultIndent 
+                + platformServices.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -768,8 +768,8 @@ shared class ExtractFunctionRefactoring(
                 document.getIndent(decNode);
         value extraIndent =
                 indent +
-                document.defaultIndent +
-                document.defaultIndent;
+                platformServices.defaultIndent +
+                platformServices.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -825,7 +825,7 @@ shared class ExtractFunctionRefactoring(
             typeOrKeyword = "dynamic";
         }
         
-        value bodyIndent = indent + document.defaultIndent;
+        value bodyIndent = indent + platformServices.defaultIndent;
         value definition = StringBuilder();
         definition
             .append(typeOrKeyword)

@@ -48,7 +48,7 @@ shared object createQuickFix {
         value delim = doc.defaultLineDelimiter;
         if (statements.empty) {
             value bodyIndent = doc.getIndent(decNode);
-            indent = bodyIndent + doc.defaultIndent;
+            indent = bodyIndent + platformServices.defaultIndent;
             indentBefore = delim + indent;
             try {
                 value singleLineBody = 

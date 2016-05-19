@@ -7,8 +7,7 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     escaping,
-    OccurrenceLocation,
-    Indents
+    OccurrenceLocation
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil {
@@ -20,6 +19,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     List,
     Collections
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 
 Boolean forceExplicitTypeArgs(Declaration d, OccurrenceLocation? ol) {
@@ -154,7 +156,7 @@ shared String getNamedInvocationDescriptionFor(Declaration dec, Reference pr,
 
 shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
     Boolean isInterface, ClassOrInterface? ci, String indent,   
-    Boolean containsNewline, Boolean preamble, Indents<out Anything> indents,
+    Boolean containsNewline, Boolean preamble,
     Boolean addParameterTypesInCompletions) {
     
     value result = StringBuilder();
@@ -168,25 +170,25 @@ shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
     appendTypeParameters(d, result);
     appendParameters(d, pr, unit, result, null, false);
     if (is Class d) {
-        result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
+        result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
                 .append(" extends super.").append(escaping.escapeName(d));
         appendPositionalArgs(d, pr, unit, result, true, false,
             addParameterTypesInCompletions);
     }
-    appendConstraints(d, pr, unit, indent, containsNewline, result, indents);
-    appendImplText(d, pr, isInterface, unit, indent, result, ci, indents);
+    appendConstraints(d, pr, unit, indent, containsNewline, result);
+    appendImplText(d, pr, isInterface, unit, indent, result, ci);
     return result.string;
 }
 
 void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent,
-    Boolean containsNewline, StringBuilder result, Indents<out Anything> indents) {
+    Boolean containsNewline, StringBuilder result) {
     
     if (is Generic d) {
         value generic = d;
         for (tp in generic.typeParameters) {
             value sts = tp.satisfiedTypes;
             if (!sts.empty) {
-                result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
+                result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
                         .append("given ").append(tp.name).append(" satisfies ");
                 variable Boolean first = true;
                 for (st in sts) {
@@ -578,8 +580,7 @@ void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
 }
 
 void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit,
-    String indent, StringBuilder result, ClassOrInterface? ci,
-    Indents<out Anything> indents) {
+    String indent, StringBuilder result, ClassOrInterface? ci) {
     
     if (is Function d) {
         if (exists ci, !ci.anonymous) {
@@ -588,7 +589,7 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
                 if (!pl.empty) {
                     value ps = pl.get(0).parameters;
                     if (!ps.empty) {
-                        appendEqualsImpl(unit, indent, result, ci, ps, indents);
+                        appendEqualsImpl(unit, indent, result, ci, ps);
                         return;
                     }
                 }
@@ -608,7 +609,7 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
     } else if (is Value d) {
         if (exists ci, !ci.anonymous) {
             if (d.name.equals("hash")) {
-                appendHashImpl(unit, indent, result, ci, indents);
+                appendHashImpl(unit, indent, result, ci);
                 return;
             }
         }
@@ -659,7 +660,7 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
 }
 
 void appendHashImpl(Unit unit, String indent, StringBuilder result,
-    ClassOrInterface ci, Indents<out Anything> indents) {
+    ClassOrInterface ci) {
     
     if (exists v = getUniqueMemberForHash(unit, ci)) {
         result.append(" => ").append(v.name);
@@ -669,21 +670,22 @@ void appendHashImpl(Unit unit, String indent, StringBuilder result,
         result.append(";");
     }
     else {
+        value defaultIndent = platformServices.defaultIndent;
         result.append(" {")
                 .append(indent)
-                .append(indents.defaultIndent)
+                .append(defaultIndent)
                 .append("variable value hash = 1;")
                 .append(indent)
-                .append(indents.defaultIndent);
+                .append(defaultIndent);
         
-        value ind = indent + indents.defaultIndent;
+        value ind = indent + defaultIndent;
         appendMembersToHash(unit, ind, result, ci);
         result.append("return hash;").append(indent).append("}");
     }
 }
 
 void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
-    ClassOrInterface ci, List<Parameter> ps, Indents<out Anything> indents) {
+    ClassOrInterface ci, List<Parameter> ps) {
     
     value targs = StringBuilder();
     if (!ci.typeParameters.empty) {
@@ -709,22 +711,23 @@ void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
     }
     
     value p = ps.get(0);
+    value defaultIndent = platformServices.defaultIndent;
     result.append(" {")
-            .append(indent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent)
             .append("if (is ").append(ci.name).append(targs.string).append(" ").append(p.name).append(") {")
-            .append(indent).append(indents.defaultIndent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent).append(defaultIndent)
             .append("return ");
     
-    value ind = indent + indents.defaultIndent + indents.defaultIndent
-            + indents.defaultIndent;
+    value ind = indent + defaultIndent + defaultIndent
+            + defaultIndent;
     appendMembersToEquals(unit, ind, result, ci, p);
-    result.append(indent).append(indents.defaultIndent)
+    result.append(indent).append(defaultIndent)
             .append("}")
-            .append(indent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent)
             .append("else {")
-            .append(indent).append(indents.defaultIndent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent).append(defaultIndent)
             .append("return false;").append(indent)
-            .append(indents.defaultIndent)
+            .append(defaultIndent)
             .append("}")
             .append(indent)
             .append("}");
@@ -777,9 +780,8 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     }
 }
 
-String extraIndent(String indent, Boolean containsNewline,
-    Indents<out Anything> indents) 
-        => if (containsNewline) then indent + indents.defaultIndent else indent;
+String extraIndent(String indent, Boolean containsNewline) 
+        => if (containsNewline) then indent + platformServices.defaultIndent else indent;
 
 shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result) {

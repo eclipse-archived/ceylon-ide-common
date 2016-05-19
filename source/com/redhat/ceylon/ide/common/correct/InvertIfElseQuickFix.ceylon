@@ -160,7 +160,7 @@ shared object invertIfElseQuickFix {
         value test = invertCondition(doc, ifCondition);
         
         value baseIndent = doc.getIndent(ifStmt);
-        value indent = doc.defaultIndent;
+        value indent = platformServices.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         value elseStr = addEnclosingBraces {
             s = doc.getNodeText(elseBlock);

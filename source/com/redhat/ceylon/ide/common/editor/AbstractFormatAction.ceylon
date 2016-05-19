@@ -141,7 +141,7 @@ shared object formatAction {
             if (exists indentMode = options.indentMode) {
                 value indentLevel = document.getIndent(unit.node)
                     .replace("\t", indentMode.indent(1)).size
-                        / document.indentSpaces;
+                        / platformServices.indentSpaces;
                 
                 if (unit != firstUnit) {
                     // add indentation

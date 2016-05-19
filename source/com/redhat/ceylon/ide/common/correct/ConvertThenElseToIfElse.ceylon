@@ -142,7 +142,7 @@ shared object convertThenElseToIfElse {
         }
         
         value baseIndent = doc.getIndent(statement);
-        value indent = doc.defaultIndent;
+        value indent = platformServices.defaultIndent;
         test = removeEnclosingParenthesis(test);
         value replace = StringBuilder();
         value delim = doc.defaultLineDelimiter;

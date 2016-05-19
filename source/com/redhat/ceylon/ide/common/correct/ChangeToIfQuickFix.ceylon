@@ -62,7 +62,7 @@ shared object changeToIfQuickFix {
                 while (i < statements.size()) {
                     change.addEdit(InsertEdit {
                         start = statements.get(i).startIndex.intValue();
-                        text = doc.defaultIndent;
+                        text = platformServices.defaultIndent;
                     }
                     );
                     i++;
@@ -78,7 +78,7 @@ shared object changeToIfQuickFix {
                 change.addEdit(InsertEdit {
                     start = last.endIndex.intValue();
                     text = newline + indent + "else {" + newline 
-                        + indent + doc.defaultIndent
+                        + indent + platformServices.defaultIndent
                         + "assert (false);" + newline + indent + "}";
                 });
                 

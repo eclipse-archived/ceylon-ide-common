@@ -70,7 +70,7 @@ shared object refineEqualsHashQuickFix {
         value bodyIndent = document.getIndent(node);
         value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + document.defaultIndent;
+            indent = delim + bodyIndent + platformServices.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }
@@ -91,7 +91,7 @@ shared object refineEqualsHashQuickFix {
         for (dec in [equals, hash]) {
             for (d in overloads(dec)) {
                 if (ci.isInheritedFromSupertype(d)) {
-                    appendRefinementText(isInterface, indent, result, ci, unit, d);
+                    appendRefinementText(data, isInterface, indent, result, ci, unit, d);
                     importProposals.importSignatureTypes(d, data.rootNode, already);
                 }
             }
@@ -107,12 +107,12 @@ shared object refineEqualsHashQuickFix {
         return change;
     }
     
-    void appendRefinementText(Boolean isInterface, String indent, StringBuilder result,
-        ClassOrInterface ci, Unit unit, Declaration member) {
+    void appendRefinementText(QuickFixData data, Boolean isInterface, String indent,
+        StringBuilder result, ClassOrInterface ci, Unit unit, Declaration member) {
         
         value pr = getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface, ci,
-            indent, true, true, platformServices.indents<Nothing>(), false);
+            indent, true, true, false);
         result.append(indent).append(rtext).append(indent);
     }
     

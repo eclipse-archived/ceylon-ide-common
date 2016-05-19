@@ -9,11 +9,19 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    TextChange,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
-}
-import com.redhat.ceylon.ide.common.util {
-    Indents
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -39,17 +47,6 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     JArrayList=ArrayList,
     HashSet
-}
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument,
-    TextChange,
-    platformServices
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
-import com.redhat.ceylon.ide.common.correct {
-    importProposals
 }
 
 // see getRefinedProducedReference(Scope scope, Declaration d)
@@ -99,18 +96,17 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
         ClassOrInterface ci, Node node, Scope scope, String prefix, IdeComponent cpc,
-        MutableList<CompletionResult> result, Boolean preamble, Indents<Document> indents,
+        MutableList<CompletionResult> result, Boolean preamble,
         Boolean addParameterTypesInCompletions) {
         
         value isInterface = scope is Interface;
         value pr = getRefinedProducedReference(scope, dec);
         value unit = node.unit;
-        value doc = cpc.document;
         
         value desc = getRefinementDescriptionFor(dec, pr, unit);
         value text = getRefinementTextFor(dec, pr, unit, isInterface, ci, 
-                        indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc), 
-                        true, preamble, indents, addParameterTypesInCompletions);
+                        cpc.commonDocument.defaultLineDelimiter + cpc.commonDocument.getIndent(node), 
+                        true, preamble, addParameterTypesInCompletions);
         
         result.add(newRefinementCompletionProposal(offset, prefix, pr, desc,
             text, cpc, dec, scope, false, true));
@@ -130,8 +126,9 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
             desc, text, cpc, dec, scope, true, false));
     }
     
-    shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
-        IdeComponent cmp, Document doc, MutableList<CompletionResult> result, Indents<Document> indents) {
+    shared void addInlineFunctionProposal(Integer offset, Declaration dec, 
+        Scope scope, Node node, String prefix, IdeComponent cmp, 
+        Document doc, MutableList<CompletionResult> result) {
         
         //TODO: type argument substitution using the
         //      Reference of the primary node
@@ -140,7 +137,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
             value unit = node.unit;
             value desc = getInlineFunctionDescriptionFor(p, null, unit);
             value text = getInlineFunctionTextFor(p, null, unit, 
-                indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc));
+                cmp.commonDocument.defaultLineDelimiter + cmp.commonDocument.getIndent(node));
             
             result.add(newRefinementCompletionProposal(offset, prefix, 
                 dec.reference,  //TODO: this needs to do type arg substitution 

@@ -246,14 +246,14 @@ shared object convertSwitchToIfQuickFix {
                             value end = b.endIndex.intValue();
                             change.addEdit(InsertEdit {
                                 start = start;
-                                text = "{" + newline + doc.defaultIndent;
+                                text = "{" + newline + platformServices.defaultIndent;
                             });
 
                             variable value line = doc.getLineOfOffset(start) + 1;
                             while (line <= doc.getLineOfOffset(end)) {
                                 change.addEdit(InsertEdit {
                                     start = doc.getLineStartOffset(line);
-                                    text = doc.defaultIndent;
+                                    text = platformServices.defaultIndent;
                                 });
                                 line++;
                             }

@@ -101,7 +101,7 @@ shared object moduleImportUtil {
             map({moduleName -> versionNode}));
         
         if (exists pu = findPhasedUnit(target)) {
-            value indent = platformServices.indents<Nothing>().defaultIndent;
+            value indent = platformServices.defaultIndent;
             
             platformServices.gotoLocation { 
                 unit = pu.unit; 
@@ -236,7 +236,7 @@ shared object moduleImportUtil {
          String moduleVersion, String newline, CommonDocument doc) {
         
         importModule.append(newline)
-                .append(doc.defaultIndent);
+                .append(platformServices.defaultIndent);
         
         if (shared) {
             importModule.append("shared ");

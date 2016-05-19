@@ -42,7 +42,7 @@ shared object splitIfStatementQuickFix {
                         } else {
                             ws = doc.defaultLineDelimiter
                                     + doc.getIndent(ifSt);
-                            indent = doc.defaultIndent;
+                            indent = platformServices.defaultIndent;
                         }
                         
                         value start = c1.endIndex.intValue();
@@ -86,7 +86,7 @@ shared object splitIfStatementQuickFix {
                         value ws 
                                 = doc.defaultLineDelimiter
                                 + doc.getIndent(ifSt);
-                        value indent = doc.defaultIndent;
+                        value indent = platformServices.defaultIndent;
                         value start = block.startIndex.intValue();
                         change.addEdit( 
                             InsertEdit {

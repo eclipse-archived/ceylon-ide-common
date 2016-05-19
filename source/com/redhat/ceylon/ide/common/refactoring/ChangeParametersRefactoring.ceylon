@@ -730,7 +730,7 @@ shared abstract class ChangeParametersRefactoring(
                     if (doc.getLineOfOffset(stopOffset) 
                             > doc.getLineOfOffset(startOffset)) {
                         argString = 
-                                  doc.defaultIndent + argString + ";"
+                                platformServices.defaultIndent + argString + ";"
                                 + doc.defaultLineDelimiter
                                 + doc.getIndent(nal);
                     } else if (startOffset == stopOffset-1) {

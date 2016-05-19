@@ -5,10 +5,6 @@ import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-import java.lang {
-    StringBuilder
-}
-
 shared interface CommonDocument {
     
     shared formal Integer getLineOfOffset(Integer offset);
@@ -46,28 +42,6 @@ shared interface CommonDocument {
             return "";
         }
     }
-    
-    shared String defaultIndent {
-        StringBuilder result = StringBuilder();
-        initialIndent(result);
-        return result.string;
-    }
-    
-    shared void initialIndent(StringBuilder buf) {
-        //guess an initial indent level
-        if (indentWithSpaces) {
-            value spaces = indentSpaces;
-            for (i in 1..spaces) {
-                buf.append(' ');
-            }
-        }
-        else {
-            buf.append('\t');
-        }
-    }
-    
-    shared formal Integer indentSpaces;
-    shared formal Boolean indentWithSpaces;
     
     shared String getNodeText(Node node) 
             => this.getText {
@@ -121,10 +95,6 @@ shared class DefaultDocument(_text)
     
     getText(Integer offset, Integer length)
             => text.substring(offset, offset + length);
-    
-    indentSpaces => 4;
-    
-    indentWithSpaces => true;
     
     size => text.size;
 }

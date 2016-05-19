@@ -32,7 +32,7 @@ shared object convertToDefaultConstructorQuickFix {
             value doc = change.document;
             value indent = doc.getIndent(statement);
             value delim = doc.defaultLineDelimiter;
-            value defIndent = doc.defaultIndent;
+            value defIndent = platformServices.defaultIndent;
             value declarations = StringBuilder();
             value assignments = StringBuilder();
             value params = StringBuilder();

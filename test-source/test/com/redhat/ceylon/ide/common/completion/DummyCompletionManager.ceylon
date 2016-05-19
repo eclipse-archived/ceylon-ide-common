@@ -18,6 +18,10 @@ import com.redhat.ceylon.ide.common.completion {
 import com.redhat.ceylon.ide.common.model {
     BaseCeylonProject
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    DefaultDocument
+}
 import com.redhat.ceylon.ide.common.settings {
     CompletionOptions
 }
@@ -25,7 +29,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    Indents,
     BaseProgressMonitorChild
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -82,6 +85,8 @@ class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<S
     shared actual TypeChecker typeChecker => nothing;
     
     shared actual CompletionOptions options = CompletionOptions();
+    
+    shared actual CommonDocument commonDocument => DefaultDocument(code);
 }
 
 object dummyMonitor satisfies BaseProgressMonitorChild {
@@ -103,13 +108,6 @@ object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result
 
     shared actual String getDocumentSubstring(String doc, Integer start, Integer length)
             => doc.span(start, start + length - 1);
-    
-    shared actual Indents<String> indents = object satisfies Indents<String> {
-        shared actual String getDefaultLineDelimiter(String? document) => "\n";
-        shared actual String getLine(Node node, String doc) => "";
-        shared actual Integer indentSpaces => 0;
-        shared actual Boolean indentWithSpaces => true;
-    };
     
     shared actual Result newAnonFunctionProposal(Integer offset, Type? requiredType, Unit unit, 
         String text, String header, Boolean isVoid, Integer start, Integer len)

@@ -19,6 +19,9 @@ import com.redhat.ceylon.ide.common.model {
 import com.redhat.ceylon.ide.common.settings {
     CompletionOptions
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
 
 "The result of the local typechecking of a CompilationUnit.
  For example, this can be used when a file is being modified,
@@ -29,6 +32,7 @@ shared interface LocalAnalysisResult<Document> {
     shared formal Tree.CompilationUnit? typecheckedRootNode;
     shared formal PhasedUnit lastPhasedUnit;
     shared formal Document document;
+    shared formal CommonDocument commonDocument;
     shared formal List<CommonToken>? tokens;
     shared formal TypeChecker typeChecker;
     shared formal BaseCeylonProject? ceylonProject;

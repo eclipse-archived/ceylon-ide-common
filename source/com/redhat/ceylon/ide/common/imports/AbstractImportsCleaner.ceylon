@@ -169,7 +169,7 @@ shared interface AbstractImportsCleaner {
         List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
         StringBuilder builder, CommonDocument doc) {
         
-        value indent = doc.defaultIndent;
+        value indent = platformServices.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         for (i in elements) {
@@ -211,7 +211,7 @@ shared interface AbstractImportsCleaner {
     void appendNestedImportElements(Tree.ImportMemberOrType imt,
         List<Declaration> unused, StringBuilder builder, CommonDocument doc) {
         
-        value indent = doc.defaultIndent;
+        value indent = platformServices.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         if (imt.importMemberOrTypeList exists) {

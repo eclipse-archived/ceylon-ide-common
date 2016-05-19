@@ -24,7 +24,6 @@ import com.redhat.ceylon.ide.common.util {
     types,
     escaping,
     BaseProgressMonitor,
-    Indents,
     RequiredType
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -286,8 +285,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         given IdeComponent satisfies LocalAnalysisResult<Document> {
 
     shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
-    
-    shared formal Indents<Document> indents;
     
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
@@ -1042,7 +1039,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                         cmp = cmp;
                         doc = doc;
                         result = result;
-                        indents = indents;
                     };
                 }
 
@@ -1170,7 +1166,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                     addIfNonemptyProposal(offset, prefix, cmp, result, dwp, dec);
                     addAssertNonemptyProposal(offset, prefix, cmp, result, dwp, dec);
                     addTryProposal(offset, prefix, cmp, result, dwp, dec);
-                    addSwitchProposal(offset, prefix, cmp, result, dwp, dec, node, indents);
+                    addSwitchProposal(offset, prefix, cmp, result, dwp, dec, node);
                 }
                 
                 if (!memberOp, !isMember, !secondLevel) {
@@ -1187,7 +1183,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                                 cpc = cmp;
                                 result = result;
                                 preamble = true;
-                                indents = indents;
                                 addParameterTypesInCompletions 
                                         = addParameterTypesInCompletions;
                             };
@@ -1371,7 +1366,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                             cpc = cpc;
                             result = result;
                             preamble = preamble;
-                            indents = indents;
                             addParameterTypesInCompletions 
                                     = addParameterTypesInCompletions;
                         };

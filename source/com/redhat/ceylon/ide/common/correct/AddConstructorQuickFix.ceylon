@@ -39,7 +39,7 @@ shared object addConstructorQuickFix {
                 value uninitialized 
                         = correctionUtil.collectUninitializedMembers(body);
                 value les = findLastExecutable(body);
-                value defaultIndent = doc.defaultIndent;
+                value defaultIndent = platformServices.defaultIndent;
                 value delim = doc.defaultLineDelimiter;
                 value indent 
                         = if (!exists les)

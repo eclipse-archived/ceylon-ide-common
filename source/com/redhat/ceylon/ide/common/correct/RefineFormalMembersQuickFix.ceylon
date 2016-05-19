@@ -99,7 +99,7 @@ shared object refineFormalMembersQuickFix {
         value bodyIndent = document.getIndent(node);
         value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + document.defaultIndent;
+            indent = delim + bodyIndent + platformServices.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }
@@ -127,7 +127,7 @@ shared object refineFormalMembersQuickFix {
             for (d in overloads(dec)) {
                 try {
                     if (d.formal, ci.isInheritedFromSupertype(d)) {
-                        appendRefinementText(isInterface, indent, result, ci, unit, d);
+                        appendRefinementText(data, isInterface, indent, result, ci, unit, d);
                         importProposals.importSignatureTypes(d, rootNode, already);
                         ambiguousNames.add(d.name);
                     }
@@ -146,7 +146,7 @@ shared object refineFormalMembersQuickFix {
                                 else true;
                         
                         if (doesntRefine && ambiguousNames.add(m.name)) {
-                            appendRefinementText(isInterface, indent, result, ci, unit, m);
+                            appendRefinementText(data, isInterface, indent, result, ci, unit, m);
                             importProposals.importSignatureTypes(m, rootNode, already);
                         }
                     }
@@ -166,12 +166,12 @@ shared object refineFormalMembersQuickFix {
         return change;
     }
     
-    void appendRefinementText(Boolean isInterface, String indent, StringBuilder result,
-        ClassOrInterface ci, Unit unit, Declaration member) {
+    void appendRefinementText(QuickFixData data, Boolean isInterface, String indent,
+        StringBuilder result, ClassOrInterface ci, Unit unit, Declaration member) {
         
         value pr = getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface,
-            ci, indent, true, true, platformServices.indents<Nothing>(), true);
+            ci, indent, true, true, true);
         
         result.append(indent).append(rtext).append(indent);
     }

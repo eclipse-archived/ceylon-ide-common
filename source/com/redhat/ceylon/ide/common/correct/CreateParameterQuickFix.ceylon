@@ -64,7 +64,7 @@ shared object createParameterQuickFix {
         value statements = body.statements;
         if (statements.empty) {
             indentAfter = doc.defaultLineDelimiter + doc.getIndent(decNode);
-            indent = indentAfter + doc.defaultIndent;
+            indent = indentAfter + platformServices.defaultIndent;
             offset2 = body.startIndex.intValue() + 1;
         } else {
             value statement = statements.get(statements.size() - 1);

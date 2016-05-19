@@ -99,7 +99,7 @@ shared object joinIfStatementsQuickFix {
     void decrementIndent(CommonDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
         TextChange change, String indent, String outerIndent) {
         
-        value defaultIndent = doc.defaultIndent;
+        value defaultIndent = platformServices.defaultIndent;
         variable Integer line = doc.getLineOfOffset(cl.stopIndex.intValue()) + 1;
         while (line < doc.getLineOfOffset(ifSt.stopIndex.intValue())) {
             value lineText = doc.getLineContent(line);

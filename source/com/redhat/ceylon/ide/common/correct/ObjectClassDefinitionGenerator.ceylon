@@ -79,7 +79,7 @@ shared class ObjectClassDefinitionGenerator(
                 typeParamDef.deleteTerminal(1);
                 typeParamDef.append(">");
             }
-            value defIndent = document.defaultIndent;
+            value defIndent = platformServices.defaultIndent;
             value supertype 
                     = if (isVoid) then null 
                     else supertypeDeclaration(returnType);
@@ -103,7 +103,7 @@ shared class ObjectClassDefinitionGenerator(
             }
             def.append(indent).append("}");
         } else if (objectGenerator) {
-            value defIndent = document.defaultIndent;
+            value defIndent = platformServices.defaultIndent;
             value supertype = 
                     if (isVoid) then null 
                     else supertypeDeclaration(returnType);
@@ -246,7 +246,6 @@ shared class ObjectClassDefinitionGenerator(
             indent = "";
             containsNewline = false;
             preamble = true;
-            indents = platformServices.indents<Nothing>();
             addParameterTypesInCompletions = false;
         };
         if (exists parameters, parameters.containsKey(d.name)) {

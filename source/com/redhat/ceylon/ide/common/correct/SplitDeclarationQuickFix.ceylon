@@ -139,7 +139,7 @@ shared object splitDeclarationQuickFix {
                 }
             }
             
-            variable value text = delim + indent + doc.defaultIndent
+            variable value text = delim + indent + platformServices.defaultIndent
                      + annotations + typeString + " " + dec.name + paramsString + ";";
             value bstart = body.startIndex.intValue();
             value bstop = body.endIndex.intValue();
