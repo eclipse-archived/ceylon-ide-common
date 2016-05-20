@@ -1,19 +1,22 @@
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
-import com.redhat.ceylon.ide.common.model {
-    BaseCeylonProject
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.model {
+    BaseCeylonProject
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
     TextChange
 }
-import com.redhat.ceylon.ide.common.doc {
-    Icons
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -23,8 +26,13 @@ import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
     Scope
 }
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
+
+import java.util {
+    JList=List
+}
+
+import org.antlr.runtime {
+    CommonToken
 }
 
 shared interface QuickFixData {
@@ -34,6 +42,7 @@ shared interface QuickFixData {
     shared formal Node node;
     shared formal Tree.CompilationUnit rootNode;
     shared formal PhasedUnit phasedUnit;
+    shared JList<CommonToken> tokens => phasedUnit.tokens;
     shared formal BaseCeylonProject ceylonProject;
     shared formal CommonDocument document;
     shared formal DefaultRegion editorSelection;

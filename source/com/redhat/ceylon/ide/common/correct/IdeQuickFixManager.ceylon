@@ -299,6 +299,9 @@ shared object ideQuickFixManager {
         
         assignToLocalQuickFix.addProposal(data, currentOffset);
         
+        convertToNamedArgumentsQuickFix.addProposal(data, currentOffset);
+        convertToPositionalArgumentsQuickFix.addProposal(data, currentOffset);
+        
         if (is Tree.BinaryOperatorExpression oe) {
             operatorQuickFix.addReverseOperatorProposal(data,  oe);
             operatorQuickFix.addInvertOperatorProposal(data, oe);
