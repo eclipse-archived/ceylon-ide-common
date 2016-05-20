@@ -219,10 +219,10 @@ shared object ideQuickFixManager {
             // TODO addMoveDirProposal
         }
         case (9000) {
-            changeRefiningTypeQuickType.addChangeRefiningTypeProposal(data);
+            changeRefiningTypeQuickFix.addProposal(data);
         }
         case (9100|9200) {
-            changeRefiningTypeQuickType.addChangeRefiningParametersProposal(data);
+            changeRefiningTypeQuickFix.addChangeRefiningParametersProposal(data);
         }
         case (10000) {
             switchQuickFix.addElseProposal(data);

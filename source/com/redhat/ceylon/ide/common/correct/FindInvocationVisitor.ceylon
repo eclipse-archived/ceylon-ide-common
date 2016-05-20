@@ -8,7 +8,7 @@ import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration
 }
 
-class FindInvocationVisitor(Node node) extends Visitor() {
+shared class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared variable Tree.InvocationExpression? result = null;
     variable Tree.InvocationExpression? current = null;

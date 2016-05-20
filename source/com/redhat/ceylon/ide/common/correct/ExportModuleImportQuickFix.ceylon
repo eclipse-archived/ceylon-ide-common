@@ -12,13 +12,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Declaration
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared object exportModuleImportQuickFix {
 
-    shared void applyChanges(QuickFixData data, Unit u, String moduleName) {
-        moduleImportUtil.exportModuleImports(data, u.\ipackage.\imodule, moduleName);
-    }
-    
     shared void addExportModuleImportProposal(QuickFixData data) {
         if (is Tree.SimpleType node = data.node) {
             value dec = (node).declarationModel;
@@ -78,8 +77,15 @@ shared object exportModuleImportQuickFix {
         value desc = "Export 'import " + decModule.nameAsString + " \"" 
                 + decModule.version + "\"' to clients of module";
 
-        data.addExportModuleImportProposal(unit, desc, 
-            decModule.nameAsString, decModule.version);
+        value callback = void() {
+            moduleImportUtil.exportModuleImports {
+                data = data;
+                target = unit.\ipackage.\imodule;
+                moduleName = decModule.nameAsString;
+            };
+        };
+        
+        data.addQuickFix(desc, callback, null, true, Icons.imports);
     }
 
 }

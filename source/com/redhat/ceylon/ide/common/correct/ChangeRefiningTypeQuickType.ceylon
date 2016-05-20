@@ -29,9 +29,9 @@ import java.util {
     Collections
 }
 
-shared object changeRefiningTypeQuickType {
+shared object changeRefiningTypeQuickFix {
     
-    shared void addChangeRefiningTypeProposal(QuickFixData data) {
+    shared void addProposal(QuickFixData data) {
         if (is Tree.TypedDeclaration td
                  = nodes.findDeclaration {
                     cu = data.rootNode;

@@ -1,8 +1,12 @@
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
 import com.redhat.ceylon.model.typechecker.model {
-    Unit
+    Unit,
+    Type
 }
 
 import java.lang {
@@ -43,6 +47,11 @@ shared interface PlatformServices {
     }
     
     shared formal LinkedMode createLinkedMode(CommonDocument document);
+    
+    // TODO this method is temporary, until completionManager becomes an object!
+    shared formal Anything getTypeProposals(CommonDocument document,
+        Integer offset, Integer length, Type infType,
+        Tree.CompilationUnit rootNode, String? kind);
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -63,6 +72,11 @@ variable PlatformServices _platformServices
     indentWithSpaces => true;
     gotoLocation(Unit unit, Integer offset, Integer length) => noop();
     createLinkedMode(CommonDocument document) => NoopLinkedMode(document);
+    
+    shared actual Anything getTypeProposals(CommonDocument document, 
+        Integer offset, Integer length, Type infType,
+        Tree.CompilationUnit rootNode, String? kind) => null;
+    
 };
 
 shared PlatformServices platformServices => _platformServices;

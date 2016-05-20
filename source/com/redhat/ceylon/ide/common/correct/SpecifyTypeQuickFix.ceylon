@@ -2,8 +2,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.ide.common.completion {
-    TypeCompletion
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
@@ -30,10 +30,8 @@ import java.util {
 
 shared object specifyTypeQuickFix {
     
-    shared DefaultRegion? specifyType<CompletionResult,IDocument>(CommonDocument document,
-        Tree.Type typeNode, Boolean inEditor, Tree.CompilationUnit rootNode,
-        Type _infType, IDocument nativeDocument,
-        TypeCompletion<CompletionResult,IDocument> completionManager) {
+    DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
+        Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
@@ -74,9 +72,8 @@ shared object specifyTypeQuickFix {
             }
         } else {
             value lm = platformServices.createLinkedMode(document);
-            value proposals 
-                    = completionManager.getTypeProposals {
-                document = nativeDocument;
+            value proposals = platformServices.getTypeProposals {
+                document = document;
                 offset = offset;
                 length = length;
                 infType = infType;
@@ -201,11 +198,22 @@ shared object specifyTypeQuickFix {
     }
     
     void newProposal(String desc, Tree.Type type, 
-        Tree.CompilationUnit rootNode, Type infType, QuickFixData data) 
-            => data.addSpecifyTypeProposal {
-                description = "``desc`` '``infType.asString(data.rootNode.unit)``'";
-                type = type;
-                cu = rootNode;
-                infType = infType;
-            };    
+        Tree.CompilationUnit rootNode, Type infType, QuickFixData data) {
+        
+        value callback = void() {
+             specifyType {
+                 document = data.document;
+                 typeNode = type;
+                 inEditor = true;
+                 rootNode = data.rootNode;
+                 _infType = infType;
+             };
+        };
+        
+        data.addQuickFix {
+            description = "``desc`` '``infType.asString(data.rootNode.unit)``'";
+            change = callback;
+            image = Icons.reveal;
+        };
+    }
 }

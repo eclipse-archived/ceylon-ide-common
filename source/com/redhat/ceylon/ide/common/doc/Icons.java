@@ -9,5 +9,5 @@ public enum Icons {
     
     localClass, localAttribute, localMethod,
     
-    addCorrection, quickAssists
+    addCorrection, quickAssists, reveal
 }

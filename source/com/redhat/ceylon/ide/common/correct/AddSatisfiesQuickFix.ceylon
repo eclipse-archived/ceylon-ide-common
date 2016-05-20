@@ -179,7 +179,7 @@ shared object addSatisfiesQuickFix {
             
             value region = if (sameFile) then DefaultRegion(ci, ct.size) else null;
 
-            data.addSatisfiesProposal(typeParam, desc, missingSatisfiedType, tfc, region);
+            data.addQuickFix(desc, tfc, region);
         }
     }
     
@@ -202,7 +202,7 @@ shared object addSatisfiesQuickFix {
         value desc = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
         value region = if (sameFile) then DefaultRegion(changeIndex, changeText.size) else null;
 
-        data.addSatisfiesProposal(typeParam, desc, missingSatisfiedType, tfc, region);
+        data.addQuickFix(desc, tfc, region);
     }
     
     Node? determineNode(variable Node node) {
