@@ -53,14 +53,13 @@ shared interface QuickFixData {
     shared formal void addQuickFix(String description, TextChange|Callable<Anything, []> change,
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false,
-        Icons? image = null);
+        Icons? image = null,
+        QuickFixKind kind = generic);
     
     shared formal void addInitializerQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type);
     shared formal void addParameterQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type, Integer exitPos);
-    shared formal void addParameterListQuickFix(String description, TextChange change,
-        DefaultRegion selection);
     shared formal void addExportModuleImportProposal(Unit u, String description,
         String name, String version);
     shared formal void addModuleImportProposal(Unit u, String description,
@@ -87,3 +86,10 @@ shared interface QuickFixData {
     shared formal void addSpecifyTypeProposal(String description,
         Tree.Type type, Tree.CompilationUnit cu, Type infType);
 }
+
+abstract shared class QuickFixKind()
+        of generic | addConstructor | addParameterList {
+}
+shared object addParameterList extends QuickFixKind() {}
+shared object addConstructor extends QuickFixKind() {}
+shared object generic extends QuickFixKind() {}

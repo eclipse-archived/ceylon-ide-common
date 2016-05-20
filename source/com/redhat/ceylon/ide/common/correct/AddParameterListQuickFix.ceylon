@@ -50,10 +50,11 @@ shared object addParameterListQuickFix {
                 });
                 
                 value description = correctionUtil.getDescription(node.declarationModel);
-                data.addParameterListQuickFix {
+                data.addQuickFix {
                     description = "Add initializer parameters '``params``' to ``description``";
                     change = change;
                     selection = DefaultRegion(offset + 1);
+                    kind = addParameterList;
                 };
             }
         }

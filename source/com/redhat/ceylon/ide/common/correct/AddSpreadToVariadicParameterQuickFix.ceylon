@@ -39,8 +39,12 @@ shared object addSpreadToVariadicParameterQuickFix {
                     text = "*";
                 });
                 
-                data.addQuickFix("Spread iterable argument of variadic parameter '``param.getName(term.unit)``'",
-                    change, DefaultRegion(term.endIndex.intValue() + 3, 0));
+                data.addQuickFix {
+                    description = "Spread iterable argument of variadic "
+                            + "parameter '``param.getName(term.unit)``'";
+                    change = change;
+                    selection = DefaultRegion(term.endIndex.intValue() + 3, 0);
+                };
             }
         }
     }

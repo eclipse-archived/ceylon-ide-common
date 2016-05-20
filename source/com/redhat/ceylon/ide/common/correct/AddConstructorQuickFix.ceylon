@@ -110,6 +110,7 @@ shared object addConstructorQuickFix {
                     description = "Add constructor 'new (``params``)' of '``name``'"; 
                     change = change; 
                     selection = DefaultRegion(loc, 0);
+                    kind = addConstructor;
                 };
             }
         }
