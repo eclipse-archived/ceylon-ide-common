@@ -30,7 +30,7 @@ import java.util {
 
 shared object specifyTypeQuickFix {
     
-    DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
+    shared DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
         Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
         
         value offset = typeNode.startIndex.intValue();
@@ -63,7 +63,7 @@ shared object specifyTypeQuickFix {
                         text = typeName;
                     });
                 
-                //applyChange(change);
+                change.apply();
                 
                 return DefaultRegion {
                     start = offset + il;
