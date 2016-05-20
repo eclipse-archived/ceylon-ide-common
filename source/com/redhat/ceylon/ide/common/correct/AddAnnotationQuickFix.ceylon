@@ -290,9 +290,7 @@ shared object addAnnotationQuickFix {
         then DefaultRegion(startOffset, annotation.size) 
         else null;
         
-        data.addAnnotationProposal {
-            declaration = dec;
-            text = annotation;
+        data.addQuickFix {
             description = description(annotation, dec);
             change = change;
             selection = selection;

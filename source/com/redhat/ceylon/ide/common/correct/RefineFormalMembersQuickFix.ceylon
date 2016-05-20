@@ -24,6 +24,9 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared object refineFormalMembersQuickFix {
     
@@ -56,7 +59,16 @@ shared object refineFormalMembersQuickFix {
                           then "Refine inherited ambiguous and formal members of " + name
                           else "Refine inherited formal members of " + name;
             
-            data.addRefineFormalMembersProposal(desc);
+            value callback = void() {
+                refineFormalMembers(data, data.editorSelection.start)
+                    ?.apply();
+            };
+            data.addQuickFix {
+                description = desc;
+                change = callback;
+                image = Icons.formalRefinement;
+                kind = addRefineFormal;
+            };
         }
     }
     

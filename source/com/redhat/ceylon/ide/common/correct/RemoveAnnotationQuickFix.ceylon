@@ -87,7 +87,7 @@ shared object removeAnnotationQuickFix {
         
         value newDesc = description(annotation, dec);
         value selection = DefaultRegion(offset.intValue(), 0);
-        data.addAnnotationProposal(dec, annotation, newDesc, change, selection);
+        data.addQuickFix(newDesc, change, selection);
     }
     
     String description(String annotation, Declaration dec) {

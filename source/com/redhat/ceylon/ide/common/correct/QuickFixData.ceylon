@@ -22,7 +22,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit,
     Type,
-    Referenceable,
     Scope
 }
 
@@ -59,10 +58,6 @@ shared interface QuickFixData {
         DefaultRegion selection, Unit unit, Scope scope, Type? type);
     shared formal void addParameterQuickFix(String description, TextChange change,
         DefaultRegion selection, Unit unit, Scope scope, Type? type, Integer exitPos);
-    shared formal void addModuleImportProposal(Unit u, String description,
-        String name, String version);
-    shared formal void addAnnotationProposal(Referenceable declaration, String text,
-        String description, TextChange change, DefaultRegion? selection);
     shared formal void addChangeTypeProposal(String description, 
         TextChange change, DefaultRegion selection, Unit unit);
     shared formal void addConvertToClassProposal(String description,
@@ -75,13 +70,14 @@ shared interface QuickFixData {
     shared formal void addDeclareLocalProposal(String description,
         TextChange change, Tree.Term term, Tree.BaseMemberExpression bme);
     shared formal void addAssignToLocalProposal(String description);
-    shared formal void addRefineFormalMembersProposal(String description);
-    shared formal void addRefineEqualsHashProposal(String description, TextChange change);
 }
 
 abstract shared class QuickFixKind()
-        of generic | addConstructor | addParameterList {
+        of generic | addConstructor | addParameterList | addRefineEqualsHash
+         | addRefineFormal {
 }
+shared object addRefineFormal extends QuickFixKind() {}
+shared object addRefineEqualsHash extends QuickFixKind() {}
 shared object addParameterList extends QuickFixKind() {}
 shared object addConstructor extends QuickFixKind() {}
 shared object generic extends QuickFixKind() {}

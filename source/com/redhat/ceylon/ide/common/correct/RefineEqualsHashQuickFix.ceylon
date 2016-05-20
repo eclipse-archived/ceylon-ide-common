@@ -24,6 +24,9 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared object refineEqualsHashQuickFix {
 
@@ -171,7 +174,12 @@ shared object refineEqualsHashQuickFix {
                 value change = refineEqualsHash(data, currentOffset);
                 
                 if (exists change) {
-                    data.addRefineEqualsHashProposal(desc, change);
+                    data.addQuickFix {
+                        description = desc;
+                        change = change;
+                        image = Icons.refinement;
+                        kind = addRefineEqualsHash;
+                    };
                 }
             }
         }

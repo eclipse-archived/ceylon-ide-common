@@ -29,12 +29,11 @@ import java.lang {
 import java.util {
     TreeSet
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared object addModuleImportQuickFix {
-    
-    shared void applyChanges(QuickFixData data, Unit unit, String name, String version) {
-        moduleImportUtil.addModuleImport(unit.\ipackage.\imodule, name, version);
-    }
         
     shared void addModuleImportProposals(QuickFixData data, TypeChecker typeChecker) {
         variable value node = data.node;
@@ -58,7 +57,20 @@ shared object addModuleImportQuickFix {
                     value desc = "Add 'import " + mod.string + " \""
                             + JDKUtils.jdk.version + "\"' to module descriptor";
                     
-                    data.addModuleImportProposal(unit, desc, mod.string, JDKUtils.jdk.version);
+                    value callback = void() {
+                        moduleImportUtil.addModuleImport {
+                            target = unit.\ipackage.\imodule;
+                            moduleName = mod.string;
+                            moduleVersion = JDKUtils.jdk.version;
+                        };
+                    };
+                    data.addQuickFix {
+                        description = desc;
+                        change = callback;
+                        image = Icons.imports;
+                        qualifiedNameIsPath = true;
+                    };
+
                     return;
                 }
             }
@@ -94,7 +106,19 @@ shared object addModuleImportQuickFix {
             value desc = "Add 'import " + name + " \"" + version
                     + "\"' to module descriptor";
             
-            data.addModuleImportProposal(unit, desc, name, version);
+            value callback = void() {
+                moduleImportUtil.addModuleImport {
+                    target = unit.\ipackage.\imodule;
+                    moduleName = name;
+                    moduleVersion = version;
+                };
+            };
+            data.addQuickFix {
+                description = desc;
+                change = callback;
+                image = Icons.imports;
+                qualifiedNameIsPath = true;
+            };
         }
     }
 }
