@@ -55,7 +55,8 @@ shared object addModuleImportQuickFix {
             value moduleNames = TreeSet<JString>(JDKUtils.jdkModuleNames);
             for (mod in moduleNames) {
                 if (JDKUtils.isJDKPackage(mod.string, pkg)) {
-                    value desc = "Add 'import " + mod.string + " \"" + JDKUtils.jdk.version + "\"' to module descriptor";
+                    value desc = "Add 'import " + mod.string + " \""
+                            + JDKUtils.jdk.version + "\"' to module descriptor";
                     
                     data.addModuleImportProposal(unit, desc, mod.string, JDKUtils.jdk.version);
                     return;
@@ -72,7 +73,9 @@ shared object addModuleImportQuickFix {
         }
     }
 
-    void findCandidateModules(Unit unit, QuickFixData data, String pkg, TypeChecker typeChecker) {
+    void findCandidateModules(Unit unit, QuickFixData data, String pkg,
+        TypeChecker typeChecker) {
+        
         value mod = unit.\ipackage.\imodule;
         value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
         query.memberName = pkg;
@@ -88,7 +91,8 @@ shared object addModuleImportQuickFix {
         for (md in msr.results) {
             value name = md.name;
             value version = md.lastVersion.version;
-            value desc = "Add 'import " + name + " \"" + version + "\"' to module descriptor";
+            value desc = "Add 'import " + name + " \"" + version
+                    + "\"' to module descriptor";
             
             data.addModuleImportProposal(unit, desc, name, version);
         }

@@ -54,12 +54,6 @@ import org.antlr.runtime {
 
 shared object addAnnotationQuickFix {
     
-    //    shared formal void newAddAnnotationQuickFix(Referenceable dec, String text, String desc, Integer offset,
-    //        TextChange change, Region? selection, Data data);
-    //
-    //    shared formal void newCorrectionQuickFix(String desc, TextChange change, Region? selection,
-    //        Data data);
-    
     value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
     "actual", "formal", "default", "variable"];
     
@@ -67,9 +61,14 @@ shared object addAnnotationQuickFix {
     
     shared void addMakeFormalDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
-        value ann = if (dec.shared) then "formal" else "shared formal";
-        value desc = if (dec.shared) then "Make Formal" else "Make Shared Formal";
-        addAddAnnotationProposal(node, ann, desc, dec, data);
+
+        addAddAnnotationProposal {
+            node = node;
+            annotation = dec.shared then "formal" else "shared formal";
+            desc = dec.shared then "Make Formal" else "Make Shared Formal";
+            dec = dec;
+            data = data;
+        };
     }
     
     shared void addMakeAbstractDecProposal(Node node, QuickFixData data) {
@@ -247,10 +246,13 @@ shared object addAnnotationQuickFix {
     
     shared void addMakeDefaultDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
-        addAddAnnotationProposal(node,
-            dec.shared then "default" else "shared default",
-            dec.shared then "Make Default" else "Make Shared Default",
-            dec, data);
+        addAddAnnotationProposal {
+            node = node;
+            annotation = dec.shared then "default" else "shared default";
+            desc = dec.shared then "Make Default" else "Make Shared Default";
+            dec = dec;
+            data = data;
+        };
     }
     
     
