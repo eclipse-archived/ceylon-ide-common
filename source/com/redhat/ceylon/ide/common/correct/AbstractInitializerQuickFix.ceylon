@@ -1,5 +1,9 @@
+import ceylon.collection {
+    ArrayList,
+    MutableList
+}
+
 import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport,
     getAssignableLiterals,
     getSortedProposedValues,
     isIgnoredLanguageModuleValue,
@@ -7,9 +11,12 @@ import com.redhat.ceylon.ide.common.completion {
     isInBounds,
     isIgnoredLanguageModuleClass
 }
-import ceylon.collection {
-    ArrayList,
-    MutableList
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.model.typechecker.model {
     NothingType,
@@ -25,25 +32,21 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     Declaration
 }
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 
-shared interface AbstractInitializerQuickFix<LinkedMode, Document, CompletionResult>
-        satisfies LinkedModeSupport<LinkedMode, Document, CompletionResult> {
+shared interface AbstractInitializerQuickFix<CompletionResult> {
     
-    shared void addInitializer(Document doc,
+    shared void addInitializer(CommonDocument doc,
         DefaultRegion selection, Type? type, Unit unit, Scope scope,
         Integer exitSeq = 0, Integer exitPos = 0) {
         
-        value linkedMode = newLinkedMode();
+        value linkedMode = platformServices.createLinkedMode(doc);
         value proposals = getProposals(doc, selection.start, type, unit, scope);
         
         if (proposals.size > 1) {
-            addEditableRegion(linkedMode, doc, selection.start, selection.length,
+            linkedMode.addEditableRegion(selection.start, selection.length,
                 0, proposals);
             
-            installLinkedMode(doc, linkedMode, this, exitSeq, exitPos);
+            linkedMode.install(this, exitSeq, exitPos);
         }
         
     }
@@ -54,7 +57,7 @@ shared interface AbstractInitializerQuickFix<LinkedMode, Document, CompletionRes
     shared formal CompletionResult newNestedCompletionProposal(
         Declaration dec, Integer offset);
     
-    CompletionResult[] getProposals(Document document, 
+    CompletionResult[] getProposals(CommonDocument document, 
         Integer loc, Type? type, Unit unit, Scope scope) {
         
         value proposals = ArrayList<CompletionResult>();

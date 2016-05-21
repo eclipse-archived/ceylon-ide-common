@@ -1,24 +1,23 @@
+import ceylon.collection {
+    ArrayList
+}
+import ceylon.interop.java {
+    CeylonList
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    TextChange,
+    InsertEdit,
+    LinkedMode
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
     ModelUtil
-}
-import ceylon.interop.java {
-    CeylonList
-}
-import ceylon.collection {
-    ArrayList
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    TextChange,
-    InsertEdit
 }
 
 shared object assignToLocalQuickFix satisfies LocalQuickFix<QuickFixData> {
@@ -28,9 +27,8 @@ shared object assignToLocalQuickFix satisfies LocalQuickFix<QuickFixData> {
     newProposal(QuickFixData data, String desc) => data.addAssignToLocalProposal(desc);
 }
 
-shared interface AssignToLocalProposal<IDocument,CompletionResult,LinkedMode>
-        satisfies AbstractLocalProposal<IDocument,LinkedMode>
-                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult> {
+shared interface AssignToLocalProposal<CompletionResult>
+        satisfies AbstractLocalProposal {
 
     shared actual TextChange createChange(QuickFixData data, Node expanse, Integer endIndex) {
         value change = platformServices.createTextChange("Assign to Local", data.phasedUnit);
@@ -49,18 +47,14 @@ shared interface AssignToLocalProposal<IDocument,CompletionResult,LinkedMode>
         return change;
     }
     
-    shared actual LinkedMode? addLinkedPositions(IDocument doc, Unit unit) {
-        value lm = newLinkedMode();
-        
+    shared actual void addLinkedPositions(LinkedMode lm, Unit unit) {
         assert(exists initialName = names.first);
         
         value namez = toNameProposals(names.coalesced.sequence(), offset, unit, 1);
-        addEditableRegion(lm, doc, offset+6, initialName.size, 0, namez);
+        lm.addEditableRegion(offset+6, initialName.size, 0, namez);
         
         value superTypes = getSupertypes(offset, unit, type, true, "value");
-        addEditableRegion(lm, doc, offset, 5, 1, toProposals(superTypes, offset, unit));
-        
-        return lm;
+        lm.addEditableRegion(offset, 5, 1, toProposals(superTypes, offset, unit));
     }
 
     shared formal CompletionResult[] toNameProposals(String[] names,

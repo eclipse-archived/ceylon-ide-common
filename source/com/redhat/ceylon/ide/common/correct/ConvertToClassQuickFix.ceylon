@@ -1,8 +1,12 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    InsertEdit,
+    CommonDocument,
+    LinkedMode
 }
 import com.redhat.ceylon.ide.common.util {
     escaping
@@ -10,12 +14,6 @@ import com.redhat.ceylon.ide.common.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    ReplaceEdit,
-    InsertEdit,
-    CommonDocument
 }
 
 shared object convertToClassQuickFix {
@@ -28,12 +26,10 @@ shared object convertToClassQuickFix {
     }
 }
 
-shared interface AbstractConvertToClassProposal<CompletionResult,IDocument,LinkedMode>
-        satisfies LinkedModeSupport<LinkedMode,IDocument,CompletionResult> {
+// TODO this thing shouldn't be an interface!
+shared interface AbstractConvertToClassProposal {
 
-    shared formal IDocument getNativeDocument(CommonDocument doc);
-    
-    shared void applyChanges(CommonDocument doc, Tree.ObjectDefinition node) {
+    shared void applyChanges(CommonDocument doc, Tree.ObjectDefinition node, LinkedMode? mode = null) {
         value declaration = node.declarationModel;
         value name = declaration.name;
         value initialName = escaping.toInitialUppercase(name);
@@ -59,15 +55,14 @@ shared interface AbstractConvertToClassProposal<CompletionResult,IDocument,Linke
         
         change.apply();
         
-        value lm = newLinkedMode();
-        value nativeDoc = getNativeDocument(doc);
+        value lm = mode else platformServices.createLinkedMode(doc);
         
-        addEditableRegions(lm, nativeDoc, 
+        lm.addEditableGroup( 
             [start - 1, length, 0],
             [offset + ws.size + mods.size + 1, length, 1],
             [offset + dec.size + 4, length, 2]
         );
         
-        installLinkedMode(nativeDoc, lm, this, -1, start - 1);
+        lm.install(this, -1, start - 1);
     }
 }

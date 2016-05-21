@@ -11,7 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
 import com.redhat.ceylon.ide.common.platform {
-    TextChange
+    TextChange,
+    LinkedMode,
+    CommonDocument
 }
 
 shared interface LocalQuickFix<in Data>
@@ -114,10 +116,10 @@ shared interface LocalQuickFix<in Data>
     }
 }
 
-shared interface AbstractLocalProposal<IDocument,LinkedMode> {
+shared interface AbstractLocalProposal {
 
     shared formal TextChange createChange(QuickFixData file, Node expanse, Integer endIndex);
-    shared formal LinkedMode? addLinkedPositions(IDocument document, Unit unit);
+    shared formal void addLinkedPositions(LinkedMode lm, Unit unit);
 
     shared formal variable {String*} names;
     shared formal variable Integer currentOffset;
