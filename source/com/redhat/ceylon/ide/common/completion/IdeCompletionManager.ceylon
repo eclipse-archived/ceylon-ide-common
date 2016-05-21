@@ -73,6 +73,9 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
 
 shared alias Proposals
         => Map<JString,DeclarationWithProximity>;
@@ -267,25 +270,22 @@ shared object proposalsFinder {
 }
 
 
-shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Document>()
-        satisfies InvocationCompletion<IdeComponent,CompletionResult,Document>
-                & ParametersCompletion<IdeComponent,CompletionResult,Document>
+shared abstract class IdeCompletionManager<CompletionResult>()
+        satisfies InvocationCompletion<CompletionResult>
+                & ParametersCompletion<CompletionResult>
                 & KeywordCompletion<CompletionResult>
-                & MemberNameCompletion<IdeComponent,CompletionResult,Document>
-                & BasicCompletion<IdeComponent,CompletionResult,Document>
-                & RefinementCompletion<IdeComponent,CompletionResult,Document>
-                & PackageCompletion<IdeComponent,CompletionResult,Document>
-                & TypeArgumentListCompletions<IdeComponent,CompletionResult,Document>
-                & ModuleCompletion<IdeComponent,CompletionResult,Document>
-                & FunctionCompletion<IdeComponent,CompletionResult,Document>
-                & ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
-                & TypeCompletion<CompletionResult,Document>
+                & MemberNameCompletion<CompletionResult>
+                & BasicCompletion<CompletionResult>
+                & RefinementCompletion<CompletionResult>
+                & PackageCompletion<CompletionResult>
+                & TypeArgumentListCompletions<CompletionResult>
+                & ModuleCompletion<CompletionResult>
+                & FunctionCompletion<CompletionResult>
+                & ControlStructureCompletionProposal<CompletionResult>
+                & TypeCompletion<CompletionResult>
                 & AnonFunctionCompletion<CompletionResult>
-        given CompletionResult satisfies Object
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        given CompletionResult satisfies Object {
 
-    shared formal String getDocumentSubstring(Document doc, Integer start, Integer length);
-    
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
         RequiredType required, Proposals proposals) {
@@ -297,13 +297,13 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     // see CeylonCompletionProcessor.getContentProposals(CeylonParseController, int, ITextViewer, boolean, boolean, IProgressMonitor)
     shared CompletionResult[] getContentProposals(
         Tree.CompilationUnit typecheckedRootNode, 
-        IdeComponent analysisResult, 
+        LocalAnalysisResult analysisResult, 
             Integer offset, Integer line, Boolean secondLevel, 
             BaseProgressMonitor monitor, 
             Boolean returnedParamInfo = false, 
             Cancellable? cancellable = null) {
         value tokens = analysisResult.tokens;
-        value document = analysisResult.document;
+        value document = analysisResult.commonDocument;
 
         // TODO perhaps we should make it non optional in LocalAnalysisResult?
         assert(exists tokens);
@@ -496,7 +496,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
     }
     
     CompletionResult[]? constructCompletionsOutsideOrdinaryCode(
-        Integer offset, String prefix, IdeComponent cpc,
+        Integer offset, String prefix, LocalAnalysisResult cpc,
             Node node, CommonToken token, Scope scope, 
             Boolean returnedParamInfo, Boolean memberOp,
             Integer tokenType, BaseProgressMonitor monitor) {
@@ -889,9 +889,9 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         Integer offset, String prefix,
         Collection<DeclarationWithProximity> sortedProposals,
         Collection<DeclarationWithProximity> sortedFunctionProposals,
-        IdeComponent cmp, Scope scope,
+        LocalAnalysisResult cmp, Scope scope,
         Node node, CommonToken token,
-        Boolean memberOp, Document doc,
+        Boolean memberOp, CommonDocument doc,
         Boolean secondLevel, Boolean inDoc,
         Type? requiredType, Integer previousTokenType,
         Integer tokenType) {
@@ -1205,7 +1205,6 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                     primary = primary;
                     result = result;
                     dec = dwp.declaration;
-                    cm = this;
                 };
             }
             
@@ -1216,9 +1215,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                 // the expression to wrap, may need to be assigned
                 value expr = (if (is Tree.BaseMemberExpression bme)
                              then "" else "val = ")
-                            + getDocumentSubstring {
-                                doc = doc;
-                                start = bme.startIndex.intValue();
+                            + doc.getText {
+                                offset = bme.startIndex.intValue();
                                 length = bme.distance.intValue();
                             };
                 
@@ -1234,7 +1232,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         return result.sequence();
     }
 
-    Boolean isDirectlyInsideBlock(Node node, IdeComponent cpc, Scope scope, CommonToken token) {
+    Boolean isDirectlyInsideBlock(Node node, LocalAnalysisResult cpc, Scope scope, CommonToken token) {
         if (scope is Interface|Package) {
             return false;
         } else {
@@ -1335,8 +1333,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
 
     void addRefinementProposals(Integer offset,
         Collection<DeclarationWithProximity> set,
-        IdeComponent cpc, Scope scope,
-        Node node, Document doc, Boolean filter,
+        LocalAnalysisResult cpc, Scope scope,
+        Node node, CommonDocument doc, Boolean filter,
         MutableList<CompletionResult> result,
         OccurrenceLocation? ol, Type t,
         Boolean preamble) {
@@ -1358,9 +1356,8 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                             ci = scope;
                             node = node;
                             scope = scope;
-                            prefix = getDocumentSubstring {
-                                doc = doc;
-                                start = 0;
+                            prefix = doc.getText {
+                                offset = 0;
                                 length = offset - start;
                             };
                             cpc = cpc;
@@ -1391,7 +1388,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
         return if (exists nal = d.namedArgumentList, scope == nal) then true else false;
     }
 
-    Boolean isDirectlyInsideNamedArgumentList(IdeComponent cmp, Node node, CommonToken token) {
+    Boolean isDirectlyInsideNamedArgumentList(LocalAnalysisResult cmp, Node node, CommonToken token) {
         assert(exists tokens = cmp.tokens);
         return node is Tree.NamedArgumentList ||
                 (!(node is Tree.SequenceEnumeration) &&
@@ -1695,7 +1692,7 @@ shared abstract class IdeCompletionManager<IdeComponent,CompletionResult,Documen
                    || dec is TypeParameter);
     }
 
-    CommonToken? getNextToken(IdeComponent cmp, CommonToken token) {
+    CommonToken? getNextToken(LocalAnalysisResult cmp, CommonToken token) {
         variable Integer i = token.tokenIndex;
         variable CommonToken? nextToken=null;
         assert(exists tokens = cmp.tokens);

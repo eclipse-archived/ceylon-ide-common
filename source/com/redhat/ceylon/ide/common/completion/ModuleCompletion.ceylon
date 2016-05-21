@@ -43,18 +43,19 @@ import java.lang {
     JInteger=Integer
 }
 import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
+    CommonDocument,
+    platformServices,
+    LinkedMode
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface ModuleCompletion<CompletionResult> {
     
     shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, ModuleDetails mod, Boolean withBody,
-                ModuleVersionDetails version, String name, Node node, IdeComponent cpc);
+                ModuleVersionDetails version, String name, Node node, LocalAnalysisResult cpc);
 
     shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
         Integer selectionStart, Integer selectionEnd); 
@@ -62,7 +63,7 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
     shared formal CompletionResult newJDKModuleProposal(Integer offset, String prefix, Integer len, 
                 String versioned, String name);
 
-    shared void addModuleCompletions(IdeComponent cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
+    shared void addModuleCompletions(LocalAnalysisResult cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
         MutableList<CompletionResult> result, Boolean withBody, BaseProgressMonitor monitor) {
         value fp = fullPath(offset, prefix, path);
         
@@ -70,7 +71,7 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
     }
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
-        Integer len, String pfp, IdeComponent cpc, Boolean withBody, BaseProgressMonitor monitor) {
+        Integer len, String pfp, LocalAnalysisResult cpc, Boolean withBody, BaseProgressMonitor monitor) {
         try(progress = monitor.Progress(1, null)) {
             if (pfp.startsWith("java.")) {
                 for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
@@ -117,7 +118,7 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
         }
     }
 
-    Boolean moduleAlreadyImported(IdeComponent cpc, String mod) {
+    Boolean moduleAlreadyImported(LocalAnalysisResult cpc, String mod) {
         if (mod.equals(Module.\iLANGUAGE_MODULE_NAME)) {
             return true;
         }
@@ -149,7 +150,7 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
         return if (withBody) then name + " \"" + version + "\";" else name;
     }
 
-    shared void addModuleDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
+    shared void addModuleDescriptorCompletion(LocalAnalysisResult cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
         if (!"module".startsWith(prefix)) {
             return;
         }
@@ -163,13 +164,11 @@ shared interface ModuleCompletion<IdeComponent,CompletionResult,Document>
 
 }
 
-shared abstract class ModuleProposal<CompletionResult,Document,LinkedMode,IdeComponent>
+shared abstract class ModuleProposal<CompletionResult>
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
-         Boolean withBody, ModuleVersionDetails version, String name, Node node, IdeComponent cpc)
+         Boolean withBody, ModuleVersionDetails version, String name, Node node, LocalAnalysisResult cpc)
         extends AbstractCompletionProposal
-        (offset, prefix, versioned, versioned.spanFrom(len))
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        (offset, prefix, versioned, versioned.spanFrom(len)) {
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value off = offset + versioned.size - prefix.size - len;
@@ -190,7 +189,7 @@ shared abstract class ModuleProposal<CompletionResult,Document,LinkedMode,IdeCom
         if (withBody, //module.getVersions().size()>1 && //TODO: put this back in when sure it works
             cpc.options.linkedModeArguments) {
             
-            value linkedMode = newLinkedMode();
+            value linkedMode = platformServices.createLinkedMode(document);
             value selection = getSelectionInternal(document);
             value proposals = ArrayList<CompletionResult>();
 
@@ -200,9 +199,9 @@ shared abstract class ModuleProposal<CompletionResult,Document,LinkedMode,IdeCom
             
             value x = selection.start;
             value y = selection.length;
-            addEditableRegion(linkedMode, cpc.document, x, y, 0, proposals.sequence());
+            linkedMode.addEditableRegion(x, y, 0, proposals.sequence());
             
-            installLinkedMode(cpc.document, linkedMode, this, 1, x + y + 2);
+            linkedMode.install(this, 1, x + y + 2);
         }
     }
 }

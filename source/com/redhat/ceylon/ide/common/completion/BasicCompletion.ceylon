@@ -12,15 +12,14 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope
 }
 
-shared interface BasicCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface BasicCompletion<CompletionResult> {
     
     shared formal CompletionResult newBasicCompletionProposal(Integer offset,
         String prefix, String text, String escapedText, Declaration decl,
-        IdeComponent cmp);
+        LocalAnalysisResult cmp);
     
     shared void addImportProposal(Integer offset, String prefix,
-        IdeComponent cpc, MutableList<CompletionResult> result,
+        LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope) {
         
         result.add(newBasicCompletionProposal(offset, prefix, dec.name,
@@ -28,7 +27,7 @@ shared interface BasicCompletion<IdeComponent,CompletionResult,Document>
     }
     
     shared void addDocLinkProposal(Integer offset, String prefix,
-        IdeComponent cpc, MutableList<CompletionResult> result,
+        LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope) {
         
         //for doc links, propose both aliases and unaliased qualified form

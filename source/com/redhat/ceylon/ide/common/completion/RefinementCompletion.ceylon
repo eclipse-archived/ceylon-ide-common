@@ -86,16 +86,15 @@ Reference refinedProducedReference(Type outerType,
 }
 
 // see RefinementCompletionProposal
-shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface RefinementCompletion<CompletionResult> {
     
     shared formal CompletionResult newRefinementCompletionProposal(Integer offset, 
-        String prefix, Reference? pr, String desc, String text, IdeComponent cmp,
+        String prefix, Reference? pr, String desc, String text, LocalAnalysisResult cmp,
         Declaration dec, Scope scope, Boolean fullType, Boolean explicitReturnType);
 
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
-        ClassOrInterface ci, Node node, Scope scope, String prefix, IdeComponent cpc,
+        ClassOrInterface ci, Node node, Scope scope, String prefix, LocalAnalysisResult cpc,
         MutableList<CompletionResult> result, Boolean preamble,
         Boolean addParameterTypesInCompletions) {
         
@@ -112,7 +111,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
             text, cpc, dec, scope, false, true));
     }
 
-    shared void addNamedArgumentProposal(Integer offset, String prefix, IdeComponent cpc,
+    shared void addNamedArgumentProposal(Integer offset, String prefix, LocalAnalysisResult cpc,
         MutableList<CompletionResult> result, Declaration dec, Scope scope) {
         
         //TODO: type argument substitution using the
@@ -127,8 +126,8 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
     }
     
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, 
-        Scope scope, Node node, String prefix, IdeComponent cmp, 
-        Document doc, MutableList<CompletionResult> result) {
+        Scope scope, Node node, String prefix, LocalAnalysisResult cmp, 
+        CommonDocument doc, MutableList<CompletionResult> result) {
         
         //TODO: type argument substitution using the
         //      Reference of the primary node
@@ -147,14 +146,12 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
 
 }
 
-shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,Document,LinkedMode>
+shared abstract class RefinementCompletionProposal<CompletionResult>
         (Integer _offset, String prefix, Reference pr, String desc, 
-        String text, IdeComponent cpc, Declaration declaration, Scope scope,
+        String text, LocalAnalysisResult cpc, Declaration declaration, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
         extends AbstractCompletionProposal
-        (_offset, prefix, desc, text)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        (_offset, prefix, desc, text) {
 
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc);
     shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Integer loc);
@@ -205,16 +202,16 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         return change;
     }
 
-    shared void enterLinkedMode(Document document) {
+    shared void enterLinkedMode(CommonDocument document) {
         try {
             value loc = offset - prefix.size;
             
             if (exists pos = text.firstInclusion("nothing")) {
-                value linkedModeModel = newLinkedMode();
+                value linkedModeModel = platformServices.createLinkedMode(document);
                 value props = ArrayList<CompletionResult>();
                 addProposals(loc + pos, prefix, props);
-                addEditableRegion(linkedModeModel, document, loc + pos, 7, 0, props.sequence());
-                installLinkedMode(document, linkedModeModel, this, 1, loc + text.size);
+                linkedModeModel.addEditableRegion(loc + pos, 7, 0, props.sequence());
+                linkedModeModel.install(this, 1, loc + text.size);
             }
         } catch (Exception e) {
             e.printStackTrace();

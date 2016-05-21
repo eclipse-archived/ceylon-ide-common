@@ -55,19 +55,18 @@ import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface InvocationCompletion<CompletionResult> {
     
     shared formal CompletionResult newInvocationCompletion(Integer offset, String prefix,
-        String desc, String text, Declaration dec, Reference? pr, Scope scope, IdeComponent cmp,
+        String desc, String text, Declaration dec, Reference? pr, Scope scope, LocalAnalysisResult cmp,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec);
     
     shared formal CompletionResult newParameterInfo(Integer offset, Declaration dec, 
-        Reference producedReference, Scope scope, IdeComponent cpc, Boolean namedInvocation);
+        Reference producedReference, Scope scope, LocalAnalysisResult cpc, Boolean namedInvocation);
     
     shared void addProgramElementReferenceProposal(Integer offset, String prefix,
-        IdeComponent cpc, MutableList<CompletionResult> result,
+        LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         Declaration dec, Scope scope, Boolean isMember) {
         
         Unit? unit = cpc.lastCompilationUnit.unit;
@@ -91,7 +90,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
 
     // see InvocationCompletionProposal.addReferenceProposal()
     shared void addReferenceProposal(Tree.CompilationUnit cu,
-        Integer offset, String prefix, IdeComponent cmp,
+        Integer offset, String prefix, LocalAnalysisResult cmp,
         MutableList<CompletionResult> result, 
         DeclarationWithProximity dwp,
         Reference? pr, Scope scope, OL? ol,
@@ -160,7 +159,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
     }
 
     shared void addSecondLevelProposal(Integer offset, String prefix, 
-        IdeComponent controller, MutableList<CompletionResult> result,
+        LocalAnalysisResult controller, MutableList<CompletionResult> result,
         Declaration dec, Scope scope, Boolean isMember, Reference pr,
         Type? requiredType, OL? ol) {
         
@@ -242,7 +241,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
     
     void addSecondLevelProposalInternal(
         Integer offset, String prefix,
-        IdeComponent controller,
+        LocalAnalysisResult controller,
         MutableList<CompletionResult> result,
         Declaration dec, Scope scope,
         Type? requiredType, OL? ol,
@@ -316,7 +315,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
     
     // see InvocationCompletionProposal.addInvocationProposals()
     shared void addInvocationProposals(
-        Integer offset, String prefix, IdeComponent cmp,
+        Integer offset, String prefix, LocalAnalysisResult cmp,
         MutableList<CompletionResult> result,
         DeclarationWithProximity? dwp,
         // sometimes we have no dwp, just a dec, so we have to handle that too
@@ -520,7 +519,7 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
         }
     }
     
-    shared void addFakeShowParametersCompletion(Node node, IdeComponent cpc,
+    shared void addFakeShowParametersCompletion(Node node, LocalAnalysisResult cpc,
         MutableList<CompletionResult> result) {
         
         if (exists upToDateAndTypeChecked = cpc.typecheckedRootNode) {
@@ -558,17 +557,14 @@ shared interface InvocationCompletion<IdeComponent,CompletionResult,Document>
             else prefix;
 }
 
-shared abstract class InvocationCompletionProposal
-        <IdeComponent,CompletionResult,Document,LinkedMode>
+shared abstract class InvocationCompletionProposal<CompletionResult>
     (variable Integer _offset, String prefix, String desc, String text,
     Declaration declaration, Reference? producedReference, Scope scope,
     Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
     Boolean namedInvocation, Boolean inheritance, Boolean qualified,
     Declaration? qualifyingValue, 
-    InvocationCompletion<IdeComponent,CompletionResult,Document> completionManager)
-        extends AbstractCompletionProposal(_offset, prefix, desc, text)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+    InvocationCompletion<CompletionResult> completionManager)
+        extends AbstractCompletionProposal(_offset, prefix, desc, text) {
     
     shared formal CompletionResult newNestedLiteralCompletionProposal(String val,
         Integer loc, Integer index);
@@ -609,7 +605,7 @@ shared abstract class InvocationCompletionProposal
         return change;
     }
     
-    shared void activeLinkedMode(CommonDocument document, IdeComponent cpc) {
+    shared void activeLinkedMode(CommonDocument document, LocalAnalysisResult cpc) {
         if (is Generic declaration) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
@@ -679,7 +675,7 @@ shared abstract class InvocationCompletionProposal
         if (text.endsWith(";")) {
             end--;
         }
-        comma = findCharCount(1, document, start, end, ",;", "", true, uncurry(CommonDocument.getChar))
+        comma = findCharCount(1, document, start, end, ",;", "", true)
                 - start;
         
         if (comma < 0) {
@@ -697,7 +693,7 @@ shared abstract class InvocationCompletionProposal
     shared void enterLinkedMode(CommonDocument document, 
         JList<Parameter>? params, 
         JList<TypeParameter>? typeParams, 
-        IdeComponent cpc) {
+        LocalAnalysisResult cpc) {
         
         value proposeTypeArguments = !params exists;
         value paramCount 
@@ -719,7 +715,7 @@ shared abstract class InvocationCompletionProposal
             if (next <= 0) {
                 return; //empty arg list
             }
-            value linkedMode = newLinkedMode();
+            value linkedMode = platformServices.createLinkedMode(document);
             variable value seq = 0;
             variable value param = 0;
             while (next>0 && param<paramCount) {
@@ -763,11 +759,9 @@ shared abstract class InvocationCompletionProposal
                         start++;
                         len = 0;
                     }
-                    addEditableRegion {
-                        lm = linkedMode;
-                        doc = cpc.document;
+                    linkedMode.addEditableRegion {
                         start = start;
-                        len = len;
+                        length = len;
                         exitSeqNumber = seq;
                         proposals = props.sequence();
                     };
@@ -778,9 +772,7 @@ shared abstract class InvocationCompletionProposal
                 param++;
             }
             if (seq > 0) {
-                installLinkedMode {
-                    doc = cpc.document;
-                    lm = linkedMode;
+                linkedMode.install {
                     owner = this;
                     exitSeqNumber = seq;
                     exitPosition = loc + text.size;
@@ -793,7 +785,7 @@ shared abstract class InvocationCompletionProposal
     
     void addValueArgumentProposals(MutableList<CompletionResult> props, 
         Parameter param, Integer loc, Integer first, Integer index, 
-        Boolean last, IdeComponent cpc) {
+        Boolean last, LocalAnalysisResult cpc) {
         
         if (!param.model.dynamicallyTyped, 
             exists producedReference, 
@@ -888,7 +880,7 @@ shared abstract class InvocationCompletionProposal
         Type type, Unit unit, 
         DeclarationWithProximity dwp, 
         DeclarationWithProximity? qualifier, 
-        IdeComponent cpc) {
+        LocalAnalysisResult cpc) {
         
         if (!qualifier exists && dwp.unimported) {
             return;

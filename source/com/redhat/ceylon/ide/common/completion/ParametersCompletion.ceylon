@@ -21,14 +21,13 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     List
 }
-shared interface ParametersCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface ParametersCompletion<CompletionResult> {
 
     shared formal CompletionResult newParametersCompletionProposal(Integer offset,
         String prefix, String desc, String text, List<Type> argTypes, Node node, Unit unit);
     
     // see ParametersCompletionProposal.addParametersProposal(final int offset, Node node, final List<ICompletionProposal> result, CeylonParseController cpc)
-    shared void addParametersProposal(Integer offset, String prefix, Tree.Term node, MutableList<CompletionResult> result, IdeComponent cmp) {
+    shared void addParametersProposal(Integer offset, String prefix, Tree.Term node, MutableList<CompletionResult> result, LocalAnalysisResult cmp) {
         value condition = if (is Tree.StaticMemberOrTypeExpression node)
                           then !(node.declaration is Functional)
                           else true;

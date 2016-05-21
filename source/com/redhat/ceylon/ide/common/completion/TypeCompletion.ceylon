@@ -34,12 +34,12 @@ import com.redhat.ceylon.ide.common.correct {
 }
 
 // TODO should be in package correct
-shared interface TypeCompletion<CompletionResult,Document> {
+shared interface TypeCompletion<CompletionResult> {
     
     shared formal CompletionResult newTypeProposal(Integer offset, Type? type,
             String text, String desc, Tree.CompilationUnit rootNode);
     
-    shared CompletionResult[] getTypeProposals(Document document, Integer offset, Integer length,
+    shared CompletionResult[] getTypeProposals(CommonDocument document, Integer offset, Integer length,
         Type infType, Tree.CompilationUnit rootNode, String? kind) {
         
         value td = infType.declaration;

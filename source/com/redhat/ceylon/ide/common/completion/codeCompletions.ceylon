@@ -253,8 +253,8 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 }
 
 // see CodeCompletions.getDocDescriptionFor
-shared String getDocDescriptionFor<Document>(Declaration decl,
-    Reference? pr, Unit unit, LocalAnalysisResult<Document> cmp) {
+shared String getDocDescriptionFor(Declaration decl,
+    Reference? pr, Unit unit, LocalAnalysisResult cmp) {
     StringBuilder result = StringBuilder();
     appendDeclarationHeader(decl, pr, unit, result, true);
     appendTypeParametersWithArguments(decl, pr, unit, result, true);
@@ -788,8 +788,8 @@ shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     appendParameters(d, pr, unit, result, null, false);
 }
 
-void appendParameters<Document>(Declaration d, Reference? pr,
-    Unit unit, StringBuilder result, LocalAnalysisResult<Document>? cpc,
+void appendParameters(Declaration d, Reference? pr,
+    Unit unit, StringBuilder result, LocalAnalysisResult? cpc,
     Boolean descriptionOnly) {
     if (is Functional d) {
         if (exists plists = d.parameterLists) {
@@ -827,9 +827,9 @@ shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
 
 
 // see CodeCompletions.appendParametersDescription
-void appendParametersDescription<Document>(Declaration d,
+void appendParametersDescription(Declaration d,
     Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
-    LocalAnalysisResult<Document> cmp) {
+    LocalAnalysisResult cmp) {
     
     appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
 }

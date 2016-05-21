@@ -23,15 +23,13 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     TextChange
 }
-shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface FunctionCompletion<CompletionResult> {
 
     shared formal CompletionResult newFunctionCompletionProposal(Integer offset, String prefix,
-           String desc, String text, Declaration dec, Unit unit, IdeComponent cmp);
+           String desc, String text, Declaration dec, Unit unit, LocalAnalysisResult cmp);
     
-    shared void addFunctionProposal(Integer offset, IdeComponent cpc, Tree.Primary primary, 
-            MutableList<CompletionResult> result, Declaration dec,
-            IdeCompletionManager<IdeComponent, CompletionResult, Document> cm) {
+    shared void addFunctionProposal(Integer offset, LocalAnalysisResult cpc, Tree.Primary primary, 
+            MutableList<CompletionResult> result, Declaration dec) {
 
         variable Tree.Term arg = primary;
         while (is Tree.Expression a = arg) {
@@ -41,9 +39,9 @@ shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
         value start = arg.startIndex.intValue();
         value stop = arg.endIndex.intValue();
         value origin = primary.startIndex.intValue();
-        value doc = cpc.document;
-        value argText = cm.getDocumentSubstring(doc, start, stop - start);
-        value prefix = cm.getDocumentSubstring(doc, origin, offset - origin);
+        value doc = cpc.commonDocument;
+        value argText = doc.getText(start, stop - start);
+        value prefix = doc.getText(origin, offset - origin);
         variable String text = dec.getName(arg.unit) + "(" + argText + ")";
         
         if (is Functional dec, dec.declaredVoid) {

@@ -19,11 +19,10 @@ import org.antlr.runtime {
     CommonToken
 }
 
-class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
-    IdeComponent cpc, MutableList<CompletionResult> result, BaseProgressMonitor monitor,
-    IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager)
-        extends Visitor()
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer offset, Node node,
+    LocalAnalysisResult cpc, MutableList<CompletionResult> result, BaseProgressMonitor monitor,
+    IdeCompletionManager<CompletionResult> completionManager)
+        extends Visitor() {
     
     shared actual void visit(Tree.ModuleDescriptor that) {
         super.visit(that);

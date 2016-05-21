@@ -6,7 +6,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
+    CommonDocument,
+    platformServices
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -24,13 +25,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
-shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface ControlStructureCompletionProposal<CompletionResult> {
     
     shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
-        String desc, String text, Declaration dec, IdeComponent cpc, Node? node = null);
+        String desc, String text, Declaration dec, LocalAnalysisResult cpc, Node? node = null);
     
-    shared void addForProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addForProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (is Value d) {
@@ -60,7 +60,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc,
+    shared void addIfExistsProposal(Integer offset, String prefix, LocalAnalysisResult cpc,
         MutableList<CompletionResult> result, DeclarationWithProximity dwp,
         Declaration d, Node? node = null, String? forcedText = null) {
         
@@ -80,7 +80,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addAssertExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addAssertExistsProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -96,7 +96,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addIfNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addIfNonemptyProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -111,7 +111,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addAssertNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addAssertNonemptyProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -128,7 +128,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addTryProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addTryProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d) {
         
         if (!dwp.unimported) {
@@ -145,7 +145,7 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
         }
     }
     
-    shared void addSwitchProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addSwitchProposal(Integer offset, String prefix, LocalAnalysisResult cpc, MutableList<CompletionResult> result,
         DeclarationWithProximity dwp, Declaration d, Node node) {
         
         if (!dwp.unimported) {
@@ -179,32 +179,30 @@ shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResul
     }
 }
 
-shared abstract class ControlStructureProposal<IdeComponent,CompletionResult,Document,LinkedMode>
+shared abstract class ControlStructureProposal<CompletionResult>
         (Integer offset, String prefix, String desc, String text,
-            Node? node, Declaration dec, IdeComponent cpc)
+            Node? node, Declaration dec, LocalAnalysisResult cpc)
         
-        extends AbstractCompletionProposal(offset, prefix, desc, text)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        extends AbstractCompletionProposal(offset, prefix, desc, text) {
 
     shared formal CompletionResult newNameCompletion(String? name);
     
     shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
 
-        enterLinkedMode(cpc.document);
+        enterLinkedMode(cpc.commonDocument);
     }
     
-    shared void enterLinkedMode(Document doc) {
+    shared void enterLinkedMode(CommonDocument doc) {
         if (exists loc = text.firstInclusion(" val =")) {
-            value linkedMode = newLinkedMode();
+            value linkedMode = platformServices.createLinkedMode(doc);
             
             value startOffset = node?.startIndex?.intValue() else offset;
             value exitOffset = text.endsWith("{}")
                                 then startOffset + text.size - 1
                                 else startOffset + text.size;
             
-            addEditableRegion(linkedMode, doc, 
+            linkedMode.addEditableRegion( 
                 startOffset + loc + 1, 3, 0, 
                 nodes.nameProposals {
                         node = node;
@@ -212,7 +210,7 @@ shared abstract class ControlStructureProposal<IdeComponent,CompletionResult,Doc
                         rootNode = cpc.parsedRootNode;
                     }.collect(newNameCompletion));
             
-            installLinkedMode(doc, linkedMode, this, 1, exitOffset);
+            linkedMode.install(this, 1, exitOffset);
         }
     }
     

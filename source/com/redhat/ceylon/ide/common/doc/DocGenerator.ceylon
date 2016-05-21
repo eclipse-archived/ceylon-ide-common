@@ -106,9 +106,9 @@ shared String convertToHTML(String content)
                   .replace("<", "&lt;")
                   .replace(">", "&gt;");
 
-shared interface DocGenerator<Document> {
+shared interface DocGenerator {
     
-    shared alias IdeComponent => LocalAnalysisResult<Document>;
+    shared alias IdeComponent => LocalAnalysisResult;
     
     shared formal String buildLink(Referenceable|String model, String text,
         String protocol = "doc");

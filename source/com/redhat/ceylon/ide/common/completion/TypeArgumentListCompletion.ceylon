@@ -20,11 +20,10 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface TypeArgumentListCompletions<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface TypeArgumentListCompletions<CompletionResult> {
     
-    shared void addTypeArgumentListProposal(Integer offset, IdeComponent cpc, Node node,
-        Scope scope, MutableList<CompletionResult> result, IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager) {
+    shared void addTypeArgumentListProposal(Integer offset, LocalAnalysisResult cpc, Node node,
+        Scope scope, MutableList<CompletionResult> result, IdeCompletionManager<CompletionResult> completionManager) {
         JInteger? startIndex2 = node.startIndex;
         value stopIndex2 = node.endIndex;
         
@@ -32,8 +31,8 @@ shared interface TypeArgumentListCompletions<IdeComponent,CompletionResult,Docum
             return; // we need it
         }
 
-        value document = cpc.document;
-        value typeArgText = completionManager.getDocumentSubstring(cpc.document, startIndex2.intValue(), stopIndex2.intValue() - startIndex2.intValue());
+        value document = cpc.commonDocument;
+        value typeArgText = document.getText(startIndex2.intValue(), stopIndex2.intValue() - startIndex2.intValue());
         Tree.CompilationUnit? upToDateAndTypechecked = cpc.typecheckedRootNode;
 
         if (!exists upToDateAndTypechecked) {
@@ -50,7 +49,7 @@ shared interface TypeArgumentListCompletions<IdeComponent,CompletionResult,Docum
                     Reference? pr = that.target;
                     value d = that.declaration;
                     if (d is Functional, exists pr) {
-                        value pref = completionManager.getDocumentSubstring(document, that.identifier.startIndex.intValue(), 
+                        value pref = document.getText(that.identifier.startIndex.intValue(), 
                             that.endIndex.intValue() - that.identifier.startIndex.intValue());
                         
                         for (dec in overloads(d)) {
@@ -68,7 +67,7 @@ shared interface TypeArgumentListCompletions<IdeComponent,CompletionResult,Docum
                 if (exists startIndex, startIndex.intValue() == startIndex2.intValue()) {
                     value d = that.declarationModel;
                     if (is Functional d) {
-                        value pref = completionManager.getDocumentSubstring(document, that.startIndex.intValue(), 
+                        value pref = document.getText(that.startIndex.intValue(), 
                             that.endIndex.intValue() - that.startIndex.intValue());
                         for (dec in overloads(d)) {
                             completionManager.addInvocationProposals(offset, pref, cpc, result, null,

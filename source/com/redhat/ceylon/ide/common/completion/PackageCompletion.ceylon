@@ -38,17 +38,18 @@ import java.lang {
     JInteger=Integer
 }
 import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
+    CommonDocument,
+    LinkedMode,
+    platformServices
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared interface PackageCompletion<IdeComponent,CompletionResult,Document> 
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface PackageCompletion<CompletionResult> {
     
     // see PackageCompletions.addPackageCompletions()
-    shared void addPackageCompletions(IdeComponent lar, Integer offset, String prefix,
+    shared void addPackageCompletions(LocalAnalysisResult lar, Integer offset, String prefix,
         Tree.ImportPath? path, Node node, MutableList<CompletionResult> result, Boolean withBody,
         BaseProgressMonitor monitor) {
         
@@ -58,7 +59,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-            IdeComponent controller, MutableList<CompletionResult> result, BaseProgressMonitor monitor) {
+            LocalAnalysisResult controller, MutableList<CompletionResult> result, BaseProgressMonitor monitor) {
         try (progress = monitor.Progress(1, null)) {
             if (exists unit) { //a null unit can occur if we have not finished parsing the file
                 variable Boolean found = false;
@@ -123,7 +124,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
                 (m) => m.nameAsString == version.\imodule
             ) exists;
 
-    shared void addPackageDescriptorCompletion(IdeComponent cpc, Integer offset, String prefix, 
+    shared void addPackageDescriptorCompletion(LocalAnalysisResult cpc, Integer offset, String prefix, 
             MutableList<CompletionResult> result) {
         if (!"package".startsWith(prefix)) {
             return;
@@ -135,7 +136,7 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
         }
     }
 
-    shared void addCurrentPackageNameCompletion(IdeComponent cpc, Integer offset, String prefix,
+    shared void addCurrentPackageNameCompletion(LocalAnalysisResult cpc, Integer offset, String prefix,
             MutableList<CompletionResult> result) {
         value moduleName = getPackageName(cpc.lastCompilationUnit);
         if (exists moduleName) {
@@ -145,26 +146,25 @@ shared interface PackageCompletion<IdeComponent,CompletionResult,Document>
     
     shared formal CompletionResult newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text);
 
-    shared formal CompletionResult newCurrentPackageProposal(Integer offset, String prefix, String packageName, IdeComponent cmp);
+    shared formal CompletionResult newCurrentPackageProposal(Integer offset, String prefix, String packageName, LocalAnalysisResult cmp);
 
     shared formal CompletionResult newImportedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
-        String fullPackageName, IdeComponent controller,
+        String fullPackageName, LocalAnalysisResult controller,
         Package candidate);
     
     shared formal CompletionResult newQueriedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
-        String fullPackageName, IdeComponent controller,
+        String fullPackageName, LocalAnalysisResult controller,
         ModuleVersionDetails version, Unit unit, ModuleSearchResult.ModuleDetails md);
 
 }
 
-shared abstract class PackageCompletionProposal<CompletionResult,Document,LinkedMode>
+shared abstract class PackageCompletionProposal
         (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName)
         extends AbstractCompletionProposal
         (offset, prefix, fullPackageName + (withBody then " { ... }" else ""),
-        memberPackageSubname + (withBody then " { ... }" else ""))
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>{
+        memberPackageSubname + (withBody then " { ... }" else "")) {
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         if (withBody) {
@@ -175,12 +175,10 @@ shared abstract class PackageCompletionProposal<CompletionResult,Document,Linked
     }
 }
 
-shared abstract class ImportedModulePackageProposal<CompletionResult,Document,LinkedMode,IdeComponent>
-        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, IdeComponent cpc)
-        extends PackageCompletionProposal<CompletionResult,Document,LinkedMode>
-        (offset, prefix, memberPackageSubname, withBody, fullPackageName)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared abstract class ImportedModulePackageProposal<CompletionResult>
+        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, LocalAnalysisResult cpc)
+        extends PackageCompletionProposal
+        (offset, prefix, memberPackageSubname, withBody, fullPackageName) {
     
     shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, DefaultRegion selection, LinkedMode lm);
     
@@ -188,7 +186,7 @@ shared abstract class ImportedModulePackageProposal<CompletionResult,Document,Li
         super.applyInternal(document);
         
         if (withBody, cpc.options.linkedModeArguments) {
-            value linkedMode = newLinkedMode();
+            value linkedMode = platformServices.createLinkedMode(document);
             value selection = getSelectionInternal(document);
             value proposals = ArrayList<CompletionResult>();
             
@@ -199,10 +197,10 @@ shared abstract class ImportedModulePackageProposal<CompletionResult,Document,Li
             }
             
             if (!proposals.empty) {
-                addEditableRegion(linkedMode, cpc.document, selection.start,
+                linkedMode.addEditableRegion(selection.start,
                     selection.length, 0, proposals.sequence());
                 
-                installLinkedMode(cpc.document, linkedMode, this, -1, 0);
+                linkedMode.install(this, -1, 0);
             }
         }
     }

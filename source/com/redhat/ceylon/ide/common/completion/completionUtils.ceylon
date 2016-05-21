@@ -46,6 +46,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
 
 shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
     if (exists loc1) {
@@ -177,7 +180,7 @@ String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
     return fullPath.string;
 }
 
-Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken token) {
+Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
     assert(exists tokens = cpc.tokens);
     while (i < tokens.size()) {
@@ -190,14 +193,14 @@ Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken t
     return -1;
 }
 
-String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Document>? cpc) 
+String getDefaultValueDescription(Parameter p, LocalAnalysisResult? cpc) 
         => if (p.defaulted) 
             then if (is Functional m = p.model) 
                 then " => ..." 
                 else getInitialValueDescription(p.model, cpc) 
             else "";
 
-shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysisResult<Document>? cpc) {
+shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? cpc) {
     if (exists cpc) {
         variable Tree.SpecifierOrInitializerExpression? sie = null;
         variable String arrow = "";
@@ -360,10 +363,9 @@ Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
             && !td.boolean;
 }
 
-Integer findCharCount<Document>(Integer count, Document document, 
+Integer findCharCount(Integer count, CommonDocument document, 
     Integer start, Integer end,
-    String increments, String decrements, Boolean considerNesting, 
-    Character getChar(Document doc,Integer offset)) {
+    String increments, String decrements, Boolean considerNesting) {
 
     assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
 
@@ -386,11 +388,11 @@ Integer findCharCount<Document>(Integer count, Document document,
                 return offset - 1;
             }
         }
-        value curr = getChar(document, offset++);
+        value curr = document.getChar(offset++);
         switch (curr)
         case ('/') {
             if (offset < end) {
-                value next = getChar(document, offset);
+                value next = document.getChar(offset);
                 if (next == '*') {
                     // a comment starts, advance to the comment end
                     // TODO offset = getCommentEnd(document, offset + 1, end);
@@ -407,7 +409,7 @@ Integer findCharCount<Document>(Integer count, Document document,
         }
         case ('*') {
             if (offset < end) {
-                value next = getChar(document, offset);
+                value next = document.getChar(offset);
                 if (next == '/') {
                     charCount = 0;
                     ++offset;

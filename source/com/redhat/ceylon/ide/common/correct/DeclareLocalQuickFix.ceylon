@@ -14,13 +14,13 @@ import com.redhat.ceylon.ide.common.util {
 
 shared object declareLocalQuickFix {
     
-    shared void enableLinkedMode<CompletionResult,Document>(QuickFixData data, Tree.Term term, Document doc,
-        TypeCompletion<CompletionResult,Document> completionManager) {
+    shared void enableLinkedMode<CompletionResult>(QuickFixData data, Tree.Term term,
+        TypeCompletion<CompletionResult> completionManager) {
         
         if (exists type = term.typeModel) {
             value lm = platformServices.createLinkedMode(data.document);
             value proposals = completionManager.getTypeProposals {
-                document = doc;
+                document = data.document;
                 offset = data.node.startIndex.intValue();
                 length = 5;
                 infType = type;

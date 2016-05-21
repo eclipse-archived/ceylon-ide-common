@@ -27,12 +27,12 @@ import java.lang {
 import java.util {
     JList=List
 }
-shared interface MemberNameCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+
+shared interface MemberNameCompletion<CompletionResult> {
     
     shared formal CompletionResult newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName);
     
-    shared void addMemberNameProposals(Integer offset, IdeComponent controller, Node node, MutableList<CompletionResult> result) {
+    shared void addMemberNameProposals(Integer offset, LocalAnalysisResult controller, Node node, MutableList<CompletionResult> result) {
         JInteger? startIndex2 = node.startIndex;
 
         if (exists upToDateAndTypechecked = controller.typecheckedRootNode) {
