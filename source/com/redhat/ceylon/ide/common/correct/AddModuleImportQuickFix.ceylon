@@ -77,16 +77,20 @@ shared object addModuleImportQuickFix {
         }
         
         if (data.useLazyFixes) {
-            data.addQuickFix("Find modules containing '``pkg``'", () {
-                findCandidateModules(unit, data, pkg, typeChecker);
-            });
+            data.addQuickFix {
+                description = "Find modules containing '``pkg``'";
+                void change() {
+                    findCandidateModules(unit, data, pkg, typeChecker, true);
+                }
+                kind = addModuleImport;
+            };
         } else {
-            findCandidateModules(unit, data, pkg, typeChecker);
+            findCandidateModules(unit, data, pkg, typeChecker, false);
         }
     }
 
     void findCandidateModules(Unit unit, QuickFixData data, String pkg,
-        TypeChecker typeChecker) {
+        TypeChecker typeChecker, Boolean async) {
         
         value mod = unit.\ipackage.\imodule;
         value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
@@ -118,6 +122,7 @@ shared object addModuleImportQuickFix {
                 change = callback;
                 image = Icons.imports;
                 qualifiedNameIsPath = true;
+                kind = async then asyncModuleImport else addModuleImport;
             };
         }
     }

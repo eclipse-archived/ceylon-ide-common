@@ -74,8 +74,10 @@ shared interface QuickFixData {
 
 abstract shared class QuickFixKind()
         of generic | addConstructor | addParameterList | addRefineEqualsHash
-         | addRefineFormal {
+         | addRefineFormal | addModuleImport | asyncModuleImport {
 }
+shared object addModuleImport extends QuickFixKind() {}
+shared object asyncModuleImport extends QuickFixKind() {}
 shared object addRefineFormal extends QuickFixKind() {}
 shared object addRefineEqualsHash extends QuickFixKind() {}
 shared object addParameterList extends QuickFixKind() {}
