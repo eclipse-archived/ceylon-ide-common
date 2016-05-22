@@ -24,10 +24,6 @@ shared object convertToClassQuickFix {
             data.addConvertToClassProposal(desc, declaration);
         }
     }
-}
-
-// TODO this thing shouldn't be an interface!
-shared interface AbstractConvertToClassProposal {
 
     shared void applyChanges(CommonDocument doc, Tree.ObjectDefinition node, LinkedMode? mode = null) {
         value declaration = node.declarationModel;
