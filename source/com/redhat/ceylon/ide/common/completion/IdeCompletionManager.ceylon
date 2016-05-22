@@ -8,7 +8,7 @@ import ceylon.interop.java {
 }
 
 import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
+    Lexer=CeylonLexer
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
@@ -20,7 +20,7 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    OccurrenceLocation,
+    OL=OccurrenceLocation,
     types,
     escaping,
     BaseProgressMonitor,
@@ -551,7 +551,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                 node = node;
                 result = result;
                 withBody = nextTokenType(cpc, token) 
-                        != CeylonLexer.\iLBRACE;
+                        != Lexer.lbrace;
                 monitor = monitor;
             };
         }
@@ -565,7 +565,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                 node = node;
                 result = result;
                 withBody = nextTokenType(cpc, token) 
-                        != CeylonLexer.\iSTRING_LITERAL;
+                        != Lexer.stringLiteral;
                 monitor = monitor;
             };
         }
@@ -609,7 +609,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             };
         }
         else if (node is Tree.TypeArgumentList, 
-            token.type == CeylonLexer.\iLARGER_OP) {
+            token.type == Lexer.largerOp) {
             if (offset == token.stopIndex+1) {
                 addTypeArgumentListProposal {
                     offset = offset;
@@ -655,12 +655,12 @@ shared abstract class IdeCompletionManager<CompletionResult>()
     Boolean atStartOfPositionalArgument(Node node, CommonToken token) {
         if (is Tree.PositionalArgumentList node) {
             value type = token.type;
-            return type == CeylonLexer.\iLPAREN
-                || type == CeylonLexer.\iCOMMA;
+            return type == Lexer.lparen
+                || type == Lexer.comma;
         } else if (is Tree.NamedArgumentList node) {
             value type = token.type;
-            return type == CeylonLexer.\iLBRACE
-                || type == CeylonLexer.\iSEMICOLON;
+            return type == Lexer.lbrace
+                || type == Lexer.semicolon;
         } else {
             return false;
         }
@@ -689,16 +689,16 @@ shared abstract class IdeCompletionManager<CompletionResult>()
     // see CeylonCompletionProcessor.isAnnotationStringLiteral()
     Boolean isAnnotationStringLiteral(CommonToken token) {
         Integer type = token.type;
-        return type == CeylonLexer.\iASTRING_LITERAL
-            || type == CeylonLexer.\iAVERBATIM_STRING;
+        return type == Lexer.astringLiteral
+            || type == Lexer.averbatimString;
     }
 
     // see CeylonCompletionProcessor.isMemberOperator()
     Boolean isMemberOperator(Token token) {
         Integer type = token.type;
-        return type == CeylonLexer.\iMEMBER_OP 
-            || type == CeylonLexer.\iSPREAD_OP 
-            || type == CeylonLexer.\iSAFE_MEMBER_OP;
+        return type == Lexer.memberOp 
+            || type == Lexer.spreadOp 
+            || type == Lexer.safeMemberOp;
     }
     
     // see CeylonCompletionProcessor.getRealText()
@@ -708,10 +708,10 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         Integer len = token.stopIndex - token.startIndex + 1;
         if (text.size < len) {
             String quote;
-            if (type == CeylonLexer.\iLIDENTIFIER) {
+            if (type == Lexer.lidentifier) {
                 quote = "\\i";
             }
-            else if (type == CeylonLexer.\iUIDENTIFIER) {
+            else if (type == Lexer.uidentifier) {
                 quote = "\\I";
             }
             else {
@@ -737,8 +737,8 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
             node = nodes.findNode(sl, null, offset, offset);
         }
-        if (tokenType == CeylonLexer.\iRBRACE && !node is Tree.IterableType
-         || tokenType == CeylonLexer.\iSEMICOLON) {
+        if (tokenType == Lexer.rbrace && !node is Tree.IterableType
+         || tokenType == Lexer.semicolon) {
             //We are to the right of a } or ;
             //so the returned node is the previous
             //statement/declaration. Look for the
@@ -783,31 +783,31 @@ shared abstract class IdeCompletionManager<CompletionResult>()
     // see CeylonCompletionProcessor.isIdentifierOrKeyword()
     Boolean isIdentifierOrKeyword(Token token) {
         value type = token.type;
-        return type == CeylonLexer.\iLIDENTIFIER
-                || type == CeylonLexer.\iUIDENTIFIER 
-                || type == CeylonLexer.\iAIDENTIFIER 
-                || type == CeylonLexer.\iPIDENTIFIER 
+        return type == Lexer.lidentifier
+                || type == Lexer.uidentifier 
+                || type == Lexer.aidentifier 
+                || type == Lexer.pidentifier 
                 || escaping.isKeyword(token.text);
     }
 
     // see CeylonCompletionProcessor.isCommentOrCodeStringLiteral()
     Boolean isCommentOrCodeStringLiteral(CommonToken adjustedToken) {
         Integer tt = adjustedToken.type;
-        return tt == CeylonLexer.\iMULTI_COMMENT
-                || tt == CeylonLexer.\iLINE_COMMENT 
-                || tt == CeylonLexer.\iSTRING_LITERAL 
-                || tt == CeylonLexer.\iSTRING_END 
-                || tt == CeylonLexer.\iSTRING_MID 
-                || tt == CeylonLexer.\iSTRING_START 
-                || tt == CeylonLexer.\iVERBATIM_STRING 
-                || tt == CeylonLexer.\iCHAR_LITERAL 
-                || tt == CeylonLexer.\iFLOAT_LITERAL 
-                || tt == CeylonLexer.\iNATURAL_LITERAL;
+        return tt == Lexer.multiComment
+                || tt == Lexer.lineComment 
+                || tt == Lexer.stringLiteral 
+                || tt == Lexer.stringEnd
+                || tt == Lexer.stringMid
+                || tt == Lexer.stringStart
+                || tt == Lexer.verbatimString
+                || tt == Lexer.charLiteral 
+                || tt == Lexer.floatLiteral
+                || tt == Lexer.naturalLiteral;
     }
     
     // see CeylonCompletionProcessor.isLineComment()
     Boolean isLineComment(variable CommonToken adjustedToken) {
-        return adjustedToken.type == CeylonLexer.\iLINE_COMMENT;
+        return adjustedToken.type == Lexer.lineComment;
     }
 
 
@@ -936,7 +936,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             }
         }
         else if (prefix.empty, 
-            !isLocation(ol, OccurrenceLocation.\iIS),
+            !isLocation(ol, OL.\iis),
             isMemberNameProposable(offset, node, memberOp),
             is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
             
@@ -1013,7 +1013,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                 }
 
                 if (isPackageOrModuleDescriptor, !inDoc, 
-                    !isLocation(ol, OccurrenceLocation.\iMETA),
+                    !isLocation(ol, OL.meta),
                     !(ol?.reference else false),
                     !dec.annotation || !dec is Function) {
                     continue;
@@ -1051,7 +1051,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                             || ModelUtil.isConstructor(dec) 
                             || dec.staticallyImportable,
                     if (is Constructor scope)
-                        then !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                        then !isLocation(ol, OL.\iextends) 
                             || isDelegatableConstructor(scope, dec)
                         else true) {
                     for (d in overloads(dec)) {
@@ -1085,13 +1085,13 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                         || noParamsFollow 
                         || dec is Functional),
                     (!scope is Constructor 
-                        || !isLocation(ol, OccurrenceLocation.\iEXTENDS) 
+                        || !isLocation(ol, OL.\iextends) 
                         || isDelegatableConstructor(scope, dec))) {
 
-                    if (isLocation(ol, OccurrenceLocation.\iDOCLINK)) {
+                    if (isLocation(ol, OL.doclink)) {
                         addDocLinkProposal(offset, prefix, cmp, result, dec, scope);
                     }
-                    else if (isLocation(ol, OccurrenceLocation.\iIMPORT)) {
+                    else if (isLocation(ol, OL.\iimport)) {
                         addImportProposal(offset, prefix, cmp, result, dec, scope);
                     }
                     else if (ol?.reference else false) {
@@ -1155,9 +1155,9 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                         requiredType = requiredType;
                         previousTokenType = previousTokenType;
                     }, 
-                    !isLocation(ol, OccurrenceLocation.\iIMPORT),
-                    !isLocation(ol, OccurrenceLocation.\iCASE),
-                    !isLocation(ol, OccurrenceLocation.\iCATCH),
+                    !isLocation(ol, OL.\iimport),
+                    !isLocation(ol, OL.\icase),
+                    !isLocation(ol, OL.\icatch),
                     isDirectlyInsideBlock(node, cmp, scope, token)) {
                     
                     addForProposal(offset, prefix, cmp, result, dwp, dec);
@@ -1224,7 +1224,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                     result, dwp, bme.declaration, bme, expr);
             }
         }
-        if (previousTokenType==CeylonLexer.\iOBJECT_DEFINITION) {
+        if (previousTokenType==Lexer.objectDefinition) {
             addKeywordProposals(cu, offset, prefix, 
                 result, node, ol, false, tokenType);
         }
@@ -1336,7 +1336,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         LocalAnalysisResult cpc, Scope scope,
         Node node, CommonDocument doc, Boolean filter,
         MutableList<CompletionResult> result,
-        OccurrenceLocation? ol, Type t,
+        OL? ol, Type t,
         Boolean preamble) {
 
         value addParameterTypesInCompletions 
@@ -1372,7 +1372,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         }
     }
 
-    Boolean isRefinementProposable(Declaration dec, OccurrenceLocation? ol, Scope scope) {
+    Boolean isRefinementProposable(Declaration dec, OL? ol, Scope scope) {
         return (ol is Null || isAnonymousClass(scope)) &&
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
@@ -1401,9 +1401,9 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             return false;
         } else {
             value tokenType = token.type;
-            if (tokenType==CeylonLexer.\iLBRACE ||
-                tokenType==CeylonLexer.\iRBRACE ||
-                tokenType==CeylonLexer.\iSEMICOLON) {
+            if (tokenType==Lexer.lbrace ||
+                tokenType==Lexer.rbrace ||
+                tokenType==Lexer.semicolon) {
                 return true;
             }
 
@@ -1414,9 +1414,9 @@ shared abstract class IdeCompletionManager<CompletionResult>()
                         tokens = tokens;
                     }.type;
 
-            return previousTokenType==CeylonLexer.\iLBRACE ||
-                   previousTokenType==CeylonLexer.\iRBRACE ||
-                   previousTokenType==CeylonLexer.\iSEMICOLON;
+            return previousTokenType==Lexer.lbrace ||
+                   previousTokenType==Lexer.rbrace ||
+                   previousTokenType==Lexer.semicolon;
         }
     }
 
@@ -1425,14 +1425,14 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             JList<CommonToken> tokens) {
         variable CommonToken adjustedToken = tokens.get(tokenIndex);
         while (--tokenIndex >= 0,
-               adjustedToken.type==CeylonLexer.\iWS //ignore whitespace
-            || adjustedToken.type==CeylonLexer.\iEOF
+               adjustedToken.type==Lexer.ws //ignore whitespace
+            || adjustedToken.type==Lexer.eof
             || adjustedToken.startIndex==offset) { //don't consider the token to the right of the caret
 
             adjustedToken = tokens.get(tokenIndex);
-            if (adjustedToken.type!=CeylonLexer.\iWS
-             && adjustedToken.type!=CeylonLexer.\iEOF 
-             && adjustedToken.channel!=Token.\iHIDDEN_CHANNEL) { //don't adjust to a ws token
+            if (adjustedToken.type!=Lexer.ws
+             && adjustedToken.type!=Lexer.eof 
+             && adjustedToken.channel!=Token.hiddenChannel) { //don't adjust to a ws token
                 break;
             }
         }
@@ -1465,32 +1465,32 @@ shared abstract class IdeCompletionManager<CompletionResult>()
     Boolean noParametersFollow(CommonToken? nextToken) {
         //should we disable this, since a statement
         //can in fact begin with an LPAREN??
-        return (nextToken?.type else CeylonLexer.\iEOF) 
-                != CeylonLexer.\iLPAREN;
+        return (nextToken?.type else Lexer.eof) 
+                != Lexer.lparen;
         //disabled now because a declaration can
         //begin with an LBRACE (an Iterable type)
         /*&& nextToken.getType()!=CeylonLexer.LBRACE*/
     }
 
-    Boolean isInvocationProposable(DeclarationWithProximity dwp, OccurrenceLocation? ol, Integer previousTokenType) {
-        if (is Functional dec = dwp.declaration, previousTokenType != CeylonLexer.\iIS_OP) {
+    Boolean isInvocationProposable(DeclarationWithProximity dwp, OL? ol, Integer previousTokenType) {
+        if (is Functional dec = dwp.declaration, previousTokenType != Lexer.isOp) {
             variable Boolean isProposable = true;
 
-            isProposable &&= previousTokenType != CeylonLexer.\iCASE_TYPES || isLocation(ol, OccurrenceLocation.\iOF);
+            isProposable &&= previousTokenType != Lexer.caseTypes || isLocation(ol, OL.\iof);
 
             variable Boolean isCorrectLocation = ol is Null;
-            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXPRESSION) && (if (is Class dec) then !dec.abstract else true);
+            isCorrectLocation ||= isLocation(ol, OL.expression) && (if (is Class dec) then !dec.abstract else true);
 
-            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXTENDS)
+            isCorrectLocation ||= isLocation(ol, OL.\iextends)
                     && (if (is Class dec) then (!dec.final && dec.typeParameters.empty) else false);
 
-            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iEXTENDS)
+            isCorrectLocation ||= isLocation(ol, OL.\iextends)
                     && ModelUtil.isConstructor(dec)
                     && (if (is Class c = dec.container) then (!c.final && c.typeParameters.empty) else false);
 
-            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) && (dec is Class);
+            isCorrectLocation ||= isLocation(ol, OL.classAlias) && (dec is Class);
 
-            isCorrectLocation ||= isLocation(ol, OccurrenceLocation.\iPARAMETER_LIST)
+            isCorrectLocation ||= isLocation(ol, OL.parameterList)
                     && (if (is Function dec) then dec.annotation else false);
 
             isProposable &&= isCorrectLocation;
@@ -1505,40 +1505,40 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         return false;
     }
 
-    Boolean isProposable(DeclarationWithProximity dwp, OccurrenceLocation? ol, Scope scope, Unit unit, Type? requiredType, Integer previousTokenType) {
+    Boolean isProposable(DeclarationWithProximity dwp, OL? ol, Scope scope, Unit unit, Type? requiredType, Integer previousTokenType) {
         value dec = dwp.declaration;
-        variable Boolean isProp = !isLocation(ol, OccurrenceLocation.\iEXTENDS);
+        variable Boolean isProp = !isLocation(ol, OL.\iextends);
         isProp ||= if (is Class dec) then !dec.final else false;
         isProp ||= ModelUtil.isConstructor(dec) && (if (is Class c = dec.container) then !c.final else false);
 
-        variable Boolean isCorrectLocation = !isLocation(ol, OccurrenceLocation.\iCLASS_ALIAS) || dec is Class;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iSATISFIES) || dec is Interface;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iOF) || dec is Class || isAnonymousClassValue(dec);
-        isCorrectLocation &&= (!isLocation(ol, OccurrenceLocation.\iTYPE_ARGUMENT_LIST)
-                                && !isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
-                                && !isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS)
-                                && !isLocation(ol, OccurrenceLocation.\iCATCH)
+        variable Boolean isCorrectLocation = !isLocation(ol, OL.classAlias) || dec is Class;
+        isCorrectLocation &&= !isLocation(ol, OL.\isatisfies) || dec is Interface;
+        isCorrectLocation &&= !isLocation(ol, OL.\iof) || dec is Class || isAnonymousClassValue(dec);
+        isCorrectLocation &&= (!isLocation(ol, OL.typeArgumentList)
+                                && !isLocation(ol, OL.upperBound)
+                                && !isLocation(ol, OL.typeAlias)
+                                && !isLocation(ol, OL.\icatch)
                               ) || dec is TypeDeclaration;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCATCH) || isExceptionType(unit, dec);
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iPARAMETER_LIST)
+        isCorrectLocation &&= !isLocation(ol, OL.\icatch) || isExceptionType(unit, dec);
+        isCorrectLocation &&= !isLocation(ol, OL.parameterList)
                                 || dec is TypeDeclaration
                                 || dec is Function && dec.annotation //i.e. an annotation
                                 || dec is Value && dec.container == scope; //a parameter ref
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iIMPORT) || !dwp.unimported;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iCASE) || isCaseOfSwitch(requiredType, dec);//, previousTokenType);
-        isCorrectLocation &&= previousTokenType != CeylonLexer.\iIS_OP
-                           && (previousTokenType != CeylonLexer.\iCASE_TYPES || isLocation(ol, OccurrenceLocation.\iOF))
+        isCorrectLocation &&= !isLocation(ol, OL.\iimport) || !dwp.unimported;
+        isCorrectLocation &&= !isLocation(ol, OL.\icase) || isCaseOfSwitch(requiredType, dec);//, previousTokenType);
+        isCorrectLocation &&= previousTokenType != Lexer.isOp
+                           && (previousTokenType != Lexer.caseTypes || isLocation(ol, OL.\iof))
                            || dec is TypeDeclaration;
-        isCorrectLocation &&= !isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_LIST);
+        isCorrectLocation &&= !isLocation(ol, OL.typeParameterList);
         isCorrectLocation &&= !dwp.namedArgumentList exists;
 
         isProp &&= isCorrectLocation;
         return isProp;
     }
 
-    Boolean isProposableBis(Node node, OccurrenceLocation? ol, Declaration dec) {
-        if (!isLocation(ol, OccurrenceLocation.\iEXISTS), !isLocation(ol, OccurrenceLocation.\iNONEMPTY),
-            !isLocation(ol, OccurrenceLocation.\iIS)) {
+    Boolean isProposableBis(Node node, OL? ol, Declaration dec) {
+        if (!isLocation(ol, OL.\iexists), !isLocation(ol, OL.\inonempty),
+            !isLocation(ol, OL.\iis)) {
             return true;
         } else if (is Value val = dec) {
             Type type = val.type;
@@ -1547,13 +1547,13 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             } else {
                 variable Unit unit = node.unit;
                 switch (ol)
-                case (OccurrenceLocation.\iEXISTS) {
+                case (OL.\iexists) {
                     return unit.isOptionalType(type);
                 }
-                case (OccurrenceLocation.\iNONEMPTY) {
+                case (OL.\inonempty) {
                     return unit.isPossiblyEmptyType(type);
                 }
-                case (OccurrenceLocation.\iIS) {
+                case (OL.\iis) {
                     return true;
                 }
                 else {
@@ -1670,25 +1670,25 @@ shared abstract class IdeCompletionManager<CompletionResult>()
         return false;
     }
 
-    Boolean definitelyRequiresType(OccurrenceLocation? ol) {
-        return isLocation(ol, OccurrenceLocation.\iSATISFIES)
-            || isLocation(ol, OccurrenceLocation.\iOF)
-            || isLocation(ol, OccurrenceLocation.\iUPPER_BOUND)
-            || isLocation(ol, OccurrenceLocation.\iTYPE_ALIAS);
+    Boolean definitelyRequiresType(OL? ol) {
+        return isLocation(ol, OL.\isatisfies)
+            || isLocation(ol, OL.\iof)
+            || isLocation(ol, OL.upperBound)
+            || isLocation(ol, OL.typeAlias);
     }
 
-    Boolean isReferenceProposable(OccurrenceLocation? ol, Declaration dec) {
-        return (isLocation(ol, OccurrenceLocation.\iVALUE_REF)
+    Boolean isReferenceProposable(OL? ol, Declaration dec) {
+        return (isLocation(ol, OL.valueRef)
                 || (if (is Value dec) then dec.typeDeclaration.anonymous else true))
-             && (isLocation(ol, OccurrenceLocation.\iFUNCTION_REF) 
+             && (isLocation(ol, OL.functionRef) 
                    || !dec is Function)
-             && (isLocation(ol, OccurrenceLocation.\iALIAS_REF) 
+             && (isLocation(ol, OL.aliasRef) 
                    || !dec is TypeAlias)
-             && (isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) 
+             && (isLocation(ol, OL.typeParameterRef) 
                    || !dec is TypeParameter)
                 //note: classes and interfaces are almost always proposable
                 //      because they are legal qualifiers for other refs
-             && (!isLocation(ol, OccurrenceLocation.\iTYPE_PARAMETER_REF) 
+             && (!isLocation(ol, OL.typeParameterRef) 
                    || dec is TypeParameter);
     }
 
@@ -1708,7 +1708,7 @@ shared abstract class IdeCompletionManager<CompletionResult>()
             
             isHiddenChannel 
                     = (nextToken?.channel else -1) 
-                        == Token.\iHIDDEN_CHANNEL;
+                        == Token.hiddenChannel;
         }
 
         return nextToken;
