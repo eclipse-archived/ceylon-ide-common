@@ -1,33 +1,23 @@
-import ceylon.collection {
-    MutableList
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Node
+    Tree
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 import com.redhat.ceylon.ide.common.util {
     escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
-    Functional,
-    Unit
+    Functional
 }
 
-import java.util {
-    List
-}
-shared interface ParametersCompletion<CompletionResult> {
-
-    shared formal CompletionResult newParametersCompletionProposal(Integer offset,
-        String prefix, String desc, String text, List<Type> argTypes, Node node, Unit unit);
+shared interface ParametersCompletion {
     
     // see ParametersCompletionProposal.addParametersProposal(final int offset, Node node, final List<ICompletionProposal> result, CeylonParseController cpc)
-    shared void addParametersProposal(Integer offset, String prefix, Tree.Term node, MutableList<CompletionResult> result, LocalAnalysisResult cmp) {
+    shared void addParametersProposal(Integer offset, String prefix, 
+        Tree.Term node, CompletionContext ctx) {
+        
         value condition = if (is Tree.StaticMemberOrTypeExpression node)
                           then !(node.declaration is Functional)
                           else true;
@@ -40,7 +30,7 @@ shared interface ParametersCompletion<CompletionResult> {
             
             if (type.classOrInterface, td.equals(cd)) {
                 value argTypes = unit.getCallableArgumentTypes(type);
-                value paramTypes = cmp.options.parameterTypesInCompletion;
+                value paramTypes = ctx.options.parameterTypesInCompletion;
                 value desc = StringBuilder().append("(");
                 value text = StringBuilder().append("(");
                 
@@ -86,8 +76,16 @@ shared interface ParametersCompletion<CompletionResult> {
                 text.append(")");
                 desc.append(")");
 
-                result.add(newParametersCompletionProposal(offset, prefix,
-                    desc.string, text.string, argTypes, node, unit));
+                platformServices.completion.newParametersCompletionProposal {
+                    ctx = ctx;
+                    offset = offset;
+                    prefix = prefix;
+                    desc = desc.string;
+                    text = text.string;
+                    argTypes = argTypes;
+                    node = node;
+                    unit = unit;
+                };
             }
         }
     }

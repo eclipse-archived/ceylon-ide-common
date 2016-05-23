@@ -48,7 +48,6 @@ shared class DefaultTextChange(shared actual DefaultDocument document) satisfies
     value edits = ArrayList<TextEdit>();
     
     shared void addChange(TextEdit change) {
-        print("add change");
         edits.add(change);
     }
     

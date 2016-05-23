@@ -1,6 +1,3 @@
-import ceylon.collection {
-    MutableList
-}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -9,19 +6,16 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor
 }
+
 import org.antlr.runtime {
     CommonToken
 }
 
-class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer offset, Node node,
-    LocalAnalysisResult cpc, MutableList<CompletionResult> result, BaseProgressMonitor monitor,
-    IdeCompletionManager<CompletionResult> completionManager)
+class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
+    CompletionContext ctx, BaseProgressMonitor monitor)
         extends Visitor() {
     
     shared actual void visit(Tree.ModuleDescriptor that) {
@@ -29,7 +23,7 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
-            completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
+            completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
     shared actual void visit(Tree.PackageDescriptor that) {
@@ -37,7 +31,7 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
-            completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
+            completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
     shared actual void visit(Tree.Import that) {
@@ -45,8 +39,8 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result,
-                nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);
+            completionManager.addPackageCompletions(ctx, offset, prefix, node, node,
+                nextTokenType(ctx, token) != CeylonLexer.\iLBRACE, monitor);
         }
     }
     shared actual void visit(Tree.PackageLiteral that) {
@@ -54,7 +48,7 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result, false, monitor);
+            completionManager.addPackageCompletions(ctx, offset, prefix, node, node, false, monitor);
         }
     }
     shared actual void visit(Tree.ImportModule that) {
@@ -62,8 +56,8 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            value withBody = nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL;
-            completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, withBody, monitor);
+            value withBody = nextTokenType(ctx, token) != CeylonLexer.\iSTRING_LITERAL;
+            completionManager.addModuleCompletions(ctx, offset, prefix, node, node, withBody, monitor);
         }
     }
     shared actual void visit(Tree.ModuleLiteral that) {
@@ -71,7 +65,7 @@ class ImportVisitor<CompletionResult>(String prefix, CommonToken token, Integer 
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, false, monitor);
+            completionManager.addModuleCompletions(ctx, offset, prefix, node, node, false, monitor);
         }
     }
 }

@@ -5,7 +5,15 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.completion {
     overloads,
     getRefinementTextFor,
-    getRefinedProducedReference
+    completionManager
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    platformServices,
+    InsertEdit
 }
 import com.redhat.ceylon.ide.common.util {
     FindBodyContainerVisitor
@@ -18,14 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     HashSet
-}
-import com.redhat.ceylon.ide.common.platform {
-    TextChange,
-    platformServices,
-    InsertEdit
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared object refineFormalMembersQuickFix {
@@ -181,7 +181,7 @@ shared object refineFormalMembersQuickFix {
     void appendRefinementText(QuickFixData data, Boolean isInterface, String indent,
         StringBuilder result, ClassOrInterface ci, Unit unit, Declaration member) {
         
-        value pr = getRefinedProducedReference(ci, member);
+        value pr = completionManager.getRefinedProducedReference(ci, member);
         value rtext = getRefinementTextFor(member, pr, unit, isInterface,
             ci, indent, true, true, true);
         

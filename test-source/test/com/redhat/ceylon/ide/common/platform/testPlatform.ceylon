@@ -13,11 +13,7 @@ import com.redhat.ceylon.ide.common.platform {
     NoopLinkedMode
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Unit,
-    Type
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+    Unit
 }
 
 shared object testPlatform satisfies PlatformServices {
@@ -40,8 +36,5 @@ shared object testPlatform satisfies PlatformServices {
     createLinkedMode(CommonDocument document)
             => NoopLinkedMode(document);
     
-    shared actual Anything getTypeProposals(CommonDocument document,
-        Integer offset, Integer length, Type infType,
-        Tree.CompilationUnit rootNode, String? kind) => null;
-    
+    completion => nothing;
 }

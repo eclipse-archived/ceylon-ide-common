@@ -1,5 +1,4 @@
 import ceylon.collection {
-    MutableList,
     HashSet,
     MutableSet
 }
@@ -9,8 +8,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -28,30 +27,44 @@ import java.util {
     JList=List
 }
 
-shared interface MemberNameCompletion<CompletionResult> {
-    
-    shared formal CompletionResult newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName);
-    
-    shared void addMemberNameProposals(Integer offset, LocalAnalysisResult controller, Node node, MutableList<CompletionResult> result) {
+shared interface MemberNameCompletion {
+        
+    shared void addMemberNameProposals(Integer offset, CompletionContext ctx, Node node) {
         JInteger? startIndex2 = node.startIndex;
 
-        if (exists upToDateAndTypechecked = controller.typecheckedRootNode) {
+        if (exists upToDateAndTypechecked = ctx.typecheckedRootNode) {
             object extends Visitor() {
     
                 shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                     if (exists tal = that.typeArguments, 
-                        exists startIndex = tal.startIndex, exists startIndex2, 
+                        exists startIndex = tal.startIndex,
+                        exists startIndex2, 
                         startIndex.intValue() == startIndex2.intValue()) {
-                        addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+                        
+                        addMemberNameProposal {
+                            ctx = ctx;
+                            offset = offset;
+                            prefix = "";
+                            previousNode = that;
+                            rootNode = upToDateAndTypechecked;
+                        };
                     }
                     super.visit(that);
                 }
     
                 shared actual void visit(Tree.SimpleType that) {
                     if (exists tal = that.typeArgumentList, 
-                        exists startIndex = tal.startIndex, exists startIndex2, 
+                        exists startIndex = tal.startIndex,
+                        exists startIndex2, 
                         startIndex.intValue() == startIndex2.intValue()) {
-                        addMemberNameProposal(offset, "", that, result, upToDateAndTypechecked);
+                        
+                        addMemberNameProposal {
+                            ctx = ctx;
+                            offset = offset;
+                            prefix = "";
+                            previousNode = that;
+                            rootNode = upToDateAndTypechecked;
+                        };
                     }
                     super.visit(that);
                 }
@@ -59,8 +72,8 @@ shared interface MemberNameCompletion<CompletionResult> {
         }
     }
     
-    shared void addMemberNameProposal(Integer offset, String prefix, Node previousNode,
-        MutableList<CompletionResult> result, Tree.CompilationUnit rootNode) {
+    shared void addMemberNameProposal(CompletionContext ctx, Integer offset,
+        String prefix, Node previousNode, Tree.CompilationUnit rootNode) {
         
         MutableSet<String> proposals = HashSet<String>();
         class FindCompoundTypeVisitor() extends Visitor() {
@@ -113,12 +126,18 @@ shared interface MemberNameCompletion<CompletionResult> {
             String unquotedPrefix = prefix.startsWith("\\i") then prefix[2...] else prefix;
             if (name.startsWith(unquotedPrefix)) {
                 value unquotedName = name.startsWith("\\i") then name[2...] else name;
-                result.add(newMemberNameCompletionProposal(offset, prefix, unquotedName, name));
+                platformServices.completion.newMemberNameCompletionProposal {
+                    ctx = ctx;
+                    offset = offset;
+                    prefix = prefix;
+                    name = unquotedName;
+                    unquotedName = name;
+                };
             }
         }
     }
     
-    shared void addProposalsForType(Node? node, MutableSet<String> proposals) {
+    void addProposalsForType(Node? node, MutableSet<String> proposals) {
         switch (node)
         case (is Tree.SimpleType) {
             addProposals(proposals, node.identifier, node.typeModel);
@@ -196,7 +215,9 @@ shared interface MemberNameCompletion<CompletionResult> {
         else {}
     }
     
-    shared void addCompoundTypeProposal(JList<out Tree.Type> ets, MutableSet<String> proposals, String join) {
+    void addCompoundTypeProposal(JList<out Tree.Type> ets, 
+        MutableSet<String> proposals, String join) {
+        
         value sb = StringBuilder();
         for (t in ets) {
             value set = HashSet<String>();

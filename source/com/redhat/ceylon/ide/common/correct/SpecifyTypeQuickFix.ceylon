@@ -7,8 +7,8 @@ import com.redhat.ceylon.ide.common.doc {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    CommonDocument,
-    ReplaceEdit
+    ReplaceEdit,
+    CommonDocument
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -30,8 +30,8 @@ import java.util {
 
 shared object specifyTypeQuickFix {
     
-    shared DefaultRegion? specifyType(CommonDocument document, Tree.Type typeNode,
-        Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
+    shared DefaultRegion? specifyType(Tree.CompilationUnit rootNode, CommonDocument document, Tree.Type typeNode,
+        Boolean inEditor, Type _infType) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
@@ -72,12 +72,11 @@ shared object specifyTypeQuickFix {
             }
         } else {
             value lm = platformServices.createLinkedMode(document);
-            value proposals = platformServices.getTypeProposals {
-                document = document;
+            value proposals = typeCompletion.getTypeProposals {
+                rootNode = rootNode;
                 offset = offset;
                 length = length;
                 infType = infType;
-                rootNode = rootNode;
                 kind = null;
             };
             lm.addEditableRegion {
@@ -99,7 +98,6 @@ shared object specifyTypeQuickFix {
             => newProposal {
                 desc = "Declare explicit type";
                 type = type;
-                rootNode = data.rootNode;
                 infType = type.typeModel;
                 data = data;
             };
@@ -122,8 +120,7 @@ shared object specifyTypeQuickFix {
         else {
             return;
         }
-        value cu = data.rootNode;
-        value result = inferType(cu, type);
+        value result = inferType(data.rootNode, type);
         value declaredType = type.typeModel;
         
         value it = result.inferredType;
@@ -131,38 +128,37 @@ shared object specifyTypeQuickFix {
         if (!isTypeUnknown(declaredType)) {
             if (type is Tree.VoidModifier) {
                 if (exists it, !isTypeUnknown(it)) {
-                    newProposal("Declare return type", type, cu, it, data);
+                    newProposal("Declare return type", type, it, data);
                 }
             }
             else {
                 if (exists gt, !isTypeUnknown(gt), 
                     isTypeUnknown(it) || !gt.isSubtypeOf(it),
                     !gt.isSubtypeOf(declaredType)) {
-                    newProposal("Widen type to", type, cu, gt, data);
+                    newProposal("Widen type to", type, gt, data);
                 }
                 
                 if (exists it, !isTypeUnknown(it)) {
                     if (!it.isSubtypeOf(declaredType)) {
-                        newProposal("Change type to", type, cu, it, data);
+                        newProposal("Change type to", type, it, data);
                     } else if (!declaredType.isSubtypeOf(it)) {
-                        newProposal("Narrow type to", type, cu, it, data);
+                        newProposal("Narrow type to", type, it, data);
                     }
                 }
                 
                 if (type is Tree.LocalModifier) {
-                    newProposal("Declare explicit type", type, cu,
-                        declaredType, data);
+                    newProposal("Declare explicit type", type, declaredType, data);
                 }
             }
             
         } else {
             if (exists it, !isTypeUnknown(it)) {
-                newProposal("Declare type", type, cu, it, data);
+                newProposal("Declare type", type, it, data);
             }
             
             if (exists gt, !isTypeUnknown(gt), 
                 isTypeUnknown(it) || !gt.isSubtypeOf(it)) {
-                newProposal("Declare type", type, cu, gt, data);                    
+                newProposal("Declare type", type, gt, data);                    
             }
         }
     }
@@ -197,15 +193,14 @@ shared object specifyTypeQuickFix {
         }
     }
     
-    void newProposal(String desc, Tree.Type type, 
-        Tree.CompilationUnit rootNode, Type infType, QuickFixData data) {
+    void newProposal(String desc, Tree.Type type, Type infType, QuickFixData data) {
         
         value callback = void() {
              specifyType {
+                 rootNode = data.rootNode;
                  document = data.document;
                  typeNode = type;
                  inEditor = true;
-                 rootNode = data.rootNode;
                  _infType = infType;
              };
         };

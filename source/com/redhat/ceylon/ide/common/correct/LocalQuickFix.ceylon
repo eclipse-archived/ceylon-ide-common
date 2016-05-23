@@ -2,6 +2,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    LinkedMode
+}
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
@@ -9,11 +13,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Declaration,
     Unit
-}
-import com.redhat.ceylon.ide.common.platform {
-    TextChange,
-    LinkedMode,
-    CommonDocument
 }
 
 shared interface LocalQuickFix<in Data>

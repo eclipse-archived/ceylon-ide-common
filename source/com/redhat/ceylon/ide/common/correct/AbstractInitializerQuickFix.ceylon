@@ -1,15 +1,11 @@
-import ceylon.collection {
-    ArrayList,
-    MutableList
-}
-
 import com.redhat.ceylon.ide.common.completion {
     getAssignableLiterals,
     getSortedProposedValues,
     isIgnoredLanguageModuleValue,
     isIgnoredLanguageModuleMethod,
     isInBounds,
-    isIgnoredLanguageModuleClass
+    isIgnoredLanguageModuleClass,
+    ProposalsHolder
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -33,7 +29,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
-shared interface AbstractInitializerQuickFix<CompletionResult> {
+shared interface AbstractInitializerQuickFix {
     
     shared void addInitializer(CommonDocument doc,
         DefaultRegion selection, Type? type, Unit unit, Scope scope,
@@ -51,16 +47,16 @@ shared interface AbstractInitializerQuickFix<CompletionResult> {
         
     }
     
-    shared formal CompletionResult newNestedLiteralCompletionProposal(
+    shared formal void newNestedLiteralCompletionProposal(ProposalsHolder proposals,
         String val, Integer offset);
 
-    shared formal CompletionResult newNestedCompletionProposal(
+    shared formal void newNestedCompletionProposal(ProposalsHolder proposals,
         Declaration dec, Integer offset);
     
-    CompletionResult[] getProposals(CommonDocument document, 
+    ProposalsHolder getProposals(CommonDocument document, 
         Integer loc, Type? type, Unit unit, Scope scope) {
         
-        value proposals = ArrayList<CompletionResult>();
+        value proposals = platformServices.completion.createProposalsHolder();
         
 //            //this is totally lame
 //            //TODO: see InvocationCompletionProcessor
@@ -69,18 +65,18 @@ shared interface AbstractInitializerQuickFix<CompletionResult> {
 
         addValueArgumentProposals(loc, type, unit, scope, proposals);
         
-        return proposals.sequence();
+        return proposals;
     }
 
     void addValueArgumentProposals(Integer loc, Type? type,
-        Unit unit, Scope scope, MutableList<CompletionResult> props) {
+        Unit unit, Scope scope, ProposalsHolder props) {
         
         if (!exists type) {
             return;
         }
         
         for (val in getAssignableLiterals(type, unit)) {
-            props.add(newNestedLiteralCompletionProposal(val, loc));
+            newNestedLiteralCompletionProposal(props, val, loc);
         }
         
         value td = type.declaration;
@@ -108,7 +104,7 @@ shared interface AbstractInitializerQuickFix<CompletionResult> {
                     !vt.nothing,
                     (isTypeParamInBounds(td, vt) || vt.isSubtypeOf(type))) {
                     
-                    props.add(newNestedCompletionProposal(d, loc));
+                    newNestedCompletionProposal(props, d, loc);
                 }
             }
             
@@ -124,7 +120,7 @@ shared interface AbstractInitializerQuickFix<CompletionResult> {
                         !mt.nothing,
                         (isTypeParamInBounds(td, mt) || mt.isSubtypeOf(type))) {
                         
-                        props.add(newNestedCompletionProposal(d, loc));
+                        newNestedCompletionProposal(props, d, loc);
                     }
                 }
             }
@@ -145,12 +141,12 @@ shared interface AbstractInitializerQuickFix<CompletionResult> {
                             || ct.isSubtypeOf(type))) {
                         
                         if (clazz.parameterList exists) {
-                            props.add(newNestedCompletionProposal(d, loc));
+                            newNestedCompletionProposal(props, d, loc);
                         }
                         
                         for (m in clazz.members) {
                             if (m is Constructor, m.shared, m.name exists) {
-                                props.add(newNestedCompletionProposal(m, loc));
+                                newNestedCompletionProposal(props, m, loc);
                             }
                         }
                     }

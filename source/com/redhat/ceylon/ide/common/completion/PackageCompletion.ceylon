@@ -1,7 +1,3 @@
-import ceylon.collection {
-    MutableList,
-    ArrayList
-}
 import ceylon.interop.java {
     CeylonIterable
 }
@@ -17,8 +13,13 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    LinkedMode,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     escaping,
@@ -37,29 +38,22 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument,
-    LinkedMode,
-    platformServices
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 
-shared interface PackageCompletion<CompletionResult> {
+shared interface PackageCompletion {
     
     // see PackageCompletions.addPackageCompletions()
-    shared void addPackageCompletions(LocalAnalysisResult lar, Integer offset, String prefix,
-        Tree.ImportPath? path, Node node, MutableList<CompletionResult> result, Boolean withBody,
+    shared void addPackageCompletions(CompletionContext ctx, Integer offset, String prefix,
+        Tree.ImportPath? path, Node node, Boolean withBody,
         BaseProgressMonitor monitor) {
         
         String fp = fullPath(offset, prefix, path);
-        addPackageCompletionsFullPath(offset, prefix, fp, withBody, node.unit, lar, result, monitor);
+        addPackageCompletionsFullPath(offset, prefix, fp, withBody, node.unit, ctx, monitor);
     }
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-            LocalAnalysisResult controller, MutableList<CompletionResult> result, BaseProgressMonitor monitor) {
+        CompletionContext ctx, BaseProgressMonitor monitor) {
+        
         try (progress = monitor.Progress(1, null)) {
             if (exists unit) { //a null unit can occur if we have not finished parsing the file
                 variable Boolean found = false;
@@ -84,8 +78,15 @@ shared interface PackageCompletion<CompletionResult> {
                         }
                         //TODO: completion filtering
                         if (!already) {
-                            result.add(newImportedModulePackageProposal(offset, prefix, 
-                                packageName.spanFrom(fullPath.size), withBody, packageName, controller, candidate));
+                            platformServices.completion.newImportedModulePackageProposal {
+                                offset = offset;
+                                prefix = prefix;
+                                memberPackageSubname = packageName.spanFrom(fullPath.size);
+                                withBody = withBody;
+                                fullPackageName = packageName;
+                                controller = ctx;
+                                candidate = candidate;
+                            };
                             found = true;
                         }
                     }
@@ -93,23 +94,31 @@ shared interface PackageCompletion<CompletionResult> {
                 }
                 if (!found, !unit.\ipackage.nameAsString.empty) {
                     progress.subTask("querying module repositories...");
-                    value query = moduleQueries.getModuleQuery("", mod, controller.ceylonProject);
+                    value query = moduleQueries.getModuleQuery("", mod, ctx.ceylonProject);
                     query.memberName = fullPrefix;
                     query.memberSearchPackageOnly = true;
                     query.memberSearchExact = false;
-                    query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-                    query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-                    query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-                    query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
-                    ModuleSearchResult msr = controller.typeChecker.context.repositoryManager.searchModules(query);
+                    query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
+                    query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
+                    query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
+                    query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
+                    ModuleSearchResult msr = ctx.typeChecker.context.repositoryManager.searchModules(query);
                     for (md in msr.results) {
                         value version = md.lastVersion;
-                        if (!alreadyImported(version, controller.typeChecker.context.modules)) {
+                        if (!alreadyImported(version, ctx.typeChecker.context.modules)) {
                             for (packageName in version.members) {
                                 if (packageName.startsWith(fullPrefix)) {
-                                    result.add(newQueriedModulePackageProposal(offset, prefix, 
-                                        packageName.substring(fullPath.size), withBody, packageName.string,
-                                        controller, version, unit, md));
+                                    platformServices.completion.newQueriedModulePackageProposal {
+                                        offset = offset;
+                                        prefix = prefix;
+                                        memberPackageSubname = packageName.substring(fullPath.size);
+                                        withBody = withBody;
+                                        fullPackageName = packageName.string;
+                                        controller = ctx;
+                                        version = version;
+                                        unit = unit;
+                                        md = md;
+                                    };
                                 }
                             }
                         }
@@ -124,39 +133,30 @@ shared interface PackageCompletion<CompletionResult> {
                 (m) => m.nameAsString == version.\imodule
             ) exists;
 
-    shared void addPackageDescriptorCompletion(LocalAnalysisResult cpc, Integer offset, String prefix, 
-            MutableList<CompletionResult> result) {
-        if (!"package".startsWith(prefix)) {
-            return;
-        }
-        value packageName = getPackageName(cpc.lastCompilationUnit);
-        if (exists packageName) {
-            result.add(newPackageDescriptorProposal(offset, prefix,
-                "package ``packageName``", "package ``packageName``;"));
-        }
-    }
+    shared void addPackageDescriptorCompletion(CompletionContext ctx, Integer offset, String prefix) {
+        if ("package".startsWith(prefix),
+            exists packageName = getPackageName(ctx.lastCompilationUnit)) {
 
-    shared void addCurrentPackageNameCompletion(LocalAnalysisResult cpc, Integer offset, String prefix,
-            MutableList<CompletionResult> result) {
-        value moduleName = getPackageName(cpc.lastCompilationUnit);
-        if (exists moduleName) {
-            result.add(newCurrentPackageProposal(offset, prefix, moduleName, cpc));
+            platformServices.completion.newPackageDescriptorProposal {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                desc = "package ``packageName``";
+                text = "package ``packageName``;";
+            };
         }
     }
-    
-    shared formal CompletionResult newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text);
 
-    shared formal CompletionResult newCurrentPackageProposal(Integer offset, String prefix, String packageName, LocalAnalysisResult cmp);
-
-    shared formal CompletionResult newImportedModulePackageProposal(Integer offset, String prefix,
-        String memberPackageSubname, Boolean withBody,
-        String fullPackageName, LocalAnalysisResult controller,
-        Package candidate);
-    
-    shared formal CompletionResult newQueriedModulePackageProposal(Integer offset, String prefix,
-        String memberPackageSubname, Boolean withBody,
-        String fullPackageName, LocalAnalysisResult controller,
-        ModuleVersionDetails version, Unit unit, ModuleSearchResult.ModuleDetails md);
+    shared void addCurrentPackageNameCompletion(CompletionContext ctx, Integer offset, String prefix) {
+        if (exists moduleName = getPackageName(ctx.lastCompilationUnit)) {
+            platformServices.completion.newCurrentPackageProposal {
+                offset = offset;
+                prefix = prefix;
+                packageName = moduleName;
+                cmp = ctx;
+            };
+        }
+    }
 
 }
 
@@ -175,12 +175,13 @@ shared abstract class PackageCompletionProposal
     }
 }
 
-shared abstract class ImportedModulePackageProposal<CompletionResult>
-        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, LocalAnalysisResult cpc)
+shared abstract class ImportedModulePackageProposal
+        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, CompletionContext cpc)
         extends PackageCompletionProposal
         (offset, prefix, memberPackageSubname, withBody, fullPackageName) {
     
-    shared formal CompletionResult newPackageMemberCompletionProposal(Declaration d, DefaultRegion selection, LinkedMode lm);
+    // TODO move to CompletionServices
+    shared formal void newPackageMemberCompletionProposal(ProposalsHolder proposals, Declaration d, DefaultRegion selection, LinkedMode lm);
     
     shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
@@ -188,17 +189,17 @@ shared abstract class ImportedModulePackageProposal<CompletionResult>
         if (withBody, cpc.options.linkedModeArguments) {
             value linkedMode = platformServices.createLinkedMode(document);
             value selection = getSelectionInternal(document);
-            value proposals = ArrayList<CompletionResult>();
+            value proposals = platformServices.completion.createProposalsHolder();
             
             for (d in candidate.members) {
                 if (ModelUtil.isResolvable(d), d.shared, !ModelUtil.isOverloadedVersion(d)) {
-                    proposals.add(newPackageMemberCompletionProposal(d, selection, linkedMode));
+                    newPackageMemberCompletionProposal(proposals, d, selection, linkedMode);
                 }
             }
             
             if (!proposals.empty) {
                 linkedMode.addEditableRegion(selection.start,
-                    selection.length, 0, proposals.sequence());
+                    selection.length, 0, proposals);
                 
                 linkedMode.install(this, -1, 0);
             }

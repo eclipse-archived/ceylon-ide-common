@@ -6,7 +6,14 @@ import com.redhat.ceylon.compiler.typechecker.util {
 }
 import com.redhat.ceylon.ide.common.completion {
     isLocation,
-    proposalsFinder
+    completionManager
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -20,13 +27,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     Collections
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    ReplaceEdit
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
 }
 
 shared object changeReferenceQuickFix {
@@ -82,7 +82,7 @@ shared object changeReferenceQuickFix {
         if (exists id = nodes.getIdentifyingNode(data.node)) {
             if (exists brokenName = id.text, !brokenName.empty) {
                 value scope = data.node.scope; //for declaration-style named args
-                value dwps = proposalsFinder.getProposals {
+                value dwps = completionManager.getProposals {
                     node = data.node;
                     scope = scope;
                     prefix = "";

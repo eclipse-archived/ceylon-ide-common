@@ -1,14 +1,7 @@
-import ceylon.collection {
-    MutableList
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
     Visitor
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
 }
 import com.redhat.ceylon.model.typechecker.model {
     Functional,
@@ -20,10 +13,10 @@ import java.lang {
     JInteger=Integer
 }
 
-shared interface TypeArgumentListCompletions<CompletionResult> {
+shared interface TypeArgumentListCompletions {
     
-    shared void addTypeArgumentListProposal(Integer offset, LocalAnalysisResult cpc, Node node,
-        Scope scope, MutableList<CompletionResult> result, IdeCompletionManager<CompletionResult> completionManager) {
+    shared void addTypeArgumentListProposal(Integer offset, CompletionContext ctx, Node node,
+        Scope scope) {
         JInteger? startIndex2 = node.startIndex;
         value stopIndex2 = node.endIndex;
         
@@ -31,9 +24,12 @@ shared interface TypeArgumentListCompletions<CompletionResult> {
             return; // we need it
         }
 
-        value document = cpc.commonDocument;
-        value typeArgText = document.getText(startIndex2.intValue(), stopIndex2.intValue() - startIndex2.intValue());
-        Tree.CompilationUnit? upToDateAndTypechecked = cpc.typecheckedRootNode;
+        value document = ctx.commonDocument;
+        value typeArgText = document.getText {
+            offset = startIndex2.intValue();
+            length = stopIndex2.intValue() - startIndex2.intValue();
+        };
+        Tree.CompilationUnit? upToDateAndTypechecked = ctx.typecheckedRootNode;
 
         if (!exists upToDateAndTypechecked) {
             return;
@@ -53,8 +49,18 @@ shared interface TypeArgumentListCompletions<CompletionResult> {
                             that.endIndex.intValue() - that.identifier.startIndex.intValue());
                         
                         for (dec in overloads(d)) {
-                            completionManager.addInvocationProposals(offset, pref, cpc, result, null,
-                                dec, pr, scope, null, typeArgText, false);
+                            completionManager.addInvocationProposals {
+                                offset = offset;
+                                prefix = pref;
+                                ctx = ctx;
+                                dwp = null;
+                                dec = dec;
+                                pr = pr;
+                                scope = scope;
+                                ol = null;
+                                typeArgs = typeArgText;
+                                isMember = false;
+                            };
                         }
                     }
                 }
@@ -70,8 +76,18 @@ shared interface TypeArgumentListCompletions<CompletionResult> {
                         value pref = document.getText(that.startIndex.intValue(), 
                             that.endIndex.intValue() - that.startIndex.intValue());
                         for (dec in overloads(d)) {
-                            completionManager.addInvocationProposals(offset, pref, cpc, result, null,
-                                dec, that.typeModel, scope, null, typeArgText, false);
+                            completionManager.addInvocationProposals {
+                                offset = offset;
+                                prefix = pref;
+                                ctx = ctx;
+                                dwp = null;
+                                dec = dec;
+                                pr = that.typeModel;
+                                scope = scope;
+                                ol = null;
+                                typeArgs = typeArgText;
+                                isMember = false;
+                            };
                         }
                     }
                 }

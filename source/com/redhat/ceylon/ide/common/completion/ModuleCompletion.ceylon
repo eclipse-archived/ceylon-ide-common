@@ -1,7 +1,5 @@
 import ceylon.collection {
-    MutableList,
-    naturalOrderTreeSet,
-    ArrayList
+    naturalOrderTreeSet
 }
 import ceylon.interop.java {
     javaString
@@ -23,6 +21,14 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    LinkedMode
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
@@ -42,54 +48,48 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument,
-    platformServices,
-    LinkedMode
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 
-shared interface ModuleCompletion<CompletionResult> {
+shared interface ModuleCompletion {
     
-    shared formal CompletionResult newModuleProposal(Integer offset, String prefix, Integer len, 
-                String versioned, ModuleDetails mod, Boolean withBody,
-                ModuleVersionDetails version, String name, Node node, LocalAnalysisResult cpc);
-
-    shared formal CompletionResult newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
-        Integer selectionStart, Integer selectionEnd); 
-            
-    shared formal CompletionResult newJDKModuleProposal(Integer offset, String prefix, Integer len, 
-                String versioned, String name);
-
-    shared void addModuleCompletions(LocalAnalysisResult cpc, Integer offset, String prefix, Tree.ImportPath? path, Node node, 
-        MutableList<CompletionResult> result, Boolean withBody, BaseProgressMonitor monitor) {
+    shared void addModuleCompletions(CompletionContext ctx, Integer offset,
+        String prefix, Tree.ImportPath? path, Node node, 
+        Boolean withBody, BaseProgressMonitor monitor) {
+        
         value fp = fullPath(offset, prefix, path);
         
-        addModuleCompletionsInternal(offset, prefix, node, result, fp.size, fp + prefix, cpc, withBody, monitor);
+        addModuleCompletionsInternal(offset, prefix, node, fp.size, fp + prefix, ctx, withBody, monitor);
     }
 
-    void addModuleCompletionsInternal(Integer offset, String prefix, Node node, MutableList<CompletionResult> result, 
-        Integer len, String pfp, LocalAnalysisResult cpc, Boolean withBody, BaseProgressMonitor monitor) {
+    void addModuleCompletionsInternal(Integer offset, String prefix, Node node, 
+        Integer len, String pfp, CompletionContext ctx, Boolean withBody, BaseProgressMonitor monitor) {
+        
         try(progress = monitor.Progress(1, null)) {
             if (pfp.startsWith("java.")) {
                 for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
-                    if (name.startsWith(pfp), !moduleAlreadyImported(cpc, name)) {
-                        result.add(newJDKModuleProposal(offset, prefix, len, getModuleString(withBody, name, JDKUtils.jdk.version), name));
+                    if (name.startsWith(pfp),
+                        !moduleAlreadyImported(ctx, name)) {
+                        
+                        platformServices.completion.newJDKModuleProposal {
+                            ctx = ctx;
+                            offset = offset;
+                            prefix = prefix;
+                            len = len;
+                            versioned = getModuleString(withBody, name, JDKUtils.jdk.version);
+                            name = name;
+                        };
                     }
                 }
             } else {
-                TypeChecker? typeChecker = cpc.typeChecker;
+                TypeChecker? typeChecker = ctx.typeChecker;
                 if (exists typeChecker) {
-                    value project = cpc.ceylonProject;
-                    value modul = cpc.lastPhasedUnit.\ipackage.\imodule;
+                    value project = ctx.ceylonProject;
+                    value modul = ctx.lastPhasedUnit.\ipackage.\imodule;
                     progress.subTask("querying module repositories...");
                     value query = moduleQueries.getModuleQuery(pfp, modul, project);
-                    query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-                    query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-                    query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-                    query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
+                    query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
+                    query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
+                    query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
+                    query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
                     ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
                     //                final ModuleSearchResult results = 
                     //                        getModuleSearchResults(pfp, typeChecker,project);
@@ -97,18 +97,40 @@ shared interface ModuleCompletion<CompletionResult> {
                         return;
                     }
                     
-                    value supportsLinkedModeInArguments = cpc.options.linkedModeArguments;
+                    value supportsLinkedModeInArguments = ctx.options.linkedModeArguments;
                     
                     for (mod in results.results) {
                         value name = mod.name;
-                        if (!name.equals(Module.\iDEFAULT_MODULE_NAME), !moduleAlreadyImported(cpc, name)) {
+                        if (!name.equals(Module.\iDEFAULT_MODULE_NAME),
+                            !moduleAlreadyImported(ctx, name)) {
+                            
                             if (supportsLinkedModeInArguments) {
-                                result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, mod.lastVersion.version),
-                                    mod, withBody, mod.lastVersion, name, node, cpc));
+                                platformServices.completion.newModuleProposal {
+                                    offset = offset;
+                                    prefix = prefix;
+                                    len = len;
+                                    versioned = getModuleString(withBody, name, mod.lastVersion.version);
+                                    mod = mod;
+                                    withBody = withBody;
+                                    version = mod.lastVersion;
+                                    name = name;
+                                    node = node;
+                                    cpc = ctx;
+                                };
                             } else {
                                 for (version in mod.versions.descendingSet()) {
-                                    result.add(newModuleProposal(offset, prefix, len, getModuleString(withBody, name, version.version),
-                                        mod, withBody, version, name, node, cpc));
+                                    platformServices.completion.newModuleProposal {
+                                        offset = offset;
+                                        prefix = prefix;
+                                        len = len;
+                                        versioned = getModuleString(withBody, name, version.version);
+                                        mod = mod;
+                                        withBody = withBody;
+                                        version = version;
+                                        name = name;
+                                        node = node;
+                                        cpc = ctx;
+                                    };
                                 }
                             }
                         }
@@ -119,13 +141,12 @@ shared interface ModuleCompletion<CompletionResult> {
     }
 
     Boolean moduleAlreadyImported(LocalAnalysisResult cpc, String mod) {
-        if (mod.equals(Module.\iLANGUAGE_MODULE_NAME)) {
+        if (mod == Module.languageModuleName) {
             return true;
         }
         value md = cpc.parsedRootNode.moduleDescriptors;
         if (!md.empty) {
-            Tree.ImportModuleList? iml = md.get(0).importModuleList;
-            if (exists iml) {
+            if (exists iml = md.get(0).importModuleList) {
                 for (im in iml.importModules) {
                     value path = nodes.getImportedModuleName(im);
                     if (exists path, path.equals(mod)) {
@@ -150,23 +171,30 @@ shared interface ModuleCompletion<CompletionResult> {
         return if (withBody) then name + " \"" + version + "\";" else name;
     }
 
-    shared void addModuleDescriptorCompletion(LocalAnalysisResult cpc, Integer offset, String prefix, MutableList<CompletionResult> result) {
+    shared void addModuleDescriptorCompletion(CompletionContext ctx, Integer offset, String prefix) {
         if (!"module".startsWith(prefix)) {
             return;
         }
-        value moduleName = getPackageName(cpc.lastCompilationUnit);
+        value moduleName = getPackageName(ctx.lastCompilationUnit);
         if (exists moduleName) {
             value text = "module " + moduleName + " \"1.0.0\" {}";
-            result.add(newModuleDescriptorProposal(offset, prefix, "module " + moduleName,
-                text, offset - prefix.size + (text.firstOccurrence('"') else 0) + 1, "1.0.0".size));
+            platformServices.completion.newModuleDescriptorProposal {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                desc = "module " + moduleName;
+                text = text;
+                selectionStart = offset - prefix.size + (text.firstOccurrence('"') else 0) + 1;
+                selectionEnd = "1.0.0".size;
+            };
         }
     }
 
 }
 
-shared abstract class ModuleProposal<CompletionResult>
+shared abstract class ModuleProposal
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
-         Boolean withBody, ModuleVersionDetails version, String name, Node node, LocalAnalysisResult cpc)
+         Boolean withBody, ModuleVersionDetails version, String name, Node node, CompletionContext cpc)
         extends AbstractCompletionProposal
         (offset, prefix, versioned, versioned.spanFrom(len)) {
 
@@ -181,7 +209,8 @@ shared abstract class ModuleProposal<CompletionResult>
         }
     }
     
-    shared formal CompletionResult newModuleProposal(ModuleVersionDetails d, DefaultRegion selection, LinkedMode lm);
+    // TODO move to CompletionServices
+    shared formal void newModuleProposal(ProposalsHolder proposals, ModuleVersionDetails d, DefaultRegion selection, LinkedMode lm);
 
     shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
@@ -191,15 +220,15 @@ shared abstract class ModuleProposal<CompletionResult>
             
             value linkedMode = platformServices.createLinkedMode(document);
             value selection = getSelectionInternal(document);
-            value proposals = ArrayList<CompletionResult>();
+            value proposals = platformServices.completion.createProposalsHolder();
 
             for (d in mod.versions) {
-                proposals.add(newModuleProposal(d, selection, linkedMode));
+                newModuleProposal(proposals, d, selection, linkedMode);
             }
             
             value x = selection.start;
             value y = selection.length;
-            linkedMode.addEditableRegion(x, y, 0, proposals.sequence());
+            linkedMode.addEditableRegion(x, y, 0, proposals);
             
             linkedMode.install(this, 1, x + y + 2);
         }

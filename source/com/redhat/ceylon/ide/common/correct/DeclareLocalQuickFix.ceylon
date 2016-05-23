@@ -1,9 +1,7 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.ide.common.completion {
-    TypeCompletion
-}
+
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit
@@ -14,17 +12,15 @@ import com.redhat.ceylon.ide.common.util {
 
 shared object declareLocalQuickFix {
     
-    shared void enableLinkedMode<CompletionResult>(QuickFixData data, Tree.Term term,
-        TypeCompletion<CompletionResult> completionManager) {
+    shared void enableLinkedMode(QuickFixData data, Tree.Term term) {
         
         if (exists type = term.typeModel) {
             value lm = platformServices.createLinkedMode(data.document);
-            value proposals = completionManager.getTypeProposals {
-                document = data.document;
+            value proposals = typeCompletion.getTypeProposals {
+                rootNode = data.rootNode;
                 offset = data.node.startIndex.intValue();
                 length = 5;
                 infType = type;
-                rootNode = data.rootNode;
                 kind = "value";
             };
             lm.addEditableRegion(data.node.startIndex.intValue(), 5, 0, proposals);

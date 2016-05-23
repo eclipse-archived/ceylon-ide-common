@@ -17,6 +17,9 @@ import test.com.redhat.ceylon.ide.common.testUtils {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
+import com.redhat.ceylon.ide.common.completion {
+    completionManager
+}
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
 
@@ -42,7 +45,9 @@ Result[] callCompletion(String fileName, Integer caretPosition, Integer line, Bo
 
     value completionData = CompletionData(code.contents, pu);
     
-    return dummyCompletionManager.getContentProposals(pu.compilationUnit, completionData, caretPosition, line, secondLevel, dummyMonitor, true);
+    completionManager.getContentProposals(pu.compilationUnit, completionData, caretPosition, line, secondLevel, dummyMonitor, true);
+    
+    return empty;
 }
 
 void assertContains(Result[] list, Result el, String? message = null) {

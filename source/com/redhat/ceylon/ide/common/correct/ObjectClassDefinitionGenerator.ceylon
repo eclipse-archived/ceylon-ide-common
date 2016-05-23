@@ -8,7 +8,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.completion {
     getRefinementTextFor,
     overloads,
-    getRefinedProducedReference
+    completionManager
 }
 import com.redhat.ceylon.ide.common.doc {
     Icons
@@ -234,7 +234,7 @@ shared class ObjectClassDefinitionGenerator(
     
     void appendRefinementText(String indent, String delim, StringBuilder def, String defIndent, Declaration d) {
         assert (exists returnType);
-        value pr = getRefinedProducedReference(returnType, d);
+        value pr = completionManager.getRefinedProducedReference(returnType, d);
         value unit = node.unit;
         variable value text 
                 = getRefinementTextFor {
