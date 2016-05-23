@@ -1032,7 +1032,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     shared Boolean isResourceFile(NativeFile file) =>
             isFileInResourceFolder(file); // TODO: add the constraint that it should be in the right packages ?
     
-    shared void projectFileTreeChanged({NativeResourceChange+} projectFileChanges) {
+    shared void projectFileTreeChanged({NativeResourceChange*} projectFileChanges) {
         
         ChangeToConvert updateModelAndConvertToProjectFileChange(NativeResourceChange nativeChange) {
             switch (nativeChange) 
@@ -1088,7 +1088,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         // Ajouter les changements dans tous les projets qui me référencent
     }
     
-    shared void referencedProjectFileTreeChanged(CeylonProjectAlias referencedProject, {NativeResourceChange+} changesInReferencedProject) {
+    shared void referencedProjectFileTreeChanged(CeylonProjectAlias referencedProject, {NativeResourceChange*} changesInReferencedProject) {
         function convertToProjectFileChange(NativeResourceChange nativeChange) {
             switch (nativeChange) 
             case(is NativeFileChange) {

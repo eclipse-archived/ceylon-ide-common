@@ -292,6 +292,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared Message typecheckerMessage = theTypecheckerMessage;
         shared Integer startLine = theStartLine;
         shared Integer startCol = theStartCol;
+        shared Integer startOffset = theStartOffset;
+        shared Integer endOffset = theEndOffset;
         
         message => typecheckerMessage.message;
         backend => typecheckerMessage.backend;
@@ -510,7 +512,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         return success;
     }
     
-    shared void fileTreeChanged({<[NativeResourceChange, NativeProject]|ResourceVirtualFileChange>+} changes) {
+    shared void fileTreeChanged({<[NativeResourceChange, NativeProject]|ResourceVirtualFileChange>*} changes) {
         state.fileChangesToAnalyze.addAll(changes); 
     }
     

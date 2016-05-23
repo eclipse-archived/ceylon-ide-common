@@ -182,7 +182,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
     
     "Dispatch the changes to the projects that might be interested
      (have the corresponding native resource in the project contents)"
-    shared void fileTreeChanged({NativeResourceChange+} changes) {
+    shared void fileTreeChanged({NativeResourceChange*} changes) {
         value projectsInModel = ceylonProjects;
         
         for (ceylonProject in projectsInModel) {
