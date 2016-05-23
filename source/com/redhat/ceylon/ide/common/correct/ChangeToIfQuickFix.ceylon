@@ -35,7 +35,7 @@ shared object changeToIfQuickFix {
                 value last = statements.get(statements.size()-1);
                 value isLast = statement == last;
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Change Assert To If";
                     input = data.phasedUnit;
                 };
@@ -62,7 +62,7 @@ shared object changeToIfQuickFix {
                 while (i < statements.size()) {
                     change.addEdit(InsertEdit {
                         start = statements.get(i).startIndex.intValue();
-                        text = platformServices.defaultIndent;
+                        text = platformServices.document.defaultIndent;
                     }
                     );
                     i++;
@@ -78,7 +78,7 @@ shared object changeToIfQuickFix {
                 change.addEdit(InsertEdit {
                     start = last.endIndex.intValue();
                     text = newline + indent + "else {" + newline 
-                        + indent + platformServices.defaultIndent
+                        + indent + platformServices.document.defaultIndent
                         + "assert (false);" + newline + indent + "}";
                 });
                 

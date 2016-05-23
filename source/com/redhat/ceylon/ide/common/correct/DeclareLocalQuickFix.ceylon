@@ -40,7 +40,7 @@ shared object declareLocalQuickFix {
                 exists e = se.expression,
                 exists term = e.term) {
                 
-                value change = platformServices.createTextChange("Declare Local Value", data.phasedUnit);
+                value change = platformServices.document.createTextChange("Declare Local Value", data.phasedUnit);
                 change.initMultiEdit();
                 change.addEdit(InsertEdit(node.startIndex.intValue(), "value "));
                 value desc = "Declare local value '``bme.identifier.text``'";

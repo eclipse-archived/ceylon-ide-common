@@ -36,7 +36,7 @@ shared object addParameterListQuickFix {
                 
                 params.append(")");
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Add Parameter List";
                     input = data.phasedUnit;
                 };

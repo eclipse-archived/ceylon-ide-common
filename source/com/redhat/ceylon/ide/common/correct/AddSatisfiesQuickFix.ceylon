@@ -172,7 +172,7 @@ shared object addSatisfiesQuickFix {
         }
         
         if (exists ct = changeText) {
-            value tfc = platformServices.createTextChange("Add Type Constraint", data.phasedUnit);
+            value tfc = platformServices.document.createTextChange("Add Type Constraint", data.phasedUnit);
             assert(exists ci = changeIndex);
             tfc.addEdit(InsertEdit(ci, ct));
             value desc = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
@@ -197,7 +197,7 @@ shared object addSatisfiesQuickFix {
             changeIndex = typeContainerBodyStartIndex;
         }
         
-        value tfc = platformServices.createTextChange("Add Inherited Interface", data.phasedUnit);
+        value tfc = platformServices.document.createTextChange("Add Inherited Interface", data.phasedUnit);
         tfc.addEdit(InsertEdit(changeIndex, changeText));
         value desc = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
         value region = if (sameFile) then DefaultRegion(changeIndex, changeText.size) else null;

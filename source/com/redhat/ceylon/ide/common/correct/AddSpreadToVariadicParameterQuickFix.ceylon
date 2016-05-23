@@ -30,7 +30,7 @@ shared object addSpreadToVariadicParameterQuickFix {
                 param.initializerParameter.sequenced) {
 
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Spread Argument of Variadic Parameter";
                     input = data.phasedUnit;
                 };

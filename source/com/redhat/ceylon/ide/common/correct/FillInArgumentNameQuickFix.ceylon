@@ -13,7 +13,7 @@ shared object fillInArgumentNameQuickFix {
         value id = sa.identifier;
         if (!id.token exists) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Fill in argument name";
                 input = data.phasedUnit;
             };

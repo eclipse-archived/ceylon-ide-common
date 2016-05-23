@@ -17,7 +17,7 @@ shared object convertForToWhileQuickFix {
             exists e = fi.specifierExpression?.expression) {
             
             value doc = data.document;
-            value change = platformServices.createTextChange { 
+            value change = platformServices.document.createTextChange { 
                 name = "Convert For to While";
                 input = data.phasedUnit;
             };

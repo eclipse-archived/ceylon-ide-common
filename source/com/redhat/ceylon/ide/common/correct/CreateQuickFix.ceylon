@@ -37,7 +37,7 @@ shared object createQuickFix {
         Declaration typeDec, PhasedUnit unit, Tree.Declaration decNode, 
         Tree.Body body, Tree.Statement? statement) {
         
-        value change = platformServices.createTextChange("Create Member", unit);
+        value change = platformServices.document.createTextChange("Create Member", unit);
         change.initMultiEdit();
         value doc = change.document;
         String indentBefore;
@@ -48,7 +48,7 @@ shared object createQuickFix {
         value delim = doc.defaultLineDelimiter;
         if (statements.empty) {
             value bodyIndent = doc.getIndent(decNode);
-            indent = bodyIndent + platformServices.defaultIndent;
+            indent = bodyIndent + platformServices.document.defaultIndent;
             indentBefore = delim + indent;
             try {
                 value singleLineBody = 
@@ -139,7 +139,7 @@ shared object createQuickFix {
         DefinitionGenerator dg, PhasedUnit unit, 
         Tree.Statement statement) {
         
-        value change = platformServices.createTextChange {
+        value change = platformServices.document.createTextChange {
             name = local then "Create Local" else "Create Toplevel";
             input = unit;
         };

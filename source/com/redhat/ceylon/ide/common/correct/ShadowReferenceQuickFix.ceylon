@@ -28,7 +28,7 @@ shared object shadowReferenceQuickFix {
                     rootNode = data.rootNode;
                 }[0];
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Shadow Reference";
                     input = data.phasedUnit;
                 };
@@ -83,7 +83,7 @@ shared object shadowReferenceQuickFix {
                 rootNode = data.rootNode;
             }[0];
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Shadow Reference";
                 input = data.phasedUnit;
             };
@@ -118,7 +118,7 @@ shared object shadowReferenceQuickFix {
         case (is Tree.Term) {
             value name = nodes.nameProposals(node)[0];
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Shadow Reference";
                 input = data.phasedUnit;
             };

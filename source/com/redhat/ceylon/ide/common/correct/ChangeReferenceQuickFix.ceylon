@@ -34,7 +34,7 @@ shared object changeReferenceQuickFix {
     void addChangeReferenceProposal(QuickFixData data, String brokenName,
         Declaration dec) {
        
-        value change = platformServices.createTextChange("Change Reference", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Change Reference", data.phasedUnit);
         change.initMultiEdit();
         variable value pkg = "";
         value problemOffset = data.problemOffset;

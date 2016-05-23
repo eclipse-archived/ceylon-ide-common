@@ -142,7 +142,7 @@ shared object convertThenElseToIfElse {
         }
         
         value baseIndent = doc.getIndent(statement);
-        value indent = platformServices.defaultIndent;
+        value indent = platformServices.document.defaultIndent;
         test = removeEnclosingParenthesis(test);
         value replace = StringBuilder();
         value delim = doc.defaultLineDelimiter;
@@ -177,7 +177,7 @@ shared object convertThenElseToIfElse {
                 .append(baseIndent)
                 .append("}");
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Convert to If Else";
             input = data.phasedUnit;
         };

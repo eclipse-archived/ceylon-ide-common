@@ -26,7 +26,7 @@ shared object convertStringQuickFix {
             if (token.type==CeylonLexer.\iASTRING_LITERAL || 
                 token.type==CeylonLexer.\iSTRING_LITERAL) {
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Convert to Verbatim String";
                     input = data.phasedUnit;
                 };
@@ -51,7 +51,7 @@ shared object convertStringQuickFix {
             if (token.type==CeylonLexer.\iAVERBATIM_STRING || 
                 token.type==CeylonLexer.\iVERBATIM_STRING) {
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Convert to Ordinary String";
                     input = data.phasedUnit;
                 };
@@ -94,7 +94,7 @@ shared object convertStringQuickFix {
         
         if (exists template = result) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert to Concatenation";
                 input = data.phasedUnit;
             };
@@ -188,7 +188,7 @@ shared object convertStringQuickFix {
         
         if (exists sum = result) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert to Interpolation";
                 input = data.phasedUnit;
             };

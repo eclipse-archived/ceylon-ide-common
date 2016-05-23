@@ -19,7 +19,7 @@ shared object fixMultilineStringIndentationQuickFix {
     shared void addFixMultilineStringIndentation(QuickFixData data) {
         if (is Tree.StringLiteral literal = data.node) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Fix Multiline String";
                 input = data.phasedUnit;
             };

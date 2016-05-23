@@ -10,7 +10,7 @@ shared object fixAliasQuickFix {
     shared void addFixAliasProposal(QuickFixData data) {
         value offset = data.problemOffset;
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Fix Alias Syntax";
             input = data.phasedUnit;
         };

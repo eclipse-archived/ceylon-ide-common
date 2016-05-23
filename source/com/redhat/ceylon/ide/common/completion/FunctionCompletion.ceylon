@@ -51,7 +51,7 @@ shared abstract class FunctionCompletionProposal
         extends AbstractCompletionProposal(_offset, prefix, desc, text) {
     
     shared TextChange createChange(CommonDocument document) {
-        value change = platformServices.createTextChange("Complete Invocation", document);
+        value change = platformServices.document.createTextChange("Complete Invocation", document);
         value decs = HashSet<Declaration>();
         importProposals.importDeclaration(decs, declaration, rootNode);
         value il = importProposals.applyImports(change, decs, rootNode, document);

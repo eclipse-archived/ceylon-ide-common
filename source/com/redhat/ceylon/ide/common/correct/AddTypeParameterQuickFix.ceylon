@@ -35,7 +35,7 @@ shared object addTypeParameterQuickFix {
         }
         
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Add Type Parameter";
             input = data.phasedUnit;
         };

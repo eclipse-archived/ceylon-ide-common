@@ -45,7 +45,7 @@ shared object specifyTypeArgumentsQuickFix {
             }
             
             builder.append(">");
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Specify Explicit Type Arguments";
                 input = data.phasedUnit;
             };

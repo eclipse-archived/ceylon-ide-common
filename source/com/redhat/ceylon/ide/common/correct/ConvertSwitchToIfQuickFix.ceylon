@@ -20,7 +20,7 @@ shared object convertSwitchToIfQuickFix {
             exists scl = statement.switchCaseList,
             exists switched = sc.switched) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert Switch To If";
                 input = data.phasedUnit;
             };
@@ -158,7 +158,7 @@ shared object convertSwitchToIfQuickFix {
         if (is Tree.IfStatement statement) {
             value ifSt = statement;
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert If To Switch";
                 input = data.phasedUnit;
             };
@@ -246,14 +246,14 @@ shared object convertSwitchToIfQuickFix {
                             value end = b.endIndex.intValue();
                             change.addEdit(InsertEdit {
                                 start = start;
-                                text = "{" + newline + platformServices.defaultIndent;
+                                text = "{" + newline + platformServices.document.defaultIndent;
                             });
 
                             variable value line = doc.getLineOfOffset(start) + 1;
                             while (line <= doc.getLineOfOffset(end)) {
                                 change.addEdit(InsertEdit {
                                     start = doc.getLineStartOffset(line);
-                                    text = platformServices.defaultIndent;
+                                    text = platformServices.document.defaultIndent;
                                 });
                                 line++;
                             }

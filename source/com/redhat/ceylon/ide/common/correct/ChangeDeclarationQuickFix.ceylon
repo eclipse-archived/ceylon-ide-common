@@ -39,7 +39,7 @@ shared object changeDeclarationQuickFix {
             }
                         
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Change Declaration";
                 input = data.phasedUnit;
             };

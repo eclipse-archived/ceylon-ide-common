@@ -83,7 +83,7 @@ shared object addAnnotationQuickFix {
                 shared actual void visit(Tree.ModuleDescriptor that) {
                     assert(is Module m = node.model);
                     value backends = m.nativeBackends;
-                    value change = platformServices.createTextChange("Declare Module Native", data.phasedUnit);
+                    value change = platformServices.document.createTextChange("Declare Module Native", data.phasedUnit);
                     value annotation = StringBuilder();
                     moduleImportUtil.appendNative(annotation, backends);
                     change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
@@ -96,7 +96,7 @@ shared object addAnnotationQuickFix {
                     if (that.importPath == node) {
                         assert (is Module m = that.importPath.model);
                         value backends = m.nativeBackends;
-                        value change = platformServices.createTextChange("Declare Import Native", data.phasedUnit);
+                        value change = platformServices.document.createTextChange("Declare Import Native", data.phasedUnit);
                         value annotation = StringBuilder();
                         moduleImportUtil.appendNative(annotation, backends);
                         change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
@@ -273,7 +273,7 @@ shared object addAnnotationQuickFix {
     
     void addAddAnnotationProposal2(String annotation, String desc, Referenceable dec,
         PhasedUnit unit, Node? node, Tree.StatementOrArgument decNode, QuickFixData data) {
-        value change = platformServices.createTextChange(desc, unit);
+        value change = platformServices.document.createTextChange(desc, unit);
         change.initMultiEdit();
         
         value edit = createReplaceAnnotationEdit(annotation, node, change)

@@ -198,7 +198,7 @@ shared abstract class RefinementCompletionProposal
     }
 
     shared TextChange createChange(CommonDocument document) {
-        value change = platformServices.createTextChange("Add Refinement", document);
+        value change = platformServices.document.createTextChange("Add Refinement", document);
         value decs = HashSet<Declaration>();
         value cu = cpc.lastCompilationUnit;
         if (explicitReturnType) {

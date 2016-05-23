@@ -35,7 +35,7 @@ shared object addInitializerQuickFix {
         if (is FunctionOrValue dec = decNode.declarationModel,
             !dec.parameter && !dec.formal) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Initializer";
                 input = data.phasedUnit;
             };

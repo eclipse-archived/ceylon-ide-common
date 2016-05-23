@@ -48,7 +48,7 @@ shared object assertExistsDeclarationQuickFix {
                 id.token exists) {
                 
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = changeDesc;
                     input = data.phasedUnit;
                 };

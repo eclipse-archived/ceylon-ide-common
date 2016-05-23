@@ -20,7 +20,7 @@ shared object verboseRefinementQuickFix {
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert to Verbose Refinement";
                 input = data.phasedUnit;
             };
@@ -64,7 +64,7 @@ shared object verboseRefinementQuickFix {
             !ModelUtil.isTypeUnknown(expr.typeModel)) {
             
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert to Shortcut Refinement";
                 input = data.phasedUnit;
             };

@@ -40,7 +40,7 @@ shared object specifyTypeQuickFix {
         
         if (!inEditor) {
             if (is Tree.LocalModifier typeNode) {
-                value change = platformServices.createTextChange("Specify Type", 
+                value change = platformServices.document.createTextChange("Specify Type", 
                                         document);
                 change.initMultiEdit();
                 value decs = HashSet<Declaration>();

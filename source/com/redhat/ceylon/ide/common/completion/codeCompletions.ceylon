@@ -670,7 +670,7 @@ void appendHashImpl(Unit unit, String indent, StringBuilder result,
         result.append(";");
     }
     else {
-        value defaultIndent = platformServices.defaultIndent;
+        value defaultIndent = platformServices.document.defaultIndent;
         result.append(" {")
                 .append(indent)
                 .append(defaultIndent)
@@ -711,7 +711,7 @@ void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
     }
     
     value p = ps.get(0);
-    value defaultIndent = platformServices.defaultIndent;
+    value defaultIndent = platformServices.document.defaultIndent;
     result.append(" {")
             .append(indent).append(defaultIndent)
             .append("if (is ").append(ci.name).append(targs.string).append(" ").append(p.name).append(") {")
@@ -781,7 +781,7 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
 }
 
 String extraIndent(String indent, Boolean containsNewline) 
-        => if (containsNewline) then indent + platformServices.defaultIndent else indent;
+        => if (containsNewline) then indent + platformServices.document.defaultIndent else indent;
 
 shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result) {

@@ -76,7 +76,7 @@ shared object refineFormalMembersQuickFix {
         
         value rootNode = data.rootNode;
         value node = data.node;
-        value change = platformServices.createTextChange("Refine Members", data.document);
+        value change = platformServices.document.createTextChange("Refine Members", data.document);
 
         change.initMultiEdit();
         
@@ -111,7 +111,7 @@ shared object refineFormalMembersQuickFix {
         value bodyIndent = document.getIndent(node);
         value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + platformServices.defaultIndent;
+            indent = delim + bodyIndent + platformServices.document.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }

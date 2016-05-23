@@ -24,7 +24,7 @@ shared object convertToDefaultConstructorQuickFix {
             exists pl = statement.parameterList) {
             
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Convert to Class with Default Constructor";
                 input = data.phasedUnit;
             };
@@ -32,7 +32,7 @@ shared object convertToDefaultConstructorQuickFix {
             value doc = change.document;
             value indent = doc.getIndent(statement);
             value delim = doc.defaultLineDelimiter;
-            value defIndent = platformServices.defaultIndent;
+            value defIndent = platformServices.document.defaultIndent;
             value declarations = StringBuilder();
             value assignments = StringBuilder();
             value params = StringBuilder();

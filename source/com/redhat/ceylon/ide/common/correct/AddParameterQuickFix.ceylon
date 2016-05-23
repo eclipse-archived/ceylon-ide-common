@@ -157,7 +157,7 @@ shared object addParameterQuickFix {
             !dec.parameter && !dec.formal, 
             dec.container is Functional) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Parameter";
                 input = data.phasedUnit;
             };

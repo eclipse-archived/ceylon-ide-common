@@ -34,7 +34,7 @@ shared interface AssignToLocalProposal
         satisfies AbstractLocalProposal {
 
     shared actual TextChange createChange(QuickFixData data, Node expanse, Integer endIndex) {
-        value change = platformServices.createTextChange("Assign to Local", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Assign to Local", data.phasedUnit);
         change.initMultiEdit();
         value name = names.first else "<unknown>";
         change.addEdit(InsertEdit(offset, "value " + name + " = "));

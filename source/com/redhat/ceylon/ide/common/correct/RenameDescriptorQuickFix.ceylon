@@ -13,7 +13,7 @@ shared object renameDescriptorQuickFix {
         value pname = escaping.escapePackageName(pack);
         
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Rename";
             input = data.phasedUnit;
         };

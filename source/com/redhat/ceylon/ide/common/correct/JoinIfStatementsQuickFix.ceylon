@@ -25,7 +25,7 @@ shared object joinIfStatementsQuickFix {
                     
                     value doc = data.document;
                     value change 
-                            = platformServices.createTextChange {
+                            = platformServices.document.createTextChange {
                         name = "Join If Statements";
                         input = data.phasedUnit;
                     };
@@ -62,7 +62,7 @@ shared object joinIfStatementsQuickFix {
                     
                     value doc = data.document;
                     value change 
-                            = platformServices.createTextChange {
+                            = platformServices.document.createTextChange {
                         name = "Join If Statements";
                         input = data.phasedUnit;
                     };
@@ -99,7 +99,7 @@ shared object joinIfStatementsQuickFix {
     void decrementIndent(CommonDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
         TextChange change, String indent, String outerIndent) {
         
-        value defaultIndent = platformServices.defaultIndent;
+        value defaultIndent = platformServices.document.defaultIndent;
         variable Integer line = doc.getLineOfOffset(cl.stopIndex.intValue()) + 1;
         while (line < doc.getLineOfOffset(ifSt.stopIndex.intValue())) {
             value lineText = doc.getLineContent(line);

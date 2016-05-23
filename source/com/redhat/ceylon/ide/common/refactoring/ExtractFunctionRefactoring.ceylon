@@ -269,7 +269,7 @@ shared class ExtractFunctionRefactoring(
     
     shared CompositeChange|TextChange build() {
         "The changes applied to the current editor"
-        value tfc = platformServices.createTextChange(name, document);
+        value tfc = platformServices.document.createTextChange(name, document);
         
         if (is Tree.Term node) {
             if (exists tn = getTargetNode {
@@ -279,7 +279,7 @@ shared class ExtractFunctionRefactoring(
                 }, 
                 tn.declarationModel.toplevel) {
                 
-                value cc = platformServices.createCompositeChange(name);
+                value cc = platformServices.document.createCompositeChange(name);
     
                 //if we're extracting a toplevel function, look for
                 //replacements in other files in the same package
@@ -423,8 +423,8 @@ shared class ExtractFunctionRefactoring(
                 + document.getIndent(decNode);
         value extraIndent 
                 = indent 
-                + platformServices.defaultIndent 
-                + platformServices.defaultIndent;
+                + platformServices.document.defaultIndent 
+                + platformServices.document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -559,7 +559,7 @@ shared class ExtractFunctionRefactoring(
             for (pu in moduleUnits) {
                 //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
-                    value tc = platformServices.createTextChange(name, pu);
+                    value tc = platformServices.document.createTextChange(name, pu);
                     tc.initMultiEdit();
                     variable value found = false;
                     object extends Visitor() {
@@ -768,8 +768,8 @@ shared class ExtractFunctionRefactoring(
                 document.getIndent(decNode);
         value extraIndent =
                 indent +
-                platformServices.defaultIndent +
-                platformServices.defaultIndent;
+                platformServices.document.defaultIndent +
+                platformServices.document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
@@ -825,7 +825,7 @@ shared class ExtractFunctionRefactoring(
             typeOrKeyword = "dynamic";
         }
         
-        value bodyIndent = indent + platformServices.defaultIndent;
+        value bodyIndent = indent + platformServices.document.defaultIndent;
         value definition = StringBuilder();
         definition
             .append(typeOrKeyword)

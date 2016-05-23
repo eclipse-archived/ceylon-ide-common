@@ -38,7 +38,7 @@ shared object changeInitialCaseQuickFix {
                     = newFirstLetter.string
                     + oldIdentifier.spanFrom(1);
             
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Change Initial Case of Identifier";
                 input = data.phasedUnit;
             };

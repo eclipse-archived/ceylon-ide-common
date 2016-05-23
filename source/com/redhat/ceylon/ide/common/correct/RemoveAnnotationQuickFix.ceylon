@@ -69,7 +69,7 @@ shared object removeAnnotationQuickFix {
     
     void addRemoveAnnotationProposalInternal(String annotation, String desc,
         Declaration dec, PhasedUnit unit, Tree.Declaration decNode, QuickFixData data) {
-        value change = platformServices.createTextChange(desc, unit);
+        value change = platformServices.document.createTextChange(desc, unit);
         change.initMultiEdit();
 
         value offset = decNode.startIndex;

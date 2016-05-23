@@ -201,7 +201,7 @@ shared object createTypeParameterQuickFix {
             return;
         }
         
-        value change = platformServices.createTextChange("Add Type Parameter", phasedUnit);
+        value change = platformServices.document.createTextChange("Add Type Parameter", phasedUnit);
         change.initMultiEdit();
         
         value doc = change.document;
@@ -221,8 +221,8 @@ shared object createTypeParameterQuickFix {
                 if (!string.trimmed.empty) {
                     text = doc.defaultLineDelimiter
                             + doc.getIndent(decNode)
-                            + platformServices.defaultIndent
-                            + platformServices.defaultIndent
+                            + platformServices.document.defaultIndent
+                            + platformServices.document.defaultIndent
                             + constraints;
                 } else {
                     text = constraints;

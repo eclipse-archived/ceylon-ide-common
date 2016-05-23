@@ -79,7 +79,7 @@ shared class ObjectClassDefinitionGenerator(
                 typeParamDef.deleteTerminal(1);
                 typeParamDef.append(">");
             }
-            value defIndent = platformServices.defaultIndent;
+            value defIndent = platformServices.document.defaultIndent;
             value supertype 
                     = if (isVoid) then null 
                     else supertypeDeclaration(returnType);
@@ -103,7 +103,7 @@ shared class ObjectClassDefinitionGenerator(
             }
             def.append(indent).append("}");
         } else if (objectGenerator) {
-            value defIndent = platformServices.defaultIndent;
+            value defIndent = platformServices.document.defaultIndent;
             value supertype = 
                     if (isVoid) then null 
                     else supertypeDeclaration(returnType);

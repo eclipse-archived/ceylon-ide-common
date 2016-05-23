@@ -133,14 +133,14 @@ shared interface ExtractValueRefactoring<IRegion>
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
             value semi = fun.endIndex.intValue()-1;
-            String starting = " {" + indent + platformServices.defaultIndent;
+            String starting = " {" + indent + platformServices.document.defaultIndent;
             String ending = ";" + indent + "}";
             tfc.addEdit(ReplaceEdit(loc, len, starting));
             tfc.addEdit(InsertEdit(end, ending));
             tfc.addEdit(DeleteEdit(semi, 1));
             adjustment = starting.size-len;
             newLineOrReturn = 
-                    indent + platformServices.defaultIndent +
+                    indent + platformServices.document.defaultIndent +
                     (!fun.declarationModel.declaredVoid then "return " else "");
             toplevel = false;
         }

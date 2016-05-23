@@ -37,7 +37,7 @@ shared object createParameterQuickFix {
         PhasedUnit unit, Tree.Declaration decNode, Tree.ParameterList paramList,
         Type? returnType, CommonImportProposals importProposals, Node node) {
         
-        value change = platformServices.createTextChange("Add Parameter", unit);
+        value change = platformServices.document.createTextChange("Add Parameter", unit);
         change.initMultiEdit();
         value offset = paramList.stopIndex.intValue();
         value il = importProposals.apply(change);
@@ -54,7 +54,7 @@ shared object createParameterQuickFix {
         Icons image, Declaration dec, PhasedUnit unit, Tree.Declaration decNode,
         Tree.ParameterList paramList, Tree.Body body, Type returnType) {
         
-        value change = platformServices.createTextChange("Add Attribute", unit);
+        value change = platformServices.document.createTextChange("Add Attribute", unit);
         change.initMultiEdit();
         value doc = change.document;
         value offset = paramList.stopIndex.intValue();
@@ -64,7 +64,7 @@ shared object createParameterQuickFix {
         value statements = body.statements;
         if (statements.empty) {
             indentAfter = doc.defaultLineDelimiter + doc.getIndent(decNode);
-            indent = indentAfter + platformServices.defaultIndent;
+            indent = indentAfter + platformServices.document.defaultIndent;
             offset2 = body.startIndex.intValue() + 1;
         } else {
             value statement = statements.get(statements.size() - 1);

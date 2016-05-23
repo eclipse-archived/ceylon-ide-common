@@ -56,7 +56,7 @@ shared object splitDeclarationQuickFix {
         value typeStartOffset = type.startIndex.intValue();
         value typeEndOffset = type.endIndex.intValue();
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Split Declaration";
             input = data.phasedUnit;
         };
@@ -139,7 +139,7 @@ shared object splitDeclarationQuickFix {
                 }
             }
             
-            variable value text = delim + indent + platformServices.defaultIndent
+            variable value text = delim + indent + platformServices.document.defaultIndent
                      + annotations + typeString + " " + dec.name + paramsString + ";";
             value bstart = body.startIndex.intValue();
             value bstop = body.endIndex.intValue();
@@ -216,7 +216,7 @@ shared object splitDeclarationQuickFix {
             exists id = varNode.identifier,
             !(varNode.type is Tree.SyntheticVariable)) {
             
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Split Variable";
                 input = data.phasedUnit;
             };

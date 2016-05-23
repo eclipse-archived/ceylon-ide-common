@@ -190,7 +190,7 @@ shared object convertIfElseToThenElseQuickFix {
         
         
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = desc;
             input = data.phasedUnit;
         };

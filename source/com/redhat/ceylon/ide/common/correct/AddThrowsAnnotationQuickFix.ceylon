@@ -41,7 +41,7 @@ shared object addThrowsAnnotationQuickFix {
         value throwsAnnotation = "throws (`class " + exceptionType.asString() + "`, \"\")";
         value edit = addAnnotationQuickFix
                 .createInsertAnnotationEdit(throwsAnnotation, throwContainer, data.document);
-        value change = platformServices.createTextChange("Add Throws Annotation", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Add Throws Annotation", data.phasedUnit);
         change.addEdit(edit);
         
         value cursorOffset = edit.start

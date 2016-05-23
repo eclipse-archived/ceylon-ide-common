@@ -200,7 +200,7 @@ shared object changeTypeQuickFix {
             return;
         }
         
-        value change = platformServices.createTextChange("Change Type", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Change Type", data.phasedUnit);
         change.initMultiEdit();
         value doc = change.document;
         value offset = node.startIndex.intValue();

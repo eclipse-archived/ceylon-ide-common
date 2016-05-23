@@ -26,7 +26,7 @@ shared object convertToPositionalArgumentsQuickFix {
             return;
         }
         
-        value tc = platformServices.createTextChange {
+        value tc = platformServices.document.createTextChange {
             name = "Convert to Positional Arguments";
             input = data.phasedUnit;
         };

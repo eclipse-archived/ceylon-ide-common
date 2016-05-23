@@ -39,7 +39,7 @@ shared object convertToSpecifierQuickFix {
             
             if (exists end, exists start) {
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Convert to Specifier";
                     input = data.phasedUnit;
                 };

@@ -1,15 +1,9 @@
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.ide.common.platform {
     PlatformServices,
     VfsServices,
     IdeUtils,
     ModelServices,
     CommonDocument,
-    DefaultDocument,
-    DefaultTextChange,
-    DefaultCompositeChange,
     NoopLinkedMode
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -17,11 +11,6 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared object testPlatform satisfies PlatformServices {
-    createCompositeChange(String desc)
-            => DefaultCompositeChange(desc);
-    
-    createTextChange(String desc, CommonDocument|PhasedUnit input)
-            => if (is DefaultDocument input) then DefaultTextChange(input) else nothing;
     
     shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> model<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
     
@@ -31,10 +20,9 @@ shared object testPlatform satisfies PlatformServices {
     
     gotoLocation(Unit unit, Integer offset, Integer length) => noop();
     
-    indentSpaces => 4;
-    indentWithSpaces => true;
     createLinkedMode(CommonDocument document)
             => NoopLinkedMode(document);
     
     completion => nothing;
+    document => testDocumentServices;
 }

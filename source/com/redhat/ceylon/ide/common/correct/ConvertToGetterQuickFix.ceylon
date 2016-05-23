@@ -22,7 +22,7 @@ shared object convertToGetterQuickFix {
             
             if (!dec.variable) { //TODO: temp restriction, autocreate setter!
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Convert to Getter";
                     input = data.phasedUnit;
                 };

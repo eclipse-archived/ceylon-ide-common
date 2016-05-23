@@ -564,7 +564,7 @@ shared abstract class InvocationCompletionProposal
     
     shared TextChange createChange(CommonDocument document) {
         HashSet<Declaration> decs = HashSet<Declaration>();
-        value change = platformServices.createTextChange("Complete Invocation", document);
+        value change = platformServices.document.createTextChange("Complete Invocation", document);
         change.initMultiEdit();
         
         if (exists qualifyingValue) {

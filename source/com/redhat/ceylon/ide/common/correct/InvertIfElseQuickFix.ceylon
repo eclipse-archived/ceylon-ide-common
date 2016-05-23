@@ -89,7 +89,7 @@ shared object invertIfElseQuickFix {
             replace.append("else ")
                    .append(doc.getNodeText(ifBlock));
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Invert If Then Else";
                 input = data.phasedUnit;
             };
@@ -160,7 +160,7 @@ shared object invertIfElseQuickFix {
         value test = invertCondition(doc, ifCondition);
         
         value baseIndent = doc.getIndent(ifStmt);
-        value indent = platformServices.defaultIndent;
+        value indent = platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         value elseStr = addEnclosingBraces {
             s = doc.getNodeText(elseBlock);
@@ -183,7 +183,7 @@ shared object invertIfElseQuickFix {
         
         replace.append("else ")
                .append(doc.getNodeText(ifBlock));
-        value change = platformServices.createTextChange {
+        value change = platformServices.document.createTextChange {
             name = "Invert If Else";
             input = data.phasedUnit;
         };

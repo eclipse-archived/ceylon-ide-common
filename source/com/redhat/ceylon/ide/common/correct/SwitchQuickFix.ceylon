@@ -31,7 +31,7 @@ shared object switchQuickFix {
                     }) {
             value offset = st.endIndex.intValue();
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Else";
                 input = data.phasedUnit;
             };
@@ -96,7 +96,7 @@ shared object switchQuickFix {
             }
             
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Cases";
                 input = data.phasedUnit;
             };

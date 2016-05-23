@@ -55,7 +55,7 @@ shared object changeRefiningTypeQuickFix {
                 value type = t.asSourceCodeString(td.unit);
                 
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Change Type";
                     input = data.phasedUnit;
                 };
@@ -149,7 +149,7 @@ shared object changeRefiningTypeQuickFix {
                         Collections.emptyList<Type>());
             value params = list.parameters;
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Fix Refining Parameter List";
                 input = data.phasedUnit;
             };

@@ -31,7 +31,7 @@ shared object convertToNamedArgumentsQuickFix {
         if (exists pal,
             canConvert(pal)) {
             
-            value tc = platformServices.createTextChange {
+            value tc = platformServices.document.createTextChange {
                 name = "Convert to Named Arguments";
                 input = data.phasedUnit;
             };

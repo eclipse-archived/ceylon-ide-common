@@ -218,7 +218,7 @@ shared abstract class ChangeParametersRefactoring(
     "Applies the changes made in the `ParameterList`."
     shared CompositeChange build(ParameterList params) {
         
-        value change = platformServices.createCompositeChange(name);
+        value change = platformServices.document.createCompositeChange(name);
         
         // TODO progress reporting!
         if (affectsOtherFiles) {
@@ -227,7 +227,7 @@ shared abstract class ChangeParametersRefactoring(
                     assert (is AnyProjectPhasedUnit phasedUnit);
                     refactorInFile {
                         params = params;
-                        tfc = platformServices.createTextChange(name, phasedUnit);
+                        tfc = platformServices.document.createTextChange(name, phasedUnit);
                         cc = change;
                         root = phasedUnit.compilationUnit;
                         tokens = phasedUnit.tokens;
@@ -240,7 +240,7 @@ shared abstract class ChangeParametersRefactoring(
                 assert (is AnyEditedPhasedUnit phasedUnit);
                 refactorInFile {
                     params = params;
-                    tfc = platformServices.createTextChange(name, phasedUnit);
+                    tfc = platformServices.document.createTextChange(name, phasedUnit);
                     cc = change;
                     root = phasedUnit.compilationUnit;
                     tokens = phasedUnit.tokens;
@@ -251,7 +251,7 @@ shared abstract class ChangeParametersRefactoring(
         if (searchInEditor()) {
             refactorInFile {
                 params = params;
-                tfc = platformServices.createTextChange(name, doc);
+                tfc = platformServices.document.createTextChange(name, doc);
                 cc = change;
                 root = rootNode;
                 tokens = tokens;
@@ -730,7 +730,7 @@ shared abstract class ChangeParametersRefactoring(
                     if (doc.getLineOfOffset(stopOffset) 
                             > doc.getLineOfOffset(startOffset)) {
                         argString = 
-                                platformServices.defaultIndent + argString + ";"
+                                platformServices.document.defaultIndent + argString + ";"
                                 + doc.defaultLineDelimiter
                                 + doc.getIndent(nal);
                     } else if (startOffset == stopOffset-1) {

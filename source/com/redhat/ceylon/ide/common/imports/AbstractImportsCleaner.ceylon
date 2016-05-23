@@ -34,7 +34,7 @@ shared interface AbstractImportsCleaner {
     shared void cleanImports(Tree.CompilationUnit? rootNode,
         CommonDocument doc) {
         
-        value change = platformServices.createTextChange("Organize Imports", doc);
+        value change = platformServices.document.createTextChange("Organize Imports", doc);
         
         if (exists rootNode) {
             value imp = imports(rootNode, doc);
@@ -169,7 +169,7 @@ shared interface AbstractImportsCleaner {
         List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
         StringBuilder builder, CommonDocument doc) {
         
-        value indent = platformServices.defaultIndent;
+        value indent = platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         for (i in elements) {
@@ -211,7 +211,7 @@ shared interface AbstractImportsCleaner {
     void appendNestedImportElements(Tree.ImportMemberOrType imt,
         List<Declaration> unused, StringBuilder builder, CommonDocument doc) {
         
-        value indent = platformServices.defaultIndent;
+        value indent = platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         if (imt.importMemberOrTypeList exists) {

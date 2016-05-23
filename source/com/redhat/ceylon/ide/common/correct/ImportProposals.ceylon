@@ -83,7 +83,7 @@ shared object importProposals {
             };
     
     void createImportProposal(QuickFixData data, Declaration declaration) {
-        value change = platformServices.createTextChange("Add Import", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Add Import", data.phasedUnit);
         change.initMultiEdit();
         
         value edits = importEdits {
@@ -129,7 +129,7 @@ shared object importProposals {
                 for (d in declarations) {
                     if (d.unit.\ipackage == p) {
                         text.appendCharacter(',').append(delim)
-                            .append(platformServices.defaultIndent)
+                            .append(platformServices.document.defaultIndent)
                             .append(escaping.escapeName(d));
                     }
                 }
@@ -138,7 +138,7 @@ shared object importProposals {
                 for (d in declarations) {
                     String? theAlias = aliasIter.next()?.string;
                     if (d.unit.\ipackage == p) {
-                        text.append(",").append(delim).append(platformServices.defaultIndent);
+                        text.append(",").append(delim).append(platformServices.document.defaultIndent);
                         if (exists theAlias, theAlias != d.name) {
                             text.append(theAlias).appendCharacter('=');
                         }
@@ -194,13 +194,13 @@ shared object importProposals {
         StringBuilder text = StringBuilder();
         if (!exists aliases) {
             for (d in declarations) {
-                text.append(",").append(delim).append(platformServices.defaultIndent).append(d.name);
+                text.append(",").append(delim).append(platformServices.document.defaultIndent).append(d.name);
             }
         } else {
             JIterator<JString> aliasIter = aliases.iterator();
             for (d in declarations) {
                 String? \ialias = aliasIter.next()?.string;
-                text.append(",").append(delim).append(platformServices.defaultIndent);
+                text.append(",").append(delim).append(platformServices.document.defaultIndent);
                 if (exists \ialias, \ialias != d.name) {
                     text.append(\ialias).appendCharacter('=');
                 }
@@ -226,7 +226,7 @@ shared object importProposals {
                 assert (exists endIndex = imtl.endIndex);
                 value start = startIndex.intValue();
                 value end = endIndex.intValue();
-                String formattedImport = formatImportMembers(delim, platformServices.defaultIndent, set, imtl);
+                String formattedImport = formatImportMembers(delim, platformServices.document.defaultIndent, set, imtl);
                 result.add(ReplaceEdit(start, end - start, formattedImport));
             }
         }

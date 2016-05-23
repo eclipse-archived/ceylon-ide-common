@@ -41,7 +41,7 @@ shared object expandTypeQuickFix {
             value start = res.startIndex.intValue();
             value len = res.distance.intValue();
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Expand Type";
                 input = data.phasedUnit;
             };

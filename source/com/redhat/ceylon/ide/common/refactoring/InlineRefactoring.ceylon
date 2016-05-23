@@ -274,7 +274,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                 if (searchInFile(phasedUnit)
                         && affectsUnit(phasedUnit.unit)) {
                     inlineInFile {
-                        textChange = platformServices.createTextChange("Inline", phasedUnit);
+                        textChange = platformServices.document.createTextChange("Inline", phasedUnit);
                         parentChange = change;
                         declarationNode = declarationNode;
                         declarationRootNode = declarationRootNode;
@@ -291,7 +291,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
             if (searchInFile(phasedUnit)
                     && affectsUnit(phasedUnit.unit)) {
                 inlineInFile {
-                    textChange = platformServices.createTextChange("Inline", phasedUnit);
+                    textChange = platformServices.document.createTextChange("Inline", phasedUnit);
                     parentChange = change;
                     declarationNode = declarationNode;
                     declarationRootNode = declarationRootNode;
@@ -306,7 +306,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         if (searchInEditor() 
                 && affectsUnit(editorUnit)) {
             inlineInFile {
-                textChange = platformServices.createTextChange("Inline", editorData.doc);
+                textChange = platformServices.document.createTextChange("Inline", editorData.doc);
                 parentChange = change;
                 declarationNode = declarationNode;
                 declarationRootNode = declarationRootNode;

@@ -32,7 +32,7 @@ shared object refineEqualsHashQuickFix {
 
     TextChange? refineEqualsHash(QuickFixData data, Integer currentOffset) {
 
-        value change = platformServices.createTextChange("Refine Equals and Hash", data.phasedUnit);
+        value change = platformServices.document.createTextChange("Refine Equals and Hash", data.phasedUnit);
         change.initMultiEdit();
         
         value node = data.node;
@@ -73,7 +73,7 @@ shared object refineEqualsHashQuickFix {
         value bodyIndent = document.getIndent(node);
         value delim = document.defaultLineDelimiter;
         if (statements.empty) {
-            indent = delim + bodyIndent + platformServices.defaultIndent;
+            indent = delim + bodyIndent + platformServices.document.defaultIndent;
             if (offset < 0) {
                 offset = body.startIndex.intValue() + 1;
             }

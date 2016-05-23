@@ -112,7 +112,7 @@ shared abstract class TypeProposal
         extends AbstractCompletionProposal(offset, "", desc, text) {
     
     shared DefaultRegion applyChange(CommonDocument document) {
-        value change = platformServices.createTextChange("Specify Type", document);
+        value change = platformServices.document.createTextChange("Specify Type", document);
         change.initMultiEdit();
         value decs = HashSet<Declaration>();
         if (exists type) {

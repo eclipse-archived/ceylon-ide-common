@@ -92,7 +92,7 @@ shared object createEnumQuickFix {
     void addCreateEnumProposalInternal2(String def, String desc, Icons image,
         PhasedUnit unit, Tree.Statement statement, QuickFixData data) {
         
-        value change = platformServices.createTextChange("Create Enumerated", unit);
+        value change = platformServices.document.createTextChange("Create Enumerated", unit);
         value doc = change.document;
         value indent = doc.getIndent(statement);
         variable value s = indent + def + doc.defaultLineDelimiter;

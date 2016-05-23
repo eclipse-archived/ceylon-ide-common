@@ -53,7 +53,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
     
     Boolean terminateWithBrace(Document doc, Integer line) {
         value change 
-                = platformServices.createTextChange(
+                = platformServices.document.createTextChange(
                     "Terminate Statement", doc);
         change.initMultiEdit();
         value [rootNode, tokens] = parse(doc);
@@ -81,7 +81,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
 
     Boolean terminateWithSemicolon(Document doc, Integer line) {
         value change 
-                = platformServices.createTextChange(
+                = platformServices.document.createTextChange(
                     "Terminate Statement", doc);
         change.initMultiEdit();
         value [rootNode, tokens] = parse(doc);

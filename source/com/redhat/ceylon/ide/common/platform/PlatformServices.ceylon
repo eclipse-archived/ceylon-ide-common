@@ -1,12 +1,5 @@
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.model.typechecker.model {
     Unit
-}
-
-import java.lang {
-    StringBuilder
 }
 
 shared interface PlatformServices {
@@ -18,30 +11,8 @@ shared interface PlatformServices {
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
             vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal CompletionServices completion;
-    
-    shared formal TextChange createTextChange(String name, CommonDocument|PhasedUnit input);
-    shared formal CompositeChange createCompositeChange(String name);
+    shared formal DocumentServices document;
     shared formal void gotoLocation(Unit unit, Integer offset, Integer length);
-
-    shared formal Integer indentSpaces;
-    shared formal Boolean indentWithSpaces;
-    shared String defaultIndent {
-        StringBuilder result = StringBuilder();
-        initialIndent(result);
-        return result.string;
-    }
-    shared void initialIndent(StringBuilder buf) {
-        //guess an initial indent level
-        if (indentWithSpaces) {
-            value spaces = indentSpaces;
-            for (i in 1..spaces) {
-                buf.append(' ');
-            }
-        }
-        else {
-            buf.append('\t');
-        }
-    }
     
     shared formal LinkedMode createLinkedMode(CommonDocument document);
 }
@@ -56,13 +27,8 @@ variable PlatformServices _platformServices
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> 
             vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() 
             => nothing;
-    shared actual TextChange createTextChange(String desc, CommonDocument|PhasedUnit input) 
-            => nothing;
     completion => nothing;
-    createCompositeChange(String desc) 
-            => nothing;
-    indentSpaces => 4;
-    indentWithSpaces => true;
+    document => nothing;
     gotoLocation(Unit unit, Integer offset, Integer length) => noop();
     createLinkedMode(CommonDocument document) => NoopLinkedMode(document);
 };

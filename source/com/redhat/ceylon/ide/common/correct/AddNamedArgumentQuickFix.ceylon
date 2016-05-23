@@ -18,7 +18,7 @@ shared object addNamedArgumentQuickFix {
     shared void addNamedArgumentsProposal(QuickFixData data) {
         if (is Tree.NamedArgumentList node = data.node) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Named Arguments";
                 input = data.phasedUnit;
             };

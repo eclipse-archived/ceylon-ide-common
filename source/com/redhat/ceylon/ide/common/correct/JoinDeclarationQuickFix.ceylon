@@ -122,7 +122,7 @@ shared object joinDeclarationQuickFix {
         Integer i, Tree.TypedDeclaration ad) {
         
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Join Declaration";
             input = data.phasedUnit;
         };

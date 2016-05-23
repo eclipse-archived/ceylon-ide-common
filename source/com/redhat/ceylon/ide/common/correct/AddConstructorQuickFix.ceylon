@@ -27,7 +27,7 @@ shared object addConstructorQuickFix {
                     then nodes.findDeclarationWithBody(data.rootNode, node) 
                     else data.node) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Default Constructor";
                 input = data.phasedUnit;
             };
@@ -39,7 +39,7 @@ shared object addConstructorQuickFix {
                 value uninitialized 
                         = correctionUtil.collectUninitializedMembers(body);
                 value les = findLastExecutable(body);
-                value defaultIndent = platformServices.defaultIndent;
+                value defaultIndent = platformServices.document.defaultIndent;
                 value delim = doc.defaultLineDelimiter;
                 value indent 
                         = if (!exists les)

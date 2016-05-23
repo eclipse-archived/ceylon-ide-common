@@ -25,7 +25,7 @@ shared object operatorQuickFix {
             exists lt = boe.leftTerm,
             exists rt = boe.rightTerm) {
             
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Swap Operands";
                 input = data.phasedUnit;
             };
@@ -56,7 +56,7 @@ shared object operatorQuickFix {
     shared void addReverseOperatorProposal(QuickFixData data, 
         Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp boe) {
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Reverse Operator";
                 input = data.phasedUnit;
             };
@@ -101,7 +101,7 @@ shared object operatorQuickFix {
     shared void addInvertOperatorProposal(QuickFixData data, 
         Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp|Tree.LogicalOp boe) {
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Invert Operator";
                 input = data.phasedUnit;
             };
@@ -265,7 +265,7 @@ shared object operatorQuickFix {
             desc = "expression";
         }
         
-        value change = platformServices.createTextChange {
+        value change = platformServices.document.createTextChange {
             name = "Add Parentheses";
             input = data.phasedUnit;
         };
@@ -288,7 +288,7 @@ shared object operatorQuickFix {
             token.type == CeylonLexer.\iLPAREN,
             endToken.type == CeylonLexer.\iRPAREN) {
             
-            value change = platformServices.createTextChange {
+            value change = platformServices.document.createTextChange {
                 name = "Remove Parentheses";
                 input = data.phasedUnit;
             };

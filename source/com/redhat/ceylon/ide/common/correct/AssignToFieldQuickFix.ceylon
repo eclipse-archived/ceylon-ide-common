@@ -51,7 +51,7 @@ shared object assignToFieldQuickFix {
             }
             
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Assign to Field";
                 input = data.phasedUnit;
             };
@@ -95,7 +95,7 @@ shared object assignToFieldQuickFix {
                 start = constructor.block.startIndex.intValue() + 1;
                 text 
                     = indent 
-                    + platformServices.defaultIndent 
+                    + platformServices.document.defaultIndent 
                     + "this.``name`` = ``name``;";
             });
             

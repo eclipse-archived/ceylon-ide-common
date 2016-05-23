@@ -79,7 +79,7 @@ shared object appendMemberReferenceQuickFix {
     void addAppendMemberReferenceProposal(Node node, QuickFixData data, 
         TypedDeclaration dec, Type type) {
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Append Member Reference";
             input = data.phasedUnit;
         };

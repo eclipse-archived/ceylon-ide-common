@@ -28,7 +28,7 @@ shared object splitIfStatementQuickFix {
                         
                         value doc = data.document;
                         value change 
-                                = platformServices.createTextChange {
+                                = platformServices.document.createTextChange {
                             name = "Split If Statement";
                             input = data.phasedUnit;
                         };
@@ -42,7 +42,7 @@ shared object splitIfStatementQuickFix {
                         } else {
                             ws = doc.defaultLineDelimiter
                                     + doc.getIndent(ifSt);
-                            indent = platformServices.defaultIndent;
+                            indent = platformServices.document.defaultIndent;
                         }
                         
                         value start = c1.endIndex.intValue();
@@ -80,13 +80,13 @@ shared object splitIfStatementQuickFix {
                         value icl = inner.ifClause.conditionList;
                         value doc = data.document;
                         value change 
-                                = platformServices.createTextChange(
+                                = platformServices.document.createTextChange(
                                     "Split If Statement", doc);
                         change.initMultiEdit();
                         value ws 
                                 = doc.defaultLineDelimiter
                                 + doc.getIndent(ifSt);
-                        value indent = platformServices.defaultIndent;
+                        value indent = platformServices.document.defaultIndent;
                         value start = block.startIndex.intValue();
                         change.addEdit( 
                             InsertEdit {

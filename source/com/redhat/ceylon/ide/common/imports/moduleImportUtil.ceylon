@@ -66,7 +66,7 @@ shared object moduleImportUtil {
     }
 
     shared void exportModuleImports2(PhasedUnit pu, String moduleName) {
-        value change = platformServices.createTextChange("Export Module Imports", pu);
+        value change = platformServices.document.createTextChange("Export Module Imports", pu);
         change.initMultiEdit();
 
         value edit = createExportEdit(pu.compilationUnit, moduleName);
@@ -77,7 +77,7 @@ shared object moduleImportUtil {
     }
     
     shared void removeModuleImports2(PhasedUnit pu, List<String> moduleNames) {
-        value change = platformServices.createTextChange("Remove Module Imports", pu);
+        value change = platformServices.document.createTextChange("Remove Module Imports", pu);
         change.initMultiEdit();
 
         for (moduleName in moduleNames) {
@@ -101,7 +101,7 @@ shared object moduleImportUtil {
             map({moduleName -> versionNode}));
         
         if (exists pu = findPhasedUnit(target)) {
-            value indent = platformServices.defaultIndent;
+            value indent = platformServices.document.defaultIndent;
             
             platformServices.gotoLocation { 
                 unit = pu.unit; 
@@ -115,7 +115,7 @@ shared object moduleImportUtil {
         ObjectArray<JString> moduleNames) {
         
         if (exists pu = findPhasedUnit(target)) {
-            value change = platformServices.createTextChange("Make Module Import Shared", pu);
+            value change = platformServices.document.createTextChange("Make Module Import Shared", pu);
             change.initMultiEdit();
             
             value compilationUnit = pu.compilationUnit;
@@ -178,7 +178,7 @@ shared object moduleImportUtil {
     shared Integer addModuleImports3(PhasedUnit pu,
         Map<String,ModuleVersionNode> moduleNamesAndVersions) {
         
-        value change = platformServices.createTextChange("Add Module Imports", pu);
+        value change = platformServices.document.createTextChange("Add Module Imports", pu);
         change.initMultiEdit();
         
         for (name -> val in moduleNamesAndVersions) {
@@ -236,7 +236,7 @@ shared object moduleImportUtil {
          String moduleVersion, String newline, CommonDocument doc) {
         
         importModule.append(newline)
-                .append(platformServices.defaultIndent);
+                .append(platformServices.document.defaultIndent);
         
         if (shared) {
             importModule.append("shared ");

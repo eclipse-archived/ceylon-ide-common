@@ -23,7 +23,7 @@ shared object changeToQuickFix {
             is Tree.Return ret = data.node,
             is Tree.VoidModifier type = method.type) {
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Change To Function";
                 input = data.phasedUnit;
             };
@@ -50,7 +50,7 @@ shared object changeToQuickFix {
             value type = dec.type;
             if (!(type is Tree.VoidModifier)) {
                 value change 
-                        = platformServices.createTextChange {
+                        = platformServices.document.createTextChange {
                     name = "Change To Void";
                     input = data.phasedUnit;
                 };

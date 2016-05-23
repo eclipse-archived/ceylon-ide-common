@@ -29,7 +29,7 @@ shared object convertToClassQuickFix {
         value declaration = node.declarationModel;
         value name = declaration.name;
         value initialName = escaping.toInitialUppercase(name);
-        value change = platformServices.createTextChange("Convert to Class", doc);
+        value change = platformServices.document.createTextChange("Convert to Class", doc);
         change.initMultiEdit();
         
         assert(is CommonToken tok = node.mainToken);

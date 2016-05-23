@@ -17,7 +17,7 @@ shared object addPunctuationQuickFix {
         
         value dec = decNode.declarationModel;
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Add Empty Parameter List";
             input = data.phasedUnit;
         };
@@ -42,7 +42,7 @@ shared object addPunctuationQuickFix {
         if (is Tree.ImportMemberOrTypeList node = data.node) {
             value imtl = node;
             value change 
-                    = platformServices.createTextChange {
+                    = platformServices.document.createTextChange {
                 name = "Add Import Wildcard";
                 input = data.phasedUnit;
             };

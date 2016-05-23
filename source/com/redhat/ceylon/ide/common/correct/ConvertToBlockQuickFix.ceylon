@@ -19,7 +19,7 @@ shared object convertToBlockQuickFix {
     
     shared void addConvertToBlockProposal(QuickFixData data, Node decNode) {
         value change 
-                = platformServices.createTextChange {
+                = platformServices.document.createTextChange {
             name = "Convert to Block";
             input = data.phasedUnit;
         };
@@ -152,7 +152,7 @@ shared object convertToBlockQuickFix {
         
         value doc = change.document;
         value baseIndent = doc.getIndent(decNode);
-        value indent = platformServices.defaultIndent;
+        value indent = platformServices.document.defaultIndent;
         value nl = doc.defaultLineDelimiter;
         change.addEdit(ReplaceEdit {
             start = offset;
