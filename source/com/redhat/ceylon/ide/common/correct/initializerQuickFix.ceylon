@@ -5,11 +5,18 @@ import com.redhat.ceylon.ide.common.completion {
     isIgnoredLanguageModuleMethod,
     isInBounds,
     isIgnoredLanguageModuleClass,
-    ProposalsHolder
+    ProposalsHolder,
+    getCurrentSpecifierRegion,
+    getProposedName,
+    appendPositionalArgs
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
-    platformServices
+    platformServices,
+    TextChange
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -26,32 +33,99 @@ import com.redhat.ceylon.model.typechecker.model {
     Class,
     Unit,
     Scope,
-    Declaration
+    Declaration,
+    Functional
 }
 
-shared interface AbstractInitializerQuickFix {
+shared object initializerQuickFix {
     
-    shared void addInitializer(CommonDocument doc,
-        DefaultRegion selection, Type? type, Unit unit, Scope scope,
-        Integer exitSeq = 0, Integer exitPos = 0) {
+    shared void apply(TextChange change, CommonDocument sourceDocument, Unit unit) {
         
-        value linkedMode = platformServices.createLinkedMode(doc);
-        value proposals = getProposals(doc, selection.start, type, unit, scope);
-        
-        if (proposals.size > 1) {
-            linkedMode.addEditableRegion(selection.start, selection.length,
-                0, proposals);
-            
-            linkedMode.install(this, exitSeq, exitPos);
+        if (sourceDocument != change.document) {
+            platformServices.gotoLocation(unit, 0, 0);
         }
+
+        change.apply();
+    }
+
+    shared void applyWithLinkedMode(TextChange change, 
+        CommonDocument sourceDocument, DefaultRegion selection, Type? type,
+        Unit unit, Scope scope, variable Integer exitPos) {
         
+        value targetDocument = change.document;
+        
+        if (sourceDocument != targetDocument) {
+            platformServices.gotoLocation(unit, 0, 0);
+            exitPos = -1;
+        }
+
+        value lenBefore = targetDocument.size;
+        change.apply();
+        value lenAfter = targetDocument.size;
+
+        value lmDocument = 
+                platformServices.gotoLocation(unit, selection.start, selection.length)
+                else targetDocument;
+        
+        //TODO: preference to disable linked mode?
+        if (lenAfter > lenBefore,
+            selection.length > 0) {
+            
+            value lm = platformServices.createLinkedMode(lmDocument);
+            value proposals = getProposals(lmDocument, selection.start, type, unit, scope);
+            if (!proposals.empty) {
+                lm.addEditableRegion {
+                    start = selection.start;
+                    length = selection.length;
+                    exitSeqNumber = 0;
+                    proposals = proposals;
+                };
+                value adjustedPos = if (exitPos >= 0, exitPos > selection.start)
+                                    then exitPos + lenAfter - lenBefore
+                                    else exitPos;
+                value exitSeq = (exitPos >= 0) then 1 else -1;
+                lm.install(this, exitSeq, adjustedPos);
+            }
+        }
     }
     
-    shared formal void newNestedLiteralCompletionProposal(ProposalsHolder proposals,
-        String val, Integer offset);
+    void addNestedLiteralCompletionProposal(CommonDocument document,
+        ProposalsHolder proposals, String val, Integer offset) {
+        
+        value region = getCurrentSpecifierRegion(document, offset);
+        
+        platformServices.completion.addProposal {
+            proposals = proposals;
+            description = val;
+            region = region;
+            icon = Icons.ceylonLiteral;
+        };
+    }
 
-    shared formal void newNestedCompletionProposal(ProposalsHolder proposals,
-        Declaration dec, Integer offset);
+    void addNestedCompletionProposal(CommonDocument document, 
+        ProposalsHolder proposals, Declaration dec, Integer offset) {
+        
+        value region = getCurrentSpecifierRegion(document, offset);
+        
+        function getText(Boolean description) {
+            value sb = StringBuilder();
+            sb.append(getProposedName(null, dec, dec.unit));
+            if (is Functional dec) {
+                appendPositionalArgs(dec, null, (dec of Declaration).unit,
+                    sb, false, description, false);
+            }
+            
+            return sb.string;
+        }
+        
+        platformServices.completion.addProposal {
+            proposals = proposals;
+            icon = dec;
+            description = getText(true);
+            region = region;
+            text = getText(false);
+        };
+    }
     
     ProposalsHolder getProposals(CommonDocument document, 
         Integer loc, Type? type, Unit unit, Scope scope) {
@@ -63,12 +137,12 @@ shared interface AbstractInitializerQuickFix {
 //            proposals.add(new NestedLiteralCompletionProposal(
 //                    document.get(point.x, point.y), point.x));
 
-        addValueArgumentProposals(loc, type, unit, scope, proposals);
+        addValueArgumentProposals(document, loc, type, unit, scope, proposals);
         
         return proposals;
     }
 
-    void addValueArgumentProposals(Integer loc, Type? type,
+    void addValueArgumentProposals(CommonDocument document, Integer loc, Type? type,
         Unit unit, Scope scope, ProposalsHolder props) {
         
         if (!exists type) {
@@ -76,7 +150,7 @@ shared interface AbstractInitializerQuickFix {
         }
         
         for (val in getAssignableLiterals(type, unit)) {
-            newNestedLiteralCompletionProposal(props, val, loc);
+            addNestedLiteralCompletionProposal(document, props, val, loc);
         }
         
         value td = type.declaration;
@@ -104,7 +178,7 @@ shared interface AbstractInitializerQuickFix {
                     !vt.nothing,
                     (isTypeParamInBounds(td, vt) || vt.isSubtypeOf(type))) {
                     
-                    newNestedCompletionProposal(props, d, loc);
+                    addNestedCompletionProposal(document, props, d, loc);
                 }
             }
             
@@ -120,7 +194,7 @@ shared interface AbstractInitializerQuickFix {
                         !mt.nothing,
                         (isTypeParamInBounds(td, mt) || mt.isSubtypeOf(type))) {
                         
-                        newNestedCompletionProposal(props, d, loc);
+                        addNestedCompletionProposal(document, props, d, loc);
                     }
                 }
             }
@@ -141,12 +215,12 @@ shared interface AbstractInitializerQuickFix {
                             || ct.isSubtypeOf(type))) {
                         
                         if (clazz.parameterList exists) {
-                            newNestedCompletionProposal(props, d, loc);
+                            addNestedCompletionProposal(document, props, d, loc);
                         }
                         
                         for (m in clazz.members) {
                             if (m is Constructor, m.shared, m.name exists) {
-                                newNestedCompletionProposal(props, m, loc);
+                                addNestedCompletionProposal(document, props, m, loc);
                             }
                         }
                     }

@@ -14,7 +14,8 @@ import com.redhat.ceylon.ide.common.model {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    InsertEdit
+    InsertEdit,
+    TextChange
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -30,7 +31,6 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface
 }
 
-// TODO extends InitializerProposal
 shared object createParameterQuickFix {
     
     void addCreateParameterProposalInternal(QuickFixData data, String def, String desc, Icons image, Declaration dec,
@@ -46,8 +46,30 @@ shared object createParameterQuickFix {
         
         value selection = correctionUtil.computeSelection(offset + il, def, DefaultRegion);
         
-        data.addCreateParameterProposal("Add " + desc + " to '" + dec.name + "'",
+        addProposal(data, "Add " + desc + " to '" + dec.name + "'",
             dec, returnType, selection, image, change, exitPos);
+    }
+    
+    void addProposal(QuickFixData data, String desc, Declaration dec,
+        Type? returnType, DefaultRegion selection, Icons image,
+        TextChange change, Integer exitPos) {
+        
+        value callback = void() {
+            initializerQuickFix.applyWithLinkedMode {
+                sourceDocument = change.document;
+                change = change;
+                selection = selection;
+                type = returnType;
+                unit = dec.unit;
+                scope = dec.scope;
+                exitPos = exitPos;
+            };
+        };
+        data.addQuickFix {
+            description = desc;
+            change = callback;
+            image = Icons.addCorrection;
+        };
     }
     
     void addCreateParameterAndAttributeProposal(QuickFixData data, String pdef, String adef, String desc,
@@ -81,7 +103,7 @@ shared object createParameterQuickFix {
         
         value selection = correctionUtil.computeSelection(offset + il, pdef, DefaultRegion);
 
-        data.addCreateParameterProposal("Add " + desc + " to '" + dec.name + "'", dec,
+        addProposal(data, "Add " + desc + " to '" + dec.name + "'", dec,
             returnType, selection, image, change, exitPos);
     }
     

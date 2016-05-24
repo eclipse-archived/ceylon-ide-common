@@ -18,12 +18,6 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
-    Unit,
-    Type,
-    Scope
-}
 
 import java.util {
     JList=List
@@ -54,21 +48,8 @@ shared interface QuickFixData {
         Icons? image = null,
         QuickFixKind kind = generic);
     
-    shared formal void addInitializerQuickFix(String description, TextChange change,
-        DefaultRegion selection, Unit unit, Scope scope, Type? type);
-    shared formal void addParameterQuickFix(String description, TextChange change,
-        DefaultRegion selection, Unit unit, Scope scope, Type? type, Integer exitPos);
-    shared formal void addChangeTypeProposal(String description, 
-        TextChange change, DefaultRegion selection, Unit unit);
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);
-    shared formal void addCreateParameterProposal(String description, Declaration dec,
-        Type? type, DefaultRegion selection, Icons image, TextChange change, Integer exitPos);
-    shared formal void addCreateQuickFix(String description,
-        Scope scope, Unit unit, Type? returnType, Icons image,
-        TextChange change, Integer exitPos, DefaultRegion selection);
-    shared formal void addDeclareLocalProposal(String description,
-        TextChange change, Tree.Term term, Tree.BaseMemberExpression bme);
     shared formal void addAssignToLocalProposal(String description);
 }
 

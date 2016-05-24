@@ -13,7 +13,8 @@ import com.redhat.ceylon.ide.common.model {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    InsertEdit
+    InsertEdit,
+    TextChange
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -27,10 +28,15 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
     Interface,
-    Class
+    Class,
+    Unit,
+    Type,
+    Scope
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 
-// TODO extends InitializerProposal
 shared object createQuickFix {
 
     void addCreateMemberProposal(QuickFixData data, DefinitionGenerator dg, 
@@ -98,7 +104,8 @@ shared object createQuickFix {
         value il = importProposals.apply(change);
         change.addEdit(InsertEdit(offset, def));
         
-        data.addCreateQuickFix {
+        addCreateQuickFix {
+            data = data;
             description = "Create " + memberKind(dg) + 
                     " in '" + typeDec.name + "'";
             scope = body.scope;
@@ -118,6 +125,28 @@ shared object createQuickFix {
         };
     }
     
+    void addCreateQuickFix(QuickFixData data, String description, Scope scope,
+        Unit unit, Type? returnType, Icons image, TextChange change,
+        Integer exitPos, DefaultRegion selection) {
+        
+        value callback = void() {
+            initializerQuickFix.applyWithLinkedMode {
+                sourceDocument = change.document;
+                change = change;
+                selection = selection;
+                type = returnType;
+                unit = unit;
+                scope = scope;
+                exitPos = exitPos;
+            };
+        };
+        data.addQuickFix {
+            description = description;
+            change = callback;
+            image = image;
+        };
+    }
+
     String memberKind(DefinitionGenerator dg) {
         value desc = dg.description;
         if (desc.startsWith("constructor")) {
@@ -161,7 +190,8 @@ shared object createQuickFix {
         value scope = 
                 local then statement.scope else rootNode.unit.\ipackage;
         
-        data.addCreateQuickFix {
+        addCreateQuickFix {
+            data = data;
             description = desc;
             scope = scope;
             unit = rootNode.unit;

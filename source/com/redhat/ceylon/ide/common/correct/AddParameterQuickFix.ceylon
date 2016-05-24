@@ -235,17 +235,23 @@ shared object addParameterQuickFix {
                     = if (exists name = containerDec.name) 
                     then " of '``name``'" else "";
             
-            data.addParameterQuickFix {
-                description = "Add '``dec.name``' to parameter list``containerDesc``";
-                change = change;
-                selection = DefaultRegion {
-                    start = offset + param.size + shift - len;
-                    length = len;
+            value callback = void() {
+                initializerQuickFix.applyWithLinkedMode {
+                    sourceDocument = data.document;
+                    change = change;
+                    selection = DefaultRegion {
+                        start = offset + param.size + shift - len;
+                        length = len;
+                    };
+                    type = paramType;
+                    unit = dec.unit;
+                    scope = dec.scope;
+                    exitPos = data.node.endIndex.intValue();
                 };
-                unit = containerDec.unit;
-                scope = containerDec.scope;
-                type = paramType;
-                exitPos = data.node.endIndex.intValue();
+            };
+            data.addQuickFix {
+                description = "Add '``dec.name``' to parameter list``containerDesc``";
+                change = callback;
             };
         }
     }

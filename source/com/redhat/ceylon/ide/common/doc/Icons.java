@@ -7,7 +7,7 @@ public enum Icons {
     returns, units, parameters, types, attributes,
     interfaces, imports,
     
-    localClass, localAttribute, localMethod,
+    localClass, localAttribute, localMethod, ceylonLiteral,
     
     addCorrection, quickAssists, reveal, refinement, formalRefinement
 }

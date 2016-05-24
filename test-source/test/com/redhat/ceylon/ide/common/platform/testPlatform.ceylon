@@ -18,7 +18,7 @@ shared object testPlatform satisfies PlatformServices {
     
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
     
-    gotoLocation(Unit unit, Integer offset, Integer length) => noop();
+    gotoLocation(Unit unit, Integer offset, Integer length) => null;
     
     createLinkedMode(CommonDocument document)
             => NoopLinkedMode(document);

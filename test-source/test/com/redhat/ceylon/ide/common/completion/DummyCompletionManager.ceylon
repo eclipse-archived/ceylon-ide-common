@@ -22,7 +22,8 @@ import com.redhat.ceylon.ide.common.model {
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
     DefaultDocument,
-    CompletionServices
+    CompletionServices,
+    TextChange
 }
 import com.redhat.ceylon.ide.common.settings {
     CompletionOptions
@@ -48,6 +49,12 @@ import java.util.regex {
 
 import org.antlr.runtime {
     CommonToken
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 
 class Result(shared String kind, shared String insertedText, shared String description = insertedText) {
@@ -190,5 +197,9 @@ class MyCompletionService() satisfies CompletionServices {
             => Result("newTypeProposal", text, desc);
     
     shared actual ProposalsHolder createProposalsHolder() => MyProposalsHolder();
+    
+    shared actual void addProposal(ProposalsHolder proposals, Icons|Declaration icon,
+        String description, DefaultRegion region, String text, TextChange? change) {}
+    
     
 }

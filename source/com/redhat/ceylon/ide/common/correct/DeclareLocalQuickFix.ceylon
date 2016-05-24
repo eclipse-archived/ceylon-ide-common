@@ -45,7 +45,11 @@ shared object declareLocalQuickFix {
                 change.addEdit(InsertEdit(node.startIndex.intValue(), "value "));
                 value desc = "Declare local value '``bme.identifier.text``'";
                 
-                data.addDeclareLocalProposal(desc, change, term, bme);
+                value callback = void() {
+                    change.apply();
+                    enableLinkedMode(data, term);
+                };
+                data.addQuickFix(desc, callback);
             }
         }
     }

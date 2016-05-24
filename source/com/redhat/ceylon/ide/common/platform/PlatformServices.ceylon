@@ -12,7 +12,7 @@ shared interface PlatformServices {
             vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal CompletionServices completion;
     shared formal DocumentServices document;
-    shared formal void gotoLocation(Unit unit, Integer offset, Integer length);
+    shared formal CommonDocument? gotoLocation(Unit unit, Integer offset, Integer length);
     
     shared formal LinkedMode createLinkedMode(CommonDocument document);
 }
@@ -29,7 +29,7 @@ variable PlatformServices _platformServices
             => nothing;
     completion => nothing;
     document => nothing;
-    gotoLocation(Unit unit, Integer offset, Integer length) => noop();
+    gotoLocation(Unit unit, Integer offset, Integer length) => null;
     createLinkedMode(CommonDocument document) => NoopLinkedMode(document);
 };
 

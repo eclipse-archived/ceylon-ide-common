@@ -24,8 +24,29 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     List
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared interface CompletionServices {
+    
+    shared formal void addProposal(
+        "The holder in which the proposal should be added"
+        ProposalsHolder proposals,
+        "An icon to be shown in the proposal"
+        Icons|Declaration icon,
+        "A user-friendly text to be shown in the proposal"
+        String description,
+        "The region to be replaced with [[text]]"
+        DefaultRegion region,
+        "The text to be inserted in the editor"
+        String text = description,
+        "An additional text change to apply in the document"
+        TextChange? change = null
+    );
     
     shared formal void newBasicCompletionProposal(CompletionContext ctx, Integer offset,
         String prefix, String text, String escapedText, Declaration decl);

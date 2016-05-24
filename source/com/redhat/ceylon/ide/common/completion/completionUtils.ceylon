@@ -49,6 +49,9 @@ import org.antlr.runtime {
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument
 }
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
     if (exists loc1) {
@@ -76,6 +79,23 @@ shared String anonFunctionHeader(Type? requiredType, Unit unit) {
     
     return text.string;
 }
+
+shared DefaultRegion getCurrentSpecifierRegion(CommonDocument document, Integer offset) {
+    variable Integer length = 0;
+    variable Integer i = offset;
+    while (i < document.size) {
+        value ch = document.getChar(i);
+        if (ch.whitespace || ch==';' || ch==',' || ch==')') {
+            break;
+        }
+        
+        length++;
+        i++;
+    }
+    
+    return DefaultRegion(offset, length);
+}
+
 
 shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit) {
     value buf = StringBuilder();

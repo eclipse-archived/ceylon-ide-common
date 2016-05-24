@@ -226,6 +226,9 @@ shared object changeTypeQuickFix {
         value desc = "Change type of ``name`` to '``newType.asString(unit)``'";
         value selection = DefaultRegion(offset + il, newTypeName.size);
         
-        data.addChangeTypeProposal(desc, change, selection, unit);
+        value callback = void() {
+            initializerQuickFix.apply(change, doc, unit);
+        };
+        data.addQuickFix(desc, callback, selection);
     }
 }
