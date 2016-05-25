@@ -22,11 +22,13 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package,
-    Unit
+    Unit,
+    Module
 }
 
 import java.io {
-    InputStream
+    InputStream,
+    File
 }
 import java.util {
     JList=List,
@@ -116,6 +118,9 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
             else null;
 
     shared formal Package? ceylonPackage;
+    shared Module? ceylonModule => ceylonPackage?.\imodule;
+    
+    shared File? toJavaFile => vfsServices.getJavaFile(nativeResource);
     
     shared actual default Boolean equals(Object that) => 
             if (is ResourceVirtualFile<out Object,out Object,out Object,out Object> that) 
