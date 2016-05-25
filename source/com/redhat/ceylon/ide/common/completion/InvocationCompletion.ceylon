@@ -495,8 +495,7 @@ shared interface InvocationCompletion {
         }
     }
     
-    shared Boolean addFakeShowParametersCompletion(Node node, CompletionContext ctx) {
-        variable value addedProposals = false;
+    shared void addFakeShowParametersCompletion(Node node, CompletionContext ctx) {
         if (exists upToDateAndTypeChecked = ctx.typecheckedRootNode) {
             object extends Visitor() {
                 shared actual void visit(Tree.InvocationExpression that) {
@@ -509,7 +508,6 @@ shared interface InvocationCompletion {
                         exists decl = primary.declaration,
                         exists target = primary.target) {
                         
-                        addedProposals = true;
                         platformServices.completion.newParameterInfo {
                             offset = startIndex.intValue();
                             dec = decl;
@@ -524,8 +522,6 @@ shared interface InvocationCompletion {
                 }
             }.visit(upToDateAndTypeChecked);
         }
-        
-        return addedProposals;
     }
 
     // see InvocationCompletionProposal.prefixWithoutTypeArgs

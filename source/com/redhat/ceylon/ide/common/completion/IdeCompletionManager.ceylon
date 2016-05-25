@@ -305,9 +305,7 @@ shared object completionManager
         if (!returnedParamInfo, 
             atStartOfPositionalArgument(node, token)) {
 
-            if (addFakeShowParametersCompletion(node, ctx)) {
-                return;
-            }
+            addFakeShowParametersCompletion(node, ctx);
         }
         else if (is Tree.PackageLiteral node) {
             addPackageCompletions {
@@ -417,9 +415,6 @@ shared object completionManager
                     ctx = ctx;
                     node = node;
                 };
-            }
-            else {
-                return;
             }
         }
     }
