@@ -99,15 +99,19 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
     
     shared actual void resolveModule(
         variable ArtifactResult artifact, 
-        Module \imodule, 
+        Module theModule, 
         ModuleImport moduleImport, 
         LinkedList<Module> dependencyTree, 
         List<PhasedUnits> phasedUnitsOfDependencies, 
         Boolean forCompiledModule) {
         variable File artifactFile = artifact.artifact();
-        if (moduleManager.isModuleLoadedFromSource(\imodule.nameAsString), 
+        if (ceylonProject?.loadInterProjectDependenciesFromSourcesFirst else false,
+            moduleManager.searchForOriginalModule(theModule.nameAsString, artifactFile) exists) {
+            moduleManager.sourceModules.add(theModule.nameAsString);
+        }
+        if (moduleManager.isModuleLoadedFromSource(theModule.nameAsString), 
             artifactFile.name.endsWith(ArtifactContext.\iCAR)) {
-            value artifactContext = ArtifactContext(\imodule.nameAsString, \imodule.version, ArtifactContext.\iSRC);
+            value artifactContext = ArtifactContext(theModule.nameAsString, theModule.version, ArtifactContext.\iSRC);
             RepositoryManager repositoryManager = context.repositoryManager;
             variable Exception? exceptionOnGetArtifact = null;
             variable ArtifactResult? sourceArtifact = null;
@@ -121,26 +125,26 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
                 artifact = existingSourceArtifact;
             }
             else {
-                ModuleHelper.buildErrorOnMissingArtifact(artifactContext, \imodule, moduleImport, dependencyTree, exceptionOnGetArtifact, this);
+                ModuleHelper.buildErrorOnMissingArtifact(artifactContext, theModule, moduleImport, dependencyTree, exceptionOnGetArtifact, this);
             }
         }
-        if (is BaseIdeModule \imodule) {
-            (\imodule).setArtifactResult(artifact);
+        if (is BaseIdeModule theModule) {
+            (theModule).setArtifactResult(artifact);
         }
-        if (!moduleManager.isModuleLoadedFromCompiledSource(\imodule.nameAsString)) {
+        if (!moduleManager.isModuleLoadedFromCompiledSource(theModule.nameAsString)) {
             variable File file = artifact.artifact();
             if (artifact.artifact().name.endsWith(".src")) {
-                moduleManager.sourceModules.add(\imodule.nameAsString);
+                moduleManager.sourceModules.add(theModule.nameAsString);
                 file = File(javaString(file.absolutePath).replaceAll("\\.src$", ".car"));
             }
         }
         try {
-            super.resolveModule(artifact, \imodule, moduleImport, dependencyTree, phasedUnitsOfDependencies, forCompiledModule);
+            super.resolveModule(artifact, theModule, moduleImport, dependencyTree, phasedUnitsOfDependencies, forCompiledModule);
         }
         catch (Exception e) {
-            if (is BaseIdeModule \imodule) {
-                logModuleResolvingError(\imodule, e);
-                (\imodule).setResolutionException(e);
+            if (is BaseIdeModule theModule) {
+                logModuleResolvingError(theModule, e);
+                (theModule).setResolutionException(e);
             }
         }
     }

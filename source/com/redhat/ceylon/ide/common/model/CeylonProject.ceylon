@@ -356,7 +356,9 @@ shared abstract class BaseCeylonProject() {
     
     shared Boolean loadDependenciesFromModelLoaderFirst =>
             compileToJava && loadBinariesFirst;
-    
+
+    shared default Boolean loadInterProjectDependenciesFromSourcesFirst => false;
+        
     shared {String*} ceylonRepositories
             => let (c = configuration) c.projectLocalRepos
             .chain(c.globalLookupRepos)
