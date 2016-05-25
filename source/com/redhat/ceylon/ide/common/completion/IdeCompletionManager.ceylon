@@ -980,8 +980,10 @@ shared object completionManager
                 };
             }
             
-            if (is Tree.StaticMemberOrTypeExpression bme = node.primary) {
-                value dwp = DeclarationWithProximity(bme.declaration, 0);
+            if (is Tree.StaticMemberOrTypeExpression bme = node.primary,
+                exists declaration = bme.declaration) {
+                
+                value dwp = DeclarationWithProximity(declaration, 0);
                 // we don't care what the text is, we just need the correct length
                 value textToReplace = "-".repeat(offset - node.startIndex.intValue());
                 // the expression to wrap, may need to be assigned
@@ -993,7 +995,7 @@ shared object completionManager
                             };
                 
                 addIfExistsProposal(offset, textToReplace, ctx,
-                    dwp, bme.declaration, bme, expr);
+                    dwp, declaration, bme, expr);
             }
         }
         if (previousTokenType==Lexer.objectDefinition) {
