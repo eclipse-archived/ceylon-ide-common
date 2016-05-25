@@ -1102,10 +1102,10 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         }
 
         build.fileTreeChanged(changesInReferencedProject.map((nativeChange) => 
-            if (isResourceForModel(nativeChange.resource),
+            if (referencedProject.isResourceForModel(nativeChange.resource),
                     exists projectFileChange=model.toProjectChange(convertToProjectFileChange(nativeChange)))
             then projectFileChange
-            else [nativeChange, ideArtifact]));
+            else [nativeChange, referencedProject.ideArtifact]));
     }
     
     shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
