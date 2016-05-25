@@ -41,6 +41,9 @@ import java.lang {
     JString=String,
     JIterable=Iterable
 }
+import java.io {
+    JFile=File
+}
 import java.util {
     Collections,
     JList=List
@@ -49,6 +52,7 @@ import ceylon.collection {
     HashSet,
     MutableSet
 }
+
 shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() 
         satisfies LazyModuleManagerEx {
@@ -152,7 +156,17 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         return false;
     }
     
-    
+    shared BaseCeylonProject? searchForOriginalProject(JFile moduleArtifact) =>
+            let (existingArtifactAbsolutePath = moduleArtifact.absolutePath)
+            ceylonProject?.referencedCeylonProjects
+            ?.filter(BaseCeylonProject.nativeProjectIsAccessible)
+            ?.find((refProject) 
+                => refProject.ceylonModulesOutputDirectory.absolutePath in existingArtifactAbsolutePath);
+
+    shared BaseIdeModule? searchForOriginalModule(String moduleName, JFile moduleArtifact) =>
+            searchForOriginalProject(moduleArtifact)?.modules
+            ?.find((m) => m.nameAsString == moduleName && m.isProjectModule);
+            
     shared actual BaseIdeModule createModule(JList<JString> moduleName, String version) {
         String moduleNameString = Util.getName(moduleName);
         value theModule = newModule(moduleNameString, version);

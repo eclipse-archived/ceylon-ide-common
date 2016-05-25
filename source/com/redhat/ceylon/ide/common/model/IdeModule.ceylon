@@ -424,15 +424,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     sourceModulePhasedUnits = WeakReference<ExternalModulePhasedUnits>(null);
                 }
                 
-                value project = moduleManager.ceylonProject;
-                if (exists project) {
-                    for (refProject in project.referencedCeylonProjects) {
-                        if (refProject.nativeProjectIsAccessible) {
-                            if (refProject.ceylonModulesOutputDirectory.absolutePath in existingArtifact.absolutePath) {
-                                _originalProject = WeakReference(refProject);
-                            }
-                        }
-                    }
+                if (is CeylonProjectAlias moduleOriginalProject = moduleManager
+                                .searchForOriginalProject(existingArtifact)) {
+                    _originalProject = WeakReference(moduleOriginalProject);
                 }
                 
                 if (isJavaBinaryArchive) {
