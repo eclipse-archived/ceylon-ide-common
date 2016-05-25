@@ -8,7 +8,9 @@ import ceylon.interop.java {
     synchronize,
     CeylonIterable,
     JavaList,
-    javaClass
+    javaClass,
+    JavaIterable,
+    JavaCollection
 }
 
 import com.redhat.ceylon.common {
@@ -53,7 +55,8 @@ import com.redhat.ceylon.ide.common.util {
     ErrorVisitor,
     equalsWithNulls,
     toCeylonStringIterable,
-    CarUtils
+    CarUtils,
+    toJavaString
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -70,7 +73,8 @@ import com.redhat.ceylon.model.typechecker.util {
 }
 
 import java.io {
-    File
+    File,
+    IOException
 }
 import java.util {
     JSet=Set,
@@ -87,6 +91,9 @@ import net.lingala.zip4j.exception {
 }
 import com.redhat.ceylon.cmr.impl {
     ShaSigner
+}
+import com.redhat.ceylon.cmr.ceylon {
+    CeylonUtils
 }
 
 shared final class Severity
@@ -130,11 +137,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         
         "Sources requiring a typechecking during the next [[updateCeylonModel]] call.
          The list is filled by [[consumeModelChanges]] and flushed for use by [[updateCeylonModel]]"
-        shared ImmutableSetWrapper<NativeFile> ceylonModelUpdateRequired = ImmutableSetWrapper<NativeFile>();
+        shared ImmutableSetWrapper<FileVirtualFileAlias> ceylonModelUpdateRequired = ImmutableSetWrapper<FileVirtualFileAlias>();
         
         "Sources requiring a JVM binary generation during the next [[performBinaryGeneration]] call.
          The list is filled by [[consumeModelChanges]] and flushed for use by [[performBinaryGeneration]]"
-        shared ImmutableSetWrapper<NativeFile> jvmBackendGenerationRequired = ImmutableSetWrapper<NativeFile>();
+        shared ImmutableSetWrapper<FileVirtualFileAlias> jvmBackendGenerationRequired = ImmutableSetWrapper<FileVirtualFileAlias>();
         
         shared ImmutableSetWrapper<SourceFileMessage> backendMessages = ImmutableSetWrapper<SourceFileMessage>();
         shared ImmutableSetWrapper<SourceFileMessage> frontendMessages = ImmutableSetWrapper<SourceFileMessage>();
@@ -721,7 +728,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    {ProjectPhasedUnitAlias*} updateUnits(Set<NativeFile> filesRequiringCeylonModelUpdate, BaseProgressMonitor monitor) {
+    {ProjectPhasedUnitAlias*} updateUnits(Set<FileVirtualFileAlias> filesRequiringCeylonModelUpdate, BaseProgressMonitor monitor) {
         value fileNumber = filesRequiringCeylonModelUpdate.size;
         value sourceTypecheckingTicks = fileNumber * 10;
         value sourceUpdatingTicks = fileNumber * 5;
@@ -738,15 +745,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     throw platformUtils.newOperationCanceledException();
                 }
                 
-                value virtualFile = ceylonProject.getOrCreateFileVirtualFile(fileToUpdate);
-                
                 // skip non-ceylon files
-                if(!ceylonProject.isCeylon(fileToUpdate)) {
-                    if (ceylonProject.isJava(fileToUpdate)) {
-                        if (is JavaUnitAlias toRemove = virtualFile.unit) {
+                if(!ceylonProject.isCeylon(fileToUpdate.nativeResource)) {
+                    if (ceylonProject.isJava(fileToUpdate.nativeResource)) {
+                        if (is JavaUnitAlias toRemove = fileToUpdate.unit) {
                             toRemove.remove();
                         } else {
-                            if(exists packageName = virtualFile.ceylonPackage?.nameAsString,
+                            if(exists packageName = fileToUpdate.ceylonPackage?.nameAsString,
                                 ! cleanedPackages.contains(packageName)) {
                                 modelLoader.clearCachesOnPackage(packageName);
                                 cleanedPackages.add(packageName);
@@ -757,11 +762,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     continue;
                 }
                 
-                value srcFolder = virtualFile.rootFolder;
+                value srcFolder = fileToUpdate.rootFolder;
                 
                 ProjectPhasedUnitAlias? alreadyBuiltPhasedUnit = 
                         unsafeCast<ProjectPhasedUnitAlias?>(
-                    typeChecker.phasedUnits.getPhasedUnit(virtualFile));
+                    typeChecker.phasedUnits.getPhasedUnit(fileToUpdate));
                 
                 Package? pkg;
                 if (exists alreadyBuiltPhasedUnit) {
@@ -769,7 +774,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     pkg = alreadyBuiltPhasedUnit.\ipackage;
                 }
                 else {
-                    pkg = virtualFile.parent?.ceylonPackage;
+                    pkg = fileToUpdate.parent?.ceylonPackage;
                 }
                 if (! srcFolder exists || ! pkg exists) {
                     progress.worked(4);
@@ -780,8 +785,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 
                 value newPhasedUnit = 
                         ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile>(
-                    ceylonProject, virtualFile, srcFolder)
-                        .parseFileToPhasedUnit(modules.manager, typeChecker, virtualFile, srcFolder, pkg);
+                    ceylonProject, fileToUpdate, srcFolder)
+                        .parseFileToPhasedUnit(modules.manager, typeChecker, fileToUpdate, srcFolder, pkg);
                 phasedUnitsToUpdate.add(newPhasedUnit);
                 progress.worked(4);
             }
@@ -832,6 +837,39 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
+    Boolean updateSourceArchives(BaseProgressMonitor monitor, {FileVirtualFileAlias*} updatedFiles) {
+        assert(exists sourceModules = ceylonProject.modules?.filter(BaseIdeModule.isProjectModule)?.sequence());
+        variable value success = true;
+        try(progress = monitor.Progress(sourceModules.size, "Generating source archives")) {
+            value cmrLogger = platformUtils.cmrLogger;
+            value outRepo = CeylonUtils.repoManager()
+                    .offline(ceylonProject.configuration.offline)
+                    .cwd(ceylonProject.rootDirectory)
+                    .outRepo(ceylonProject.ceylonModulesOutputDirectory.absolutePath)
+                    .logger(cmrLogger)
+                    .buildOutputManager();
+            for (m in sourceModules) {
+                try {
+                    value sourceDirectories = ceylonProject.sourceFolders.map(
+                            (virtualFolder) => virtualFolder.toJavaFile).coalesced;
+                    value sac = CeylonUtils.makeSourceArtifactCreator(outRepo, JavaIterable(sourceDirectories),
+                        m.nameAsString, m.version, false, cmrLogger);
+                    sac.copy(JavaCollection(updatedFiles
+                        .filter((file)
+                            => file.sourceFile &&
+                                equalsWithNulls(file.ceylonModule, m))
+                        .map((file) => toJavaString(file.toJavaFile?.absolutePath))
+                        .coalesced.sequence()));
+                } catch (IOException e) {
+                    platformUtils.log(Status._ERROR, "Source generation failed for module ``m``", e);
+                    success = false;
+                }
+                progress.worked(1);
+            }
+        }
+        return success;
+    }
+    
     shared void updateCeylonModel(BaseProgressMonitor monitor) => 
             synchronize(this, () {
         withCeylonModelCaching(() {
@@ -868,10 +906,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         phasedUnitsToTypecheck = updateUnits(filesRequiringCeylonModelUpdate, progress.newChild(100));
                     }
                     // Finally typecheck the project sources, manage the related errors, and collection dependencies
-                    progress.updateRemainingWork(800);
-                    typecheck(progress.newChild(800), phasedUnitsToTypecheck);
+                    progress.updateRemainingWork(700);
+                    typecheck(progress.newChild(700), phasedUnitsToTypecheck);
                     state.buildType.resetFullBuild();
                     ceylonProject.state = ProjectState.typechecked;
+                    if (! updateSourceArchives(progress.newChild(100), filesRequiringCeylonModelUpdate)) {
+                        requestFullBuild();
+                    }
                 }
             });
         });
@@ -1022,7 +1063,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         try(progress = monitor.Progress(1000, "Calculating dependencies on project `` ceylonProject.name ``")) {
             value changedFiles = state.modelFileChanges.clear();
             if (state.buildType.fullBuildPlanned) {
-                value projectNativeFiles = ceylonProject.projectNativeFiles.sequence();
+                value projectNativeFiles = ceylonProject.projectFiles.sequence();
                 state.ceylonModelUpdateRequired.reset(projectNativeFiles);
                 state.jvmBackendGenerationRequired.reset(projectNativeFiles);
             } else {
@@ -1153,8 +1194,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             filesToAddInCompile.add(file);
         }
         
-        state.ceylonModelUpdateRequired.addAll(filesToAddInTypecheck.map((vf) => vf.nativeResource));
-        state.jvmBackendGenerationRequired.addAll(filesToAddInCompile.map((vf) => vf.nativeResource));
+        state.ceylonModelUpdateRequired.addAll(filesToAddInTypecheck);
+        state.jvmBackendGenerationRequired.addAll(filesToAddInCompile);
     }
 
     
