@@ -94,7 +94,7 @@ shared object initializerQuickFix {
         
         value region = getCurrentSpecifierRegion(document, offset);
         
-        platformServices.completion.addProposal {
+        platformServices.completion.addNestedProposal {
             proposals = proposals;
             description = val;
             region = region;
@@ -118,7 +118,7 @@ shared object initializerQuickFix {
             return sb.string;
         }
         
-        platformServices.completion.addProposal {
+        platformServices.completion.addNestedProposal {
             proposals = proposals;
             icon = dec;
             description = getText(true);

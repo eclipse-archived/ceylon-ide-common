@@ -10,7 +10,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.completion {
     CompletionContext,
-    ProposalsHolder
+    ProposalsHolder,
+    ProposalKind,
+    generic
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -33,7 +35,7 @@ import com.redhat.ceylon.ide.common.refactoring {
 
 shared interface CompletionServices {
     
-    shared formal void addProposal(
+    shared formal void addNestedProposal(
         "The holder in which the proposal should be added"
         ProposalsHolder proposals,
         "An icon to be shown in the proposal"
@@ -43,42 +45,47 @@ shared interface CompletionServices {
         "The region to be replaced with [[text]]"
         DefaultRegion region,
         "The text to be inserted in the editor"
+        String text = description
+    );
+
+    shared formal void addProposal(
+        "The context in which the proposal should be added"
+        CompletionContext ctx,
+        "The offset where completion was called"
+        Integer offset,
+        "A text prefix"
+        String prefix,
+        "An icon to be shown in the proposal"
+        Icons|Declaration icon,
+        "A user-friendly text to be shown in the proposal"
+        String description,
+        "The text to be inserted in the editor"
         String text = description,
-        "An additional text change to apply in the document"
-        TextChange? change = null
+        ProposalKind kind = generic,
+        "An additional change to apply after the text is inserted"
+        TextChange? additionalChange = null,
+        "A region to be selected after the proposal is applied"
+        DefaultRegion? selection = null
     );
     
-    shared formal void newBasicCompletionProposal(CompletionContext ctx, Integer offset,
-        String prefix, String text, String escapedText, Declaration decl);
-
     shared default void newInvocationCompletion(CompletionContext ctx, Integer offset, String prefix,
         String desc, String text, Declaration dec, Reference? pr, Scope scope,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
-            => newBasicCompletionProposal(ctx, offset, prefix, desc, text, dec);
+            => addProposal(ctx, offset, prefix, dec, desc, text, generic, null, null);
     
     shared formal void newParameterInfo(CompletionContext ctx, Integer offset, Declaration dec, 
         Reference producedReference, Scope scope, Boolean namedInvocation);
     
     shared formal void newParametersCompletionProposal(CompletionContext ctx, Integer offset,
         String prefix, String desc, String text, List<Type> argTypes, Node node, Unit unit);
-
-    shared formal void newKeywordCompletionProposal(CompletionContext ctx,
-        Integer offset, String prefix, String keyword, String text);
-    
-    shared formal void newMemberNameCompletionProposal(CompletionContext ctx,
-        Integer offset, String prefix, String name, String unquotedName);
     
     shared formal void newRefinementCompletionProposal(Integer offset, 
         String prefix, Reference? pr, String desc, String text, CompletionContext cmp,
         Declaration dec, Scope scope, Boolean fullType, Boolean explicitReturnType);
 
-    
     shared formal void newPackageDescriptorProposal(CompletionContext ctx, 
         Integer offset, String prefix, String desc, String text);
-    
-    shared formal void newCurrentPackageProposal(Integer offset, String prefix,
-        String packageName, CompletionContext cmp);
     
     shared formal void newImportedModulePackageProposal(Integer offset, String prefix,
         String memberPackageSubname, Boolean withBody,
@@ -109,9 +116,5 @@ shared interface CompletionServices {
     shared formal void newTypeProposal(ProposalsHolder proposals, Integer offset, Type? type,
         String text, String desc, Tree.CompilationUnit rootNode);
 
-    shared formal void newAnonFunctionProposal(CompletionContext ctx, Integer offset, Type? requiredType,
-        Unit unit, String text, String header, Boolean isVoid,
-        Integer selectionStart, Integer selectionLength);
-    
     shared formal ProposalsHolder createProposalsHolder();
 }

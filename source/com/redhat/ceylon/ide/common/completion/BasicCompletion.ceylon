@@ -14,13 +14,13 @@ shared interface BasicCompletion {
     shared void addImportProposal(Integer offset, String prefix,
         CompletionContext ctx, Declaration dec, Scope scope) {
         
-        platformServices.completion.newBasicCompletionProposal {
+        platformServices.completion.addProposal {
             ctx = ctx;
             offset = offset;
             prefix = prefix;
-            text = dec.name;
-            escapedText = escaping.escapeName(dec);
-            decl = dec;
+            description = dec.name;
+            text = escaping.escapeName(dec);
+            icon = dec;
         };
     }
     
@@ -34,23 +34,22 @@ shared interface BasicCompletion {
         String aliasedName = dec.getName(cu.unit);
 
         if (!name.equals(aliasedName)) {
-            platformServices.completion.newBasicCompletionProposal {
+            platformServices.completion.addProposal {
                 ctx = ctx;
                 offset = offset;
                 prefix = prefix;
-                text = aliasedName;
-                escapedText = aliasedName;
-                decl = dec;
+                description = aliasedName;
+                icon = dec;
             };
         }
         
-        platformServices.completion.newBasicCompletionProposal {
+        platformServices.completion.addProposal {
             ctx = ctx;
             offset = offset;
             prefix = prefix;
-            text = name;
-            escapedText = getTextForDocLink(cu.unit, dec);
-            decl = dec;
+            description = name;
+            text = getTextForDocLink(cu.unit, dec);
+            icon = dec;
         };
     }
 }

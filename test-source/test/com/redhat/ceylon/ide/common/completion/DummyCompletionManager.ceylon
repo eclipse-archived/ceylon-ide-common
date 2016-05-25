@@ -14,7 +14,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.completion {
     CompletionContext,
-    ProposalsHolder
+    ProposalsHolder,
+    ProposalKind
 }
 import com.redhat.ceylon.ide.common.model {
     BaseCeylonProject
@@ -118,20 +119,10 @@ object dummyMonitor satisfies BaseProgressMonitorChild {
 }
 
 class MyCompletionService() satisfies CompletionServices {
-    shared actual void newAnonFunctionProposal(CompletionContext ctx, Integer offset, Type? requiredType, Unit unit, 
-        String text, String header, Boolean isVoid, Integer start, Integer len)
-            => Result("newAnonFunctionProposal", text);
-    
-    shared actual void newBasicCompletionProposal(CompletionContext ctx, Integer offset, String prefix, String text,
-        String escapedText, Declaration decl)
-            => Result("newBasicCompletionProposal", escapedText, text);
     
     shared actual void newControlStructureCompletionProposal(Integer offset, String prefix,
         String desc, String text, Declaration dec, CompletionContext ctx, Node? node)
             => Result("newControlStructureCompletionProposal", desc, text);
-    
-    shared actual void newCurrentPackageProposal(Integer offset, String prefix, String packageName, CompletionContext ctx)
-            => Result("newCurrentPackageProposal", packageName);
     
     shared actual void newFunctionCompletionProposal(Integer offset, String prefix, String desc, String text,
         Declaration dec, Unit unit, CompletionContext ctx)
@@ -143,12 +134,6 @@ class MyCompletionService() satisfies CompletionServices {
     
     shared actual void newJDKModuleProposal(CompletionContext ctx, Integer offset, String prefix, Integer len, String versioned, String name) 
             => Result("newJDKModuleProposal", versioned);
-    
-    shared actual void newKeywordCompletionProposal(CompletionContext ctx, Integer offset, String prefix, String keyword, String text) 
-            => Result("newKeywordCompletionProposal", keyword, text);
-    
-    shared actual void newMemberNameCompletionProposal(CompletionContext ctx, Integer offset, String prefix, String name, String unquotedName)
-            => Result("newMemberNameCompletionProposal", unquotedName, name);
     
     shared actual void newModuleDescriptorProposal(CompletionContext ctx, Integer offset, String prefix, String desc, String text,
         Integer selectionStart, Integer selectionEnd)
@@ -198,8 +183,10 @@ class MyCompletionService() satisfies CompletionServices {
     
     shared actual ProposalsHolder createProposalsHolder() => MyProposalsHolder();
     
-    shared actual void addProposal(ProposalsHolder proposals, Icons|Declaration icon,
-        String description, DefaultRegion region, String text, TextChange? change) {}
+    shared actual void addNestedProposal(ProposalsHolder proposals, Icons|Declaration icon,
+        String description, DefaultRegion region, String text) {}
+    shared actual void addProposal(CompletionContext ctx, Integer offset, String prefix, Icons|Declaration icon, String description, String text, ProposalKind kind, TextChange? additionalChange, DefaultRegion? selection) {}
+    
     
     
 }

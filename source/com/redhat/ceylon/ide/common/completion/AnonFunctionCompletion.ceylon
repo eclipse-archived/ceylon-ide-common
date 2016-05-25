@@ -5,6 +5,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type
 }
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared interface AnonFunctionCompletion {
     
@@ -14,29 +20,26 @@ shared interface AnonFunctionCompletion {
         value text = anonFunctionHeader(requiredType, unit);
         value funtext = text + " => nothing";
         
-        platformServices.completion.newAnonFunctionProposal {
+        platformServices.completion.addProposal {
             ctx = ctx;
             offset = offset;
-            requiredType = requiredType;
-            unit = unit;
-            text = funtext;
-            header = text;
-            isVoid = false;
-            selectionStart = offset + (funtext.firstInclusion("nothing") else 0);
-            selectionLength = 7;
+            description = funtext;
+            prefix = "";
+            icon = Icons.correction;
+            selection = DefaultRegion(
+                offset + (funtext.firstInclusion("nothing") else 0),
+                7
+            );
         };
         
         if (unit.getCallableReturnType(requiredType).anything) {
-            platformServices.completion.newAnonFunctionProposal {
+            platformServices.completion.addProposal {
                 ctx = ctx;
                 offset = offset;
-                requiredType = requiredType;
-                unit = unit;
-                text = "void " + text + " {}";
-                header = text;
-                isVoid = true;
-                selectionStart = offset + funtext.size - 1;
-                selectionLength = 0;
+                description = "void " + text + " {}";
+                prefix = "";
+                selection = DefaultRegion(offset + funtext.size - 1, 0);
+                icon = Icons.correction;
             };
         }
     }

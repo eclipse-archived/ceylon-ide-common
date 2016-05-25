@@ -12,6 +12,12 @@ import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
     escaping
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 // see KeywordCompletionProposal
 shared interface KeywordCompletion {
@@ -80,10 +86,22 @@ shared interface KeywordCompletion {
     }
     
     void addKeywordProposal(CompletionContext ctx, Integer offset,
-        String prefix, String keyword) {
+        String prefix, String kw) {
         
-        value text = keyword in conditionKeywords then "``keyword`` ()" else keyword;
-        platformServices.completion.newKeywordCompletionProposal(ctx, offset,
-            prefix, keyword, text);
+        value text = kw in conditionKeywords then "``kw`` ()" else kw;
+        value selection = if (exists close = text.firstOccurrence(')'))
+        then DefaultRegion(offset + close - prefix.size, 0)
+        else null;
+        
+        platformServices.completion.addProposal {
+            ctx = ctx;
+            offset = offset;
+            prefix = prefix;
+            description = kw;
+            text = text;
+            icon = Icons.ceylonLiteral;
+            selection = selection;
+            kind = keyword;
+        };
     }
 }

@@ -38,6 +38,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared interface PackageCompletion {
     
@@ -149,11 +152,16 @@ shared interface PackageCompletion {
 
     shared void addCurrentPackageNameCompletion(CompletionContext ctx, Integer offset, String prefix) {
         if (exists moduleName = getPackageName(ctx.lastCompilationUnit)) {
-            platformServices.completion.newCurrentPackageProposal {
+            value icon = if (isModuleDescriptor(ctx.lastCompilationUnit))
+            then Icons.modules
+            else Icons.packages;
+            
+            platformServices.completion.addProposal {
+                ctx = ctx;
                 offset = offset;
                 prefix = prefix;
-                packageName = moduleName;
-                cmp = ctx;
+                description = moduleName;
+                icon = icon;
             };
         }
     }

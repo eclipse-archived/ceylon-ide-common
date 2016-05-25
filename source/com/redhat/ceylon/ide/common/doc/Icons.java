@@ -1,7 +1,7 @@
 package com.redhat.ceylon.ide.common.doc;
 
 public enum Icons {
-    annotations, modules, objects, classes,
+    annotations, modules, packages, objects, classes,
     enumeration, extendedType, satisfiedTypes,
     exceptions, see, implementation, override,
     returns, units, parameters, types, attributes,
@@ -9,5 +9,5 @@ public enum Icons {
     
     localClass, localAttribute, localMethod, ceylonLiteral,
     
-    addCorrection, quickAssists, reveal, refinement, formalRefinement
+    correction, addCorrection, quickAssists, reveal, refinement, formalRefinement
 }

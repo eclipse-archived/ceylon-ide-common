@@ -26,6 +26,9 @@ import java.lang {
 import java.util {
     JList=List
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 
 shared interface MemberNameCompletion {
         
@@ -126,12 +129,13 @@ shared interface MemberNameCompletion {
             String unquotedPrefix = prefix.startsWith("\\i") then prefix[2...] else prefix;
             if (name.startsWith(unquotedPrefix)) {
                 value unquotedName = name.startsWith("\\i") then name[2...] else name;
-                platformServices.completion.newMemberNameCompletionProposal {
+                platformServices.completion.addProposal {
                     ctx = ctx;
                     offset = offset;
                     prefix = prefix;
-                    name = unquotedName;
-                    unquotedName = name;
+                    description = unquotedName;
+                    text = name;
+                    icon = Icons.localAttribute;
                 };
             }
         }
