@@ -40,7 +40,8 @@ import com.redhat.ceylon.ide.common.model.mirror {
 }
 import com.redhat.ceylon.ide.common.platform {
     platformUtils,
-    Status
+    Status,
+    JavaModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     unsafeCast,
@@ -653,7 +654,13 @@ shared abstract class BaseIdeModelLoader(
    }
 }
 
-shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot, JavaClassOrInterface> extends BaseIdeModelLoader {
+shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot, JavaClassOrInterface> extends BaseIdeModelLoader 
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & JavaModelServicesConsumer<JavaClassRoot> 
+        given NativeProject satisfies Object 
+        given NativeResource satisfies Object 
+        given NativeFolder satisfies NativeResource 
+        given NativeFile satisfies NativeResource {
     shared new (
         IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager,
         IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper,
@@ -661,22 +668,15 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
     ) extends BaseIdeModelLoader(moduleManager, moduleSourceMapper, modules){
     }
     
-    shared actual default IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager => 
-            unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleManager);
+    shared actual default IdeModuleManagerAlias moduleManager => 
+            unsafeCast<IdeModuleManagerAlias>(super.moduleManager);
     
-    shared actual default IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper => 
-            unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleSourceMapper);
-
-    shared formal JavaClassRoot? getJavaClassRoot(ClassMirror classMirror);
-
-    shared formal Unit newCrossProjectBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newJavaCompilationUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newCeylonBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newJavaClassFile(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+    shared actual default IdeModuleSourceMapperAlias moduleSourceMapper => 
+            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
 
     shared actual Unit? newCompiledUnit(LazyPackage pkg, IdeClassMirror classMirror) {
         Unit unit;
-        JavaClassRoot? typeRoot = getJavaClassRoot(classMirror);
+        JavaClassRoot? typeRoot = javaModelServices.getJavaClassRoot(classMirror);
         if (! exists typeRoot) {
             return null;
         }
@@ -689,26 +689,37 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
         String fullPath = classMirror.fullPath;
         
         if (!classMirror.isBinary) {
-            unit = newJavaCompilationUnit(typeRoot, relativePath, fileName,
-                fullPath, pkg);
+            if (is IdeModuleAlias ideModule = pkg.\imodule) {
+                CeylonProjectAlias? originalProject = ideModule.originalProject;
+                if (exists originalProject) {
+                    unit = javaModelServices.newCrossProjectJavaCompilationUnit(originalProject, typeRoot, relativePath,
+                        fileName, fullPath, pkg);
+                } else {
+                    unit = javaModelServices.newJavaCompilationUnit(typeRoot, relativePath, fileName,
+                        fullPath, pkg);
+                }
+            } else {
+                unit = javaModelServices.newJavaCompilationUnit(typeRoot, relativePath, fileName,
+                    fullPath, pkg);
+            }
         }
         else {
             if (classMirror.isCeylon) {
-                if (is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> ideModule = pkg.\imodule) {
-                    CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? originalProject = ideModule.originalProject;
+                if (is IdeModuleAlias ideModule = pkg.\imodule) {
+                    CeylonProjectAlias? originalProject = ideModule.originalProject;
                     if (exists originalProject) {
-                        unit = newCrossProjectBinaryUnit(typeRoot, relativePath,
+                        unit = javaModelServices.newCrossProjectBinaryUnit(typeRoot, relativePath,
                             fileName, fullPath, pkg);
                     } else {
-                        unit = newCeylonBinaryUnit(typeRoot, relativePath,
+                        unit = javaModelServices.newCeylonBinaryUnit(typeRoot, relativePath,
                             fileName, fullPath, pkg);
                     }
                 } else {
-                    unit = newCeylonBinaryUnit(typeRoot, fileName, relativePath, fullPath, pkg);
+                    unit = javaModelServices.newCeylonBinaryUnit(typeRoot, fileName, relativePath, fullPath, pkg);
                 }
             }
             else {
-                unit = newJavaClassFile(typeRoot, relativePath, fileName,
+                unit = javaModelServices.newJavaClassFile(typeRoot, relativePath, fileName,
                     fullPath, pkg);
             }
         }

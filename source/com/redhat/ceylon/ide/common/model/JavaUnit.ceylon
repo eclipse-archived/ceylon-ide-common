@@ -3,8 +3,11 @@ import com.redhat.ceylon.ide.common.model {
     IResourceAware,
     IdeUnit
 }
+import com.redhat.ceylon.model.loader.model {
+    LazyPackage
+}
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Unit
 }
 
 shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
@@ -13,7 +16,7 @@ shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
 }
 
 shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
-        (String theFilename, String theRelativePath, String theFullPath, Package thePackage)
+        (String theFilename, String theRelativePath, String theFullPath, LazyPackage thePackage)
         extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage)
         satisfies IResourceAware<NativeProject, NativeFolder, NativeFile>
                 & IJavaModelAware<NativeProject, JavaClassRoot, JavaElement>
@@ -27,6 +30,15 @@ shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRo
                 .each((m) => m.removedOriginalUnit(relativePath));
     }
     
+    shared formal Unit clone();
+    
+    shared void update() {
+        remove();
+        value newUnit = clone();
+        newUnit.dependentsOf.addAll(dependentsOf);
+        thePackage.addLazyUnit(newUnit);
+    }
+
     resourceFile => javaClassRootToNativeFile(typeRoot);
     resourceProject => project;
     resourceRootFolder 

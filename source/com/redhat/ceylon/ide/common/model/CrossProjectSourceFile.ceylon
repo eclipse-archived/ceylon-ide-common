@@ -9,7 +9,7 @@ import com.redhat.ceylon.ide.common.util {
 shared class CrossProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile>
         (CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> crossProjectPhasedUnit) 
         extends ExternalSourceFile(crossProjectPhasedUnit)
-        satisfies ICrossProjectReference<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ICrossProjectCeylonReference<NativeProject, NativeResource, NativeFolder, NativeFile>
                 & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
                 & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object

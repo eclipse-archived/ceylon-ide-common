@@ -8,6 +8,8 @@ shared interface PlatformServices {
     shared formal IdeUtils utils();
     shared formal ModelServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
             model<NativeProject, NativeResource, NativeFolder, NativeFile>();
+    shared formal JavaModelServices<JavaClassRoot>
+            javaModel<JavaClassRoot>();
     shared formal VfsServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
             vfs<NativeProject, NativeResource, NativeFolder, NativeFile>();
     shared formal CompletionServices completion;
@@ -22,6 +24,9 @@ variable PlatformServices _platformServices
         = object satisfies PlatformServices {
     shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> 
             model<NativeProject, NativeResource, NativeFolder, NativeFile>() 
+            => nothing;
+    shared actual JavaModelServices<JavaClassRoot>
+            javaModel<JavaClassRoot>()
             => nothing;
     shared actual IdeUtils utils() => DefaultIdeUtils();
     shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> 

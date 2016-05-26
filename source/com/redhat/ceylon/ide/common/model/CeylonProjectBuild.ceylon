@@ -748,8 +748,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 // skip non-ceylon files
                 if(!ceylonProject.isCeylon(fileToUpdate.nativeResource)) {
                     if (ceylonProject.isJava(fileToUpdate.nativeResource)) {
-                        if (is JavaUnitAlias toRemove = fileToUpdate.unit) {
-                            toRemove.remove();
+                        if (is JavaUnitAlias toUpdate = fileToUpdate.unit) {
+                            toUpdate.update();
                         } else {
                             if(exists packageName = fileToUpdate.ceylonPackage?.nameAsString,
                                 ! cleanedPackages.contains(packageName)) {

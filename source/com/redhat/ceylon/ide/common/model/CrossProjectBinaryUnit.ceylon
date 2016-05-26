@@ -16,7 +16,7 @@ shared abstract class CrossProjectBinaryUnit<NativeProject,NativeResource,Native
         (JavaClassRoot typeRoot, String fileName, String relativePath, String fullPath, Package thePackage) 
         extends CeylonBinaryUnit<NativeProject,JavaClassRoot,JavaElement>
                 (typeRoot, fileName, relativePath, fullPath, thePackage)
-        satisfies ICrossProjectReference<NativeProject,NativeResource,NativeFolder,NativeFile>
+        satisfies ICrossProjectCeylonReference<NativeProject,NativeResource,NativeFolder,NativeFile>
                 & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
                 & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object

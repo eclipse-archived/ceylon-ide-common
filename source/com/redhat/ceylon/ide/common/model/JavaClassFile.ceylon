@@ -1,5 +1,11 @@
+import com.redhat.ceylon.ide.common.platform {
+    JavaModelServicesConsumer
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyPackage
+}
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Unit
 }
 
 shared abstract class JavaClassFile<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement> (
@@ -7,15 +13,19 @@ shared abstract class JavaClassFile<NativeProject, NativeFolder, NativeFile, Jav
                 String theFilename,
                 String theRelativePath,
                 String theFullPath,
-                Package thePackage)
+                LazyPackage thePackage)
             extends JavaUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(
                     theFilename,
                     theRelativePath,
                     theFullPath,
                     thePackage)
-            satisfies BinaryWithSources {
+            satisfies BinaryWithSources 
+            & JavaModelServicesConsumer<JavaClassRoot> {
     
     shared actual JavaClassRoot typeRoot;
+
+    shared actual Unit clone() 
+            => javaModelServices.newJavaClassFile(typeRoot, relativePath, filename, fullPath, thePackage);
     
     binaryRelativePath => relativePath;
     

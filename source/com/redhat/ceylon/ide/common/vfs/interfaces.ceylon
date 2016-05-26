@@ -22,8 +22,8 @@ import com.redhat.ceylon.ide.common.util {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package,
-    Unit,
-    Module
+    Module,
+    Declaration
 }
 
 import java.io {
@@ -237,7 +237,10 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
             else false;
     
     shared <ModifiableSourceFileAlias | JavaUnitAlias>? unit 
-            => ifExists(ceylonPackage?.units, CeylonIterable<Unit>)
+            => ifExists(ceylonPackage?.members, CeylonIterable<Declaration>) 
+                ?.map(Declaration.unit)
+                // Go through `members` since the units of Java files are added lazily in the Package.
+                // `members` loads all the declarations eagerly, making the units of Java files visible
                 ?.narrow<ModifiableSourceFileAlias | JavaUnitAlias>()
                 ?.find((unit) => unit.filename == name);
 }

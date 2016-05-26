@@ -4,7 +4,8 @@ import com.redhat.ceylon.ide.common.platform {
     IdeUtils,
     ModelServices,
     CommonDocument,
-    NoopLinkedMode
+    NoopLinkedMode,
+    JavaModelServices
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit
@@ -25,4 +26,6 @@ shared object testPlatform satisfies PlatformServices {
     
     completion => nothing;
     document => testDocumentServices;
+    
+    shared actual JavaModelServices<JavaClassRoot> javaModel<JavaClassRoot>() => nothing;
 }

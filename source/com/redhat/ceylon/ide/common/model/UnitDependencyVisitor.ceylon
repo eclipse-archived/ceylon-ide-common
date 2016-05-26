@@ -128,15 +128,14 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
         if (dependedOnUnitName != currentUnitName ||
             dependedOnPackage != currentUnitPackage) {
             
-            // WOW : Ceylon Abstract Data types and swith case would be cool here ;) 
             if (is ProjectSourceFileAlias declarationUnit) {
                 declarationUnit.dependentsOf
                         .add(toJavaString(currentUnitPath));
             }
             else if (is ICrossProjectReferenceAlias crossProjectReference=declarationUnit) {
-                if (exists originalProjectSourceFile = 
+                if (exists originalUnit = 
                         crossProjectReference.originalSourceFile) {
-                    originalProjectSourceFile.dependentsOf
+                    originalUnit.dependentsOf
                             .add(toJavaString(currentUnitPath));
                 }
             }
@@ -149,9 +148,8 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                 declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
             } 
             else if (is JavaCompilationUnitAlias declarationUnit) {
-                    //TODO: this does not seem to work for cross-project deps
-                    // We should introduce a CrossProjectJavaUnit that can return 
-                    // the original JavaCompilationUnit from the original project 
+                    // The cross-project case for Java files has already been managed
+                    // as an ICrossProjectReferenceAlias
                     declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
             }
             else  if (is JavaClassFileAlias declarationUnit) {
