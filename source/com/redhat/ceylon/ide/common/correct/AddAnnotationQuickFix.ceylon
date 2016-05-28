@@ -318,11 +318,9 @@ shared object addAnnotationQuickFix {
         Referenceable? dec, QuickFixData data) {
         
         if (exists dec, !node is Tree.MissingDeclaration) {
-            
             value fdv = FindDeclarationNodeVisitor(dec);
             data.phasedUnit.compilationUnit.visit(fdv);
-            value decNode = fdv.declarationNode;
-            if (exists decNode) {
+            if (exists decNode = fdv.declarationNode) {
                 addAddAnnotationProposal2 {
                     annotation = annotation;
                     desc = desc;
@@ -360,12 +358,13 @@ shared object addAnnotationQuickFix {
         change.addEdit(edit);
         
         createExplicitTypeEdit(decNode, change);
-        
-        value startOffset = edit.start;
         value selection = 
                 if (exists node, node.unit==decNode.unit) 
-        then DefaultRegion(startOffset, annotation.size) 
-        else null;
+                then DefaultRegion {
+                    start = edit.start;
+                    length = annotation.size;
+                } 
+                else null;
         
         data.addQuickFix {
             description = description(annotation, dec);
@@ -376,18 +375,16 @@ shared object addAnnotationQuickFix {
     
     void createExplicitTypeEdit(Tree.StatementOrArgument decNode, TextChange change) {
         if (is Tree.TypedDeclaration decNode, 
-            !decNode is Tree.ObjectDefinition) {
-            value type = decNode.type;
-            if (type.token exists, 
-                type is Tree.FunctionModifier|Tree.ValueModifier, 
-                exists it = type.typeModel, !it.unknown) {
-                value explicitType = it.asString();
-                change.addEdit(ReplaceEdit {
-                    start = type.startIndex.intValue();
-                    length = type.text.size;
-                    text = explicitType;
-                });
-            }
+            !decNode is Tree.ObjectDefinition,
+            is Tree.FunctionModifier|Tree.ValueModifier type 
+                    = decNode.type, 
+            type.token exists, 
+            exists it = type.typeModel, !it.unknown) {
+            change.addEdit(ReplaceEdit {
+                start = type.startIndex.intValue();
+                length = type.text.size;
+                text = it.asString();
+            });
         }
     }
     
