@@ -61,11 +61,11 @@ shared object addAnnotationQuickFix {
     
     shared void addMakeFormalDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
-
+        value shared = dec.shared;
         addAddAnnotationProposal {
             node = node;
-            annotation = dec.shared then "formal" else "shared formal";
-            desc = dec.shared then "Make Formal" else "Make Shared Formal";
+            annotation = shared then "formal" else "shared formal";
+            desc = shared then "Make Formal" else "Make Shared Formal";
             dec = dec;
             data = data;
         };
@@ -73,7 +73,13 @@ shared object addAnnotationQuickFix {
     
     shared void addMakeAbstractDecProposal(Node node, QuickFixData data) {
         if (is Class dec = annotatedNode(node)) {
-            addAddAnnotationProposal(node, "abstract", "Make Abstract", dec, data);
+            addAddAnnotationProposal {
+                node = node;
+                annotation = "abstract";
+                desc = "Make Abstract";
+                dec = dec;
+                data = data;
+            };
         }
     }
     
@@ -83,11 +89,17 @@ shared object addAnnotationQuickFix {
                 shared actual void visit(Tree.ModuleDescriptor that) {
                     assert(is Module m = node.model);
                     value backends = m.nativeBackends;
-                    value change = platformServices.document.createTextChange("Declare Module Native", data.phasedUnit);
+                    value change = platformServices.document.createTextChange {
+                        name = "Declare Module Native";
+                        input = data.phasedUnit;
+                    };
                     value annotation = StringBuilder();
                     moduleImportUtil.appendNative(annotation, backends);
-                    change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                    data.addQuickFix("Declare module '" + annotation.string + "'", change);
+                    change.addEdit(InsertEdit {
+                        start = that.startIndex.intValue();
+                        text = annotation.string + " ";
+                    });
+                    data.addQuickFix("Declare module '``annotation``'", change);
                     
                     super.visit(that);
                 }
@@ -96,11 +108,17 @@ shared object addAnnotationQuickFix {
                     if (that.importPath == node) {
                         assert (is Module m = that.importPath.model);
                         value backends = m.nativeBackends;
-                        value change = platformServices.document.createTextChange("Declare Import Native", data.phasedUnit);
+                        value change = platformServices.document.createTextChange {
+                            name = "Declare Import Native";
+                            input = data.phasedUnit;
+                        };
                         value annotation = StringBuilder();
                         moduleImportUtil.appendNative(annotation, backends);
-                        change.addEdit(InsertEdit(that.startIndex.intValue(), annotation.string + " "));
-                        data.addQuickFix("Declare import '" + annotation.string + "'", change);
+                        change.addEdit(InsertEdit {
+                            start = that.startIndex.intValue();
+                            text = annotation.string + " ";
+                        });
+                        data.addQuickFix("Declare import '``annotation``'", change);
                     }
                     
                     super.visit(that);
@@ -122,7 +140,13 @@ shared object addAnnotationQuickFix {
             assert (is Declaration scope = node.scope);
             dec = scope;
         }
-        addAddAnnotationProposal(node, "abstract", "Make Abstract", dec, data);
+        addAddAnnotationProposal {
+            node = node;
+            annotation = "abstract";
+            desc = "Make Abstract";
+            dec = dec;
+            data = data;
+        };
     }
     
     shared void addMakeContainerNativeProposal(Node node, QuickFixData data) {
@@ -139,7 +163,13 @@ shared object addAnnotationQuickFix {
             }
             value annotation = StringBuilder();
             moduleImportUtil.appendNative(annotation, backends);
-            addAddAnnotationProposal(node, annotation.string, "Make Native", dec, data);
+            addAddAnnotationProposal {
+                node = node;
+                annotation = annotation.string;
+                desc = "Make Native";
+                dec = dec;
+                data = data;
+            };
         }
     }
     
@@ -161,9 +191,21 @@ shared object addAnnotationQuickFix {
         if (is Tree.MemberOrTypeExpression term, 
             is Value dec = term.declaration, 
             !dec.originalDeclaration exists && !dec.transient) {
-            addAddAnnotationProposal(node, "variable", "Make Variable", dec, data);
+            addAddAnnotationProposal {
+                node = node;
+                annotation = "variable";
+                desc = "Make Variable";
+                dec = dec;
+                data = data;
+            };
             if (dec.classMember) {
-                addAddAnnotationProposal(node, "late", "Make Late", dec, data);
+                addAddAnnotationProposal {
+                    node = node;
+                    annotation = "late";
+                    desc = "Make Late";
+                    dec = dec;
+                    data = data;
+                };
             }
         }
     }
@@ -176,8 +218,13 @@ shared object addAnnotationQuickFix {
             !dec.variable,
             !dec.transient) {
             
-            addAddAnnotationProposal(node, "variable", "Make Variable",
-                dec, data);
+            addAddAnnotationProposal {
+                node = node;
+                annotation = "variable";
+                desc = "Make Variable";
+                dec = dec;
+                data = data;
+            };
         }
     }
     
@@ -192,7 +239,13 @@ shared object addAnnotationQuickFix {
                 }
             }
         }.visit(data.rootNode);
-        addAddAnnotationProposal(data.node, "variable", "Make Variable", dec, data);
+        addAddAnnotationProposal {
+            node = data.node;
+            annotation = "variable";
+            desc = "Make Variable";
+            dec = dec;
+            data = data;
+        };
     }
     
     Declaration annotatedNode(Node node) {
@@ -205,7 +258,7 @@ shared object addAnnotationQuickFix {
     }
     
     shared void addMakeDefaultProposal(Node node, QuickFixData data) {
-        variable Declaration? d;
+        Declaration? d;
         switch (node)
         case (is Tree.Declaration) {
             //get the supertype declaration we're refining
@@ -221,9 +274,14 @@ shared object addAnnotationQuickFix {
         } else {
             return;
         }
-        if (exists _d = d, _d.classOrInterfaceMember) {
-            addAddAnnotationProposal(node, "default",
-                "Make default", d, data);
+        if (exists d, d.classOrInterfaceMember) {
+            addAddAnnotationProposal {
+                node = node;
+                annotation = "default";
+                desc = "Make default";
+                dec = d;
+                data = data;
+            };
             
             //assert (is ClassOrInterface container = d.container);
             //value rds = container.getInheritedMembers(d.name);
@@ -259,26 +317,45 @@ shared object addAnnotationQuickFix {
     void addAddAnnotationProposal(Node? node, String annotation, String desc,
         Referenceable? dec, QuickFixData data) {
         
-        if (exists dec, !(node is Tree.MissingDeclaration)) {
+        if (exists dec, !node is Tree.MissingDeclaration) {
             
             value fdv = FindDeclarationNodeVisitor(dec);
             data.phasedUnit.compilationUnit.visit(fdv);
             value decNode = fdv.declarationNode;
             if (exists decNode) {
-                addAddAnnotationProposal2(annotation, desc, dec, data.phasedUnit,
-                    node, decNode, data);
+                addAddAnnotationProposal2 {
+                    annotation = annotation;
+                    desc = desc;
+                    dec = dec;
+                    unit = data.phasedUnit;
+                    node = node;
+                    decNode = decNode;
+                    data = data;
+                };
             }
         }
     }
     
     void addAddAnnotationProposal2(String annotation, String desc, Referenceable dec,
         PhasedUnit unit, Node? node, Tree.StatementOrArgument decNode, QuickFixData data) {
-        value change = platformServices.document.createTextChange(desc, unit);
+        value change 
+                = platformServices.document.createTextChange {
+            name = desc;
+            input = unit;
+        };
         change.initMultiEdit();
         
-        value edit = createReplaceAnnotationEdit(annotation, node, change)
-        else createInsertAnnotationEdit(annotation, decNode,
-            change.document);
+        value edit 
+                = createReplaceAnnotationEdit {
+                    annotation = annotation;
+                    node = node;
+                    change = change;
+                }
+                else createInsertAnnotationEdit {
+                    newAnnotation = annotation;
+                    node = decNode;
+                    doc = change.document;
+                };
         
         change.addEdit(edit);
         
@@ -298,45 +375,59 @@ shared object addAnnotationQuickFix {
     }
     
     void createExplicitTypeEdit(Tree.StatementOrArgument decNode, TextChange change) {
-        if (is Tree.TypedDeclaration decNode, !(decNode is Tree.ObjectDefinition)) {
+        if (is Tree.TypedDeclaration decNode, 
+            !decNode is Tree.ObjectDefinition) {
             value type = decNode.type;
             if (type.token exists, 
                 type is Tree.FunctionModifier|Tree.ValueModifier, 
                 exists it = type.typeModel, !it.unknown) {
                 value explicitType = it.asString();
-                change.addEdit(ReplaceEdit(type.startIndex.intValue(),
-                    type.text.size, explicitType));
+                change.addEdit(ReplaceEdit {
+                    start = type.startIndex.intValue();
+                    length = type.text.size;
+                    text = explicitType;
+                });
             }
         }
     }
     
     String description(String annotation, Referenceable dec) {
-        String description;
-        if (is Declaration dec) {
-            value d = dec;
-            value container = d.container;
-            variable value containerDesc = "";
-            if (is TypeDeclaration container) {
-                variable String? name = container.name;
-                if (!exists n = name, is Constructor container) {
-                    value cont = container.container;
-                    if (is Declaration cont) {
-                        value cd = cont;
-                        name = cd.name;
+        switch (dec)
+        case (is Declaration) {
+            String containerDesc;
+            if (is TypeDeclaration container = dec.container) {
+                if (!container.name exists) {
+                    if (is Constructor container, 
+                        is Declaration cont = container.container) {
+                        containerDesc = " in '``cont.name``'";
+                    }
+                    else {
+                        containerDesc = "";
                     }
                 }
-                containerDesc = " in '" + (name else "") + "'";
+                else {
+                    containerDesc = " in '``container.name``'";
+                }
             }
-            String? name = d.name;
-            if (!exists n = name, ModelUtil.isConstructor(d)) {
-                description = "Make default constructor " + annotation + containerDesc;
-            } else {
-                description = "Make '" + (name else "") + "' " + annotation + containerDesc;
+            else {
+                containerDesc = "";
             }
-        } else {
-            description = "Make package '" + dec.nameAsString + "' " + annotation;
+            if (exists name = dec.name) {
+                return "Make '``name``' " + annotation + containerDesc;
+            }    
+            else if (ModelUtil.isConstructor(dec)) {
+                return "Make default constructor " + annotation + containerDesc;
+            }
+            else {
+                return "Make " + annotation;
+            }
         }
-        return description;
+        case (is Package) {
+            return "Make package '``dec.nameAsString``' " + annotation;
+        }
+        else {
+            assert (false);
+        }
     }
     
     TextEdit? createReplaceAnnotationEdit(String annotation, Node? node, TextChange change) {
@@ -350,10 +441,15 @@ shared object addAnnotationQuickFix {
         }
         if (exists annotationList = getAnnotationList(node)) {
             for (ann in annotationList.annotations) {
-                if (exists id = getAnnotationIdentifier(ann), id == toRemove) {
+                if (exists id = getAnnotationIdentifier(ann), 
+                    id == toRemove) {
                     value start = ann.startIndex.intValue();
                     value length = ann.endIndex.intValue() - start;
-                    return ReplaceEdit(start, length, annotation);
+                    return ReplaceEdit {
+                        start = start;
+                        length = length;
+                        text = annotation;
+                    };
                 }
             }
         }
@@ -379,22 +475,29 @@ shared object addAnnotationQuickFix {
         if (exists ann = nextAnnotation) {
             nextNodeStartIndex = ann.startIndex.intValue();
         } else {
-            if (is Tree.AnyAttribute|Tree.AnyMethod node) {
+            switch (node) 
+            case (is Tree.AnyAttribute|Tree.AnyMethod) {
                 nextNodeStartIndex = node.type.startIndex.intValue();
-            } else if (is Tree.ObjectDefinition node) {
+            } 
+            case (is Tree.ObjectDefinition) {
                 assert (is CommonToken token = node.mainToken);
                 nextNodeStartIndex = token.startIndex;
-            } else if (is Tree.ClassOrInterface node) {
+            }
+            case (is Tree.ClassOrInterface) {
                 assert (is CommonToken token = node.mainToken);
                 nextNodeStartIndex = token.startIndex;
-            } else {
+            }
+            else {
                 nextNodeStartIndex = node.startIndex.intValue();
             }
         }
+        
         Integer newAnnotationOffset;
         value newAnnotationText = StringBuilder();
-        if (isAnnotationOnSeparateLine(newAnnotationName), !(node is Tree.Parameter)) {
-            if (exists ann = prevAnnotation, exists id = getAnnotationIdentifier(ann),
+        if (isAnnotationOnSeparateLine(newAnnotationName), 
+            !node is Tree.Parameter) {
+            if (exists ann = prevAnnotation, 
+                exists id = getAnnotationIdentifier(ann),
                 isAnnotationOnSeparateLine(id)) {
                 
                 newAnnotationOffset = ann.endIndex.intValue();
@@ -412,19 +515,27 @@ shared object addAnnotationQuickFix {
             newAnnotationText.append(newAnnotation);
             newAnnotationText.append(" ");
         }
-        return InsertEdit(newAnnotationOffset, newAnnotationText.string);
+        return InsertEdit {
+            start = newAnnotationOffset;
+            text = newAnnotationText.string;
+        };
     }
     
     shared Tree.AnnotationList? getAnnotationList(Node? node) {
-        if (is Tree.Declaration node) {
+        switch (node)
+        case (is Tree.Declaration) {
             return node.annotationList;
-        } else if (is Tree.ModuleDescriptor node) {
+        }
+        case (is Tree.ModuleDescriptor) {
             return node.annotationList;
-        } else if (is Tree.PackageDescriptor node) {
+        }
+        case (is Tree.PackageDescriptor) {
             return node.annotationList;
-        } else if (is Tree.Assertion node) {
+        }
+        case (is Tree.Assertion) {
             return node.annotationList;
-        } else {
+        }
+        else {
             return null;
         }
     }
@@ -463,8 +574,13 @@ shared object addAnnotationQuickFix {
     shared void addMakeActualDecProposal(Node node, QuickFixData data) {
         value dec = annotatedNode(node);
         value shared = dec.shared;
-        addAddAnnotationProposal(node, if (shared) then "actual" else "shared actual",
-            if (shared) then "Make Actual" else "Make Shared Actual", dec, data);
+        addAddAnnotationProposal {
+            node = node;
+            annotation = if (shared) then "actual" else "shared actual";
+            desc = if (shared) then "Make Actual" else "Make Shared Actual";
+            dec = dec;
+            data = data;
+        };
     }
     
     shared void addMakeSharedProposalForSupertypes(Node node, QuickFixData data) {
@@ -493,90 +609,142 @@ shared object addAnnotationQuickFix {
             if (refined.default || refined.formal) {
                 addMakeSharedProposal2(refined, data);
             } else {
-                addAddAnnotationProposal(node, "shared default", "Make Shared Default", refined, data);
+                addAddAnnotationProposal {
+                    node = node;
+                    annotation = "shared default";
+                    desc = "Make Shared Default";
+                    dec = refined;
+                    data = data;
+                };
             }
         }
     }
     
     shared void addMakeSharedProposal(Node node, QuickFixData data) {
-        variable Referenceable? dec = null;
-        variable JList<Type>? typeArgumentList = null;
+        Referenceable? dec;
+        JList<Type>? typeArguments;
         switch (node)
         case (is Tree.StaticMemberOrTypeExpression) {
             dec = node.declaration;
-        } case (is Tree.SimpleType) {
+            typeArguments = null;
+        }
+        case (is Tree.SimpleType) {
             dec = node.declarationModel;
-        } case (is Tree.OptionalType) {
+            typeArguments = null;
+        }
+        case (is Tree.OptionalType) {
             if (is Tree.SimpleType st = node.definiteType) {
                 dec = st.declarationModel;
+                typeArguments = null;
             }
-        } case (is Tree.IterableType) {
-            if (is Tree.SimpleType st = node.elementType) {
-                dec = st.declarationModel;
-            }
-        } case (is Tree.SequenceType) {
-            if (is Tree.SimpleType st = node.elementType) {
-                dec = st.declarationModel;
-            }
-        } case (is Tree.ImportMemberOrType) {
-            dec = node.declarationModel;
-        } case (is Tree.ImportPath) {
-            dec = node.model;
-        } case (is Tree.TypedDeclaration) {
-            if (exists td = node.declarationModel) {
-                value pt = td.type;
-                dec = pt.declaration;
-                typeArgumentList = pt.typeArgumentList;
-            }
-        } case (is Tree.Parameter) {
-            if (exists param = node.parameterModel, exists p = param.type) {
-                value pt = param.type;
-                dec = pt.declaration;
-                typeArgumentList = pt.typeArgumentList;
+            else {
+                return;
             }
         }
-        else {}
+        case (is Tree.IterableType) {
+            if (is Tree.SimpleType st = node.elementType) {
+                dec = st.declarationModel;
+                typeArguments = null;
+            }
+            else {
+                return;
+            }
+        }
+        case (is Tree.SequenceType) {
+            if (is Tree.SimpleType st = node.elementType) {
+                dec = st.declarationModel;
+                typeArguments = null;
+            }
+            else {
+                return;
+            }
+        }
+        case (is Tree.ImportMemberOrType) {
+            dec = node.declarationModel;
+            typeArguments = null;
+        }
+        case (is Tree.ImportPath) {
+            dec = node.model;
+            typeArguments = null;
+        }
+        case (is Tree.TypedDeclaration) {
+            if (exists td = node.declarationModel,
+                exists pt = td.type) {
+                dec = pt.declaration;
+                typeArguments = pt.typeArgumentList;
+            }
+            else {
+                return;
+            }
+        }
+        case (is Tree.Parameter) {
+            if (exists param = node.parameterModel, 
+                exists pt = param.type) {
+                dec = pt.declaration;
+                typeArguments = pt.typeArgumentList;
+            }
+            else {
+                return;
+            }
+        }
+        else {
+            return;
+        }
         addMakeSharedProposal2(dec, data);
-        if (exists tal = typeArgumentList) {
-            for (typeArgument in tal) {
+        if (exists typeArguments) {
+            for (typeArgument in typeArguments) {
                 addMakeSharedProposal2(typeArgument.declaration, data);
             }
         }
     }
     
     void addMakeSharedProposal2(Referenceable? ref, QuickFixData data) {
-        if (exists ref) {
-            if (is TypedDeclaration|ClassOrInterface|TypeAlias ref) {
-                if (!ref.shared) {
-                    addAddAnnotationProposal(null, "shared", "Make Shared", ref, data);
-                }
-            } else if (is Package ref) {
-                if (!ref.shared) {
-                    addAddAnnotationProposal(null, "shared", "Make Shared", ref, data);
-                }
+        switch (ref)
+        case (is TypedDeclaration|ClassOrInterface|TypeAlias) {
+            if (!ref.shared) {
+                addAddAnnotationProposal {
+                    node = null;
+                    annotation = "shared";
+                    desc = "Make Shared";
+                    dec = ref;
+                    data = data;
+                };
             }
         }
+        case (is Package) {
+            if (!ref.shared) {
+                addAddAnnotationProposal {
+                    node = null;
+                    annotation = "shared";
+                    desc = "Make Shared";
+                    dec = ref;
+                    data = data;
+                };
+            }
+        }
+        else {}
     }
     
     shared void addMakeSharedDecProposal(Node node, QuickFixData data) {
         if (is Tree.Declaration node) {
-            addAddAnnotationProposal(node, "shared", "Make Shared", node.declarationModel, data);
+            addAddAnnotationProposal {
+                node = node;
+                annotation = "shared";
+                desc = "Make Shared";
+                dec = node.declarationModel;
+                data = data;
+            };
         }
     }
     
     shared void addContextualAnnotationProposals(QuickFixData data, Tree.Declaration? decNode, 
         Integer offset) {
-        
-        value doc = data.document;
-        
-        if (exists decNode) {
-            value idNode = nodes.getIdentifyingNode(decNode);
-            if (!exists idNode) {
-                return;
-            }
+                
+        if (exists decNode, 
+            exists idNode = nodes.getIdentifyingNode(decNode)) {
+            value doc = data.document;
             if (doc.getLineOfOffset(idNode.startIndex.intValue())
                 != doc.getLineOfOffset(offset)) {
-                
                 return;
             }
             
@@ -585,7 +753,7 @@ shared object addAnnotationQuickFix {
                     addMakeVariableDeclarationProposal(data, decNode);
                 }
                 
-                if ((d.classOrInterfaceMember || d.toplevel), !d.shared) {
+                if (d.classOrInterfaceMember || d.toplevel, !d.shared) {
                     addMakeSharedDecProposal(decNode, data);
                 }
                 
@@ -593,25 +761,32 @@ shared object addAnnotationQuickFix {
                     switch (decNode)
                     case (is Tree.AnyClass) {
                         addMakeDefaultDecProposal(decNode, data);
-                    } case (is Tree.AnyAttribute) {
+                    }
+                    case (is Tree.AnyAttribute) {
                         addMakeDefaultDecProposal(decNode, data);
-                    } case (is Tree.AnyMethod) {
+                    }
+                    case (is Tree.AnyMethod) {
                         addMakeDefaultDecProposal(decNode, data);
-                    } else {}
+                    }
+                    else {}
                     
                     switch (decNode)
                     case (is Tree.ClassDefinition) {
                         addMakeFormalDecProposal(decNode, data);
-                    } case (is Tree.AttributeDeclaration) {
-                        if (!decNode.specifierOrInitializerExpression exists) {
+                    }
+                    case (is Tree.AttributeDeclaration) {
+                        if (!decNode.specifierOrInitializerExpression exists &&
+                            !decNode.declarationModel.parameter) {
                             addMakeFormalDecProposal(decNode, data);
                         }
-                    } case (is Tree.MethodDeclaration) {
-                        value md = decNode;
-                        if (!md.specifierExpression exists) {
+                    }
+                    case (is Tree.MethodDeclaration) {
+                        if (!decNode.specifierExpression exists &&
+                            !decNode.declarationModel.parameter) {
                             addMakeFormalDecProposal(decNode, data);
                         }
-                    } else {}
+                    }
+                    else {}
                 }
             }
         }
