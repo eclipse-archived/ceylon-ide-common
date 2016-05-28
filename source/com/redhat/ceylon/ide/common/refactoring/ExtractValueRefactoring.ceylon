@@ -79,9 +79,12 @@ shared interface ExtractValueRefactoring<IRegion>
         object extends Visitor() {
             shared actual void visit(Tree.FunctionArgument that) {
                 if (that != term &&
-                    that.startIndex.intValue() <= term.startIndex.intValue() &&
-                    that.endIndex.intValue() >= term.endIndex.intValue() &&
-                    that.startIndex.intValue() > statement.startIndex.intValue()) {
+                    that.startIndex.intValue() 
+                        <= term.startIndex.intValue() &&
+                    that.endIndex.intValue() 
+                        >= term.endIndex.intValue() &&
+                    that.startIndex.intValue() 
+                        > statement.startIndex.intValue()) {
                     result = that;
                 }
                 super.visit(that);
@@ -133,7 +136,9 @@ shared interface ExtractValueRefactoring<IRegion>
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
             value semi = fun.endIndex.intValue()-1;
-            String starting = " {" + indent + platformServices.document.defaultIndent;
+            String starting 
+                    = " {" + indent 
+                    + platformServices.document.defaultIndent;
             String ending = ";" + indent + "}";
             tfc.addEdit(ReplaceEdit(loc, len, starting));
             tfc.addEdit(InsertEdit(end, ending));
@@ -149,8 +154,8 @@ shared interface ExtractValueRefactoring<IRegion>
             adjustment = 0;
             newLineOrReturn = indent;
             toplevel 
-                    = if (is Tree.Declaration dec = statement) 
-                    then dec.declarationModel.toplevel 
+                    = if (is Tree.Declaration statement) 
+                    then statement.declarationModel.toplevel 
                     else false;
         }
         
@@ -170,12 +175,22 @@ shared interface ExtractValueRefactoring<IRegion>
             keyword = voidModifier then "void" else "function";
             
             value bodyWithParams = StringBuilder();
-            nodes.appendParameters(bodyWithParams, core, unit, tokens);
+            nodes.appendParameters {
+                result = bodyWithParams;
+                anonFunction = core;
+                unit = unit;
+                tokens = tokens;
+            };
             if (exists block = core.block) {
-                bodyWithParams.append(" ").append(nodes.text(tokens, block));
+                bodyWithParams
+                        .append(" ")
+                        .append(nodes.text(tokens, block));
             }
             else if (exists expr = core.expression) {
-                bodyWithParams.append(" => ").append(nodes.text(tokens, expr)).append(";");
+                bodyWithParams
+                        .append(" => ")
+                        .append(nodes.text(tokens, expr))
+                        .append(";");
             }
             else {
                 bodyWithParams.append(" => ");
@@ -204,7 +219,11 @@ shared interface ExtractValueRefactoring<IRegion>
         else if (exists type = this.type, !type.unknown) {
             if (explicitType || toplevel) {
                 typeDec = type.asSourceCodeString(unit);
-                importProposals.importType(imports, type, rootNode);
+                importProposals.importType {
+                    declarations = imports;
+                    type = type;
+                    rootNode = rootNode;
+                };
             }
             else {
                 canBeInferred = true;
@@ -223,7 +242,8 @@ shared interface ExtractValueRefactoring<IRegion>
                 else false;
         value definition = 
                 typeDec + " " + newName + body + 
-                (isReplacingStatement then "" else newLineOrReturn);
+                (isReplacingStatement then "" 
+                                    else newLineOrReturn);
         
         value shift 
                 = importProposals.applyImports {
@@ -282,7 +302,8 @@ shared interface ExtractValueRefactoring<IRegion>
             value statementScope = statement.scope;
             value targetScope = 
                     statement is Tree.AttributeDeclaration 
-                    then statementScope.container else statementScope;
+                    then statementScope.container 
+                    else statementScope;
             shared actual void visit(Tree.Term t) {
                 if (exists start = t.startIndex?.intValue(),
                     exists length = t.distance?.intValue(),

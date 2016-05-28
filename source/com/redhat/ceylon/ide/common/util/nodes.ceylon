@@ -532,9 +532,9 @@ shared object nodes {
     }
     
     shared void appendParameters(StringBuilder result, 
-        Tree.FunctionArgument fa, 
+        Tree.FunctionArgument anonFunction, 
         Unit unit, JList<CommonToken> tokens) {
-        for (pl in fa.parameterLists) {
+        for (pl in anonFunction.parameterLists) {
             result.append("(");
             variable Boolean first = true;
             for (p in pl.parameters) {
