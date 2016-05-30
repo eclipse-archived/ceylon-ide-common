@@ -129,10 +129,6 @@ shared interface DocGenerator {
     shared formal String? getLiveValue(Declaration dec, Unit unit);
     shared formal Boolean supportsQuickAssists;
     
-    "Get the Node referenced by the given model, searching
-     in all relevant compilation units."
-    shared formal Node? getReferencedNode(Declaration dec);
-    
     shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
         if (exists target) {
             if (javaString(target)
@@ -1111,9 +1107,9 @@ shared interface DocGenerator {
     // see addDoc(Declaration dec, Node node, StringBuilder buffer)
     Boolean addDoc(Declaration dec, Node? node, 
         StringBuilder builder, IdeComponent cmp) {
-        value rn = let (n = getReferencedNode(dec)) 
+        value rn = let (n = nodes.getReferencedNode(dec)) 
                 if (is Tree.SpecifierStatement n)
-                then getReferencedNode(n.refined) 
+                then nodes.getReferencedNode(n.refined) 
                 else n;
         if (dec.unit is CeylonUnit) {
             value annotationList 
@@ -1497,7 +1493,7 @@ shared interface DocGenerator {
                                 .append(".");
                             
                             if (is Tree.Declaration refNode 
-                                    = getReferencedNode(model)) {
+                                    = nodes.getReferencedNode(model)) {
                                 appendDocAnnotationContent(model, 
                                     refNode.annotationList,
                                     param, resolveScope(dec), cmp);
