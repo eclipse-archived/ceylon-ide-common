@@ -6,9 +6,6 @@ import ceylon.interop.java {
 import com.redhat.ceylon.common {
     Backends
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -125,7 +122,6 @@ shared interface DocGenerator {
     shared formal void appendPageProlog(StringBuilder builder);
     shared formal void appendPageEpilog(StringBuilder builder);
     shared formal String getUnitName(Unit u);
-    shared formal PhasedUnit? getPhasedUnit(Unit u);
     shared formal String? getLiveValue(Declaration dec, Unit unit);
     shared formal Boolean supportsQuickAssists;
     
@@ -516,8 +512,8 @@ shared interface DocGenerator {
     // see addPackageDocumentation(CeylonParseController, Package, StringBuilder)
     void addPackageDocumentation(Package pack, 
         StringBuilder builder, IdeComponent cmp) {
-        if (exists unit = pack.unit,
-            exists pu = getPhasedUnit(unit),
+        if (is CeylonUnit unit = pack.unit,
+            exists pu = unit.phasedUnit,
             !pu.compilationUnit.packageDescriptors.empty,
             exists refnode = pu.compilationUnit.packageDescriptors.get(0)) {
             
@@ -677,8 +673,8 @@ shared interface DocGenerator {
     // see addModuleDocumentation(CeylonParseController, Module, StringBuilder)
     void addModuleDocumentation(Module mod, 
         StringBuilder buffer, IdeComponent cmp) {
-        if (exists unit=mod.unit, 
-            exists pu = getPhasedUnit(unit),
+        if (is CeylonUnit unit=mod.unit, 
+            exists pu = unit.phasedUnit,
             !pu.compilationUnit.moduleDescriptors.empty,
             exists refnode = pu.compilationUnit.moduleDescriptors.get(0)) {
             
