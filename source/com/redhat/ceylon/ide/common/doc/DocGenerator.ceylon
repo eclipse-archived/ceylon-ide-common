@@ -121,7 +121,6 @@ shared interface DocGenerator {
     shared formal Boolean showMembers;
     shared formal void appendPageProlog(StringBuilder builder);
     shared formal void appendPageEpilog(StringBuilder builder);
-    shared formal String getUnitName(Unit u);
     shared formal String? getLiveValue(Declaration dec, Unit unit);
     shared formal Boolean supportsQuickAssists;
     
@@ -1595,7 +1594,11 @@ shared interface DocGenerator {
     void addUnitInfo(Declaration decl, StringBuilder builder) {
         // <p> was replaced with <div> because <p> can't contain <div>s
         builder.append("<div class='paragraph'>");
-        value text = "<span>Declared in&nbsp;``buildLink(decl, getUnitName(decl.unit), "dec")``.</span>";
+        value unit = decl.unit;
+        value unitName = if (is CeylonUnit unit, exists name = unit.ceylonFileName)
+                         then name
+                         else unit.filename;
+        value text = "<span>Declared in&nbsp;``buildLink(decl, unitName, "dec")``.</span>";
         addIconAndText(builder, Icons.units, text);
         addPackageModuleInfo(decl.unit.\ipackage, builder);
         builder.append("</div>");
