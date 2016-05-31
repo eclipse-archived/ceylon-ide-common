@@ -644,7 +644,8 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
     variable Value? result = null;
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
-        if (is Value m, 
+        if (is Value m,
+            exists name = m.name,
             !isObjectField(m) && !isConstructor(m),
             !m.transient && !nt.isSubtypeOf(m.type)) {
             if (result exists) {
@@ -746,13 +747,14 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
+            exists name = m.name,
             !isObjectField(m), !isConstructor(m), 
             !m.transient, !nt.isSubtypeOf(m.type)) {
             if (found) {
                 result.append(" && ").append(indent);
             }
-            result.append(m.name).append("==")
-                    .append(p.name).append(".").append(m.name);
+            result.append(name).append("==")
+                    .append(name).append(".").append(name);
             found = true;
         }
     }
@@ -769,9 +771,10 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
+            exists name = m.name,
             !isObjectField(m), !isConstructor(m),
             !m.transient, !nt.isSubtypeOf(m.type)) {
-            result.append("hash = 31*hash + ").append(m.name);
+            result.append("hash = 31*hash + ").append(name);
             if (!m.type.integer) {
                 result.append(".hash");
             }
