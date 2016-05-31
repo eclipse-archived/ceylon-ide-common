@@ -100,6 +100,12 @@ shared object refineEqualsHashQuickFix {
             }
         }
         
+        // If the cursor is right after the closing brace, we have to insert
+        // our declarations inside the body
+        if (offset == body.endIndex.intValue()) {
+            offset--;
+        }
+        
         if (document.getText(offset, 1) == "}", result.size > 0) {
             result.append(delim).append(bodyIndent);
         }
@@ -185,4 +191,4 @@ shared object refineEqualsHashQuickFix {
         }
     }
 
-}
+} 
