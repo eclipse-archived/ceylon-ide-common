@@ -335,7 +335,7 @@ shared abstract class BaseIdeModelLoader(
             then unsafeCast<LazyInterface>(classMirror.modelDeclaration) 
             else super.makeLazyInterface(classMirror, isNativeHeader);
    
-    shared actual Module findModuleForClassMirror(ClassMirror classMirror) => 
+    shared actual Module? findModuleForClassMirror(ClassMirror classMirror) => 
             lookupModuleByPackageName(
                getPackageNameForQualifiedClassName(classMirror));
    
