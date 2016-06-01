@@ -376,6 +376,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     shared Map<NativeFile,Set<String>> missingClasses => state.missingClasses.immutable;
     
+    shared {ChangeToAnalyze*} fileChangesToAnalyze => state.fileChangesToAnalyze.immutable;
+    
     shared Boolean somethingToDo => 
             state.buildType.fullBuildRequested 
             || state.buildType.classpathResolutionRequested
