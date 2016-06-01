@@ -33,6 +33,13 @@ shared abstract class ResourceChange<Resource, Folder, File>()
     then type==that.type && 
             resource==that.resource 
     else false;
+    
+    shared actual Integer hash {
+            variable value hash = 1;
+            hash = 31*hash + type.hash;
+            hash = 31*hash + resource.hash;
+            return hash;
+        }
 }
 
 shared abstract class FileChange<Resource, Folder, File>(File theFile)
