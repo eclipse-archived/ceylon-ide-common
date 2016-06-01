@@ -271,7 +271,9 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
         if (params.empty) {
             result.append("()");
         } else if (exists pr) {
-            value paramTypes = descriptionOnly && addParameterTypesInCompletions;
+            value paramTypes 
+                    = descriptionOnly 
+                    && addParameterTypesInCompletions;
             result.append("(");
             for (p in params) {
                 value typedParameter = pr.getTypedParameter(p);
@@ -287,7 +289,8 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
                         result.append(" => ").append("nothing");
                     }
                 } else {
-                    if (paramTypes, exists pt = typedParameter.type,
+                    if (paramTypes, 
+                        exists pt = typedParameter.type,
                         !isTypeUnknown(pt)) {
                         value newPt = if (p.sequenced)
                                       then unit.getSequentialElementType(pt)
@@ -300,9 +303,11 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
                     } else if (p.sequenced) {
                         result.append("*");
                     }
-                    FunctionOrValue? mod = p.model;
-                    result.append(if (descriptionOnly || mod is Null)
-                        then p.name else escaping.escapeName(p.model));
+                    if (!descriptionOnly, exists mod = p.model) {
+                        result.append(escaping.escapeName(mod));
+                    } else if (exists name = p.name) {
+                        result.append(name);
+                    }
                 }
                 result.append(", ");
             }
