@@ -13,12 +13,24 @@ import ceylon.interop.java {
     JavaCollection
 }
 
+import com.redhat.ceylon.cmr.api {
+    SourceStream
+}
+import com.redhat.ceylon.cmr.ceylon {
+    CeylonUtils
+}
+import com.redhat.ceylon.cmr.impl {
+    ShaSigner
+}
 import com.redhat.ceylon.common {
     Backend,
     FileUtil
 }
 import com.redhat.ceylon.compiler.java.loader {
     UnknownTypeCollector
+}
+import com.redhat.ceylon.compiler.java.util {
+    Util
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
@@ -55,8 +67,7 @@ import com.redhat.ceylon.ide.common.util {
     ErrorVisitor,
     equalsWithNulls,
     toCeylonStringIterable,
-    CarUtils,
-    toJavaString
+    CarUtils
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -80,20 +91,12 @@ import java.util {
     JSet=Set,
     Properties
 }
-import com.redhat.ceylon.compiler.java.util {
-    Util
-}
+
 import net.lingala.zip4j.core {
     ZipFile
 }
 import net.lingala.zip4j.exception {
     ZipException
-}
-import com.redhat.ceylon.cmr.impl {
-    ShaSigner
-}
-import com.redhat.ceylon.cmr.ceylon {
-    CeylonUtils
 }
 
 shared final class Severity
@@ -839,6 +842,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
+    class VirtualFileSourceStream(FileVirtualFileAlias virtualFile) 
+            extends SourceStream() {
+        inputStream => virtualFile.inputStream;
+        sourceRelativePath => virtualFile.rootRelativePath?.string else "<unknown>";
+    }
+     
     Boolean updateSourceArchives(BaseProgressMonitor monitor, {FileVirtualFileAlias*} updatedFiles) {
         assert(exists sourceModules = ceylonProject.modules?.filter(BaseIdeModule.isProjectModule)?.sequence());
         variable value success = true;
@@ -856,12 +865,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                             (virtualFolder) => virtualFolder.toJavaFile).coalesced;
                     value sac = CeylonUtils.makeSourceArtifactCreator(outRepo, JavaIterable(sourceDirectories),
                         m.nameAsString, m.version, false, cmrLogger);
-                    sac.copy(JavaCollection(updatedFiles
+                    sac.copyStreams(JavaCollection<SourceStream>(updatedFiles
                         .filter((file)
                             => file.sourceFile &&
                                 equalsWithNulls(file.ceylonModule, m))
-                        .map((file) => toJavaString(file.toJavaFile?.absolutePath))
-                        .coalesced.sequence()));
+                        .map(VirtualFileSourceStream).coalesced.sequence()));
                 } catch (IOException e) {
                     platformUtils.log(Status._ERROR, "Source generation failed for module ``m``", e);
                     success = false;
