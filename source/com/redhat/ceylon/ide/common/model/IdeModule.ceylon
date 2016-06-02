@@ -948,82 +948,81 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             value unitPathsToSearch = { relativePathToRemove,
                                 * toBinaryUnitRelativePaths(relativePathToRemove) };
                                 
-                                for (relativePathOfUnitToRemove in unitPathsToSearch) {
-                                    if (exists p = getPackageFromRelativePath(relativePathOfUnitToRemove)) {
-                                        value units = HashSet<Unit>();
-                                        for (d in p.members) {
-                                            value u = d.unit;
-                                            if (u.relativePath == relativePathOfUnitToRemove) {
-                                                units.add(u);
-                                            }
-                                        }
-                                        for (u in units) {
-                                            try {
-                                                p.removeUnit(u);
-                                            }
-                                            catch (e) {
-                                                e.printStackTrace();
-                                            }
+                            for (relativePathOfUnitToRemove in unitPathsToSearch) {
+                                if (exists p = getPackageFromRelativePath(relativePathOfUnitToRemove)) {
+                                    value units = HashSet<Unit>();
+                                    for (d in p.members) {
+                                        value u = d.unit;
+                                        if (u.relativePath == relativePathOfUnitToRemove) {
+                                            units.add(u);
                                         }
                                     }
-                                    else {
-                                        print("WARNING : The package of the following binary unit (``relativePathOfUnitToRemove``) cannot be found in module ``nameAsString```` if (exists a=artifact) then "(artifact=" + a.absolutePath + ")" else "" ``.");
+                                    for (u in units) {
+                                        try {
+                                            p.removeUnit(u);
+                                        }
+                                        catch (e) {
+                                            e.printStackTrace();
+                                        }
                                     }
                                 }
+                                else {
+                                    print("WARNING : The package of the following binary unit (``relativePathOfUnitToRemove``) cannot be found in module ``nameAsString```` if (exists a=artifact) then "(artifact=" + a.absolutePath + ")" else "" ``.");
+                                }
                             }
-                            phasedUnitMap.removePhasedUnitForRelativePath(relativePathToRemove);
                         }
-                        if (isSourceArchive) {
-                            assert(is ExternalModulePhasedUnits phasedUnitMap);
-                            variable ClosableVirtualFile? theSourceArchive = null;
-                            try {
-                                value zipFile = ZipFileVirtualFile.fromFile(File(_sourceArchivePath));
-                                theSourceArchive = zipFile;
-                                for (relativePathToAdd in originalUnitsToAdd) {
-                                    if (exists archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile)) {
-                                        assert(exists pkg = getPackageFromRelativePath(relativePathToAdd));
-                                        phasedUnitMap.parseFileInPackage(archiveEntry, zipFile, pkg);
-                                    }
-                                }
-                            }
-                            catch (e) {
-                                value error = "Unable to read source artifact from
-                                               ``_sourceArchivePath else "<null>"
-                                ``due to connection error: ``e.message``";
-                                process.writeErrorLine(error);
-                                throw e;
-                            } finally {
-                                if (exists zipFile=theSourceArchive) {
-                                    zipFile.close();
-                                }
-                            }
-                        } else if (isCeylonBinaryArchive, is BinaryPhasedUnits phasedUnits=binaryModulePhasedUnits) {
+                        phasedUnitMap.removePhasedUnitForRelativePath(relativePathToRemove);
+                    }
+                    if (isSourceArchive) {
+                        assert(is ExternalModulePhasedUnits phasedUnitMap);
+                        variable ClosableVirtualFile? theSourceArchive = null;
+                        try {
+                            value zipFile = ZipFileVirtualFile.fromFile(File(_sourceArchivePath));
+                            theSourceArchive = zipFile;
                             for (relativePathToAdd in originalUnitsToAdd) {
-                                phasedUnits.putRelativePath(relativePathToAdd);
+                                if (exists archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile)) {
+                                    assert(exists pkg = getPackageFromRelativePath(relativePathToAdd));
+                                    phasedUnitMap.parseFileInPackage(archiveEntry, zipFile, pkg);
+                                }
                             }
                         }
-                        fillSourceRelativePaths();
-                        originalUnitsToRemove.clear();
-                        originalUnitsToAdd.clear();
+                        catch (e) {
+                            value error = "Unable to read source artifact from
+                                           ``_sourceArchivePath else "<null>"
+                            ``due to connection error: ``e.message``";
+                            process.writeErrorLine(error);
+                            throw e;
+                        } finally {
+                            if (exists zipFile=theSourceArchive) {
+                                zipFile.close();
+                            }
+                        }
+                    } else if (isCeylonBinaryArchive, is BinaryPhasedUnits phasedUnits=binaryModulePhasedUnits) {
+                        for (relativePathToAdd in originalUnitsToAdd) {
+                            phasedUnits.putRelativePath(relativePathToAdd);
+                        }
                     }
-                    defaultValue = null; 
-                };
+                    fillSourceRelativePaths();
+                    originalUnitsToRemove.clear();
+                    originalUnitsToAdd.clear();
+                }
+                defaultValue = null; 
+            };
                 
-                if (isCeylonBinaryArchive || isJavaBinaryArchive) {
-                    jarPackages.clear();
-                    loadPackageList(object satisfies ArtifactResult {
-                        shared actual VisibilityType? visibilityType() => null;
-                        shared actual String? version() => null;
-                        shared actual ArtifactResultType? type()  => null;
-                        shared actual String? name() => null;
-                        shared actual ImportType? importType() => null;
-                        shared actual JList<ArtifactResult>? dependencies() => null;
-                        shared actual File? artifact() => null;
-                        shared actual String? repositoryDisplayString() => null;
-                        shared actual PathFilter? filter() => null;
-                        shared actual Repository? repository() => null;
-                    }
-                );
+            if (isCeylonBinaryArchive || isJavaBinaryArchive) {
+                jarPackages.clear();
+                loadPackageList(object satisfies ArtifactResult {
+                    shared actual VisibilityType? visibilityType() => null;
+                    shared actual String? version() => null;
+                    shared actual ArtifactResultType? type()  => null;
+                    shared actual String? name() => null;
+                    shared actual ImportType? importType() => null;
+                    shared actual JList<ArtifactResult>? dependencies() => null;
+                    shared actual File? artifact() => null;
+                    shared actual String? repositoryDisplayString() => null;
+                    shared actual PathFilter? filter() => null;
+                    shared actual Repository? repository() => null;
+                });
             }
         }
         catch (e) {
