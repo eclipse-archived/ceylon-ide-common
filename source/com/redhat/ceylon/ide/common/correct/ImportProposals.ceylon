@@ -13,6 +13,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.completion {
     FindImportNodeVisitor
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
@@ -52,9 +55,6 @@ import java.util {
     JSet=Set,
     Collections
 }
-import com.redhat.ceylon.ide.common.doc {
-    Icons
-}
 
 shared object importProposals {
     
@@ -83,7 +83,11 @@ shared object importProposals {
             };
     
     void createImportProposal(QuickFixData data, Declaration declaration) {
-        value change = platformServices.document.createTextChange("Add Import", data.phasedUnit);
+        value change 
+                = platformServices.document.createTextChange {
+            name = "Add Import";
+            input = data.phasedUnit;
+        };
         change.initMultiEdit();
         
         value edits = importEdits {
@@ -97,17 +101,14 @@ shared object importProposals {
         for (e in edits) {
             change.addEdit(e);
         }
-        String proposedName = declaration.name;
-        /*String brokenName = id.getText();
-         if (!brokenName.equals(proposedName)) {
-            change.addEdit(new ReplaceEdit(id.getStartIndex(), brokenName.length(),
-                    proposedName));
-         }*/
-        String pname = declaration.unit.\ipackage.nameAsString;
-        String description =
-            "Add import of '``proposedName``' in package '``pname``'";
         
-        data.addQuickFix(description, change, null, false, Icons.imports);
+        data.addQuickFix {
+            description = "Add import of '``declaration.name``' in package '``declaration.unit.\ipackage.nameAsString``'";
+            change = change;
+            selection = null;
+            qualifiedNameIsPath = true;
+            image = Icons.imports;
+        };
     }
     
     shared List<InsertEdit> importEdits(
