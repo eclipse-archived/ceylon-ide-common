@@ -15,6 +15,8 @@ shared interface JavaUnitUtils<NativeFolder,NativeFile,JavaClassRoot> {
     shared formal NativeFolder? javaClassRootToNativeRootFolder(JavaClassRoot javaClassRoot);
 }
 
+shared alias AnyJavaUnit => JavaUnit<out Anything,out Anything,out Anything,out Anything,out Anything>;
+
 shared abstract class JavaUnit<NativeProject,NativeFolder,NativeFile,JavaClassRoot,JavaElement>
         (String theFilename, String theRelativePath, String theFullPath, LazyPackage thePackage)
         extends IdeUnit.init(theFilename, theRelativePath, theFullPath, thePackage)
