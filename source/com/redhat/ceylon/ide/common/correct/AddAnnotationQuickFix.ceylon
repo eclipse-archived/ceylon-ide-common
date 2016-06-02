@@ -12,6 +12,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.imports {
     moduleImportUtil
 }
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
+}
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
@@ -317,15 +320,18 @@ shared object addAnnotationQuickFix {
     void addAddAnnotationProposal(Node? node, String annotation, String desc,
         Referenceable? dec, QuickFixData data) {
         
-        if (exists dec, !node is Tree.MissingDeclaration) {
+        if (exists dec, !node is Tree.MissingDeclaration,
+            is AnyModifiableSourceFile unit = dec.unit,
+            exists phasedUnit = unit.phasedUnit,
+            exists rootNode = unit.compilationUnit) {
             value fdv = FindDeclarationNodeVisitor(dec);
-            data.phasedUnit.compilationUnit.visit(fdv);
+            rootNode.visit(fdv);
             if (exists decNode = fdv.declarationNode) {
                 addAddAnnotationProposal2 {
                     annotation = annotation;
                     desc = desc;
                     dec = dec;
-                    unit = data.phasedUnit;
+                    unit = phasedUnit;
                     node = node;
                     decNode = decNode;
                     data = data;
