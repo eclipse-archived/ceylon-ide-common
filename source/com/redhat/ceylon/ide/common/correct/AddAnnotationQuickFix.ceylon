@@ -713,6 +713,17 @@ shared object addAnnotationQuickFix {
                     data = data;
                 };
             }
+            else if (is ClassOrInterface container = ref.container) {
+                if (!container.shared) {
+                    addAddAnnotationProposal {
+                        node = null;
+                        annotation = "shared";
+                        desc = "Make Shared";
+                        dec = container;
+                        data = data;
+                    };
+                }
+            }
         }
         case (is Package) {
             if (!ref.shared) {
