@@ -51,4 +51,11 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
             super.visitAny(node);
         }
     }
+
+    shared actual void visit(Tree.SpecifierStatement that) {
+        if (isDeclaration(that.declaration)) {
+            declarationNode = that;
+        }
+        super.visit(that);
+    }
 }
