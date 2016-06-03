@@ -206,7 +206,7 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
     shared actual void visit(Tree.TypeArguments that) {
         //TODO: is this really necessary?
         if (exists types = that.typeModels) {
-            for (Type type in types) {
+            for (Type? type in types) {
                 storeTypeDependency(type);
             }
         }
