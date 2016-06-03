@@ -34,8 +34,13 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
         JIterable<Declaration> declarations,
         JIterable<JString>? aliases = null,
         Declaration? declarationBeingDeleted = null)
-            => importProposals.importEdits(rootNode, declarations, aliases,
-                declarationBeingDeleted, document);
+            => importProposals.importEdits {
+                rootNode = rootNode;
+                declarations = declarations;
+                aliases = aliases;
+                declarationBeingDeleted = declarationBeingDeleted;
+                doc = document;
+            };
     
     shared void importDeclaration(Declaration declaration)
             => importProposals.importDeclaration {

@@ -34,13 +34,18 @@ shared object changeReferenceQuickFix {
     void addChangeReferenceProposal(QuickFixData data, String brokenName,
         Declaration dec) {
        
-        value change = platformServices.document.createTextChange("Change Reference", data.phasedUnit);
+        value change 
+               = platformServices.document.createTextChange {
+            name = "Change Reference";
+            input = data.phasedUnit;
+        };
         change.initMultiEdit();
         variable value pkg = "";
         value problemOffset = data.problemOffset;
         variable value importsLength = 0;
         
-        value importProposals = CommonImportProposals {
+        value importProposals 
+                = CommonImportProposals {
             document = data.document;
             rootNode = data.rootNode;
         };
@@ -53,12 +58,19 @@ shared object changeReferenceQuickFix {
             pkg = " in '" + pn + "'";
             if (!pn.empty,
                 !pn.equals(Module.\iLANGUAGE_MODULE_NAME),
-                exists node = nodes.findNode(data.rootNode, null, problemOffset)) {
+                exists node = nodes.findNode {
+                    node = data.rootNode;
+                    tokens = null;
+                    startOffset = problemOffset;
+                }) {
                 
-                value ol = nodes.getOccurrenceLocation(data.rootNode, node, problemOffset);
+                value ol = nodes.getOccurrenceLocation {
+                    cu = data.rootNode;
+                    node = node;
+                    offset = problemOffset;
+                };
                 if (!isLocation(ol, OccurrenceLocation.\iIMPORT)) {
-                    value ies = importProposals.importEdits(Collections.singleton(dec));
-                    for (ie in ies) {
+                    for (ie in importProposals.importEdits(Collections.singleton(dec))) {
                         importsLength += ie.text.size;
                         change.addEdit(ie);
                     }
@@ -67,11 +79,22 @@ shared object changeReferenceQuickFix {
         }
         
         //Note: don't use problem.getLength() because it's wrong from the problem list
-        change.addEdit(ReplaceEdit(problemOffset, brokenName.size, dec.name));
+        change.addEdit(ReplaceEdit {
+            start = problemOffset;
+            length = brokenName.size;
+            text = dec.name;
+        });
         
-        value desc = "Change reference to '" + dec.name + "'" + pkg;
-        value selection = DefaultRegion(problemOffset + importsLength, dec.name.size);
-        data.addQuickFix(desc, change, selection);
+        data.addQuickFix {
+            description 
+                    = "Change reference to '``dec.name``'``pkg``";
+            qualifiedNameIsPath = true;
+            change = change;
+            selection = DefaultRegion {
+                start = problemOffset + importsLength;
+                length = dec.name.size;
+            };
+        };
     }
     
     Boolean isInPackage(Tree.CompilationUnit cu, Declaration dec) {
@@ -90,7 +113,11 @@ shared object changeReferenceQuickFix {
                     rootNode = data.rootNode;
                 }.values();
                 for (dwp in dwps) {
-                    processProposal(data, brokenName, dwp.declaration);
+                    processProposal {
+                        data = data;
+                        brokenName = brokenName;
+                        declaration = dwp.declaration;
+                    };
                 }
             }
         }
@@ -106,11 +133,15 @@ shared object changeReferenceQuickFix {
                 if (!(scope is NamedArgumentList)) {
                     scope = scope.scope; //for declaration-style named args
                 }
-                assert(is NamedArgumentList namedArgumentList = scope);
+                assert (is NamedArgumentList namedArgumentList = scope);
                 if (exists parameterList = namedArgumentList.parameterList) {
                     for (parameter in parameterList.parameters) {
                         if (exists declaration = parameter.model) {
-                            processProposal(data, brokenName, declaration);
+                            processProposal {
+                                data = data;
+                                brokenName = brokenName;
+                                declaration = declaration;
+                            };
                         }
                     }
                 }
@@ -128,7 +159,11 @@ shared object changeReferenceQuickFix {
                 //TODO: would it be better to just sort by distance, 
                 //      and then select the 3 closest possibilities?
                 if (similarity > 0.6) {
-                    addChangeReferenceProposal(data, brokenName, declaration);
+                    addChangeReferenceProposal {
+                        data = data;
+                        brokenName = brokenName;
+                        dec = declaration;
+                    };
                 }
             }
         }
