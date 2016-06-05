@@ -162,10 +162,10 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node)
         }
     }
     
-    actual shared void visit(Tree.CaseClause that) {
-        if (inBounds(that) && 
-            !inBounds(that.block) &&
-                !inBounds(that.expression)) {
+    actual shared void visit(Tree.CaseItem that) {
+        if (inBounds(that),
+            !that.mainEndToken exists ||
+            offset<that.endIndex.intValue()) {
             occurrence = OccurrenceLocation.\iCASE;
         }
         super.visit(that);

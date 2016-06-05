@@ -205,11 +205,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         variable Type? srt = that.unit.anythingType;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
-            Tree.Expression? e = switchClause.switched.expression;
-            Tree.Variable? v = switchClause.switched.variable;
-            if (exists e) {
+            if (exists e = switchClause.switched.expression) {
                 srt = e.typeModel;
-            } else if (exists v) {
+            } else if (exists v = switchClause.switched.variable) {
                 srt = v.type.typeModel;
             } else {
                 srt = null;
@@ -228,6 +226,41 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 if (exists b = cc.block) {
                     requiredType = ort;
                     b.visit(this);
+                }
+            }
+        }
+        requiredType = ort;
+    }
+    
+    shared actual void visit(Tree.SwitchExpression that) {
+        Type? ort = requiredType;
+        Type? srt;
+        if (exists switchClause = that.switchClause) {
+            switchClause.visit(this);
+            if (exists e = switchClause.switched.expression) {
+                srt = e.typeModel;
+            } else if (exists v = switchClause.switched.variable) {
+                srt = v.type.typeModel;
+            } else {
+                srt = null;
+            }
+        }
+        else {
+            srt = null;
+        }
+        
+        if (exists switchCaseList = that.switchCaseList) {
+            for (cc in switchCaseList.caseClauses) {
+                if (cc===node || cc.caseItem===node) {
+                    finalResult = srt;
+                }
+                if (exists i = cc.caseItem) {
+                    requiredType = srt;
+                    i.visit(this);
+                }
+                if (exists e = cc.expression) {
+                    requiredType = ort;
+                    e.visit(this);
                 }
             }
         }
