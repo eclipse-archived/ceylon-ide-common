@@ -9,9 +9,6 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.ide.common.util {
-    nodes
-}
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
 }
@@ -53,6 +50,7 @@ shared object switchQuickFix {
                         };
                     }
                 }
+                
                 shared actual void visit(Tree.SwitchExpression that) {
                     if (that.switchClause==node) {
                         value offset = that.endIndex.intValue();
@@ -80,40 +78,40 @@ shared object switchQuickFix {
         }
     }
 
+    function missingType(Tree.SwitchClause sc, Tree.SwitchCaseList scl) {
+        variable value type = sc.switched.expression.typeModel;
+        for (cc in scl.caseClauses) {
+            switch (item = cc.caseItem) 
+            case (is Tree.IsCase) {
+                if (exists tn = item.type,
+                    exists t = tn.typeModel, 
+                    !ModelUtil.isTypeUnknown(t)) {
+                    type = type.minus(t);
+                }
+            }
+            case (is Tree.MatchCase) {
+                for (Tree.Expression? ex 
+                        in item.expressionList.expressions) {
+                    if (exists ex, 
+                        exists t = ex.typeModel,
+                        !ModelUtil.isTypeUnknown(t)) {
+                        type = type.minus(t);
+                    }
+                }
+            }
+            else {}
+        }
+        return type;
+    }
+    
     shared void addCasesProposal(QuickFixData data) {
         if (is Tree.SwitchClause node = data.node, 
             exists e = node.switched.expression, 
-            exists _type = e.typeModel) {
+            !ModelUtil.isTypeUnknown(e.typeModel)) {
             object extends Visitor() {
                 shared actual void visit(Tree.SwitchStatement that) {
                     if (that.switchClause==node) {
-                        value scl = that.switchCaseList;
-                        variable value type = _type;
-                        
-                        for (cc in scl.caseClauses) {
-                            value item = cc.caseItem;
-                            
-                            if (is Tree.IsCase ic = item) {
-                                if (exists tn = ic.type) {
-                                    value t = tn.typeModel;
-                                    
-                                    if (!ModelUtil.isTypeUnknown(t)) {
-                                        type = type.minus(t);
-                                    }
-                                }
-                            } else if (is Tree.MatchCase item) {
-                                value ic = item;
-                                value il = ic.expressionList;
-                                for (Tree.Expression? ex in il.expressions) {
-                                    if (exists ex, 
-                                        exists t = ex.typeModel,
-                                        !ModelUtil.isTypeUnknown(t)) {
-                                        
-                                        type = type.minus(t);
-                                    }
-                                }
-                            }
-                        }
+                        value type = missingType(node, that.switchCaseList);
                         
                         value change 
                                 = platformServices.document.createTextChange {
@@ -150,35 +148,10 @@ shared object switchQuickFix {
                         };
                     }
                 }
+                
                 shared actual void visit(Tree.SwitchExpression that) {
                     if (that.switchClause==node) {
-                        value scl = that.switchCaseList;
-                        variable value type = _type;
-                        
-                        for (cc in scl.caseClauses) {
-                            value item = cc.caseItem;
-                            
-                            if (is Tree.IsCase ic = item) {
-                                if (exists tn = ic.type) {
-                                    value t = tn.typeModel;
-                                    
-                                    if (!ModelUtil.isTypeUnknown(t)) {
-                                        type = type.minus(t);
-                                    }
-                                }
-                            } else if (is Tree.MatchCase item) {
-                                value ic = item;
-                                value il = ic.expressionList;
-                                for (Tree.Expression? ex in il.expressions) {
-                                    if (exists ex, 
-                                        exists t = ex.typeModel,
-                                        !ModelUtil.isTypeUnknown(t)) {
-                                        
-                                        type = type.minus(t);
-                                    }
-                                }
-                            }
-                        }
+                        value type = missingType(node, that.switchCaseList);
                         
                         value change 
                                 = platformServices.document.createTextChange {
