@@ -26,7 +26,7 @@ import java.lang {
 
 shared abstract class AbstractNavigation<Target,NativeFile>() {
     
-    shared Target? gotoDeclaration(Referenceable? model) {
+    shared default Target? gotoDeclaration(Referenceable? model) {
         if (exists model) {
             if (is CeylonUnit ceylonUnit = model.unit) {
                 if (exists node = nodes.getReferencedNodeInUnit {
