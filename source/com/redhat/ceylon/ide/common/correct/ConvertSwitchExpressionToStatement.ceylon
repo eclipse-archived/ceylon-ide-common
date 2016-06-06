@@ -11,7 +11,7 @@ import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 
-shared object convertSwitchExpressionToStatement {
+shared object convertSwitchExpressionToStatementQuickFix {
     
     shared void addConvertSwitchExpressionToStatementProposal(
         QuickFixData data, Tree.Statement? statement) {
@@ -141,7 +141,9 @@ shared object convertSwitchExpressionToStatement {
             data.addQuickFix {
                 description = "Convert to 'switch' statement";
                 change = change;
-                selection = DefaultRegion(statement.startIndex.intValue(), 0);
+                selection = DefaultRegion {
+                    start = statement.startIndex.intValue();
+                };
             };
         }
     }

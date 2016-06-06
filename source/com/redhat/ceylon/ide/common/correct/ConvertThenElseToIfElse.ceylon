@@ -14,7 +14,7 @@ import com.redhat.ceylon.ide.common.util {
     nodes
 }
 
-shared object convertThenElseToIfElse {
+shared object convertThenElseToIfElseQuickFix {
     
     shared void addConvertToIfElseProposal(QuickFixData data, 
         Tree.Statement? statement) {

@@ -31,17 +31,20 @@ import java.util {
 shared object specifyTypeQuickFix {
     
     shared DefaultRegion? specifyType(Tree.CompilationUnit rootNode, CommonDocument document, Tree.Type typeNode,
-        Boolean inEditor, Type _infType) {
+        Boolean inEditor, Type type) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
         value unit = rootNode.unit;
-        value infType = unit.denotableType(_infType);
+        value infType = unit.denotableType(type);
         
         if (!inEditor) {
             if (is Tree.LocalModifier typeNode) {
-                value change = platformServices.document.createTextChange("Specify Type", 
-                                        document);
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Specify Type";
+                    input = document;
+                };
                 change.initMultiEdit();
                 value decs = HashSet<Declaration>();
                 importProposals.importType {
@@ -71,7 +74,6 @@ shared object specifyTypeQuickFix {
                 };
             }
         } else {
-            value lm = platformServices.createLinkedMode(document);
             value proposals = typeCompletion.getTypeProposals {
                 rootNode = rootNode;
                 offset = offset;
@@ -79,6 +81,7 @@ shared object specifyTypeQuickFix {
                 infType = infType;
                 kind = null;
             };
+            value lm = platformServices.createLinkedMode(document);
             lm.addEditableRegion {
                 start = offset;
                 length = length;
@@ -201,7 +204,7 @@ shared object specifyTypeQuickFix {
                  document = data.document;
                  typeNode = type;
                  inEditor = true;
-                 _infType = infType;
+                 type = infType;
              };
         };
         

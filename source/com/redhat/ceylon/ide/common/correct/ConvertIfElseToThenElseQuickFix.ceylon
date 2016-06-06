@@ -210,13 +210,6 @@ shared object convertIfElseToThenElseQuickFix {
             then "(``term``)" else term;
     }
     
-    Boolean hasLowerPrecedenceThenElse(Tree.Term operand) {
-        value node = if (is Tree.Expression exp = operand)
-                     then exp.term
-                     else operand;
-        return node is Tree.DefaultOp|Tree.ThenOp|Tree.AssignOp;
-    }
-    
     String removeSemiColon(String term) 
             => if (term.endsWith(";")) 
             then term[0..term.size - 2] 
@@ -259,4 +252,11 @@ shared object convertIfElseToThenElseQuickFix {
             then s[1..s.size-2] 
             else s;
 
+}
+
+Boolean hasLowerPrecedenceThenElse(Tree.Term operand) {
+    value node = if (is Tree.Expression exp = operand)
+    then exp.term
+    else operand;
+    return node is Tree.DefaultOp|Tree.ThenOp|Tree.AssignOp;
 }
