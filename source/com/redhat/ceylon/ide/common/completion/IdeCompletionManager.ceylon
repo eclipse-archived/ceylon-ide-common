@@ -104,8 +104,7 @@ shared object completionManager
         CompletionContext ctx, 
         Integer offset, Integer line, Boolean secondLevel, 
         BaseProgressMonitor monitor, 
-        Boolean returnedParamInfo = false, 
-        Cancellable? cancellable = null) {
+        Boolean returnedParamInfo = false) {
 
         value tokens = ctx.tokens;
         value document = ctx.commonDocument;
@@ -253,14 +252,14 @@ shared object completionManager
                 prefix = prefix;
                 memberOp = isMemberOp;
                 rootNode = typecheckedRootNode;
-                cancellable = cancellable;
+                cancellable = monitor;
             };
             value functionProposals = getFunctionProposals {
                 node = node;
                 scope = scope;
                 prefix = prefix;
                 memberOp = isMemberOp;
-                cancellable = cancellable;
+                cancellable = monitor;
             };
             
             filterProposals(ctx, proposals);
@@ -292,6 +291,7 @@ shared object completionManager
                 requiredType = required.type;
                 previousTokenType = previousTokenType;
                 tokenType = tokenType;
+                cancellable = monitor;
             };
         }
     }
@@ -672,7 +672,8 @@ shared object completionManager
         Boolean memberOp, CommonDocument doc,
         Boolean secondLevel, Boolean inDoc,
         Type? requiredType, Integer previousTokenType,
-        Integer tokenType) {
+        Integer tokenType,
+        Cancellable cancellable) {
 
         value cu = ctx.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
@@ -893,6 +894,7 @@ shared object completionManager
                                 pr = pr;
                                 requiredType = requiredType;
                                 ol = ol;
+                                cancellable = cancellable;
                             };
                         }
                         else if (!dec is Function 
@@ -1502,7 +1504,7 @@ shared object completionManager
                 then type.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                    unit, scope, prefix, 0)
+                    unit, scope, prefix, 0, cancellable)
                 else noProposals;
             }
         } case (is Tree.TypeLiteral) {
@@ -1510,7 +1512,7 @@ shared object completionManager
                 if (bt.packageQualified) {
                     return unit.\ipackage
                             .getMatchingDirectDeclarations(
-                        prefix, 0);
+                        prefix, 0, cancellable);
                 }
             }
             if (exists tlt = node.type) {
@@ -1518,7 +1520,7 @@ shared object completionManager
                 then type.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                    unit, scope, prefix, 0)
+                    unit, scope, prefix, 0, cancellable)
                 else noProposals;
             }
         }
@@ -1535,7 +1537,7 @@ shared object completionManager
                 return type.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                    unit, scope, prefix, 0);
+                    unit, scope, prefix, 0, cancellable);
             }
             else {
                 switch (primary = node.primary)
@@ -1546,7 +1548,7 @@ shared object completionManager
                         then t.resolveAliases()
                                 .declaration
                                 .getMatchingMemberDeclarations(
-                            unit, scope, prefix, 0)
+                            unit, scope, prefix, 0, cancellable)
                         else noProposals;
                     }
                     else {
@@ -1556,7 +1558,7 @@ shared object completionManager
                 case (is Tree.Package) {
                     return unit.\ipackage
                             .getMatchingDirectDeclarations(
-                        prefix, 0);
+                        prefix, 0, cancellable);
                 }
                 else {
                     return noProposals;
@@ -1568,7 +1570,7 @@ shared object completionManager
                 return qt.resolveAliases()
                         .declaration
                         .getMatchingMemberDeclarations(
-                    unit, scope, prefix, 0);
+                    unit, scope, prefix, 0, cancellable);
             }
             else {
                 return noProposals;
@@ -1578,7 +1580,7 @@ shared object completionManager
             if (node.packageQualified) {
                 return unit.\ipackage
                         .getMatchingDirectDeclarations(
-                    prefix, 0);
+                    prefix, 0, cancellable);
             }
             else if (exists scope) {
                 return scope.getMatchingDeclarations(
@@ -1599,7 +1601,7 @@ shared object completionManager
                     return type.resolveAliases()
                             .declaration
                             .getMatchingMemberDeclarations(
-                        unit, scope, prefix, 0);
+                        unit, scope, prefix, 0, cancellable);
                 }
                 else if (exists scope) {
                     return scope.getMatchingDeclarations(

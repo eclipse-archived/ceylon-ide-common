@@ -132,7 +132,7 @@ shared object refineFormalMembersQuickFix {
         //TODO: does not return unrefined overloaded  
         //      versions of a method with one overlaad
         //      already refined
-        value proposals = ci.getMatchingMemberDeclarations(unit, ci, "", 0).values();
+        value proposals = ci.getMatchingMemberDeclarations(unit, ci, "", 0, null).values();
         
         for (dwp in proposals) {
             value dec = dwp.declaration;

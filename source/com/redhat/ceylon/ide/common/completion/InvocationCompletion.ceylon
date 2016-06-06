@@ -38,7 +38,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Module,
     Value,
     Function,
-    NothingType
+    NothingType,
+    Cancellable
 }
 
 import java.util {
@@ -142,7 +143,7 @@ shared interface InvocationCompletion {
 
     shared void addSecondLevelProposal(Integer offset, String prefix, 
         CompletionContext ctx, Declaration dec, Scope scope, Boolean isMember,
-        Reference pr, Type? requiredType, OL? ol) {
+        Reference pr, Type? requiredType, OL? ol, Cancellable cancellable) {
         
         value unit = ctx.lastCompilationUnit.unit;
         
@@ -152,7 +153,7 @@ shared interface InvocationCompletion {
                 //add qualified member proposals
                 value members 
                         = type.declaration
-                            .getMatchingMemberDeclarations(unit, scope, "", 0)
+                            .getMatchingMemberDeclarations(unit, scope, "", 0, cancellable)
                             .values();
                 for (ndwp in members) {
                     value m = ndwp.declaration;
@@ -578,7 +579,7 @@ shared abstract class InvocationCompletionProposal
         return change;
     }
     
-    shared void activeLinkedMode(CommonDocument document, CompletionContext cpc) {
+    shared void activeLinkedMode(CommonDocument document, CompletionContext cpc, Cancellable? cancellable=null) {
         if (is Generic declaration) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
@@ -594,13 +595,13 @@ shared abstract class InvocationCompletionProposal
                 value params = 
                         getParameters(pl, includeDefaulted, namedInvocation);
                 if (!params.empty) {
-                    enterLinkedMode(document, params, null, cpc);
+                    enterLinkedMode(document, params, null, cpc, cancellable);
                     return; //NOTE: early exit!
                 }
             }
             value typeParams = declaration.typeParameters;
             if (!typeParams.empty) {
-                enterLinkedMode(document, null, typeParams, cpc);
+                enterLinkedMode(document, null, typeParams, cpc, cancellable);
             }
         }
     }
@@ -666,7 +667,8 @@ shared abstract class InvocationCompletionProposal
     shared void enterLinkedMode(CommonDocument document, 
         JList<Parameter>? params, 
         JList<TypeParameter>? typeParams, 
-        CompletionContext cpc) {
+        CompletionContext cpc,
+        Cancellable? cancellable) {
         
         value proposeTypeArguments = !params exists;
         value paramCount 
@@ -722,6 +724,7 @@ shared abstract class InvocationCompletionProposal
                             index = seq;
                             last = param == params.size() - 1;
                             cpc = cpc;
+                            cancellable = cancellable;
                         };
                     }
                     value middle 
@@ -758,7 +761,7 @@ shared abstract class InvocationCompletionProposal
     
     void addValueArgumentProposals(ProposalsHolder props, 
         Parameter param, Integer loc, Integer first, Integer index, 
-        Boolean last, CompletionContext cpc) {
+        Boolean last, CompletionContext cpc, Cancellable? cancellable) {
         
         if (!param.model.dynamicallyTyped, 
             exists producedReference, 
@@ -804,6 +807,7 @@ shared abstract class InvocationCompletionProposal
                         dwp = dwp;
                         qualifier = null;
                         cpc = cpc;
+                        cancellable = cancellable;
                     };
                 }
             }
@@ -845,6 +849,7 @@ shared abstract class InvocationCompletionProposal
                         dwp = dwp;
                         qualifier = null;
                         cpc = cpc;
+                        cancellable = cancellable;
                     };
                 }
             }
@@ -856,7 +861,8 @@ shared abstract class InvocationCompletionProposal
         Type type, Unit unit, 
         DeclarationWithProximity dwp, 
         DeclarationWithProximity? qualifier, 
-        CompletionContext cpc) {
+        CompletionContext cpc,
+        Cancellable? cancellable) {
         
         if (!qualifier exists && dwp.unimported) {
             return;
@@ -897,7 +903,7 @@ shared abstract class InvocationCompletionProposal
                 cpc.options.chainLinkedModeArguments) {
                 value members = 
                         dec.typeDeclaration
-                           .getMatchingMemberDeclarations(unit, scope, "", 0)
+                           .getMatchingMemberDeclarations(unit, scope, "", 0, cancellable)
                            .values();
                 for (mwp in members) {
                     addValueArgumentProposal {
@@ -911,6 +917,7 @@ shared abstract class InvocationCompletionProposal
                         dwp = mwp;
                         qualifier = dwp;
                         cpc = cpc;
+                        cancellable = cancellable;
                     };
                 }
             }

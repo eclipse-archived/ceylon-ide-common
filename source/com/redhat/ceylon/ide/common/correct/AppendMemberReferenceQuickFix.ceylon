@@ -56,7 +56,7 @@ shared object appendMemberReferenceQuickFix {
                 value proposals 
                         = type.declaration
                               .getMatchingMemberDeclarations(
-                                    node.unit, node.scope, "", 0);
+                                    node.unit, node.scope, "", 0, null);
                 for (dwp in proposals.values()) {
                     if (is Value val = dwp.declaration,
                         !javaString(dwp.name) in val.aliases) {

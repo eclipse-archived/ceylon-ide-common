@@ -152,7 +152,7 @@ shared class ObjectClassDefinitionGenerator(
         value td = defaultedSupertype;
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
-        value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
+        value members = td.getMatchingMemberDeclarations(unit, null, "", 0, null).values();
         for (dwp in members) {
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
@@ -185,7 +185,7 @@ shared class ObjectClassDefinitionGenerator(
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
         value members = 
-                td.getMatchingMemberDeclarations(unit, null, "", 0)
+                td.getMatchingMemberDeclarations(unit, null, "", 0, null)
                     .values();
         for (dwp in members) {
             value dec = dwp.declaration;

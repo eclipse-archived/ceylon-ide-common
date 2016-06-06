@@ -104,8 +104,8 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
             else modelPackage.getDeclaringType(modelDeclaration);
     
     shared actual JMap<JString, DeclarationWithProximity> getImportableDeclarations(Unit modelUnit, 
-        String startingWith, JList<Import> imports, Integer proximity) =>
-            modelPackage.getImportableDeclarations(modelUnit, startingWith, imports, proximity);
+        String startingWith, JList<Import> imports, Integer proximity, Cancellable cancellable) =>
+            modelPackage.getImportableDeclarations(modelUnit, startingWith, imports, proximity, cancellable);
     
     shared actual TypeDeclaration? getInheritingDeclaration(Declaration d) =>
             modelPackage.getInheritingDeclaration(d);
