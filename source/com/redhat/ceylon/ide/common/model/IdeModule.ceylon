@@ -1015,6 +1015,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     shared actual VisibilityType? visibilityType() => null;
                     shared actual String? version() => null;
                     shared actual ArtifactResultType? type()  => null;
+                    shared actual String? namespace() => null;
                     shared actual String? name() => null;
                     shared actual ImportType? importType() => null;
                     shared actual JList<ArtifactResult>? dependencies() => null;
