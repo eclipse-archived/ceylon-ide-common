@@ -69,19 +69,16 @@ shared object convertIfElseToThenElseQuickFix {
         value elseBlockNode = elseBlock.statements.get(0);
         value conditionList = ifStmt.ifClause.conditionList;
         
-        variable value replaceFrom 
-                = statement.startIndex.intValue();
-        variable value test 
-                = removeEnclosingParenthesis(
-                    doc.getNodeText(conditionList));
+        Integer replaceFrom;
 
         String thenStr;
-        String  elseStr;
+        String elseStr;
         String? attributeIdentifier;
         String operator;
-        variable String action;
+        String action;
         
-        if (is Tree.Return ifBlockNode) {
+        switch (ifBlockNode)
+        case (is Tree.Return) {
             value ifReturn = ifBlockNode;
             if (!is Tree.Return elseBlockNode) {
                 return null;
@@ -92,13 +89,15 @@ shared object convertIfElseToThenElseQuickFix {
             operator = "";
             thenStr = getOperands(doc, ifReturn.expression);
             elseStr = getOperands(doc, elseBlockNode.expression);
-        } else if (is Tree.SpecifierStatement ifBlockNode) {
+            replaceFrom = statement.startIndex.intValue();
+        }
+        case (is Tree.SpecifierStatement) {
             value ifSpecifierStmt = ifBlockNode;
             value attrId 
                     = doc.getNodeText(
                         ifSpecifierStmt.baseMemberExpression);
             operator = " = ";
-            action = attrId + operator;
+            
             if (!is Tree.SpecifierStatement elseBlockNode) {
                 return null;
             }
@@ -116,31 +115,35 @@ shared object convertIfElseToThenElseQuickFix {
                 ifSpecifierStmt.specifierExpression.expression.term);
             elseStr = getOperands(doc, 
                 elseBlockNode.specifierExpression.expression.term);
+
+            if (is Tree.AttributeDeclaration prevStatement 
+                        = findPreviousStatement(data, statement),
+                attrId == doc.getNodeText(prevStatement.identifier)) {
+                action = removeSemiColon(doc.getNodeText(prevStatement)) 
+                        + operator;
+                replaceFrom = prevStatement.startIndex.intValue();
+            }
+            else {
+                action = attrId + operator;
+                replaceFrom = statement.startIndex.intValue();
+            }
+            
         }
         else {
             return null;
         }
         
-        if (exists attributeIdentifier) {
-            if (exists prevStatement 
-                    = findPreviousStatement(data, doc, statement), 
-                is Tree.AttributeDeclaration prevStatement) {
-                if (attributeIdentifier
-                        == doc.getNodeText(prevStatement.identifier)) {
-                    action = removeSemiColon(doc.getNodeText(prevStatement)) 
-                            + operator;
-                    replaceFrom = prevStatement.startIndex.intValue();
-                }
-            }
-        }
-        
         Boolean abbreviateToElse;
         Boolean abbreviateToThen;
         
+        String test;
+        value conditionText 
+                = removeEnclosingParenthesis(
+                    doc.getNodeText(conditionList));
         if (conditionList.conditions.size()==1) {
-            value condition = conditionList.conditions[0];
             
-            if (is Tree.ExistsCondition condition, 
+            if (is Tree.ExistsCondition condition 
+                    = conditionList.conditions[0], 
                 is Tree.Variable variable = condition.variable, 
                 thenStr == doc.getNodeText(variable.identifier)) {
                 value existsExpr = variable.specifierExpression.expression;
@@ -148,15 +151,18 @@ shared object convertIfElseToThenElseQuickFix {
                 abbreviateToElse = true;
             }
             else {
+                test = conditionText;
                 abbreviateToElse = false;
             }
             
             abbreviateToThen = 
-                    condition is Tree.BooleanCondition && 
+                    conditionList.conditions[0] 
+                        is Tree.BooleanCondition && 
                     elseStr.equals("null");
             
         }
         else {
+            test = conditionText;
             abbreviateToElse = false;
             abbreviateToThen = false;
         }
@@ -215,37 +221,6 @@ shared object convertIfElseToThenElseQuickFix {
             then term[0..term.size - 2] 
             else term;
     
-    Tree.Statement? findPreviousStatement(QuickFixData data, 
-        CommonDocument doc, Tree.Statement statement) {
-        value rootNode = data.rootNode;
-        
-        variable value previousLineNo 
-                = doc.getLineOfOffset(statement.startIndex.intValue());
-        
-        while (previousLineNo > 1) {
-            previousLineNo--;
-            value lineStart 
-                    = doc.getLineStartOffset(previousLineNo);
-            value prevLine 
-                    = doc.getLineContent(previousLineNo);
-            value m = Pattern.compile("(\\s*)\\w+")
-                        .matcher(javaString(prevLine));
-            if (m.find()) {
-                value whitespaceLen = m.group(1).size;
-                if (exists node = nodes.findNode {
-                    node = rootNode;
-                    tokens = null;
-                    startOffset = lineStart + whitespaceLen;
-                    endOffset = lineStart + whitespaceLen + 1;
-                }) {
-                    return nodes.findStatement(rootNode, node);
-                }
-            }
-        }
-        
-        return null;
-    }
-    
     String removeEnclosingParenthesis(String s) 
             => if (exists first = s.first, first == '(',
                    exists last = s.last, last == ')') 
@@ -260,3 +235,36 @@ Boolean hasLowerPrecedenceThenElse(Tree.Term operand) {
     else operand;
     return node is Tree.DefaultOp|Tree.ThenOp|Tree.AssignOp;
 }
+
+Tree.Statement? findPreviousStatement(QuickFixData data, 
+    Tree.Statement statement) {
+    value rootNode = data.rootNode;
+    value doc = data.document;
+    
+    variable value previousLineNo 
+            = doc.getLineOfOffset(statement.startIndex.intValue());
+    
+    while (previousLineNo > 1) {
+        previousLineNo--;
+        value lineStart 
+                = doc.getLineStartOffset(previousLineNo);
+        value prevLine 
+                = doc.getLineContent(previousLineNo);
+        value m = Pattern.compile("(\\s*)\\w+")
+                .matcher(javaString(prevLine));
+        if (m.find()) {
+            value whitespaceLen = m.group(1).size;
+            if (exists node = nodes.findNode {
+                node = rootNode;
+                tokens = null;
+                startOffset = lineStart + whitespaceLen;
+                endOffset = lineStart + whitespaceLen + 1;
+            }) {
+                return nodes.findStatement(rootNode, node);
+            }
+        }
+    }
+    
+    return null;
+}
+
