@@ -40,9 +40,13 @@ shared object convertSwitchStatementToExpressionQuickFix {
                     = caseStatements.every((statement) => statement is Tree.SpecifierStatement);
             
             value document = data.document;
+            Integer start;
+            Integer length;
             value builder = StringBuilder();
             TypedDeclaration? declaration;
             if (returns) {
+                start = statement.startIndex.intValue();
+                length = statement.distance.intValue();
                 builder.append("return ");
                 declaration = null;
             }
@@ -60,10 +64,19 @@ shared object convertSwitchStatementToExpressionQuickFix {
                 })) {
                     return;
                 }
-                //TODO: check if we're assigning to the
-                //      immediately preceding declaration!
-                String specifiedText = document.getNodeText(first.baseMemberExpression);
-                builder.append(specifiedText).append(" = ");
+                if (is Tree.AttributeDeclaration prev 
+                        = findPreviousStatement(data, statement),
+                    prev.declarationModel==declaration) {
+                    start = prev.stopIndex.intValue();
+                    length = statement.endIndex.intValue() - start;
+                    builder.append(" = ");
+                }
+                else {
+                    start = statement.startIndex.intValue();
+                    length = statement.distance.intValue();
+                    String specifiedText = document.getNodeText(first.baseMemberExpression);
+                    builder.append(specifiedText).append(" = ");
+                }
             }
             else {
                 return;
@@ -97,8 +110,8 @@ shared object convertSwitchStatementToExpressionQuickFix {
                 input = data.phasedUnit;
             };
             change.addEdit(ReplaceEdit {
-                start = statement.startIndex.intValue();
-                length = statement.distance.intValue();
+                start = start;
+                length = length;
                 text = builder.string;
             });
             
@@ -106,7 +119,7 @@ shared object convertSwitchStatementToExpressionQuickFix {
                 description = "Convert to 'switch' expression";
                 change = change;
                 selection = DefaultRegion {
-                    start = statement.startIndex.intValue();
+                    start = start;
                 };
             };
         }
