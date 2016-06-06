@@ -117,7 +117,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             languageModule.available = false;
             modules.languageModule = languageModule;
             modules.listOfModules.add(languageModule);
-            defaultModule.addImport(ModuleImport(languageModule, false, false));
+            defaultModule.addImport(ModuleImport(null, languageModule, false, false));
             defaultModule.languageModule = languageModule;
             createPackage("", defaultModule);
         }

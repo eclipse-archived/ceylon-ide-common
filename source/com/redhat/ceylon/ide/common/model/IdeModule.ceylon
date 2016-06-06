@@ -1022,6 +1022,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     shared actual String? repositoryDisplayString() => null;
                     shared actual PathFilter? filter() => null;
                     shared actual Repository? repository() => null;
+                    shared actual String? namespace() => null;
                 });
             }
         }
