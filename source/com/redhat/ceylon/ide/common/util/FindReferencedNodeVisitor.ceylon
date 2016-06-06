@@ -111,7 +111,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     }
     
     actual shared void visit(Tree.InitializerParameter that) {
-        if (isDeclaration(that.parameterModel.model)) {
+        if (isDeclaration(that.parameterModel?.model)) {
             declarationNode = that;
         }
         super.visit(that);
