@@ -95,9 +95,9 @@ shared object convertThenElseToIfElse {
         }
         assert (exists statement);
         
-        variable String test;
-        variable String elseTerm;
-        variable String thenTerm;
+        String test;
+        String elseTerm;
+        String thenTerm;
         
         switch (op = TreeUtil.unwrapExpressionUntilTerm(operation))
         case (is Tree.DefaultOp) {
@@ -143,7 +143,6 @@ shared object convertThenElseToIfElse {
         
         value baseIndent = doc.getIndent(statement);
         value indent = platformServices.document.defaultIndent;
-        test = removeEnclosingParenthesis(test);
         value replace = StringBuilder();
         value delim = doc.defaultLineDelimiter;
         if (exists dec = declaration) {
@@ -153,13 +152,13 @@ shared object convertThenElseToIfElse {
         }
         
         replace.append("if (")
-                .append(test)
+                .append(removeEnclosingParenthesis(test))
                 .append(") {")
                 .append(delim)
                 .append(baseIndent)
                 .append(indent)
                 .append(action)
-                .append(thenTerm)
+                .append(removeEnclosingParenthesis(thenTerm))
                 .append(";")
                 .append(delim)
                 .append(baseIndent)
@@ -171,7 +170,7 @@ shared object convertThenElseToIfElse {
                 .append(baseIndent)
                 .append(indent)
                 .append(action)
-                .append(elseTerm)
+                .append(removeEnclosingParenthesis(elseTerm))
                 .append(";")
                 .append(delim)
                 .append(baseIndent)
@@ -197,5 +196,5 @@ shared object convertThenElseToIfElse {
     String removeEnclosingParenthesis(String s) 
             => if (exists f = s.first, f == '(',
                    exists l = s.last, l == ')') 
-            then s.span(1, s.size - 2) else s;
+            then s[1..s.size-2] else s;
 }

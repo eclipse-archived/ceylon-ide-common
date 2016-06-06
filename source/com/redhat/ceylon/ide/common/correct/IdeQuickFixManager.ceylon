@@ -333,6 +333,8 @@ shared object ideQuickFixManager {
         
         miscQuickFixes.addArgumentProposals(data, namedArgument);
         
+        convertSwitchExpressionToStatement.addConvertSwitchExpressionToStatementProposal(data, statement);
+        
         convertThenElseToIfElse.addConvertToIfElseProposal(data, statement);
         convertIfElseToThenElseQuickFix.addConvertToThenElseProposal(data, statement);
         invertIfElseQuickFix.addInvertIfElseProposal(data, statement);

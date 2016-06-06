@@ -206,28 +206,21 @@ shared object convertIfElseToThenElseQuickFix {
     
     String getOperands(CommonDocument doc, Tree.Term operand) {
         value term = doc.getNodeText(operand);
-        if (hasLowerPrecedenceThenElse(operand)) {
-            return "(``term``)";
-        }
-        
-        return term;
+        return if (hasLowerPrecedenceThenElse(operand)) 
+            then "(``term``)" else term;
     }
     
     Boolean hasLowerPrecedenceThenElse(Tree.Term operand) {
         value node = if (is Tree.Expression exp = operand)
                      then exp.term
                      else operand;
-        
         return node is Tree.DefaultOp|Tree.ThenOp|Tree.AssignOp;
     }
     
-    String removeSemiColon(String term) {
-        if (term.endsWith(";")) {
-            return term[0..term.size - 2];
-        }
-        
-        return term;
-    }
+    String removeSemiColon(String term) 
+            => if (term.endsWith(";")) 
+            then term[0..term.size - 2] 
+            else term;
     
     Tree.Statement? findPreviousStatement(QuickFixData data, 
         CommonDocument doc, Tree.Statement statement) {
