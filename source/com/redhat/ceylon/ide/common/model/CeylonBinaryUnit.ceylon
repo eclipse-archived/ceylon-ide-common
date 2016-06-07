@@ -8,6 +8,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
+shared alias AnyCeylonBinaryUnit => CeylonBinaryUnit<out Anything,out Anything,out Anything>;
+
 shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement>
         (shared actual JavaClassRoot typeRoot, 
         String theFilename, String theRelativePath, String theFullPath, 
