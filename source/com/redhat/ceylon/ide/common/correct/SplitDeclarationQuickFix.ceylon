@@ -83,7 +83,9 @@ shared object splitDeclarationQuickFix {
         
         value delim = doc.defaultLineDelimiter;
         value indent = doc.getIndent(decNode);
-        if (dec.parameter) {
+        if (dec.parameter,
+            is Declaration container = dec.container) {
+
             change.addEdit(DeleteEdit {
                 start = startOffset;
                 length = idStartOffset - startOffset;
@@ -92,8 +94,6 @@ shared object splitDeclarationQuickFix {
                 start = idEndOffset;
                 length = paramsEndOffset - idEndOffset;
             });
-
-            assert (is Declaration container = dec.container);
 
             value containerNode 
                     = nodes.getReferencedNodeInUnit(container, data.rootNode);
