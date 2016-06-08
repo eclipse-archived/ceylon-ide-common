@@ -14,8 +14,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     shared variable Node? declarationNode = null;
     
     Boolean isDeclaration(Declaration? dec) {
-        if (exists dec, exists declaration,
-                dec.equals(declaration)) {
+        if (exists dec, exists declaration, dec==declaration) {
             if (is Declaration declaration, dec.native, 
                 dec.nativeBackends != declaration.nativeBackends) {
                 return false;
@@ -36,7 +35,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     actual shared void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
         Referenceable? m = that.importPath.model;
-        if (exists m, exists declaration, m.equals(declaration)) {
+        if (exists m, exists declaration, m==declaration) {
             declarationNode = that;
         }
     }
@@ -44,7 +43,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     actual shared void visit(Tree.PackageDescriptor that) {
         super.visit(that);
         Referenceable? p = that.importPath.model;
-        if (exists p, exists declaration, p.equals(declaration)) {
+        if (exists p, exists declaration, p==declaration) {
             declarationNode = that;
         }
     }
@@ -71,10 +70,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     }
     
     actual shared void visit(Tree.AttributeSetterDefinition that) {
-        value setter = that.declarationModel;
-        Declaration? param = 
-                setter.getDirectMember(setter.name, null, false);
-        if (isDeclaration(param)) {
+        if (isDeclaration(that.declarationModel?.parameter?.model)) {
             declarationNode = that;
         }
         super.visit(that);
@@ -118,8 +114,7 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     }
     
     actual shared void visitAny(Node node) {
-        if (declarationNode is Null ||
-            declarationNode is Tree.InitializerParameter) {
+        if (declarationNode is Tree.InitializerParameter?) {
             super.visitAny(node);
         }
     }
