@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.ide.common.util {
     types,
     RequiredType
@@ -69,10 +65,10 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                     Boolean xbottom = xtype?.nothing else false;
                     Boolean ybottom = ytype?.nothing else false;
                     if (xbottom, !ybottom) {
-                        return -1;
+                        return 1;
                     }
                     else if (ybottom, !xbottom) {
-                        return 1;
+                        return -1;
                     }
                 }
             }
@@ -100,7 +96,6 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 else if (!xnr && ynr) {
                     return 1;
                 }
-
             }
 
             //lowercase proposals first if no prefix
@@ -110,22 +105,20 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             else if (xUpperCase, !yUpperCase) {
                 return 1;
             }
-            Integer nc = javaString(xName).compareTo(yName);
+            
+            //sort by unqualified name
+            Integer nc 
+                    = switch (xName<=>yName) 
+                    case (larger) 1
+                    case (smaller) -1
+                    case (equal) 0;
             if (nc != 0) {
                 return nc;
             }
             
-            String xqn = x.declaration.qualifiedNameString;
-            String yqn = y.declaration.qualifiedNameString;
-            
-            value xnothing = xqn.equalsIgnoringCase("ceylon.language::nothing");
-            value ynothing = yqn.equalsIgnoringCase("ceylon.language::nothing");
-            if (xnothing && !ynothing) {
-                return 1;
-            }
-            else if (!xnothing && ynothing) {
-                return -1;
-            }
+            //if all else fails sort by qualified name
+            String xqn = xd.qualifiedNameString;
+            String yqn = yd.qualifiedNameString;
             return switch (xqn<=>yqn) 
                 case (larger) 1
                 case (smaller) -1
