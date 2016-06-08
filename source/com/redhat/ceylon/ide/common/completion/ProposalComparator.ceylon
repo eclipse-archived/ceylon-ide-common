@@ -43,7 +43,8 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 Boolean upperCasePrefix = prefix.first?.uppercase else false;
                 if (!xUpperCase, yUpperCase) {
                     return if (upperCasePrefix) then 1 else -1;
-                } else if (xUpperCase, !yUpperCase) {
+                }
+                else if (xUpperCase, !yUpperCase) {
                     return if (upperCasePrefix) then -1 else 1;
                 }
             }
@@ -58,7 +59,7 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 if (xassigns, !yassigns) {
                     return -1;
                 }
-                if (yassigns, !xassigns) {
+                else if (yassigns, !xassigns) {
                     return 1;
                 }
                 if (xassigns, yassigns) {
@@ -70,7 +71,7 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                     if (xbottom, !ybottom) {
                         return -1;
                     }
-                    if (ybottom, !xbottom) {
+                    else if (ybottom, !xbottom) {
                         return 1;
                     }
                 }
@@ -81,7 +82,7 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             if (xdepr && !ydepr) {
                 return 1;
             }
-            if (!xdepr && ydepr) {
+            else if (!xdepr && ydepr) {
                 return -1;
             }
 
@@ -96,7 +97,7 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 if (xnr && !ynr) {
                     return -1;
                 }
-                if (!xnr && ynr) {
+                else if (!xnr && ynr) {
                     return 1;
                 }
 
@@ -105,7 +106,8 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             //lowercase proposals first if no prefix
             if (!xUpperCase, yUpperCase) {
                 return -1;
-            } else if (xUpperCase, !yUpperCase) {
+            }
+            else if (xUpperCase, !yUpperCase) {
                 return 1;
             }
             Integer nc = javaString(xName).compareTo(yName);
@@ -115,8 +117,21 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             
             String xqn = x.declaration.qualifiedNameString;
             String yqn = y.declaration.qualifiedNameString;
-            return javaString(xqn).compareTo(yqn);
-        } catch (Exception e) {
+            
+            value xnothing = xqn.equalsIgnoringCase("ceylon.language::nothing");
+            value ynothing = yqn.equalsIgnoringCase("ceylon.language::nothing");
+            if (xnothing && !ynothing) {
+                return 1;
+            }
+            else if (!xnothing && ynothing) {
+                return -1;
+            }
+            return switch (xqn<=>yqn) 
+                case (larger) 1
+                case (smaller) -1
+                case (equal) 0;
+        }
+        catch (Exception e) {
             e.printStackTrace();
             return 0;
         }
