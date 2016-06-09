@@ -119,6 +119,14 @@ shared class ExtractFunctionRefactoring(
             => node.startIndex.intValue() >= selection[0]
             && node.endIndex.intValue() <= selection[1];
     
+    function getBody(Tree.Statement statement, 
+                     Tree.CompilationUnit rootNode) {
+        value fbv = FindBodyVisitor(statement);
+        fbv.visit(rootNode);
+        value body = fbv.body;
+        return body;
+    }
+    
     function bodyAndStatements(Node node, 
             Tree.CompilationUnit rootNode) {
         switch (node)
@@ -131,14 +139,18 @@ shared class ExtractFunctionRefactoring(
                 [ for (s in node.statements)
                   if (selected(s)) s ]];
         }
+        case (is Tree.Statement) {
+            //we're extracting a single statement
+            if (exists found = getBody(node, rootNode)) {
+                return [found, [node]];
+            }
+        }
         else {
             value statement
                     = nodes.findStatement(rootNode, node);
             if (exists statement) {
                 //we're extracting a single statement
-                value fbv = FindBodyVisitor(statement);
-                fbv.visit(rootNode);
-                if (exists found = fbv.body) {
+                if (exists found = getBody(statement, rootNode)) {
                     return [found, [statement]];
                 }
             }
