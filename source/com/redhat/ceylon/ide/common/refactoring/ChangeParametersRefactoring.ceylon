@@ -60,8 +60,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    JList=List,
-    JHashSet=HashSet
+    JList=List
 }
 
 import org.antlr.runtime {
@@ -532,9 +531,8 @@ shared abstract class ChangeParametersRefactoring(
                     //handle split declarations
                     super.visit(that);
                     if (exists id = that.identifier,
-                        isReference(that.declarationModel),
-                        is JHashSet<Node> _nodes = nodeSet) {
-                        _nodes.add(that);
+                        isReference(that.declarationModel)) {
+                        nodeSet.add(that);
                     }
                 }
                 
