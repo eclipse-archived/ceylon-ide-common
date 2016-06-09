@@ -87,9 +87,11 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     }
     
     Boolean isSetterParameterReference(Declaration ref) {
-        if (is Setter setter = ref.container) {
-            value member = setter.getDirectMember(setter.name, null, false);
-            return member==ref && isReference(setter.getter);
+        if (is Value ref, 
+            exists param = ref.initializerParameter,
+            is Setter setter = param.declaration) {
+            return isReference(setter) || 
+                    isReference(setter.getter);
         } else {
             return false;
         }
