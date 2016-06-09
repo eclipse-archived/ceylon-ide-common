@@ -17,8 +17,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Parameter,
     Referenceable,
     Setter,
-    TypedDeclaration,
-    FunctionOrValue
+    Value
 }
 
 import java.util {
@@ -29,31 +28,41 @@ import java.util {
 shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     shared Set<Node> nodeSet = HashSet<Node>();
     
-    function initialDeclaration(Referenceable dec) {
-        if (is TypedDeclaration dec) {
-            variable TypedDeclaration result = dec;
-            while (exists original = result.originalDeclaration, 
-                original!=result && original!=dec) {
-                result = original;
-            }
-            if (is Setter setter = result.container,
-                is FunctionOrValue res = result, 
-                exists param = res.initializerParameter,
-                param.declaration==result) {
-                result = setter;
-            }
-            if (is Setter setter = result,
-                exists getter = setter.getter) {
-                result = getter;
-            }
-            return result;
+    function originalDeclaration(Value val) {
+        variable Value result = val;
+        while (is Value original = result.originalDeclaration, 
+            original!=result && original!=val) {
+            result = original;
         }
-        else if (is Constructor dec, !dec.name exists,
-            exists extended = dec.extendedType) {
-            return extended.declaration;
+        return result;
+    }
+    
+    function initialDeclaration(Referenceable declaration) {
+        switch (declaration)
+        case (is Value) {
+            value original = originalDeclaration(declaration);
+            if (exists param = original.initializerParameter,
+                is Setter setter = param.declaration) {
+                return setter.getter else setter;
+            }
+            else {
+                return original;
+            }
+        }
+        case (is Setter) {
+            return declaration.getter else declaration;
+        }
+        case (is Constructor) {
+            if (!declaration.name exists,
+                exists extended = declaration.extendedType) {
+                return extended.declaration;
+            }
+            else {
+                return declaration;
+            }
         }    
         else {
-            return dec;
+            return declaration;
         }
     }
     
