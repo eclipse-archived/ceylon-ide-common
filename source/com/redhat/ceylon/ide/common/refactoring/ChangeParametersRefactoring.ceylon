@@ -552,16 +552,15 @@ shared abstract class ChangeParametersRefactoring(
             
             for (ref in fprv.nodeSet) {
                 if (is Tree.Identifier id 
-                        = nodes.getIdentifyingNode(ref)) {
-                    if (!id.text==newName) {
-                        tfc.addEdit(
-                            ReplaceEdit {
-                                start = id.startIndex.intValue();
-                                length = id.distance.intValue();
-                                text = newName;
-                            }
-                        );
-                    }
+                        = nodes.getIdentifyingNode(ref), 
+                    !id.text==newName) {
+                    tfc.addEdit(
+                        ReplaceEdit {
+                            start = id.startIndex.intValue();
+                            length = id.distance.intValue();
+                            text = newName;
+                        }
+                    );
                 }
             }
         }
@@ -620,7 +619,8 @@ shared abstract class ChangeParametersRefactoring(
             
             if (exists oldParam 
                     = params.find((op)
-                        => isSameParameter(op.parameterModel, p.model))) {
+                        => isSameParameter(op.parameterModel, 
+                                           p.model))) {
                 paramString 
                         = paramStringWithoutDefaultArg {
                     parameter = oldParam;
@@ -768,7 +768,8 @@ shared abstract class ChangeParametersRefactoring(
         for (p in list.parameters) {
             if (exists oldVal 
                     = oldArgs.find((oa) 
-                        => isSameParameter(oa.parameter, p.model))) {
+                        => isSameParameter(oa.parameter, 
+                                           p.model))) {
                 builder.append(nodes.text(tokens, oldVal));
             } else {
                 builder.append(getInlinedArg(p));
