@@ -311,6 +311,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         shared actual Boolean equals(Object that) {
             if (is SourceFileMessage that) {
                 return message==that.message && 
+                        theStartOffset==that.theStartOffset &&
                         equalsWithNulls(backend, that.backend) && 
                         severity==that.severity && 
                         file==that.file;
@@ -326,6 +327,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             hash = 31*hash + file.hash;
             hash = 31*hash + severity.hash;
             hash = 31*hash + (backend?.hash else 0);
+            hash = 31*hash + theStartOffset;
             return hash;
         }
     }
