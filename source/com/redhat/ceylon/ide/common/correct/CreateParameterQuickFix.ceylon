@@ -33,8 +33,9 @@ import com.redhat.ceylon.model.typechecker.model {
 
 shared object createParameterQuickFix {
     
-    void addCreateParameterProposalInternal(QuickFixData data, String def, String desc, Icons image, Declaration dec,
-        PhasedUnit unit, Tree.Declaration decNode, Tree.ParameterList paramList,
+    void addCreateParameterProposalInternal(QuickFixData data, String def, 
+        String desc, Icons image, Declaration dec, PhasedUnit unit,
+        Tree.Declaration decNode, Tree.ParameterList paramList,
         Type? returnType, CommonImportProposals importProposals, Node node) {
         
         value change = platformServices.document.createTextChange("Add Parameter", unit);
@@ -46,8 +47,16 @@ shared object createParameterQuickFix {
         
         value selection = correctionUtil.computeSelection(offset + il, def, DefaultRegion);
         
-        addProposal(data, "Add " + desc + " to '" + dec.name + "'",
-            dec, returnType, selection, image, change, exitPos);
+        addProposal {
+            data = data;
+            desc = "Add " + desc + " to '" + dec.name + "'";
+            dec = dec;
+            returnType = returnType;
+            selection = selection;
+            image = image;
+            change = change;
+            exitPos = exitPos;
+        };
     }
     
     void addProposal(QuickFixData data, String desc, Declaration dec,
@@ -72,8 +81,9 @@ shared object createParameterQuickFix {
         };
     }
     
-    void addCreateParameterAndAttributeProposal(QuickFixData data, String pdef, String adef, String desc,
-        Icons image, Declaration dec, PhasedUnit unit, Tree.Declaration decNode,
+    void addCreateParameterAndAttributeProposal(QuickFixData data, String pdef,
+        String adef, String desc, Icons image, Declaration dec,
+        PhasedUnit unit, Tree.Declaration decNode,
         Tree.ParameterList paramList, Tree.Body body, Type returnType) {
         
         value change = platformServices.document.createTextChange("Add Attribute", unit);
@@ -103,8 +113,16 @@ shared object createParameterQuickFix {
         
         value selection = correctionUtil.computeSelection(offset + il, pdef, DefaultRegion);
 
-        addProposal(data, "Add " + desc + " to '" + dec.name + "'", dec,
-            returnType, selection, image, change, exitPos);
+        addProposal {
+            data = data;
+            desc = "Add " + desc + " to '" + dec.name + "'";
+            dec = dec;
+            returnType = returnType;
+            selection = selection;
+            image = image;
+            change = change;
+            exitPos = exitPos;
+        };
     }
     
     shared void addCreateParameterProposal(QuickFixData data, ValueFunctionDefinitionGenerator dg) {
@@ -122,8 +140,20 @@ shared object createParameterQuickFix {
                 exists phasedUnit = u.phasedUnit) {
                 value importProposals = CommonImportProposals(data.document, data.rootNode);
                 dg.generateImports(importProposals);
-                addCreateParameterProposalInternal(data, paramDef, paramDesc, Icons.addCorrection,
-                    dm, phasedUnit, decl, paramList, dg.returnType, importProposals, dg.node);
+                
+                addCreateParameterProposalInternal {
+                    data = data;
+                    def = paramDef;
+                    desc = paramDesc;
+                    image = Icons.addCorrection;
+                    dec = dm;
+                    unit = phasedUnit;
+                    decNode = decl;
+                    paramList = paramList;
+                    returnType = dg.returnType;
+                    importProposals = importProposals;
+                    node = dg.node;
+                };
             }
         }
     }
@@ -188,7 +218,6 @@ shared object createParameterQuickFix {
             value adef = parameterTypeStr + " " + parameterName + ";";
             value padesc = "attribute '" + parameterName + "'";
             addCreateParameterAndAttributeProposals(data, pdef, adef, padesc, dec, dt);
-            
         }
     }
 
@@ -207,42 +236,72 @@ shared object createParameterQuickFix {
         return null;
     }
 
-    void addCreateParameterProposalsInternal(QuickFixData data, variable String def, String desc, Declaration? typeDec, Type t) {
+    void addCreateParameterProposalsInternal(QuickFixData data, 
+        variable String def, String desc, Declaration? typeDec, Type t) {
+        
         if (exists typeDec, is Functional typeDec, 
             is AnyModifiableSourceFile unit 
                     = (typeDec of Declaration).unit, 
             exists phasedUnit = unit.phasedUnit) {
             value fdv = FindDeclarationNodeVisitor(typeDec);
             correctionUtil.getRootNode(phasedUnit).visit(fdv);
+
             if (is Tree.Declaration decNode = fdv.declarationNode, 
                 exists paramList = getParameters(decNode)) {
+
                 if (!paramList.parameters.empty) {
                     def = ", " + def;
                 }
                 value importProposals = CommonImportProposals(data.document, phasedUnit.compilationUnit);
                 importProposals.importType(t);
-                addCreateParameterProposalInternal(data, def, desc, Icons.addCorrection, typeDec,
-                    phasedUnit, decNode, paramList, t, importProposals, data.node);
+
+                addCreateParameterProposalInternal {
+                    data = data;
+                    def = def;
+                    desc = desc;
+                    image = Icons.addCorrection;
+                    dec = typeDec;
+                    unit = phasedUnit;
+                    decNode = decNode;
+                    paramList = paramList;
+                    returnType = t;
+                    importProposals = importProposals;
+                    node = data.node;
+                };
             }
         }
     }
     
-    void addCreateParameterAndAttributeProposals(QuickFixData data, variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
+    void addCreateParameterAndAttributeProposals(QuickFixData data, 
+        variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
+        
         if (is ClassOrInterface typeDec, 
             is AnyModifiableSourceFile unit 
                     = (typeDec of Declaration).unit, 
             exists phasedUnit = unit.phasedUnit) {
+
             value fdv = FindDeclarationNodeVisitor(typeDec);
             correctionUtil.getRootNode(phasedUnit).visit(fdv);
+
             if (is Tree.Declaration decNode = fdv.declarationNode, 
                 exists body = correctionUtil.getClassOrInterfaceBody(decNode), 
                 exists paramList = getParameters(decNode)) {
+                
                 if (!paramList.parameters.empty) {
                     pdef = ", " + pdef;
                 }
-                addCreateParameterAndAttributeProposal(data, pdef, adef, desc, 
-                    Icons.addCorrection, typeDec, phasedUnit, 
-                    decNode, paramList, body, t);
+                addCreateParameterAndAttributeProposal { data = data;
+                    pdef = pdef;
+                    adef = adef;
+                    desc = desc;
+                    image = Icons.addCorrection;
+                    dec = typeDec;
+                    unit = phasedUnit;
+                    decNode = decNode;
+                    paramList = paramList;
+                    body = body;
+                    returnType = t;
+                };
             }
         }
     }
