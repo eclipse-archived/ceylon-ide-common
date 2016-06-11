@@ -54,7 +54,12 @@ shared object convertToBlockQuickFix {
                 offset = pls.get(pls.size() - 1).endIndex.intValue();
             }
             
-            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression = 
+                    decNode.specifierExpression?.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = "";
             addedKeyword = null;
         }
@@ -69,14 +74,24 @@ shared object convertToBlockQuickFix {
             
             isVoid = false;
             offset = decNode.identifier.endIndex.intValue();
-            length = decNode.specifierOrInitializerExpression.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression = 
+                    decNode.specifierOrInitializerExpression?.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = "";
             addedKeyword = null;
         }
         case (is Tree.AttributeSetterDefinition) {
             isVoid = true;
             offset = decNode.identifier.endIndex.intValue();
-            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression = 
+                    decNode.specifierExpression?.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = "";
             addedKeyword = null;
         }
@@ -100,7 +115,12 @@ shared object convertToBlockQuickFix {
             }
             
             offset = pls.get(pls.size() - 1).endIndex.intValue();
-            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression = 
+                    decNode.specifierExpression?.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = "";
         }
         case (is Tree.AttributeArgument) {
@@ -113,7 +133,12 @@ shared object convertToBlockQuickFix {
             }
             
             offset = decNode.identifier.endIndex.intValue();
-            length = decNode.specifierExpression.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression 
+                    = decNode.specifierExpression?.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = "";
         }
         case (is Tree.FunctionArgument) {
@@ -135,7 +160,11 @@ shared object convertToBlockQuickFix {
                 offset = pls.get(pls.size() - 1).endIndex.intValue();
             }
             
-            length = decNode.expression.startIndex.intValue() - offset;
+            Tree.Expression? expression = decNode.expression;
+            if (!exists expression) {
+                return;
+            }
+            length = expression.startIndex.intValue() - offset;
             semi = ";";
             addedKeyword = null;
         }
