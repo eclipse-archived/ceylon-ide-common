@@ -237,9 +237,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         Type? srt;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
-            if (exists e = switchClause.switched.expression) {
+            if (exists e = switchClause.switched?.expression) {
                 srt = e.typeModel;
-            } else if (exists v = switchClause.switched.variable) {
+            } else if (exists v = switchClause.switched?.variable) {
                 srt = v.type.typeModel;
             } else {
                 srt = null;
