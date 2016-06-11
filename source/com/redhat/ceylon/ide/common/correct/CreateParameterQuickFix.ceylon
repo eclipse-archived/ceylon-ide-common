@@ -123,7 +123,7 @@ shared object createParameterQuickFix {
                 value importProposals = CommonImportProposals(data.document, data.rootNode);
                 dg.generateImports(importProposals);
                 addCreateParameterProposalInternal(data, paramDef, paramDesc, Icons.addCorrection,
-                    decl.declarationModel, phasedUnit, decl, paramList, dg.returnType, importProposals, dg.node);
+                    dm, phasedUnit, decl, paramList, dg.returnType, importProposals, dg.node);
             }
         }
     }
