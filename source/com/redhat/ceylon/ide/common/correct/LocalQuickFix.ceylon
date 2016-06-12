@@ -23,25 +23,22 @@ shared interface LocalQuickFix<in Data>
     shared formal String desc;
     shared default Boolean isEnabled(Type type) => true;
 
-    shared void addProposal(Data data, Integer currentOffset = data.problemOffset) {
+    shared void addProposal(Data data, 
+            Integer currentOffset = data.problemOffset) {
         if (enabled(data, currentOffset)) {
             newProposal(data, desc);
         }
     }
     
     shared Boolean enabled(Data data, Integer currentOffset) {
-        value rootNode = data.rootNode;
         value node = data.node;
-        value st = nodes.findStatement(rootNode, node);
         
-        if (is Tree.ExpressionStatement st) {
-            value es = st;
-            value e = es.expression;
+        switch (st = nodes.findStatement(data.rootNode, node))
+        case (is Tree.ExpressionStatement) {
+            value e = st.expression;
             variable Type resultType = e.typeModel;
-            value term = e.term;
-            if (is Tree.InvocationExpression term) {
-                value ie = term;
-                value primary = ie.primary;
+            if (is Tree.InvocationExpression term = e.term) {
+                value primary = term.primary;
                 if (is Tree.QualifiedMemberExpression primary) {
                     value prim = primary;
                     if (!prim.memberOperator.token exists) {
@@ -52,16 +49,16 @@ shared interface LocalQuickFix<in Data>
             }
             
             return isEnabled(resultType);
-        } else if (is Tree.Declaration st) {
+        }
+        case (is Tree.Declaration) {
             value unit = node.unit;
-            value dec = st;
-            Tree.Identifier? id = dec.identifier;
+            Tree.Identifier? id = st.identifier;
             if (!exists id) {
                 return false;
             }
             
             value line = id.token.line;
-            Declaration? d = dec.declarationModel;
+            Declaration? d = st.declarationModel;
             if (!exists d) {
                 return false;
             }
@@ -69,9 +66,10 @@ shared interface LocalQuickFix<in Data>
                 return false;
             }
             
-            value annotations = dec.annotationList.annotations;
-            variable Type resultType;
-            if (exists aa = dec.annotationList.anonymousAnnotation,
+            value al = st.annotationList;
+            value annotations = al.annotations;
+            Type resultType;
+            if (exists aa = al.anonymousAnnotation,
                 currentOffset <= aa.endIndex.intValue()) {
                 
                 if (aa.endToken.line == line) {
@@ -79,8 +77,9 @@ shared interface LocalQuickFix<in Data>
                 }
                 
                 resultType = unit.stringType;
-            } else if (!annotations.empty,
-                currentOffset <= dec.annotationList.endIndex.intValue()) {
+            }
+            else if (!annotations.empty,
+                currentOffset <= al.endIndex.intValue()) {
                 
                 value a = annotations.get(0);
                 if (a.endToken.line == line) {
@@ -88,30 +87,38 @@ shared interface LocalQuickFix<in Data>
                 }
                 
                 resultType = a.typeModel;
-            } else if (is Tree.TypedDeclaration st, !(st is Tree.ObjectDefinition)) {
+            }
+            else if (is Tree.TypedDeclaration st, 
+                    !(st is Tree.ObjectDefinition)) {
                 value type = st.type;
                 if (currentOffset <= type.endIndex.intValue(),
                     currentOffset >= type.startIndex.intValue(),
                     type.endToken.line != line) {
                     
-                    resultType = type.typeModel;
-                    if (is Tree.SimpleType type) {
-                    } else if (is Tree.FunctionType type) {
-                        resultType = unit.getCallableReturnType(resultType);
-                    } else {
+                    switch (type)
+                    case (is Tree.SimpleType) {
+                        resultType = type.typeModel;
+                    }
+                    case (is Tree.FunctionType) {
+                        resultType = unit.getCallableReturnType(type.typeModel);
+                    }
+                    else {
                         return false;
                     }
-                } else {
+                }
+                else {
                     return false;
                 }
-            } else {
+            }
+            else {
                 return false;
             }
             
             return isEnabled(resultType);
         }
-        
-        return false;
+        else {
+            return false;
+        }
     }
 }
 
@@ -129,16 +136,17 @@ shared interface AbstractLocalProposal {
     shared String initialName => names.first else "<unknown>";
 
     shared TextChange? performInitialChange(QuickFixData data, Integer currentOffset) {
-        value st = nodes.findStatement(data.rootNode, data.node);
+        
+        value unit = data.node.unit;
+        
         variable Node expression;
         variable Node expanse;
         variable Type resultType;
-        value unit = data.node.unit;
-        
-        if (is Tree.ExpressionStatement es = st) {
-            value e = es.expression;
+        switch (st = nodes.findStatement(data.rootNode, data.node))
+        case (is Tree.ExpressionStatement) {
+            value e = st.expression;
             expression = e;
-            expanse = es;
+            expanse = st;
             resultType = e.typeModel;
             value term = e.term;
             if (is Tree.InvocationExpression term) {
@@ -158,9 +166,9 @@ shared interface AbstractLocalProposal {
                     }
                 }
             }
-        } else if (is Tree.Declaration st) {
-            value dec = st;
-            Declaration? d = dec.declarationModel;
+        }
+        case (is Tree.Declaration) {
+            Declaration? d = st.declarationModel;
             if (!exists d) {
                 return null;
             }
@@ -169,41 +177,48 @@ shared interface AbstractLocalProposal {
             }
             
             //some expressions get interpreted as annotations
-            value annotations = dec.annotationList.annotations;
-            if (exists aa = dec.annotationList.anonymousAnnotation,
+            value annotations = st.annotationList.annotations;
+            if (exists aa = st.annotationList.anonymousAnnotation,
                 currentOffset <= aa.endIndex.intValue()) {
                 
                 expression = aa;
                 expanse = expression;
                 resultType = unit.stringType;
-            } else if (!annotations.empty,
-                currentOffset <= dec.annotationList.endIndex.intValue()) {
+            }
+            else if (!annotations.empty,
+                currentOffset <= st.annotationList.endIndex.intValue()) {
                 
                 value a = annotations.get(0);
                 expression = a;
                 expanse = expression;
                 resultType = a.typeModel;
-            } else if (is Tree.TypedDeclaration td = st) {
+            }
+            else if (is Tree.TypedDeclaration st) {
                 //some expressions look like a type declaration
                 //when they appear right in front of an annotation
                 //or function invocations
-                value type = td.type;
+                value type = st.type;
                 value t = type.typeModel;
-                if (is Tree.SimpleType type) {
+                switch (type)
+                case (is Tree.SimpleType) {
                     expression = type;
                     expanse = expression;
                     resultType = t;
-                } else if (is Tree.FunctionType type) {
+                }
+                case (is Tree.FunctionType) {
                     expression = type;
                     expanse = expression;
                     resultType = unit.getCallableReturnType(t);
-                } else {
+                }
+                else {
                     return null;
                 }
-            } else {
+            }
+            else {
                 return null;
             }
-        } else {
+        }
+        else {
             return null;
         }
         
