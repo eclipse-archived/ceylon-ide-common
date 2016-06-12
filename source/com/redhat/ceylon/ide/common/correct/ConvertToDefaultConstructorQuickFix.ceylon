@@ -45,7 +45,7 @@ shared object convertToDefaultConstructorQuickFix {
                 };
                 extend = delim + indent + defIndent + defIndent + defIndent + text;
                 
-                if (exists pal = et.invocationExpression.positionalArgumentList) {
+                if (exists pal = et.invocationExpression?.positionalArgumentList) {
                     change.addEdit(DeleteEdit {
                         start = pal.startIndex.intValue();
                         length = pal.distance.intValue();
