@@ -21,7 +21,7 @@ shared interface LocalQuickFix<in Data>
     shared formal void newProposal(Data data, String desc);
 
     shared formal String desc;
-    shared default Boolean isEnabled(Type type) => true;
+    shared default Boolean isEnabled(Type? type) => true;
 
     shared void addProposal(Data data, 
             Integer currentOffset = data.problemOffset) {
@@ -36,7 +36,7 @@ shared interface LocalQuickFix<in Data>
         switch (st = nodes.findStatement(data.rootNode, node))
         case (is Tree.ExpressionStatement) {
             value e = st.expression;
-            variable Type resultType = e.typeModel;
+            variable Type? resultType = e.typeModel;
             if (is Tree.InvocationExpression term = e.term) {
                 value primary = term.primary;
                 if (is Tree.QualifiedMemberExpression primary) {
@@ -68,7 +68,7 @@ shared interface LocalQuickFix<in Data>
             
             value al = st.annotationList;
             value annotations = al.annotations;
-            Type resultType;
+            Type? resultType;
             if (exists aa = al.anonymousAnnotation,
                 currentOffset <= aa.endIndex.intValue()) {
                 
