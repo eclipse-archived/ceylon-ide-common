@@ -144,17 +144,17 @@ class FindValueFunctionVisitor(Tree.MemberOrTypeExpression smte)
     shared variable Boolean isVariable = false;
     
     shared actual void visitAssignmentOp(Tree.AssignmentOp that) {
-        isVariable = that.leftTerm == smte;
+        isVariable = that.leftTerm exists && that.leftTerm == smte;
         super.visitAssignmentOp(that);
     }
     
     shared actual void visitUnaryOperatorExpression(Tree.UnaryOperatorExpression that) {
-        isVariable = that.term == smte;
+        isVariable = that.term exists && that.term == smte;
         super.visitUnaryOperatorExpression(that);
     }
     
     shared actual void visitSpecifierStatement(Tree.SpecifierStatement that) {
-        isVariable = that.baseMemberExpression == smte;
+        isVariable = that.baseMemberExpression exists && that.baseMemberExpression == smte;
         super.visitSpecifierStatement(that);
     }
 }
