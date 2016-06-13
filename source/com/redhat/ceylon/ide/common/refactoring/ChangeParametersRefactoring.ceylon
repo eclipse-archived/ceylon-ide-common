@@ -532,7 +532,7 @@ shared abstract class ChangeParametersRefactoring(
                     super.visit(that);
                     if (exists id = that.identifier,
                         isReference(that.declarationModel)) {
-                        nodeSet.add(that);
+                        nodesMutator.add(that);
                     }
                 }
                 
@@ -550,7 +550,7 @@ shared abstract class ChangeParametersRefactoring(
             };
             root.visit(fprv);
             
-            for (ref in fprv.nodeSet) {
+            for (ref in fprv.referenceNodes) {
                 if (is Tree.Identifier id 
                         = nodes.getIdentifyingNode(ref), 
                     !id.text==newName) {

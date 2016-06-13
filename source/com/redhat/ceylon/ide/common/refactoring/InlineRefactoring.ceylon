@@ -130,7 +130,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         //TODO: don't count references which are being narrowed
         //      in a Tree.Variable, since they don't get inlined
         cu.visit(vis);
-        return vis.nodeSet.size();
+        return vis.referenceNodes.size;
     }
 
     name => "Inline";

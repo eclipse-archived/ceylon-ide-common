@@ -1,10 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.ide.common.util {
-    nodes,
-    FindReferencesVisitor
-}
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
@@ -12,6 +8,10 @@ import com.redhat.ceylon.ide.common.platform {
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes,
+    FindReferencesVisitor
 }
 
 shared object shadowReferenceQuickFix {
@@ -52,7 +52,7 @@ shared object shadowReferenceQuickFix {
 
                     value frv = FindReferencesVisitor(d);
                     frv.visit(ss.switchCaseList);
-                    for (n in frv.nodeSet) {
+                    for (n in frv.referenceNodes) {
                         if (exists identifyingNode 
                                 = nodes.getIdentifyingNode(n)) {
                             value start = identifyingNode.startIndex.intValue();
@@ -97,7 +97,7 @@ shared object shadowReferenceQuickFix {
             value dec = node.declarationModel;
             value frv = FindReferencesVisitor(dec);
             frv.visit(statement);
-            for (n in frv.nodeSet) {
+            for (n in frv.referenceNodes) {
                 value identifyingNode = nodes.getIdentifyingNode(n);
                 
                 if (exists identifyingNode) {

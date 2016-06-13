@@ -1,3 +1,11 @@
+import ceylon.collection {
+    HashSet,
+    SetMutator
+}
+import ceylon.interop.java {
+    JavaSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil {
         formatPath
@@ -8,6 +16,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     CustomTree {
         GuardedVariable
     }
+}
+import com.redhat.ceylon.ide.common.util {
+    finder=nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Constructor,
@@ -21,15 +32,19 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    HashSet,
-    Set
+    JSet=Set
 }
 
 shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
-    shared Set<Node> nodeSet = HashSet<Node>();
+    value nodes = HashSet<Node>();
+    
+    shared Set<Node> referenceNodes => nodes;
+    shared JSet<Node> referenceNodeSet => JavaSet(nodes);
+    
+    shared SetMutator<Node> nodesMutator => nodes;
     
     function originalDeclaration(Value val) {
-        variable Value result = val;
+        variable value result = val;
         while (is Value original = result.originalDeclaration, 
             original!=result && original!=val) {
             result = original;
@@ -78,15 +93,11 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         return false;
     }
     
-    Boolean isRefinedDeclarationReference(Declaration ref) {
-        if (is Declaration dec = declaration) {
-            return dec.refines(ref);
-        } else {
-            return false;
-        }
-    }
+    shared default Boolean isRefinedDeclarationReference(Declaration ref) 
+            => if (is Declaration dec = declaration) 
+            then dec.refines(ref) else false;
     
-    Boolean isSetterParameterReference(Declaration ref) {
+    shared default Boolean isSetterParameterReference(Declaration ref) {
         if (is Value ref, 
             exists param = ref.initializerParameter,
             is Setter setter = param.declaration) {
@@ -300,7 +311,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         if (isReference(that.declaration)) {
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -308,7 +319,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     
     shared actual void visit(Tree.MemberLiteral that) {
         if (isReference(that.declaration)) {
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -316,7 +327,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     
     shared actual void visit(Tree.TypedArgument that) {
         if (isReference(that.parameter)) {
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -327,7 +338,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
             that.identifier.token exists, 
             isReference(that.parameter)) {
             
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -337,7 +348,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         if (exists type = that.typeModel,
             isReference(type.declaration)) {
             
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -345,7 +356,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     
     shared actual void visit(Tree.ImportMemberOrType that) {
         if (isReference(that.declarationModel)) {
-            nodeSet.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -356,7 +367,7 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         if (is Package pkg = declaration) {
             value path = formatPath(that.importPath.identifiers);
             if (path==pkg.nameAsString) {
-                nodeSet.add(that);
+                nodes.add(that);
             }
         }
     }
@@ -365,16 +376,16 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         super.visit(that);
         
         if (is Module mod = declaration,
-            exists path = nodes.getImportedModuleName(that),
+            exists path = finder.getImportedModuleName(that),
             path==declaration.nameAsString) {
             
-            nodeSet.add(that);
+            nodes.add(that);
         }
     }
     
     shared actual default void visit(Tree.InitializerParameter that) {
         if (isReference(that.parameterModel)) {
-            nodeSet.add(that);
+            nodes.add(that);
         } else {
             super.visit(that);
         }
@@ -382,9 +393,13 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     
     shared actual void visit(Tree.TypeConstraint that) {
         if (isReference(that.declarationModel)) {
-            nodeSet.add(that);
+            nodes.add(that);
         } else {
             super.visit(that);
         }
     }
 }
+
+
+
+

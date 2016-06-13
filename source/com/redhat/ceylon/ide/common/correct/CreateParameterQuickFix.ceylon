@@ -49,7 +49,7 @@ shared object createParameterQuickFix {
         
         addProposal {
             data = data;
-            desc = "Add " + desc + " to '" + dec.name + "'";
+            desc = "Add ``desc`` to '``dec.name``'";
             dec = dec;
             returnType = returnType;
             selection = selection;
@@ -115,7 +115,7 @@ shared object createParameterQuickFix {
 
         addProposal {
             data = data;
-            desc = "Add " + desc + " to '" + dec.name + "'";
+            desc = "Add ``desc`` to '``dec.name``'";
             dec = dec;
             returnType = returnType;
             selection = selection;

@@ -9,12 +9,19 @@ import com.redhat.ceylon.model.typechecker.model {
 import ceylon.collection {
     HashSet
 }
+import java.util {
+    JSet=Set
+}
+import ceylon.interop.java {
+    JavaSet
+}
 
 shared class FindRefinementsVisitor(Declaration declaration) extends Visitor() {
 
     value nodes = HashSet<Tree.StatementOrArgument>();
     
     shared Set<Tree.StatementOrArgument> declarationNodes => nodes; 
+    shared JSet<Tree.StatementOrArgument> declarationNodeSet => JavaSet(nodes);
     
     Boolean isRefinement(Declaration? dec) {
         return if (exists dec) 
