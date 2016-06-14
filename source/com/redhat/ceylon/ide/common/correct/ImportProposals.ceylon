@@ -63,11 +63,13 @@ shared object importProposals {
             exists id = nodes.getIdentifyingNode(node)) {
             
             value rootNode = data.rootNode;
-            value brokenName = id.text;
-            value mod = rootNode.unit.\ipackage.\imodule;
-            
-            for (dec in findImportCandidates(mod, brokenName, rootNode)) {
-                createImportProposal(data, dec);
+            value candidates = findImportCandidates {
+                mod = rootNode.unit.\ipackage.\imodule;
+                name = id.text;
+                rootNode = rootNode;
+            };
+            for (dec in candidates) {
+                createImportProposal(data, dec, candidates.size==1);
             }
         }
     }
@@ -82,7 +84,7 @@ shared object importProposals {
                             .coalesced;
             };
     
-    void createImportProposal(QuickFixData data, Declaration declaration) {
+    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint) {
         value change 
                 = platformServices.document.createTextChange {
             name = "Add Import";
@@ -102,12 +104,15 @@ shared object importProposals {
             change.addEdit(e);
         }
         
+        value description 
+                = "Add import of '``declaration.name``' in package '``declaration.unit.\ipackage.nameAsString``'";
         data.addQuickFix {
-            description = "Add import of '``declaration.name``' in package '``declaration.unit.\ipackage.nameAsString``'";
+            description = description;
             change = change;
             selection = null;
             qualifiedNameIsPath = true;
             image = Icons.imports;
+            hint = hint then description;
         };
     }
     

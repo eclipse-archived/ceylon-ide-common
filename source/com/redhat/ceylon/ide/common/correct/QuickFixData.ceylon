@@ -46,7 +46,8 @@ shared interface QuickFixData {
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false,
         Icons? image = null,
-        QuickFixKind kind = generic);
+        QuickFixKind kind = generic,
+        String? hint = null);
     
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);
