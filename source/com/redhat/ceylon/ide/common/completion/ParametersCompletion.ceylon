@@ -11,6 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Functional
 }
+import ceylon.interop.java {
+    CeylonList
+}
 
 shared interface ParametersCompletion {
     
@@ -82,7 +85,7 @@ shared interface ParametersCompletion {
                     prefix = prefix;
                     desc = desc.string;
                     text = text.string;
-                    argTypes = argTypes;
+                    argTypes = CeylonList(argTypes);
                     node = node;
                     unit = unit;
                 };

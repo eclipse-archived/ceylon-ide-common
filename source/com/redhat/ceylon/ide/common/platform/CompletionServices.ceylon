@@ -23,9 +23,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
-import java.util {
-    List
-}
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }

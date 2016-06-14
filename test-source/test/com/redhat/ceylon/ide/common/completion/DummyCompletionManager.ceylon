@@ -165,7 +165,7 @@ class MyCompletionService() satisfies CompletionServices {
       //      => nothing; // not supported
     
     shared actual void newParametersCompletionProposal(CompletionContext ctx, Integer offset, String prefix, String desc, String text,
-        JList<Type> argTypes, Node node, Unit unit)
+        List<Type> argTypes, Node node, Unit unit)
             => Result("newParametersCompletionProposal", text, desc);
     
     shared actual void newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
