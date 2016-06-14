@@ -31,14 +31,13 @@ shared interface ParametersCompletion {
             value cd = unit.callableDeclaration;
             value td = type.declaration;
             
-            if (type.classOrInterface, td.equals(cd)) {
+            if (type.classOrInterface, td==cd) {
                 value argTypes = unit.getCallableArgumentTypes(type);
                 value paramTypes = ctx.options.parameterTypesInCompletion;
                 value desc = StringBuilder().append("(");
                 value text = StringBuilder().append("(");
                 
-                for (i in 0..argTypes.size()-1) {
-                    value argType = argTypes.get(i);
+                for (i in 0:argTypes.size()) {
                     if (desc.size > 1) {
                         desc.append(", ");
                     }
@@ -46,23 +45,29 @@ shared interface ParametersCompletion {
                         text.append(", ");
                     }
                     Type returnType;
-                    if (argType.classOrInterface,
-                        argType.declaration == cd) {
-                        String anon = 
-                                anonFunctionHeader(argType, unit);
-                        text.append(anon).append(" => ");
-                        desc.append(anon).append(" => ");
-                        returnType = unit.getCallableReturnType(argType);
-                        argTypes.set(i, returnType);
-                    }
-                    else if (paramTypes) {
-                        returnType = argType;
-                        desc.append(argType.asString(unit))
-                            .append(" ");
+                    if (exists argType = argTypes.get(i)) {
+                        if (argType.classOrInterface,
+                            argType.declaration == cd) {
+                            String anon = 
+                                    anonFunctionHeader(argType, unit);
+                            text.append(anon).append(" => ");
+                            desc.append(anon).append(" => ");
+                            returnType = unit.getCallableReturnType(argType);
+                            argTypes.set(i, returnType);
+                        }
+                        else if (paramTypes) {
+                            returnType = argType;
+                            desc.append(argType.asString(unit))
+                                .append(" ");
+                        }
+                        else {
+                            returnType = argType;
+                        }
                     }
                     else {
-                        returnType = argType;
+                        returnType = unit.unknownType;
                     }
+                    
                     String name;
                     if (returnType.classOrInterface
                         || returnType.typeParameter) {
