@@ -143,8 +143,7 @@ shared object createTypeParameterQuickFix {
             
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
-                value d = that.declaration;
-                if (is Generic d) {
+                if (is Generic d = that.declaration) {
                     value g = d;
                     value tps = g.typeParameters;
                     value tas = that.typeArguments;
