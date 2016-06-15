@@ -25,10 +25,6 @@ import com.redhat.ceylon.model.typechecker.model {
     NamedArgumentList
 }
 
-import java.util {
-    Collections
-}
-
 shared object changeReferenceQuickFix {
    
     void addChangeReferenceProposal(QuickFixData data, String brokenName,
@@ -70,7 +66,7 @@ shared object changeReferenceQuickFix {
                     offset = problemOffset;
                 };
                 if (!isLocation(ol, OccurrenceLocation.\iIMPORT)) {
-                    for (ie in importProposals.importEdits(Collections.singleton(dec))) {
+                    for (ie in importProposals.importEdits({dec})) {
                         importsLength += ie.text.size;
                         change.addEdit(ie);
                     }

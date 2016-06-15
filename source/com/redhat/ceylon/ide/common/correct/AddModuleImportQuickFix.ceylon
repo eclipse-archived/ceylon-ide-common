@@ -8,6 +8,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     TreeUtil
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.imports {
     moduleImportUtil
 }
@@ -28,9 +31,6 @@ import java.lang {
 }
 import java.util {
     TreeSet
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared object addModuleImportQuickFix {
@@ -54,18 +54,17 @@ shared object addModuleImportQuickFix {
             value moduleNames = TreeSet<JString>(JDKUtils.jdkModuleNames);
             for (mod in moduleNames) {
                 if (JDKUtils.isJDKPackage(mod.string, pkg)) {
-                    value desc = "Add 'import " + mod.string + " \""
-                            + JDKUtils.jdk.version + "\"' to module descriptor";
                     
-                    value callback = void() {
+                    void callback() {
                         moduleImportUtil.addModuleImport {
                             target = unit.\ipackage.\imodule;
                             moduleName = mod.string;
                             moduleVersion = JDKUtils.jdk.version;
                         };
-                    };
+                    }
+                    
                     data.addQuickFix {
-                        description = desc;
+                        description = "Add 'import ``mod`` \"``JDKUtils.jdk.version``\"' to module descriptor";
                         change = callback;
                         image = Icons.imports;
                         qualifiedNameIsPath = true;
@@ -82,7 +81,7 @@ shared object addModuleImportQuickFix {
                 void change() {
                     findCandidateModules(unit, data, pkg, typeChecker, true);
                 }
-                kind = addModuleImport;
+                kind = QuickFixKind.addModuleImport;
             };
         } else {
             findCandidateModules(unit, data, pkg, typeChecker, false);
@@ -107,22 +106,22 @@ shared object addModuleImportQuickFix {
         for (md in msr.results) {
             value name = md.name;
             value version = md.lastVersion.version;
-            value desc = "Add 'import " + name + " \"" + version
-                    + "\"' to module descriptor";
             
-            value callback = void() {
+            void callback() {
                 moduleImportUtil.addModuleImport {
                     target = unit.\ipackage.\imodule;
                     moduleName = name;
                     moduleVersion = version;
                 };
-            };
+            }
             data.addQuickFix {
-                description = desc;
+                description = "Add 'import ``name`` \"``version``\"' to module descriptor";
                 change = callback;
                 image = Icons.imports;
                 qualifiedNameIsPath = true;
-                kind = async then asyncModuleImport else addModuleImport;
+                kind = async 
+                    then QuickFixKind.asyncModuleImport 
+                    else QuickFixKind.addModuleImport;
             };
         }
     }

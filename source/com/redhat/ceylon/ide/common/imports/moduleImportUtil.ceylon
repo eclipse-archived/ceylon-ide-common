@@ -98,7 +98,7 @@ shared object moduleImportUtil {
             Collections.emptyList<ModuleVersionNode>()), moduleVersion);
         
         value offset = addModuleImports2(target, 
-            map({moduleName -> versionNode}));
+            map {moduleName -> versionNode});
         
         if (exists pu = findPhasedUnit(target)) {
             value indent = platformServices.document.defaultIndent;
@@ -175,15 +175,18 @@ shared object moduleImportUtil {
         return 0;
     }
 
-    shared Integer addModuleImports3(PhasedUnit pu,
+    shared Integer addModuleImports3(PhasedUnit phasedUnit,
         Map<String,ModuleVersionNode> moduleNamesAndVersions) {
         
-        value change = platformServices.document.createTextChange("Add Module Imports", pu);
+        value change = platformServices.document.createTextChange { 
+            name = "Add Module Imports"; 
+            input = phasedUnit;
+        };
         change.initMultiEdit();
         
         for (name -> val in moduleNamesAndVersions) {
             value version = val.version;
-            value mod = pu.compilationUnit.unit.\ipackage.\imodule;
+            value mod = phasedUnit.compilationUnit.unit.\ipackage.\imodule;
 
             value nativeBackend = 
             if (exists moduleBackends = mod.nativeBackends,
@@ -193,8 +196,13 @@ shared object moduleImportUtil {
                 then null
                 else val.nativeBackend;
             
-            value edit = createAddEdit(pu.compilationUnit, nativeBackend, name,
-                version, change.document);
+            value edit = createAddEdit { 
+                unit = phasedUnit.compilationUnit; 
+                backend = nativeBackend; 
+                moduleName = name; 
+                moduleVersion = version; 
+                doc = change.document; 
+            };
             
             if (exists edit) {
                 change.addEdit(edit);

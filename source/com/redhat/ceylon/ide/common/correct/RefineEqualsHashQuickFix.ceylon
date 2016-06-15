@@ -1,3 +1,7 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
@@ -22,10 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
     Unit
-}
-
-import java.util {
-    HashSet
 }
 
 shared object refineEqualsHashQuickFix {
@@ -184,7 +184,7 @@ shared object refineEqualsHashQuickFix {
                         description = desc;
                         change = change;
                         image = Icons.refinement;
-                        kind = addRefineEqualsHash;
+                        kind = QuickFixKind.addRefineEqualsHash;
                     };
                 }
             }

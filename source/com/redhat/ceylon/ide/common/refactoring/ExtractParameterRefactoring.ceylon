@@ -24,10 +24,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
-import java.util {
-    JHashSet=HashSet
-}
-
 
 shared interface ExtractParameterRefactoring<IRegion>
         satisfies ExtractInferrableTypedRefactoring<TextChange>
@@ -125,7 +121,7 @@ shared interface ExtractParameterRefactoring<IRegion>
             body = nodes.text(tokens, core);
         }
         
-        value imports = JHashSet<Declaration>();
+        value imports = HashSet<Declaration>();
         
         String typeDec;
         if (exists type = this.type, !type.unknown) {

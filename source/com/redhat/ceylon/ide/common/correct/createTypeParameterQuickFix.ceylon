@@ -1,7 +1,13 @@
+import ceylon.collection {
+    HashSet
+}
 import ceylon.interop.java {
     CeylonIterable
 }
 
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
@@ -28,11 +34,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    List,
-    HashSet
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
+    List
 }
 
 shared object createTypeParameterQuickFix {

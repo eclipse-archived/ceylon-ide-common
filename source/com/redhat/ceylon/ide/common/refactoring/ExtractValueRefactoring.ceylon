@@ -1,6 +1,13 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
+}
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
 }
 import com.redhat.ceylon.ide.common.platform {
     TextChange,
@@ -22,11 +29,7 @@ import java.lang {
     StringBuilder
 }
 import java.util {
-    HashSet,
     JList=List
-}
-import com.redhat.ceylon.ide.common.correct {
-    importProposals
 }
 
 

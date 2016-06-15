@@ -54,7 +54,7 @@ shared object addParameterListQuickFix {
                     description = "Add initializer parameters '``params``' to ``description``";
                     change = change;
                     selection = DefaultRegion(offset + 1);
-                    kind = addParameterList;
+                    kind = QuickFixKind.addParameterList;
                 };
             }
         }

@@ -46,7 +46,7 @@ shared interface QuickFixData {
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false,
         Icons? image = null,
-        QuickFixKind kind = generic,
+        QuickFixKind kind = QuickFixKind.generic,
         String? hint = null);
     
     shared formal void addConvertToClassProposal(String description,
@@ -54,14 +54,17 @@ shared interface QuickFixData {
     shared formal void addAssignToLocalProposal(String description);
 }
 
-abstract shared class QuickFixKind()
+shared class QuickFixKind
         of generic | addConstructor | addParameterList | addRefineEqualsHash
-         | addRefineFormal | addModuleImport | asyncModuleImport {
+         | addRefineFormal | addModuleImport | asyncModuleImport
+         | addImport | asyncImport {
+    shared new addImport {}
+    shared new asyncImport {}
+    shared new addModuleImport {}
+    shared new asyncModuleImport {}
+    shared new addRefineFormal {}
+    shared new addRefineEqualsHash {}
+    shared new addParameterList {}
+    shared new addConstructor {}
+    shared new generic {}
 }
-shared object addModuleImport extends QuickFixKind() {}
-shared object asyncModuleImport extends QuickFixKind() {}
-shared object addRefineFormal extends QuickFixKind() {}
-shared object addRefineEqualsHash extends QuickFixKind() {}
-shared object addParameterList extends QuickFixKind() {}
-shared object addConstructor extends QuickFixKind() {}
-shared object generic extends QuickFixKind() {}

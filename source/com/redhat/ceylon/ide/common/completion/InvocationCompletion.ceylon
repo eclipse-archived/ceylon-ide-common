@@ -1,3 +1,7 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor,
@@ -44,7 +48,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     Collections,
-    HashSet,
     JList=List
 }
 

@@ -1,3 +1,6 @@
+import ceylon.collection {
+    HashSet
+}
 import ceylon.interop.java {
     CeylonList
 }
@@ -26,9 +29,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.lang {
     Character
-}
-import java.util {
-    HashSet
 }
 
 shared object typeCompletion {

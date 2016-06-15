@@ -1,3 +1,7 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -12,10 +16,6 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Functional
-}
-
-import java.util {
-    HashSet
 }
 
 shared interface FunctionCompletion {

@@ -1,3 +1,7 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -22,10 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
     Unit
-}
-
-import java.util {
-    HashSet
 }
 
 shared object refineFormalMembersQuickFix {
@@ -67,7 +67,7 @@ shared object refineFormalMembersQuickFix {
                 description = desc;
                 change = callback;
                 image = Icons.formalRefinement;
-                kind = addRefineFormal;
+                kind = QuickFixKind.addRefineFormal;
             };
         }
     }

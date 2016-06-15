@@ -1,5 +1,5 @@
-import ceylon.interop.java {
-    JavaIterable
+import ceylon.collection {
+    HashSet
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -15,24 +15,16 @@ import com.redhat.ceylon.model.typechecker.model {
     Type
 }
 
-import java.lang {
-    JString=String,
-    JIterable=Iterable
-}
-import java.util {
-    JHashSet=HashSet
-}
-
 shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit rootNode) {
     
-    value imports = JHashSet<Declaration>();
+    value imports = HashSet<Declaration>();
     
     shared Boolean isImported(Declaration declaration)
             => importProposals.isImported(declaration, rootNode);
 
     shared List<InsertEdit> importEdits(
-        JIterable<Declaration> declarations,
-        JIterable<JString>? aliases = null,
+        {Declaration*} declarations,
+        {String*}? aliases = null,
         Declaration? declarationBeingDeleted = null)
             => importProposals.importEdits {
                 rootNode = rootNode;
@@ -58,7 +50,7 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
     
     shared void importTypes({Type*} types)
             => importProposals.importTypes {
-                types = JavaIterable(types);
+                types = types;
                 declarations = imports;
                 rootNode = rootNode;
             };

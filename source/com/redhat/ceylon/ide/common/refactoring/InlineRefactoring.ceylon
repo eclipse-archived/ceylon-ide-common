@@ -1,6 +1,8 @@
 import ceylon.collection {
     ArrayList,
-    HashMap
+    HashMap,
+    HashSet,
+    MutableSet
 }
 
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -48,9 +50,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    JList=List,
-    HashSet,
-    Set
+    JList=List
 }
 
 import org.antlr.runtime {
@@ -382,7 +382,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         variable Boolean importedFromDeclarationPackage = false;
 
         class AddImportsVisitor(already) extends Visitor() {
-            Set<Declaration> already;
+            MutableSet<Declaration> already;
             
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);

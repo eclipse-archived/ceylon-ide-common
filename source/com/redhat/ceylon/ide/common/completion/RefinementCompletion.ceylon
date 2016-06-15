@@ -1,3 +1,6 @@
+import ceylon.collection {
+    HashSet
+}
 import ceylon.interop.java {
     javaString
 }
@@ -41,8 +44,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    JArrayList=ArrayList,
-    HashSet
+    JArrayList=ArrayList
 }
 
 // see RefinementCompletionProposal

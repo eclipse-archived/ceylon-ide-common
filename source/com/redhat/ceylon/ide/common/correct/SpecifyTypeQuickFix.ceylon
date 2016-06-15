@@ -1,3 +1,7 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -22,10 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
         isTypeUnknown
     },
     Declaration
-}
-
-import java.util {
-    HashSet
 }
 
 shared object specifyTypeQuickFix {

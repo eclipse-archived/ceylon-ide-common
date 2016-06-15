@@ -1,14 +1,16 @@
 import ceylon.collection {
     HashSet,
     unlinked,
-    ArrayList
+    ArrayList,
+    MutableSet
 }
 import ceylon.interop.java {
     CeylonIterable
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+    Tree,
+    Node
 }
 import com.redhat.ceylon.ide.common.completion {
     FindImportNodeVisitor
@@ -37,7 +39,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Module {
         \iLANGUAGE_MODULE_NAME=languageModuleName
     },
-    ParameterList,
     Type,
     TypeDeclaration,
     TypedDeclaration
@@ -47,29 +48,40 @@ import java.lang {
     JIterable=Iterable,
     JString=String
 }
-import java.util {
-    JHashSet=HashSet,
-    JIterator=Iterator,
-    JList=List,
-    JMap=Map,
-    JSet=Set,
-    Collections
-}
+
 
 shared object importProposals {
+    
+    void findCandidateDeclarations(Tree.CompilationUnit rootNode, Node id, QuickFixData data, 
+        Boolean hint, Boolean async) {
+        value candidates 
+                = findImportCandidates {
+                    mod = rootNode.unit.\ipackage.\imodule;
+                    name = id.text;
+                    rootNode = rootNode;
+                };
+        for (dec in candidates) {
+            createImportProposal(data, dec, hint && candidates.size==1, async);
+        }
+    }
     
     shared void addImportProposals(QuickFixData data) {
         if (is Tree.BaseMemberOrTypeExpression|Tree.SimpleType node = data.node,
             exists id = nodes.getIdentifyingNode(node)) {
             
             value rootNode = data.rootNode;
-            value candidates = findImportCandidates {
-                mod = rootNode.unit.\ipackage.\imodule;
-                name = id.text;
-                rootNode = rootNode;
-            };
-            for (dec in candidates) {
-                createImportProposal(data, dec, candidates.size==1);
+            if (data.useLazyFixes) {
+                value description = "Import '``id.text``'";
+                data.addQuickFix {
+                    description = description;
+                    void change() {
+                        findCandidateDeclarations(rootNode, id, data, false, true);
+                    }
+                    kind = QuickFixKind.addImport;
+                    hint = description;
+                };
+            } else {
+                findCandidateDeclarations(rootNode, id, data, true, false);
             }
         }
     }
@@ -84,48 +96,56 @@ shared object importProposals {
                             .coalesced;
             };
     
-    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint) {
-        value change 
-                = platformServices.document.createTextChange {
-            name = "Add Import";
-            input = data.phasedUnit;
-        };
-        change.initMultiEdit();
-        
-        value edits = importEdits {
-            rootNode = data.rootNode;
-            declarations = Collections.singleton(declaration);
-            aliases = null;
-            declarationBeingDeleted = null;
-            doc = change.document;
-        };
-        
-        for (e in edits) {
-            change.addEdit(e);
+    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint, Boolean async) {
+        void callback() {
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Add Import";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            
+            value edits = importEdits {
+                rootNode = data.rootNode;
+                declarations = {declaration};
+                aliases = null;
+                declarationBeingDeleted = null;
+                doc = change.document;
+            };
+            
+            for (e in edits) {
+                change.addEdit(e);
+            }
+            
+            if (change.hasEdits) {
+                change.apply();
+            }
         }
         
         value description 
                 = "Add import of '``declaration.name``' in package '``declaration.unit.\ipackage.nameAsString``'";
         data.addQuickFix {
             description = description;
-            change = change;
-            selection = null;
+            change = callback;
             qualifiedNameIsPath = true;
             image = Icons.imports;
             hint = hint then description;
+            kind = async
+                then QuickFixKind.asyncImport
+                else QuickFixKind.addImport;
         };
     }
     
     shared List<InsertEdit> importEdits(
         Tree.CompilationUnit rootNode,
-        JIterable<Declaration> declarations,
-        JIterable<JString>? aliases,
+        {Declaration*} declarations,
+        {String*}? aliases,
         Declaration? declarationBeingDeleted,
         CommonDocument doc) {
         String delim = doc.defaultLineDelimiter;
         
         value edits = ArrayList<InsertEdit>();
-        value packages = CeylonIterable(declarations)
+        value packages = declarations
                 .map((decl) => decl.unit.\ipackage)
                 .distinct;
 
@@ -140,12 +160,12 @@ shared object importProposals {
                     }
                 }
             } else {
-                JIterator<JString> aliasIter = aliases.iterator();
+                value aliasIter = aliases.iterator();
                 for (d in declarations) {
-                    String? theAlias = aliasIter.next()?.string;
+                    value theAlias = aliasIter.next();
                     if (d.unit.\ipackage == p) {
                         text.append(",").append(delim).append(platformServices.document.defaultIndent);
-                        if (exists theAlias, theAlias != d.name) {
+                        if (!is Finished theAlias, theAlias != d.name) {
                             text.append(theAlias).appendCharacter('=');
                         }
                         text.append(escaping.escapeName(d));
@@ -158,16 +178,19 @@ shared object importProposals {
                 if (imtl.importWildcard exists) {
                     // Do Nothing
                 } else {
-                    Integer insertPosition = getBestImportMemberInsertPosition(importNode);
+                    Integer insertPosition 
+                            = getBestImportMemberInsertPosition(importNode);
                     if (exists declarationBeingDeleted,
                         imtl.importMemberOrTypes.size() == 1,
-                        imtl.importMemberOrTypes.get(0).declarationModel == declarationBeingDeleted) {
+                        imtl.importMemberOrTypes.get(0).declarationModel 
+                                == declarationBeingDeleted) {
                         text.delete(0, 2);
                     }
                     edits.add(InsertEdit(insertPosition, text.string));
                 }
             } else {
-                Integer insertPosition = getBestImportInsertPosition(rootNode);
+                Integer insertPosition 
+                        = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
                 text.insert(0, "import " + escaping.escapePackageName(p)
                             + " {" + delim).append(delim + "}");
@@ -203,7 +226,7 @@ shared object importProposals {
                 text.append(",").append(delim).append(platformServices.document.defaultIndent).append(d.name);
             }
         } else {
-            JIterator<JString> aliasIter = aliases.iterator();
+            value aliasIter = aliases.iterator();
             for (d in declarations) {
                 String? \ialias = aliasIter.next()?.string;
                 text.append(",").append(delim).append(platformServices.document.defaultIndent);
@@ -315,7 +338,7 @@ shared object importProposals {
         }
     }
     
-    shared Integer applyImportsInternal(TextChange change, JIterable<Declaration> declarations, JIterable<JString>? aliases, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted) {
+    shared Integer applyImportsInternal(TextChange change, {Declaration*} declarations, {String*}? aliases, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted) {
         variable Integer il = 0;
         for (ie in importEdits(cu, declarations, aliases, declarationBeingDeleted, doc)) {
             il += ie.text.size;
@@ -324,13 +347,27 @@ shared object importProposals {
         return il;
     }
     
-    shared Integer applyImports(TextChange change, JSet<Declaration> declarations, Tree.CompilationUnit rootNode, CommonDocument doc, Declaration? declarationBeingDeleted = null)
-            => applyImportsInternal(change, declarations, null, rootNode, doc, declarationBeingDeleted);
+    shared Integer applyImports(TextChange change, Set<Declaration> declarations, Tree.CompilationUnit rootNode, CommonDocument doc, Declaration? declarationBeingDeleted = null)
+            => applyImportsInternal { 
+                change = change; 
+                declarations = declarations; 
+                aliases = null; 
+                cu = rootNode; 
+                doc = doc; 
+                declarationBeingDeleted = declarationBeingDeleted; 
+            };
     
-    shared Integer applyImportsWithAliases(TextChange change, JMap<Declaration,JString> declarations, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted = null)
-            => applyImportsInternal(change, declarations.keySet(), declarations.values(), cu, doc, declarationBeingDeleted);
+    shared Integer applyImportsWithAliases(TextChange change, Map<Declaration,JString> declarations, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted = null)
+            => applyImportsInternal { 
+                change = change; 
+                declarations = declarations.keys; 
+                aliases = declarations.items.map(JString.string); 
+                cu = cu; 
+                doc = doc; 
+                declarationBeingDeleted = declarationBeingDeleted;
+            };
     
-    shared void importSignatureTypes(Declaration declaration, Tree.CompilationUnit rootNode, JSet<Declaration> declarations) {
+    shared void importSignatureTypes(Declaration declaration, Tree.CompilationUnit rootNode, MutableSet<Declaration> declarations) {
         if (is TypedDeclaration declaration) {
             TypedDeclaration td = declaration;
             importType(declarations, td.type, rootNode);
@@ -345,14 +382,14 @@ shared object importProposals {
         }
     }
     
-    shared void importTypes(JSet<Declaration> declarations, JIterable<Type>? types, Tree.CompilationUnit rootNode) {
+    shared void importTypes(MutableSet<Declaration> declarations, {Type*}? types, Tree.CompilationUnit rootNode) {
         if (exists types) {
             for (type in types) {
                 importType(declarations, type, rootNode);
             }
         }
     }
-    shared void importType(JSet<Declaration> declarations, Type? type, Tree.CompilationUnit rootNode) {
+    shared void importType(MutableSet<Declaration> declarations, Type? type, Tree.CompilationUnit rootNode) {
         if (exists type) {
             if (type.unknown || type.nothing) {
                 // Do Nothing
@@ -377,14 +414,15 @@ shared object importProposals {
         }
     }
     
-    shared void importDeclaration(JSet<Declaration> declarations, Declaration declaration, Tree.CompilationUnit rootNode) {
+    shared void importDeclaration(MutableSet<Declaration> declarations, Declaration declaration, Tree.CompilationUnit rootNode) {
         if (!declaration.parameter) {
             value p = declaration.unit.\ipackage;
             value pack = rootNode.unit.\ipackage;
             if (!p.nameAsString.empty
                         && p!=pack
                         && p.nameAsString!=\iLANGUAGE_MODULE_NAME
-                        && (!declaration.classOrInterfaceMember || declaration.staticallyImportable)) {
+                        && (!declaration.classOrInterfaceMember 
+                            || declaration.staticallyImportable)) {
                 if (!isImported(declaration, rootNode)) {
                     declarations.add(declaration);
                 }
@@ -401,10 +439,10 @@ shared object importProposals {
         return false;
     }
     
-    shared void importCallableParameterParamTypes(Declaration declaration, JHashSet<Declaration> decs, Tree.CompilationUnit cu) {
+    shared void importCallableParameterParamTypes(Declaration declaration, MutableSet<Declaration> decs, Tree.CompilationUnit cu) {
         if (is Functional declaration) {
             Functional fun = declaration;
-            JList<ParameterList> pls = fun.parameterLists;
+            value pls = fun.parameterLists;
             if (!pls.empty) {
                 for (p in pls.get(0).parameters) {
                     FunctionOrValue pm = p.model;
@@ -414,7 +452,7 @@ shared object importProposals {
         }
     }
     
-    shared void importParameterTypes(Declaration dec, Tree.CompilationUnit cu, JHashSet<Declaration> decs) {
+    shared void importParameterTypes(Declaration dec, Tree.CompilationUnit cu, MutableSet<Declaration> decs) {
         if (is Function dec) {
             for (ppl in dec.parameterLists) {
                 for (pp in ppl.parameters) {
