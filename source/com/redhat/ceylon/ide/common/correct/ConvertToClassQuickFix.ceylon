@@ -20,14 +20,13 @@ shared object convertToClassQuickFix {
     
     shared void addConvertToClassProposal(QuickFixData data, Tree.Declaration? declaration) {
         if (is Tree.ObjectDefinition declaration) {
-            value desc = "Convert '" + declaration.declarationModel.name + "' to class";
+            value desc = "Convert '``declaration.identifier.text``' to class";
             data.addConvertToClassProposal(desc, declaration);
         }
     }
 
     shared void applyChanges(CommonDocument doc, Tree.ObjectDefinition node, LinkedMode? mode = null) {
-        value declaration = node.declarationModel;
-        value name = declaration.name;
+        value name = node.identifier.text;
         value initialName = escaping.toInitialUppercase(name);
         value change = platformServices.document.createTextChange("Convert to Class", doc);
         change.initMultiEdit();
@@ -42,7 +41,7 @@ shared object convertToClassQuickFix {
         change.addEdit(ReplaceEdit(start, length, initialName + "()"));
         value offset = node.endIndex.intValue();
         //TODO: handle actual object declarations
-        value mods = if (declaration.shared) then "shared " else "";
+        value mods = if (node.declarationModel.shared) then "shared " else "";
         value ws = doc.defaultLineDelimiter + doc.getIndent(node);
         value impl = " = " + initialName + "();";
         value dec = ws + mods + initialName + " " + name;
