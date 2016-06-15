@@ -20,9 +20,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.cmr {
     JDKUtils
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Unit
-}
 
 import java.lang {
     JString=String,
@@ -34,94 +31,97 @@ import java.util {
 }
 
 shared object addModuleImportQuickFix {
-        
+    
+    function packageName(Tree.ImportPath|Tree.Import node) {
+        Tree.ImportPath ip;
+        switch (node)
+        case (is Tree.ImportPath) {
+            ip = node;
+        }
+        case (is Tree.Import) {
+            ip = node.importPath;
+        }
+        return TreeUtil.formatPath(ip.identifiers);
+    }
+    
     shared void addModuleImportProposals(QuickFixData data, TypeChecker typeChecker) {
-        variable value node = data.node;
-        value unit = node.unit;
-        
-        if (unit.\ipackage.\imodule.defaultModule) {
-            return;
+        if (is Tree.ImportPath|Tree.Import node = data.node, 
+            !data.node.unit.\ipackage.\imodule.defaultModule) {
+            value name = packageName(node);
+            if (data.useLazyFixes) {
+                value description = "Import module containing '``name``'";
+                data.addQuickFix {
+                    description = description;
+                    void change() {
+                        findCandidateModules(data, typeChecker, name);
+                    }
+                    kind = QuickFixKind.addModuleImport;
+                    asynchronous = true;
+                    hint = description;
+                };
+            } else {
+                findCandidateModules(data, typeChecker, name);
+            }
         }
+    }
+
+    void findCandidateModules(QuickFixData data, TypeChecker typeChecker,
+            String packagaName) {
+        value unit = data.node.unit;
         
-        if (is Tree.Import i = node) {
-            node = i.importPath;
-        }
-        
-        assert (is Tree.ImportPath ip = node);
-        value ids = ip.identifiers;
-        value pkg = TreeUtil.formatPath(ids);
-        if (JDKUtils.isJDKAnyPackage(pkg)) {
+        //We have no reason to do these lazily, except for
+        //consistency of user experience
+        if (JDKUtils.isJDKAnyPackage(packagaName)) {
             value moduleNames = TreeSet<JString>(JDKUtils.jdkModuleNames);
             for (mod in moduleNames) {
-                if (JDKUtils.isJDKPackage(mod.string, pkg)) {
-                    
-                    void callback() {
-                        moduleImportUtil.addModuleImport {
-                            target = unit.\ipackage.\imodule;
-                            moduleName = mod.string;
-                            moduleVersion = JDKUtils.jdk.version;
-                        };
-                    }
+                if (JDKUtils.isJDKPackage(mod.string, packagaName)) {
                     
                     data.addQuickFix {
                         description = "Add 'import ``mod`` \"``JDKUtils.jdk.version``\"' to module descriptor";
-                        change = callback;
                         image = Icons.imports;
                         qualifiedNameIsPath = true;
+                        kind = QuickFixKind.addModuleImport;
+                        void change() {
+                            moduleImportUtil.addModuleImport {
+                                target = unit.\ipackage.\imodule;
+                                moduleName = mod.string;
+                                moduleVersion = JDKUtils.jdk.version;
+                            };
+                        }
                     };
-
+                    
                     return;
                 }
             }
         }
         
-        if (data.useLazyFixes) {
-            data.addQuickFix {
-                description = "Find modules containing '``pkg``'";
-                void change() {
-                    findCandidateModules(unit, data, pkg, typeChecker, true);
-                }
-                kind = QuickFixKind.addModuleImport;
-            };
-        } else {
-            findCandidateModules(unit, data, pkg, typeChecker, false);
-        }
-    }
-
-    void findCandidateModules(Unit unit, QuickFixData data, String pkg,
-        TypeChecker typeChecker, Boolean async) {
-        
         value mod = unit.\ipackage.\imodule;
         value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
-        query.memberName = pkg;
+        query.memberName = packagaName;
         query.memberSearchPackageOnly = true;
         query.memberSearchExact = true;
         query.count = Long(10);
-        query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-        query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-        query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-        query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
+        query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
+        query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
+        query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
+        query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
         value msr = typeChecker.context.repositoryManager.searchModules(query);
         
         for (md in msr.results) {
             value name = md.name;
             value version = md.lastVersion.version;
             
-            void callback() {
-                moduleImportUtil.addModuleImport {
-                    target = unit.\ipackage.\imodule;
-                    moduleName = name;
-                    moduleVersion = version;
-                };
-            }
             data.addQuickFix {
                 description = "Add 'import ``name`` \"``version``\"' to module descriptor";
-                change = callback;
                 image = Icons.imports;
                 qualifiedNameIsPath = true;
-                kind = async 
-                    then QuickFixKind.asyncModuleImport 
-                    else QuickFixKind.addModuleImport;
+                kind = QuickFixKind.addModuleImport;
+                void change() 
+                        => moduleImportUtil.addModuleImport {
+                            target = unit.\ipackage.\imodule;
+                            moduleName = name;
+                            moduleVersion = version;
+                        };
             };
         }
     }

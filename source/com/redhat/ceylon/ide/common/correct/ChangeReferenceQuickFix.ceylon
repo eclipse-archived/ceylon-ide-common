@@ -26,10 +26,10 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared object changeReferenceQuickFix {
-   
+    
     void addChangeReferenceProposal(QuickFixData data, String brokenName,
         Declaration dec) {
-       
+        
         value change 
                = platformServices.document.createTextChange {
             name = "Change Reference";
@@ -85,7 +85,7 @@ shared object changeReferenceQuickFix {
             description 
                     = "Change reference to '``dec.name``'``pkg``";
             qualifiedNameIsPath = true;
-            change = change;
+            change() => change.apply();
             selection = DefaultRegion {
                 start = problemOffset + importsLength;
                 length = dec.name.size;
@@ -93,17 +93,21 @@ shared object changeReferenceQuickFix {
         };
     }
     
-    Boolean isInPackage(Tree.CompilationUnit cu, Declaration dec) {
-        return !dec.unit.\ipackage.equals(cu.unit.\ipackage);
-    }
+    Boolean isInPackage(Tree.CompilationUnit cu, Declaration dec) 
+            => !dec.unit.\ipackage.equals(cu.unit.\ipackage);
 
     shared void addChangeReferenceProposals(QuickFixData data) {
+        if (!data.useLazyFixes) {
+            findChangeReferenceProposals(data);
+        }
+    }
+    
+    shared void findChangeReferenceProposals(QuickFixData data) {
         if (exists id = nodes.getIdentifyingNode(data.node)) {
             if (exists brokenName = id.text, !brokenName.empty) {
-                value scope = data.node.scope; //for declaration-style named args
                 value dwps = completionManager.getProposals {
                     node = data.node;
-                    scope = scope;
+                    scope = data.node.scope; //for declaration-style named args
                     prefix = "";
                     memberOp = false;
                     rootNode = data.rootNode;

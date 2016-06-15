@@ -51,8 +51,9 @@ import java.lang {
 
 shared object importProposals {
     
-    void findCandidateDeclarations(Tree.CompilationUnit rootNode, Node id, QuickFixData data, 
-        Boolean hint, Boolean async) {
+    void findCandidateDeclarations(Node id, QuickFixData data, 
+        Boolean hint) {
+        value rootNode = data.rootNode;
         value candidates 
                 = findImportCandidates {
                     mod = rootNode.unit.\ipackage.\imodule;
@@ -60,7 +61,11 @@ shared object importProposals {
                     rootNode = rootNode;
                 };
         for (dec in candidates) {
-            createImportProposal(data, dec, hint && candidates.size==1, async);
+            createImportProposal { 
+                data = data; 
+                declaration = dec; 
+                hint = hint && candidates.size==1; 
+            };
         }
     }
     
@@ -68,19 +73,20 @@ shared object importProposals {
         if (is Tree.BaseMemberOrTypeExpression|Tree.SimpleType node = data.node,
             exists id = nodes.getIdentifyingNode(node)) {
             
-            value rootNode = data.rootNode;
             if (data.useLazyFixes) {
-                value description = "Import '``id.text``'";
+                value description = "Import '``id.text``' or correct spelling";
                 data.addQuickFix {
                     description = description;
                     void change() {
-                        findCandidateDeclarations(rootNode, id, data, false, true);
+                        findCandidateDeclarations(id, data, false);
+                        changeReferenceQuickFix.findChangeReferenceProposals(data);
                     }
                     kind = QuickFixKind.addImport;
                     hint = description;
+                    asynchronous = true;
                 };
             } else {
-                findCandidateDeclarations(rootNode, id, data, true, false);
+                findCandidateDeclarations(id, data, true);
             }
         }
     }
@@ -95,7 +101,7 @@ shared object importProposals {
                             .coalesced;
             };
     
-    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint, Boolean async) {
+    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint) {
         void callback() {
             value change 
                     = platformServices.document.createTextChange {
@@ -129,9 +135,7 @@ shared object importProposals {
             qualifiedNameIsPath = true;
             image = Icons.imports;
             hint = hint then description;
-            kind = async
-                then QuickFixKind.asyncImport
-                else QuickFixKind.addImport;
+            kind = QuickFixKind.addImport;
         };
     }
     

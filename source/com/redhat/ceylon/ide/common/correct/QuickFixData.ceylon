@@ -47,7 +47,8 @@ shared interface QuickFixData {
         Boolean qualifiedNameIsPath = false,
         Icons? image = null,
         QuickFixKind kind = QuickFixKind.generic,
-        String? hint = null);
+        String? hint = null,
+        Boolean asynchronous = false);
     
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);
@@ -56,12 +57,9 @@ shared interface QuickFixData {
 
 shared class QuickFixKind
         of generic | addConstructor | addParameterList | addRefineEqualsHash
-         | addRefineFormal | addModuleImport | asyncModuleImport
-         | addImport | asyncImport {
+         | addRefineFormal | addModuleImport | addImport {
     shared new addImport {}
-    shared new asyncImport {}
     shared new addModuleImport {}
-    shared new asyncModuleImport {}
     shared new addRefineFormal {}
     shared new addRefineEqualsHash {}
     shared new addParameterList {}
