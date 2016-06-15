@@ -202,7 +202,7 @@ String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
 
 Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
-    assert(exists tokens = cpc.tokens);
+    value tokens = cpc.tokens;
     while (i < tokens.size()) {
         CommonToken tok = tokens.get(i);
         if (tok.channel != CommonToken.\iHIDDEN_CHANNEL) {
@@ -260,15 +260,14 @@ shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? c
                     return arrow + id.text;
                 }
             }
-            else if (exists tokens = cpc.tokens, 
-                    term.unit == cpc.lastCompilationUnit.unit) {
+            else if (exists unit = cpc.lastCompilationUnit?.unit,
+                        term.unit == unit) {
+                value tokens = cpc.tokens;
                 value impl = nodes.text(tokens, term);
                 if (impl.size < 10) {
                     return arrow + impl;
                 }
             }
-            //don't have the token stream :-/
-            //TODO: figure out where to get it from!
             return arrow + "...";
         }
     }

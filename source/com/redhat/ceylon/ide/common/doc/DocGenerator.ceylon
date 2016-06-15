@@ -50,6 +50,9 @@ import com.redhat.ceylon.model.loader.model {
     JavaBeanValue,
     JavaMethod
 }
+import com.redhat.ceylon.compiler.typechecker {
+    TypeChecker
+}
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
     Declaration,
@@ -125,19 +128,21 @@ shared interface DocGenerator {
     shared formal Boolean supportsQuickAssists;
     
     shared Referenceable? getLinkedModel(String? target, IdeComponent cmp) {
-        if (exists target) {
+        if (exists target,
+            exists lastCompilationUnit = cmp.lastCompilationUnit,
+            exists typechecker = cmp.typeChecker) {
             if (javaString(target)
                 .matches("doc:ceylon.language/.*:ceylon.language:Nothing")) {
-                return cmp.lastCompilationUnit.unit.nothingDeclaration;
+                return lastCompilationUnit.unit.nothingDeclaration;
             }
-            return getLinkedModelInternal(target, cmp);
+            return getLinkedModelInternal(target, typechecker);
         }
         else {
             return null;
         }
     }
     
-    Referenceable? getLinkedModelInternal(String link, IdeComponent cpc) {
+    Referenceable? getLinkedModelInternal(String link, TypeChecker typeChecker) {
         value bits = link.split(':'.equals).sequence();
         
         if (exists moduleNameAndVersion = bits[1],
@@ -150,7 +155,7 @@ shared interface DocGenerator {
             
             value linkedModule 
                     = let (modules 
-                        = cpc.typeChecker.context.modules)
+                        = typeChecker.context.modules)
                     CeylonIterable(modules.listOfModules)
                         .find((m) 
                             => m.nameAsString==moduleName 

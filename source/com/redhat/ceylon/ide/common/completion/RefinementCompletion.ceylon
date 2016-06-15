@@ -19,9 +19,6 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     ClassOrInterface,
@@ -160,7 +157,7 @@ shared interface RefinementCompletion {
 
 shared abstract class RefinementCompletionProposal
         (Integer _offset, String prefix, Reference pr, String desc, 
-        String text, LocalAnalysisResult cpc, Declaration declaration, Scope scope,
+        String text, CompletionContext ctx, Declaration declaration, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
         extends AbstractCompletionProposal
         (_offset, prefix, desc, text) {
@@ -202,7 +199,7 @@ shared abstract class RefinementCompletionProposal
     shared TextChange createChange(CommonDocument document) {
         value change = platformServices.document.createTextChange("Add Refinement", document);
         value decs = HashSet<Declaration>();
-        value cu = cpc.lastCompilationUnit;
+        value cu = ctx.lastCompilationUnit;
         if (explicitReturnType) {
             importProposals.importSignatureTypes(declaration, cu, decs);
         } else {
@@ -237,7 +234,7 @@ shared abstract class RefinementCompletionProposal
             return;
         }
         
-        value unit = cpc.lastCompilationUnit.unit;
+        value unit = ctx.lastCompilationUnit.unit;
         
         // nothing:
         newNestedCompletionProposal(props,
