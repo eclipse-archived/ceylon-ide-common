@@ -115,6 +115,10 @@ shared final class Severity
     else false;
 }
 
+"We don't want to run the *Did you mean ?* search during the typechecking in the IDE:
+ Since we already have quick fixes that do even better, it's just useless processing."
+shared Cancellable cancelDidYouMeanSearch => Cancellable.alwaysCancelled;
+
 
 shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject)
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -624,10 +628,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             value mainTypecheckingPhases = {
                 ["scanning declarations", 1, void(PhasedUnit pu) => pu.scanDeclarations()],
-                ["scanning types", 2, void(PhasedUnit pu) => pu.scanTypeDeclarations()],
+                ["scanning types", 2, void(PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
                 ["validating refinement", 1, void(PhasedUnit pu) => pu.validateRefinement()],
                 ["analysing usages", 3, void(PhasedUnit pu) { 
-                    pu.analyseTypes();
+                    pu.analyseTypes(cancelDidYouMeanSearch);
                     if (ceylonProject.showWarnings) {
                         pu.analyseUsage();
                     }
@@ -724,9 +728,9 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             value dependencyTypecheckingPhases = {
                 ["scanning declarations", 1, void (PhasedUnit pu) => pu.scanDeclarations()],
-                ["scanning types", 2, void (PhasedUnit pu) => pu.scanTypeDeclarations()],
+                ["scanning types", 2, void (PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
                 ["validating refinement", 1, void (PhasedUnit pu) => pu.validateRefinement()],
-                ["analysing types", 2, void (PhasedUnit pu) => pu.analyseTypes()]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
+                ["analysing types", 2, void (PhasedUnit pu) => pu.analyseTypes(cancelDidYouMeanSearch)]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
                 // which in turn is important for debugging !
             };
             
