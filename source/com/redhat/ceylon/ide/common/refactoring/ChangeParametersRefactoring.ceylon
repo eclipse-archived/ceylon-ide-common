@@ -56,7 +56,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Value,
     Scope,
-    Unit
+    Unit,
+    Cancellable
 }
 
 import java.util {
@@ -124,8 +125,8 @@ shared String|Type parseTypeExpression(String typeText, Unit unit, Scope scope) 
                 super.visitAny(that);
             }
         });
-        staticType.visit(TypeVisitor(unit));
-        staticType.visit(ExpressionVisitor(unit));
+        staticType.visit(TypeVisitor(unit, Cancellable.alwaysCancelled));
+        staticType.visit(ExpressionVisitor(unit, Cancellable.alwaysCancelled));
         
         variable String? err = null;
         
