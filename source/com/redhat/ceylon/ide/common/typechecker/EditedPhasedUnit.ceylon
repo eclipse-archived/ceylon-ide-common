@@ -51,7 +51,7 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
             TypeChecker typeChecker, 
             JList<CommonToken> tokens,
             ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? savedPhasedUnit,
-            NativeProject project,
+            NativeProject? project,
             NativeFile file)
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
             unitFile,
@@ -86,7 +86,7 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
     shared ProjectPhasedUnitAlias? originalPhasedUnit 
             => savedPhasedUnitRef.get();
     
-    shared actual NativeProject resourceProject => project;
+    shared actual NativeProject? resourceProject => project;
     shared actual NativeFile resourceFile => file;
     
     resourceRootFolder => originalPhasedUnit?.resourceRootFolder;
