@@ -45,7 +45,6 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    JIterable=Iterable,
     JString=String
 }
 
@@ -208,8 +207,8 @@ shared object importProposals {
     
     shared List<TextEdit> importEditForMove(
         Tree.CompilationUnit rootNode,
-        JIterable<Declaration> declarations,
-        JIterable<JString>? aliases,
+        {Declaration*} declarations,
+        {String*}? aliases,
         String newPackageName,
         String oldPackageName,
         CommonDocument doc) {
@@ -228,10 +227,10 @@ shared object importProposals {
         } else {
             value aliasIter = aliases.iterator();
             for (d in declarations) {
-                String? \ialias = aliasIter.next()?.string;
+                value al = aliasIter.next();
                 text.append(",").append(delim).append(platformServices.document.defaultIndent);
-                if (exists \ialias, \ialias != d.name) {
-                    text.append(\ialias).appendCharacter('=');
+                if (!is Finished al, al != d.name) {
+                    text.append(al).appendCharacter('=');
                 }
                 text.append(d.name);
             }
