@@ -769,7 +769,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                         exists name = parts[0],
                         exists version = parts[1],
                         exists file = repositoryManager.getArtifact(
-                            ArtifactContext(name, version, ArtifactContext.\iJAR))) {
+                            ArtifactContext(null, name, version, ArtifactContext.\iJAR))) {
                     
                         // OK
                     } else {
@@ -931,6 +931,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                                 if (nonempty importedModuleImports) {
                                     File? artifact = repositoryManager.getArtifact(
                                         ArtifactContext(
+                                            null,
                                             _module.nameAsString, 
                                             _module.version, 
                                             ArtifactContext.\iJS));
