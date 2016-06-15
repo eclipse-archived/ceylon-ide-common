@@ -917,7 +917,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     existingPhasedUnit.visitSrcModulePhase();
                     existingPhasedUnit.visitRemainingModulePhase();
                     existingPhasedUnit.scanDeclarations();
-                    existingPhasedUnit.scanTypeDeclarations();
+                    existingPhasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
                     existingPhasedUnit.validateRefinement();
                 }
             }

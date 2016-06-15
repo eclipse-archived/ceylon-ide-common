@@ -47,6 +47,9 @@ import java.util {
         emptyList
     }
 }
+import com.redhat.ceylon.ide.common.model {
+    cancelDidYouMeanSearch
+}
 
 shared class SourceCode(contents, path) {
     shared String contents;
@@ -142,13 +145,13 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         pu.scanDeclarations();
     }
     for (pu in listOfUnits) {
-        pu.scanTypeDeclarations();
+        pu.scanTypeDeclarations(cancelDidYouMeanSearch);
     }
     for (pu in listOfUnits) {
         pu.validateRefinement();
     }
     for (pu in listOfUnits) {
-        pu.analyseTypes();
+        pu.analyseTypes(cancelDidYouMeanSearch);
     }
     for (pu in listOfUnits) {
         pu.analyseFlow();

@@ -139,9 +139,9 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
             lastPhasedUnit.visitSrcModulePhase();
             lastPhasedUnit.visitRemainingModulePhase();
             lastPhasedUnit.scanDeclarations();
-            lastPhasedUnit.scanTypeDeclarations();
+            lastPhasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
             lastPhasedUnit.validateRefinement();
-            lastPhasedUnit.analyseTypes();
+            lastPhasedUnit.analyseTypes(cancelDidYouMeanSearch);
             lastPhasedUnit.analyseFlow();
             UnknownTypeCollector utc = UnknownTypeCollector();
             lastPhasedUnit.compilationUnit.visit(utc);
