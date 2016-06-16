@@ -583,7 +583,7 @@ shared abstract class InvocationCompletionProposal
     }
     
     shared void activeLinkedMode(CommonDocument document, CompletionContext cpc, Cancellable? cancellable=null) {
-        if (is Generic declaration) {
+        if (is Generic declaration, cpc.options.linkedModeArguments) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
                 positionalInvocation || namedInvocation) {

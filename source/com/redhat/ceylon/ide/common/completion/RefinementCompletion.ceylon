@@ -216,7 +216,8 @@ shared abstract class RefinementCompletionProposal
         try {
             value loc = offset - prefix.size;
             
-            if (exists pos = text.firstInclusion("nothing")) {
+            if (exists pos = text.firstInclusion("nothing"),
+                ctx.options.linkedModeArguments) {
                 value linkedModeModel = platformServices.createLinkedMode(document);
                 value props = platformServices.completion.createProposalsHolder();
                 addProposals(loc + pos, prefix, props);
