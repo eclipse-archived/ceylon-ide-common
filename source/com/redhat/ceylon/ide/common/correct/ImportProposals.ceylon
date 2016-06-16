@@ -74,7 +74,7 @@ shared object importProposals {
             exists id = nodes.getIdentifyingNode(node)) {
             
             if (data.useLazyFixes) {
-                value description = "Import '``id.text``' or correct spelling";
+                value description = "Import '``id.text``' or correct spelling...";
                 data.addQuickFix {
                     description = description;
                     void change() {

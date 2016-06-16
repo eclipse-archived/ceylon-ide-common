@@ -49,7 +49,7 @@ shared object addModuleImportQuickFix {
             !data.node.unit.\ipackage.\imodule.defaultModule) {
             value name = packageName(node);
             if (data.useLazyFixes) {
-                value description = "Import module containing '``name``'";
+                value description = "Import module containing '``name``'...";
                 data.addQuickFix {
                     description = description;
                     void change() {
