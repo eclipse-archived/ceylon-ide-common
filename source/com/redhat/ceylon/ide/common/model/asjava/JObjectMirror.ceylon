@@ -1,6 +1,7 @@
 import com.redhat.ceylon.model.typechecker.model {
     Value,
-    Declaration
+    Declaration,
+    Function
 }
 import com.redhat.ceylon.compiler.java.codegen {
     CodegenUtil
@@ -42,7 +43,9 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
     }
 }
 
-class GetMethod(JObjectMirror obj) satisfies MethodMirror {
+shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
+    shared Declaration declaration => obj.decl;
+    
     shared actual Boolean abstract => false;
     
     shared actual Boolean constructor => false;
@@ -83,6 +86,9 @@ class GetMethod(JObjectMirror obj) satisfies MethodMirror {
 }
 
 shared String getJavaQualifiedName(Declaration decl) {
+    if (is Function decl, decl.toplevel) {
+        return decl.scope.qualifiedNameString + "." + decl.name + "_";
+    }
     value fqn = CodegenUtil.getJavaNameOfDeclaration(decl);
     if (is Value decl) {
         return fqn.initial(fqn.size - ".get_".size);

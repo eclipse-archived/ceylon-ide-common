@@ -24,7 +24,8 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Interface,
     Declaration,
-    Type
+    Type,
+    Class
 }
 
 import java.util {
@@ -172,4 +173,14 @@ shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractC
         return types;
     }
 
+    shared actual void scanExtraMembers(ArrayList<MethodMirror> methods) {
+        super.scanExtraMembers(methods);
+
+        if (is Class cl = decl,
+            exists pl = cl.parameterList,
+            pl.parameters.size() > 0) {
+            
+            methods.add(JConstructorMirror(cl, pl));
+        }
+    }
 }

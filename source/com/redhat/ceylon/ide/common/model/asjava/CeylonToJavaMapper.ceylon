@@ -9,7 +9,7 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface
 }
 
-shared alias JavaMirror => JClassMirror|JObjectMirror|JGetterMirror|JSetterMirror|JMethodMirror;
+shared alias JavaMirror => JClassMirror|JObjectMirror|JGetterMirror|JSetterMirror|JMethodMirror|JToplevelFunctionMirror;
 
 shared object ceylonToJavaMapper {
     
@@ -17,7 +17,7 @@ shared object ceylonToJavaMapper {
         return switch (decl)
         case (is ClassOrInterface) sequence({JClassMirror(decl)})
         case (is Value) mapValue(decl)
-        case (is Function) sequence({JMethodMirror(decl)})
+        case (is Function) sequence({mapFunction(decl)})
         else empty; 
     }
     
@@ -37,6 +37,12 @@ shared object ceylonToJavaMapper {
         }
         
         return JTypeMirror(type);
+    }
+    
+    JToplevelFunctionMirror|JMethodMirror mapFunction(Function func) {
+        return func.toplevel
+        then JToplevelFunctionMirror(func)
+        else JMethodMirror(func);
     }
     
     <JGetterMirror|JSetterMirror|JObjectMirror>[] mapValue(Value decl) {

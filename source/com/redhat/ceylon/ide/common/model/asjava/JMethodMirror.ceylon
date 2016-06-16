@@ -16,7 +16,8 @@ import ceylon.interop.java {
     CeylonIterable
 }
 
-shared class JMethodMirror(Function decl) extends AbstractMethodMirror(decl) {
+shared class JMethodMirror(Function decl, Boolean forceStatic = false)
+        extends AbstractMethodMirror(decl) {
     
     shared actual Boolean constructor => false;
     
@@ -43,4 +44,6 @@ shared class JMethodMirror(Function decl) extends AbstractMethodMirror(decl) {
     shared actual Boolean variadic => decl.variable;
     
     shared actual Boolean defaultMethod => false;
+    
+    static => forceStatic then true else super.static;
 }

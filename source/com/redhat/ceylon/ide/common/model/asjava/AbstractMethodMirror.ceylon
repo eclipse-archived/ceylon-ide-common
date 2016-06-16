@@ -7,7 +7,7 @@ import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue
 }
 
-shared abstract class AbstractMethodMirror(FunctionOrValue decl)
+shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
         satisfies MethodMirror {
     
     shared actual Boolean abstract => decl.abstraction;
@@ -24,7 +24,7 @@ shared abstract class AbstractMethodMirror(FunctionOrValue decl)
     
     shared actual Boolean public => decl.shared;
     
-    shared actual Boolean static => false;
+    shared actual default Boolean static => false;
     
     shared actual Boolean staticInit => false;
 }
