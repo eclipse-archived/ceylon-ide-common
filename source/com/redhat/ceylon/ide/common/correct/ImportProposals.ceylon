@@ -136,6 +136,7 @@ shared object importProposals {
             image = Icons.imports;
             hint = hint then description;
             kind = QuickFixKind.addImport;
+            declaration = declaration;
         };
     }
     

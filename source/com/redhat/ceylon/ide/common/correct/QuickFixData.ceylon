@@ -26,6 +26,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration
+}
 
 shared interface QuickFixData {
     shared formal Integer errorCode;
@@ -48,7 +51,8 @@ shared interface QuickFixData {
         Icons? image = null,
         QuickFixKind kind = QuickFixKind.generic,
         String? hint = null,
-        Boolean asynchronous = false);
+        Boolean asynchronous = false,
+        Declaration? declaration = null);
     
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);
