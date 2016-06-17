@@ -28,9 +28,9 @@ shared object convertSwitchToIfQuickFix {
             
             String name;
             if (exists e = switched.expression) {
-                if (is Tree.BaseMemberExpression t = e.term) {
-                    value bme = t;
-                    name = bme.declaration.name;
+                if (is Tree.BaseMemberExpression t = e.term,
+                    exists d = t.declaration) {
+                    name = d.name;
                     change.addEdit(DeleteEdit {
                         start = sc.startIndex.intValue();
                         length = scl.startIndex.intValue() 
@@ -86,8 +86,7 @@ shared object convertSwitchToIfQuickFix {
                         });
                     }
                     case (is Tree.MatchCase) {
-                        value mc = ci;
-                        value el = mc.expressionList;
+                        value el = ci.expressionList;
                         if (el.expressions.size() == 1) {
                             if (exists e0 = el.expressions.get(0), 
                                 is Tree.BaseMemberExpression t0 = e0.term) {
