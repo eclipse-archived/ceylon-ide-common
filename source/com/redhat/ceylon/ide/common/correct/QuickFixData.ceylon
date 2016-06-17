@@ -1,3 +1,6 @@
+import com.redhat.ceylon.cmr.api {
+    ModuleVersionDetails
+}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
@@ -18,6 +21,9 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Referenceable
+}
 
 import java.util {
     JList=List
@@ -25,9 +31,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration
 }
 
 shared interface QuickFixData {
@@ -52,7 +55,7 @@ shared interface QuickFixData {
         QuickFixKind kind = QuickFixKind.generic,
         String? hint = null,
         Boolean asynchronous = false,
-        Declaration? declaration = null);
+        Referenceable|ModuleVersionDetails? declaration = null);
     
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);

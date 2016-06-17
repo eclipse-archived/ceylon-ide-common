@@ -1,3 +1,6 @@
+import com.redhat.ceylon.cmr.api {
+    ModuleVersionDetails
+}
 import com.redhat.ceylon.common {
     Versions
 }
@@ -66,18 +69,19 @@ shared object addModuleImportQuickFix {
     }
 
     void findCandidateModules(QuickFixData data, TypeChecker typeChecker,
-            String packagaName) {
+            String packageName) {
         value unit = data.node.unit;
         
         //We have no reason to do these lazily, except for
         //consistency of user experience
-        if (JDKUtils.isJDKAnyPackage(packagaName)) {
+        if (JDKUtils.isJDKAnyPackage(packageName)) {
             value moduleNames = TreeSet<JString>(JDKUtils.jdkModuleNames);
             for (mod in moduleNames) {
-                if (JDKUtils.isJDKPackage(mod.string, packagaName)) {
+                if (JDKUtils.isJDKPackage(mod.string, packageName)) {
                     
+                    value version = JDKUtils.jdk.version;
                     data.addQuickFix {
-                        description = "Add 'import ``mod`` \"``JDKUtils.jdk.version``\"' to module descriptor";
+                        description = "Add 'import ``mod`` \"``version``\"' to module descriptor";
                         image = Icons.imports;
                         qualifiedNameIsPath = true;
                         kind = QuickFixKind.addModuleImport;
@@ -85,9 +89,10 @@ shared object addModuleImportQuickFix {
                             moduleImportUtil.addModuleImport {
                                 target = unit.\ipackage.\imodule;
                                 moduleName = mod.string;
-                                moduleVersion = JDKUtils.jdk.version;
+                                moduleVersion = version;
                             };
                         }
+                        declaration = ModuleVersionDetails(mod.string, version);
                     };
                     
                     return;
@@ -97,7 +102,7 @@ shared object addModuleImportQuickFix {
         
         value mod = unit.\ipackage.\imodule;
         value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
-        query.memberName = packagaName;
+        query.memberName = packageName;
         query.memberSearchPackageOnly = true;
         query.memberSearchExact = true;
         query.count = Long(10);
@@ -122,6 +127,7 @@ shared object addModuleImportQuickFix {
                             moduleName = name;
                             moduleVersion = version;
                         };
+                 declaration = md.lastVersion;
             };
         }
     }
