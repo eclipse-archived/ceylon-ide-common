@@ -4,7 +4,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
-    DeleteEdit
+    DeleteEdit,
+    ReplaceEdit
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
@@ -52,32 +53,71 @@ shared object verboseRefinementQuickFix {
             model.actual, 
             if (is Tree.AnyMethod statement)
                 then !statement.typeParameterList exists 
-                else true,
-            exists spec = 
-                    switch (statement) 
-                    case (is Tree.AttributeDeclaration) 
-                        statement.specifierOrInitializerExpression
-                    case (is Tree.MethodDeclaration) 
-                        statement.specifierExpression
-                    else null,
-            exists expr = spec.expression,
-            !ModelUtil.isTypeUnknown(expr.typeModel)) {
+                else true) {
             
-            value change 
-                    = platformServices.document.createTextChange {
-                name = "Convert to Shortcut Refinement";
-                input = data.phasedUnit;
-            };
-            change.initMultiEdit();
+            value body = 
+                switch (statement) 
+                case (is Tree.AttributeDeclaration) 
+                    statement.specifierOrInitializerExpression
+                case (is Tree.MethodDeclaration) 
+                    statement.specifierExpression
+                case (is Tree.AttributeGetterDefinition)
+                    statement.block
+                case (is Tree.MethodDefinition) 
+                    statement.block
+                else null;
             
-            value start = statement.startIndex.intValue();
-            value length = statement.identifier.startIndex.intValue() - start;
-            change.addEdit(DeleteEdit {
-                start = start;
-                length = length;
-            });
+            Tree.Expression? expr;
+            switch (body)
+            case (null) {
+                return;
+            }
+            case (is Tree.SpecifierOrInitializerExpression) {
+                expr = body.expression;
+            }
+            case (is Tree.Block) {
+                if (is Tree.Return ret = body.statements[0]) {
+                    expr = ret.expression;
+                }
+                else {
+                    return;
+                }
+            }
             
-            data.addQuickFix("Convert to shortcut refinement", change);
+            if (exists expr,
+                !ModelUtil.isTypeUnknown(expr.typeModel)) {
+            
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Convert to Shortcut Refinement";
+                    input = data.phasedUnit;
+                };
+                change.initMultiEdit();
+                
+                value start = statement.startIndex.intValue();
+                value length = statement.identifier.startIndex.intValue() - start;
+                change.addEdit(DeleteEdit {
+                    start = start;
+                    length = length;
+                });
+                
+                if (is Tree.Block body) {
+                    change.addEdit(ReplaceEdit {
+                        start = body.startIndex.intValue();
+                        length = expr.startIndex.intValue() 
+                               - body.startIndex.intValue();
+                        text = "=> ";
+                    });
+                    change.addEdit(ReplaceEdit {
+                        start = expr.endIndex.intValue();
+                        length = body.endIndex.intValue() 
+                               - expr.endIndex.intValue();
+                        text = ";";
+                    });
+                }
+                
+                data.addQuickFix("Convert to shortcut refinement", change);
+            }
         }
     }
 }
