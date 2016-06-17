@@ -90,6 +90,7 @@ shared object changeReferenceQuickFix {
                 start = problemOffset + importsLength;
                 length = dec.name.size;
             };
+            declaration = dec;
         };
     }
     
