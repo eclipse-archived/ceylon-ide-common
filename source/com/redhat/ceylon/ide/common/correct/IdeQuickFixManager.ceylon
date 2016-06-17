@@ -314,6 +314,7 @@ shared object ideQuickFixManager {
         
         addAnnotationQuickFix.addContextualAnnotationProposals(data, declaration, currentOffset);
         specifyTypeQuickFix.addTypingProposals(data, declaration);
+        specifyTypeArgumentsQuickFix.addTypingProposals(data);
         
         miscQuickFixes.addAnonymousFunctionProposals(data);
         

@@ -190,10 +190,6 @@ shared object specifyTypeQuickFix {
         } else if (is Tree.LocalModifier|Tree.StaticType node = data.node) {
             addSpecifyTypeProposal(node, data);
         }
-        
-        if (is Tree.MemberOrTypeExpression node = data.node) {
-            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data);
-        }
     }
     
     void newProposal(String desc, Tree.Type type, Type infType, QuickFixData data) {

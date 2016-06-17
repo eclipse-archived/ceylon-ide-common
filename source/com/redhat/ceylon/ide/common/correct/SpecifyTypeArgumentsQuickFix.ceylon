@@ -57,4 +57,11 @@ shared object specifyTypeArgumentsQuickFix {
             data.addQuickFix("Specify explicit type arguments '``builder``'", change);
         }
     }
+
+    shared void addTypingProposals(QuickFixData data) {
+        if (is Tree.MemberOrTypeExpression node = data.node) {
+            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data);
+        }
+    }
+    
 }
