@@ -2,11 +2,22 @@ import ceylon.collection {
     HashMap,
     HashSet
 }
+import ceylon.interop.java {
+    JavaMap,
+    JavaList
+}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node,
     Tree
+}
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    InsertEdit
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -14,14 +25,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Module
 }
 
-import java.util {
-    JMap=Map
-}
 import java.lang {
     JString=String
 }
-import ceylon.interop.java {
-    JavaMap
+import java.util {
+    JMap=Map,
+    JList=List
 }
 
 shared class SelectedImportsVisitor(Integer offset, Integer length) 
@@ -75,12 +84,50 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
     }
     
     shared actual void visit(Tree.Declaration that) {
-        if (inSelection(that)) {
-            value dec = that.declarationModel;
+        if (inSelection(that),
+            exists dec = that.declarationModel) {
             copied.add(dec);
             results.remove(dec);
         }
         
         super.visit(that);
     }
+    
+    shared actual void visit(Tree.ImportMemberOrType that) {
+        if (inSelection(that),
+            exists dec = that.declarationModel) {
+            copied.add(dec);
+            results.remove(dec);
+        }
+    }
+}
+
+shared JList<InsertEdit> pasteImportsSet(JMap<Declaration,JString> references, 
+    CommonDocument doc, Tree.CompilationUnit rootNode) 
+        => JavaList(pasteImports { 
+            references 
+                    = map { 
+                        for (r in references.entrySet()) 
+                        r.key->r.\ivalue.string 
+                    };
+            doc = doc; 
+            rootNode = rootNode; 
+        });
+
+shared List<InsertEdit> pasteImports(Map<Declaration,String> references, 
+        CommonDocument doc, Tree.CompilationUnit rootNode) {
+    value unit = rootNode.unit;
+    value filtered = references.filterKeys((dec) 
+        => unit.\ipackage!=dec.unit.\ipackage 
+        && every { for (i in unit.imports) 
+                    i.declaration.qualifiedNameString
+                        != dec.qualifiedNameString });
+    
+    return importProposals.importEdits { 
+        rootNode = rootNode; 
+        declarations = filtered.keys; 
+        aliases = filtered.items; 
+        declarationBeingDeleted = null; 
+        doc = doc; 
+    };
 }
