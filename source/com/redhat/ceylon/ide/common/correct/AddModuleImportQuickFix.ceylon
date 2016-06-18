@@ -56,9 +56,7 @@ shared object addModuleImportQuickFix {
                 value description = "Import module containing '``name``'...";
                 data.addQuickFix {
                     description = description;
-                    void change() {
-                        findCandidateModules(data, typeChecker, name, true);
-                    }
+                    void change() => findCandidateModules(data, typeChecker, name, true);
                     kind = QuickFixKind.addModuleImport;
                     asynchronous = true;
                     hint = description;
