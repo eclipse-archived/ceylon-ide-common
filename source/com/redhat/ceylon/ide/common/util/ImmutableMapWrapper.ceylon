@@ -1,12 +1,14 @@
 import ceylon.collection {
-    MutableMap
+    MutableMap,
+    unlinked,
+    HashMap,
+    Hashtable
 }
 
-import ceylon.language {
-    newMap = map
-}
-
-shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap = emptyMap) satisfies MutableMap<Key, Item> 
+shared class ImmutableMapWrapper<Key, Item>(
+    variable Map<Key, Item> immutableMap = emptyMap,
+    Map<Key, Item> newMap({<Key->Item>*} entries) => HashMap(unlinked, Hashtable(), entries)) 
+        satisfies MutableMap<Key, Item> 
         given Key satisfies Object {
     
     shared Map<Key, Item> immutable =>

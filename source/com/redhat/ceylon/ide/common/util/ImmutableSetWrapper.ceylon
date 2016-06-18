@@ -1,10 +1,15 @@
 import ceylon.collection {
-    MutableSet
+    MutableSet,
+    HashSet,
+    unlinked,
+    Hashtable
 }
 
-shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySet) satisfies MutableSet<Item> 
+shared class ImmutableSetWrapper<Item>(
+    variable Set<Item> immutableSet = emptySet,
+    Set<Item> newSet({Item*} items) => HashSet(unlinked, Hashtable(), items)) 
+        satisfies MutableSet<Item> 
         given Item satisfies Object {
-    
     shared Set<Item> immutable =>
             synchronize { 
                 on = this; 
@@ -45,7 +50,7 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
             let(do = () {
                 if (immutableSet.size != newItems.size
                     || !immutableSet.containsEvery(newItems)) {
-                    immutableSet = set(newItems);
+                    immutableSet = newSet(newItems);
                 }
                 return this;
             }) synchronize(this, do);
@@ -56,14 +61,14 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
                 if (alreadyExists) {
                     return false;
                 }
-                immutableSet = set (immutableSet.chain {element});
+                immutableSet = newSet (immutableSet.chain {element});
                 return true;
             }) synchronize(this, do);
             
     shared actual Boolean addAll({Item*} elements) => 
             let(do = () {
                 value containedSomeElements = immutableSet.containsAny(elements);
-                immutableSet = set(immutableSet.chain(elements));
+                immutableSet = newSet(immutableSet.chain(elements));
                 return !containedSomeElements;
             }) synchronize(this, do);
                     
@@ -73,7 +78,7 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
                 if (!containedTheElement) {
                     return false;
                 }
-                immutableSet = set(
+                immutableSet = newSet(
                     immutableSet.filter((elementToKeep) => elementToKeep != element));
                 return true;
             }) synchronize(this, do);
@@ -82,7 +87,7 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
             let(do = () {
                 value containedAnyElement = immutableSet.containsAny(elements);
                 if (containedAnyElement) {
-                    immutableSet = set(
+                    immutableSet = newSet(
                         immutableSet.filter((elementToKeep) => ! elementToKeep in elements));
                 }
                 return containedAnyElement;
@@ -92,7 +97,7 @@ shared class ImmutableSetWrapper<Item>(variable Set<Item> immutableSet = emptySe
             let(do = () {
                 value anyElementToRemove = immutableSet.any(selecting);
                 if (anyElementToRemove) {
-                    immutableSet = set(
+                    immutableSet = newSet(
                         immutableSet.filter((elementToKeep) => ! selecting(elementToKeep)));
                 }
                 return anyElementToRemove;
