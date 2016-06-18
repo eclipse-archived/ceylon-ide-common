@@ -14,6 +14,16 @@ import com.redhat.ceylon.model.typechecker.model {
     Module
 }
 
+import java.util {
+    JMap=Map
+}
+import java.lang {
+    JString=String
+}
+import ceylon.interop.java {
+    JavaMap
+}
+
 shared class SelectedImportsVisitor(Integer offset, Integer length) 
         extends Visitor() {
     
@@ -21,6 +31,9 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
     value results = HashMap<Declaration,String>();
     
     shared Map<Declaration,String> copiedReferences => results;
+    
+    shared JMap<Declaration,JString> copiedReferencesMap 
+            => JavaMap(results.mapItems((key, item) => JString(item)));
     
     Boolean inSelection(Node node) {
         return node.startIndex.intValue()>=offset 
