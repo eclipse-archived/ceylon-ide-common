@@ -30,7 +30,8 @@ import java.lang {
     Long
 }
 import java.util {
-    TreeSet
+    TreeSet,
+    Collections
 }
 
 shared object addModuleImportQuickFix {
@@ -56,20 +57,20 @@ shared object addModuleImportQuickFix {
                 data.addQuickFix {
                     description = description;
                     void change() {
-                        findCandidateModules(data, typeChecker, name);
+                        findCandidateModules(data, typeChecker, name, true);
                     }
                     kind = QuickFixKind.addModuleImport;
                     asynchronous = true;
                     hint = description;
                 };
             } else {
-                findCandidateModules(data, typeChecker, name);
+                findCandidateModules(data, typeChecker, name, false);
             }
         }
     }
 
     void findCandidateModules(QuickFixData data, TypeChecker typeChecker,
-            String packageName) {
+            String packageName, Boolean allVersions) {
         value unit = data.node.unit;
         
         //We have no reason to do these lazily, except for
@@ -114,21 +115,24 @@ shared object addModuleImportQuickFix {
         
         for (md in msr.results) {
             value name = md.name;
-            value version = md.lastVersion.version;
-            
-            data.addQuickFix {
-                description = "Add 'import ``name`` \"``version``\"' to module descriptor";
-                image = Icons.imports;
-                qualifiedNameIsPath = true;
-                kind = QuickFixKind.addModuleImport;
-                void change() 
-                        => moduleImportUtil.addModuleImport {
-                            target = unit.\ipackage.\imodule;
-                            moduleName = name;
-                            moduleVersion = version;
-                        };
-                 declaration = md.lastVersion;
-            };
+            value versions = allVersions 
+                then md.versions 
+                else Collections.singleton(md.lastVersion);
+            for (version in versions) {
+                data.addQuickFix {
+                    description = "Add 'import ``name`` \"``version``\"' to module descriptor";
+                    image = Icons.imports;
+                    qualifiedNameIsPath = true;
+                    kind = QuickFixKind.addModuleImport;
+                    void change() 
+                            => moduleImportUtil.addModuleImport {
+                                target = unit.\ipackage.\imodule;
+                                moduleName = name;
+                                moduleVersion = version.version;
+                            };
+                     declaration = version;
+                };
+            }
         }
     }
 }
