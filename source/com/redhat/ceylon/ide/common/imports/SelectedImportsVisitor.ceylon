@@ -44,10 +44,11 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
     shared JMap<Declaration,JString> copiedReferencesMap 
             => JavaMap(results.mapItems((key, item) => JString(item)));
     
-    Boolean inSelection(Node node) {
-        return node.startIndex.intValue()>=offset 
-            && node.endIndex.intValue()<= offset+length;
-    }
+    Boolean inSelection(Node node) 
+            => node.startIndex exists 
+            && node.endIndex exists 
+            && node.startIndex.intValue() >= offset 
+            && node.endIndex.intValue() <= offset+length;
     
     void addDeclaration(Declaration? dec, Tree.Identifier? id) {
         if (exists dec, exists id, dec.toplevel, 
