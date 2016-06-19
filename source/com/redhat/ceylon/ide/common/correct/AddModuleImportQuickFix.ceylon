@@ -84,13 +84,12 @@ shared object addModuleImportQuickFix {
                         image = Icons.imports;
                         qualifiedNameIsPath = true;
                         kind = QuickFixKind.addModuleImport;
-                        void change() {
-                            moduleImportUtil.addModuleImport {
-                                target = unit.\ipackage.\imodule;
-                                moduleName = mod.string;
-                                moduleVersion = version;
-                            };
-                        }
+                        void change() 
+                                => moduleImportUtil.addModuleImport {
+                                    target = unit.\ipackage.\imodule;
+                                    moduleName = mod.string;
+                                    moduleVersion = version;
+                                };
                         declaration = ModuleVersionDetails(mod.string, version);
                     };
                     
@@ -122,7 +121,7 @@ shared object addModuleImportQuickFix {
                     image = Icons.imports;
                     qualifiedNameIsPath = true;
                     kind = QuickFixKind.addModuleImport;
-                    void change() 
+                    void change()
                             => moduleImportUtil.addModuleImport {
                                 target = unit.\ipackage.\imodule;
                                 moduleName = name;

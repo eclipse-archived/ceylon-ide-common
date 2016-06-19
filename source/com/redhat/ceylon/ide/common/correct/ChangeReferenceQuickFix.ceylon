@@ -85,7 +85,7 @@ shared object changeReferenceQuickFix {
             description 
                     = "Change reference to '``dec.name``'``pkg``";
             qualifiedNameIsPath = true;
-            change() => change.apply();
+            change = change;
             selection = DefaultRegion {
                 start = problemOffset + importsLength;
                 length = dec.name.size;
@@ -95,10 +95,11 @@ shared object changeReferenceQuickFix {
     }
     
     Boolean isInPackage(Tree.CompilationUnit cu, Declaration dec) 
-            => !dec.unit.\ipackage.equals(cu.unit.\ipackage);
+            => !dec.unit.\ipackage==cu.unit.\ipackage;
 
     shared void addChangeReferenceProposals(QuickFixData data) {
-        if (!data.useLazyFixes) {
+        if (!data.useLazyFixes
+            || data.node is Tree.QualifiedType|Tree.QualifiedMemberExpression) {
             findChangeReferenceProposals(data);
         }
     }

@@ -1,11 +1,7 @@
 import ceylon.collection {
     HashSet,
-    unlinked,
     ArrayList,
     MutableSet
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -36,9 +32,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     Function,
     FunctionOrValue,
-    Module {
-        \iLANGUAGE_MODULE_NAME=languageModuleName
-    },
+    Module,
     Type,
     TypeDeclaration,
     TypedDeclaration
@@ -50,6 +44,14 @@ import java.lang {
 
 
 shared object importProposals {
+    
+    function findImportCandidates(Module mod, String name, Tree.CompilationUnit rootNode)
+            => set {
+                for (pkg in mod.allVisiblePackages)
+                if (!pkg.nameAsString.empty)
+                if (exists d = pkg.getMember(name, null, false)) 
+                d
+            };
     
     void findCandidateDeclarations(Node id, QuickFixData data, 
         Boolean hint) {
@@ -91,47 +93,32 @@ shared object importProposals {
         }
     }
 
-    Set<Declaration> findImportCandidates(Module mod, String name, Tree.CompilationUnit rootNode)
-            => HashSet {
-                stability = unlinked;
-                elements
-                        = CeylonIterable(mod.allVisiblePackages)
-                            .filter((pkg) => !pkg.nameAsString.empty)
-                            .map((pkg) => let (Declaration? d = pkg.getMember(name, null, false)) d)
-                            .coalesced;
-            };
-    
     void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint) {
-        void callback() {
-            value change 
-                    = platformServices.document.createTextChange {
-                name = "Add Import";
-                input = data.phasedUnit;
-            };
-            change.initMultiEdit();
-            
-            value edits = importEdits {
-                rootNode = data.rootNode;
-                declarations = {declaration};
-                aliases = null;
-                declarationBeingDeleted = null;
-                doc = change.document;
-            };
-            
-            for (e in edits) {
-                change.addEdit(e);
-            }
-            
-            if (change.hasEdits) {
-                change.apply();
-            }
+        
+        value change 
+                = platformServices.document.createTextChange {
+            name = "Add Import";
+            input = data.phasedUnit;
+        };
+        change.initMultiEdit();
+        
+        value edits = importEdits {
+            rootNode = data.rootNode;
+            declarations = {declaration};
+            aliases = null;
+            declarationBeingDeleted = null;
+            doc = change.document;
+        };
+        
+        for (e in edits) {
+            change.addEdit(e);
         }
         
         value description 
                 = "Add import of '``declaration.name``' in package '``declaration.unit.\ipackage.nameAsString``'";
         data.addQuickFix {
             description = description;
-            change = callback;
+            change = change;
             qualifiedNameIsPath = true;
             image = Icons.imports;
             hint = hint then description;
@@ -424,7 +411,7 @@ shared object importProposals {
             value pack = rootNode.unit.\ipackage;
             if (!p.nameAsString.empty
                         && p!=pack
-                        && p.nameAsString!=\iLANGUAGE_MODULE_NAME
+                        && p.nameAsString!=Module.languageModuleName
                         && (!declaration.classOrInterfaceMember 
                             || declaration.staticallyImportable)) {
                 if (!isImported(declaration, rootNode)) {
