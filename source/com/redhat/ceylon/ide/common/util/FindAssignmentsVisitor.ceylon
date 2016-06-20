@@ -1,6 +1,9 @@
 import ceylon.collection {
     HashSet
 }
+import ceylon.interop.java {
+    JavaSet
+}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
@@ -15,11 +18,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Value,
     Setter
 }
+
 import java.util {
     JSet=Set
-}
-import ceylon.interop.java {
-    JavaSet
 }
 
 shared class FindAssignmentsVisitor extends Visitor {
@@ -207,20 +208,17 @@ shared class FindAssignmentsVisitor extends Visitor {
     
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         value typeArguments = that.typeArguments;
-        if (is Tree.TypeArgumentList typeArguments) {
-            value dec = that.declaration;
-            if (is Generic dec) {
-                value g = dec;
-                value typeParameters = g.typeParameters;
-                value tal = typeArguments;
-                value types = tal.types;
-                variable Integer i = 0;
-                while (i < types.size() && i < typeParameters.size()) {
-                    if (isReference(typeParameters.get(i))) {
-                        nodes.add(types.get(i));
-                    }
-                    i++;
+        if (is Tree.TypeArgumentList typeArguments, 
+            is Generic dec = that.declaration) {
+            value typeParameters = dec.typeParameters;
+            value tal = typeArguments;
+            value types = tal.types;
+            variable Integer i = 0;
+            while (i < types.size() && i < typeParameters.size()) {
+                if (isReference(typeParameters.get(i))) {
+                    nodes.add(types.get(i));
                 }
+                i++;
             }
         }
         
@@ -228,10 +226,9 @@ shared class FindAssignmentsVisitor extends Visitor {
     }
     
     shared actual void visit(Tree.SimpleType that) {
-        if (exists typeArguments = that.typeArgumentList) {
-            value dec = that.declarationModel;
-            value g = dec;
-            value typeParameters = g.typeParameters;
+        if (exists typeArguments = that.typeArgumentList,
+            exists value dec = that.declarationModel) {
+            value typeParameters = dec.typeParameters;
             value types = typeArguments.types;
             variable Integer i = 0;
             while (i < types.size() && i < typeParameters.size()) {
