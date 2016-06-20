@@ -608,14 +608,35 @@ shared object nodes {
     shared Integer getTokenLength(CommonToken token)
             => token.stopIndex - token.startIndex + 1;
     
+    shared Set<String> renameProposals(node, rootNode = null) {
+        "If given a [[Tree.Declaration]], suggest names based on the
+         type of the term."
+        Tree.Declaration node;
+        "If specified, and the given [[node]] occurs in an 
+         argument list, suggest the name of the parameter."
+        Tree.CompilationUnit? rootNode;
+        
+        value names = HashSet<String>();
+        addNameProposals(names, false, node.declarationModel.name,
+            node is Tree.TypedDeclaration|Tree.ObjectDefinition);
+        value ex = switch (node)
+            case (is Tree.AttributeDeclaration)
+                node.specifierOrInitializerExpression?.expression
+            case (is Tree.MethodDeclaration) 
+                node.specifierExpression?.expression
+            else null;
+        nameProposals(ex, rootNode, false, true).filter(not("it".equals)).each(names.add);
+        return names;
+    }
+    
     "Generates proposed names for provided node.
      
      Returned names are quoted to be valid text representing a 
      variable name."
-    shared [String+] nameProposals(node = null, rootNode = null, unplural = false, avoidClash = true) {
+    shared [String+] nameProposals(node, rootNode = null, unplural = false, avoidClash = true) {
         "If given a [[Tree.Term]], suggest names based on the
          type of the term."
-        Node? node;
+       Tree.Term? node;
         "Use English pluralization rules to find a singular 
          form of the proposed name."
         Boolean unplural;
@@ -822,11 +843,13 @@ shared object nodes {
     
     shared void addNameProposals(
         MutableSet<String>|JSet<JString> names,
-        Boolean plural, String name) {
+        Boolean plural, String name,
+        Boolean lowercase = true) {
         value matcher = idPattern.matcher(javaString(name));
+        function lower(String str) => lowercase then str.lowercased else str;
         while (matcher.find()) {
             value subname 
-                    = matcher.group(1).lowercased 
+                    = lower(matcher.group(1)) 
                     + name[matcher.start(2) ...];
             value pluralized 
                     = plural 

@@ -79,7 +79,7 @@ createExtractFunctionRefactoring(
             document = doc;
             newName = 
                     functionName 
-                    else nodes.nameProposals(node).first;
+                    else nodes.nameProposals(if (is Tree.Term node) then node else null).first;
             rootNode = rootNode;
             tokens = tokens;
             selection = [selectionStart, selectionEnd];
@@ -1098,7 +1098,7 @@ shared class ExtractFunctionRefactoring(
     
     shared [String+] nameProposals {
         value proposals = nodes.nameProposals {
-            node = node;
+            node = if (is Tree.Term node) then node else null;
             rootNode = rootNode;
         }.collect((n) => n == "it" then "do" else n);
         

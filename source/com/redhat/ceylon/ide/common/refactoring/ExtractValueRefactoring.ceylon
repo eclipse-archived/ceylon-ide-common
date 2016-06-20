@@ -50,7 +50,8 @@ shared interface ExtractValueRefactoring<IRegion>
 
     nameProposals
             => nodes.nameProposals {
-        node = editorData.node;
+        node = if (is Tree.Term node = editorData.node) 
+                then node else null;
         rootNode = editorData.rootNode;
     };
     

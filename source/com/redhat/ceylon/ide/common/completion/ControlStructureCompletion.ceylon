@@ -1,5 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node
+    Node,
+    Tree
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -198,7 +199,7 @@ shared abstract class ControlStructureProposal
             
             value proposals = platformServices.completion.createProposalsHolder();
             nodes.nameProposals {
-                node = node;
+                node = if (is Tree.Term node) then node else null;
                 unplural = false;
                 rootNode = cpc.parsedRootNode;
             }.each((name) => newNameCompletion(proposals, name));

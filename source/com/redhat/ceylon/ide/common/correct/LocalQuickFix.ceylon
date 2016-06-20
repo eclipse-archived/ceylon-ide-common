@@ -139,17 +139,16 @@ shared interface AbstractLocalProposal {
         
         value unit = data.node.unit;
         
-        variable Node expression;
+        variable Tree.Term? expression;
         variable Node expanse;
         variable Type resultType;
         switch (st = nodes.findStatement(data.rootNode, data.node))
         case (is Tree.ExpressionStatement) {
             value e = st.expression;
-            expression = e;
+            expression = e.term;
             expanse = st;
             resultType = e.typeModel;
-            value term = e.term;
-            if (is Tree.InvocationExpression term) {
+            if (is Tree.InvocationExpression term = expression) {
                 value ie = term;
                 value primary = ie.primary;
                 if (is Tree.QualifiedMemberExpression primary) {
@@ -161,7 +160,7 @@ shared interface AbstractLocalProposal {
                         //expression statement
                         value p = prim.primary;
                         expression = p;
-                        expanse = expression;
+                        expanse = term;
                         resultType = p.typeModel;
                     }
                 }
@@ -181,8 +180,8 @@ shared interface AbstractLocalProposal {
             if (exists aa = st.annotationList.anonymousAnnotation,
                 currentOffset <= aa.endIndex.intValue()) {
                 
-                expression = aa;
-                expanse = expression;
+                expression = aa.stringLiteral;
+                expanse = aa;
                 resultType = unit.stringType;
             }
             else if (!annotations.empty,
@@ -190,7 +189,7 @@ shared interface AbstractLocalProposal {
                 
                 value a = annotations.get(0);
                 expression = a;
-                expanse = expression;
+                expanse = a;
                 resultType = a.typeModel;
             }
             else if (is Tree.TypedDeclaration st) {
@@ -201,13 +200,13 @@ shared interface AbstractLocalProposal {
                 value t = type.typeModel;
                 switch (type)
                 case (is Tree.SimpleType) {
-                    expression = type;
-                    expanse = expression;
+                    expression = null; //TODO: type;
+                    expanse = type;
                     resultType = t;
                 }
                 case (is Tree.FunctionType) {
-                    expression = type;
-                    expanse = expression;
+                    expression =null; //TODO: type;
+                    expanse = type;
                     resultType = unit.getCallableReturnType(t);
                 }
                 else {

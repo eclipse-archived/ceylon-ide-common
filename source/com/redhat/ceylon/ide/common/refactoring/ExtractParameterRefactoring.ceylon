@@ -38,7 +38,8 @@ shared interface ExtractParameterRefactoring<IRegion>
     shared formal actual variable Type? type;
     
     nameProposals => nodes.nameProposals {
-        node = editorData.node;
+        node = if (is Tree.Term node = editorData.node) 
+                then node else null;
         rootNode = editorData.rootNode;
     };
     
