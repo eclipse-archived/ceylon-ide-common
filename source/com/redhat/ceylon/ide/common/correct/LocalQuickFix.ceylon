@@ -139,7 +139,7 @@ shared interface AbstractLocalProposal {
         
         value unit = data.node.unit;
         
-        variable Tree.Term? expression;
+        variable Tree.Term|Tree.Type? expression;
         variable Node expanse;
         variable Type resultType;
         switch (st = nodes.findStatement(data.rootNode, data.node))
@@ -200,12 +200,12 @@ shared interface AbstractLocalProposal {
                 value t = type.typeModel;
                 switch (type)
                 case (is Tree.SimpleType) {
-                    expression = null; //TODO: type;
+                    expression = type;
                     expanse = type;
                     resultType = t;
                 }
                 case (is Tree.FunctionType) {
-                    expression =null; //TODO: type;
+                    expression = type;
                     expanse = type;
                     resultType = unit.getCallableReturnType(t);
                 }

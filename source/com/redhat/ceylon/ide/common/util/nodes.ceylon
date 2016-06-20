@@ -1,6 +1,7 @@
 import ceylon.collection {
     HashSet,
-    MutableSet
+    MutableSet,
+    SetMutator
 }
 import ceylon.interop.java {
     javaString
@@ -31,7 +32,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     FunctionOrValue,
     Function,
-    Class
+    Class,
+    Type
 }
 
 import java.lang {
@@ -636,7 +638,7 @@ shared object nodes {
     shared [String+] nameProposals(node, rootNode = null, unplural = false, avoidClash = true) {
         "If given a [[Tree.Term]], suggest names based on the
          type of the term."
-       Tree.Term? node;
+       Tree.Term|Tree.Type? node;
         "Use English pluralization rules to find a singular 
          form of the proposed name."
         Boolean unplural;
@@ -649,7 +651,14 @@ shared object nodes {
         
         value names = HashSet<String>();
         
-        if (is Tree.Term node) {
+        switch (node)
+        case (null) {}
+        case (is Tree.Type) {
+            if (exists type = node.typeModel) {
+                addNameProposalsForType(names, type, unplural, node.unit);
+            }
+        }
+        case (is Tree.Term) {
             Tree.Term term = TreeUtil.unwrapExpressionUntilTerm(node);
             Tree.Term typedTerm =
                 //TODO: is this really a good idea?!
@@ -721,33 +730,8 @@ shared object nodes {
             }
             else {}
             
-            if (exists type = typedTerm.typeModel,
-                !ModelUtil.isTypeUnknown(type)) {
-                if (!unplural, type.classOrInterface || type.typeParameter) {
-                    addNameProposals(names, false, type.declaration.name);
-                }
-                if (exists unit = node.unit) {
-                    if (unit.isOptionalType(type),
-                        exists def = unit.getDefiniteType(type),
-                        def.classOrInterface || def.typeParameter) {
-                        addNameProposals(names, false, def.declaration.name);
-                    }
-                    if (unit.isIterableType(type),
-                        exists iter = unit.getIteratedType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                    if (unit.isJavaIterableType(type),
-                        exists iter = unit.getJavaIteratedType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                    if (unit.isJavaArrayType(type),
-                        exists iter = unit.getJavaArrayElementType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                }
+            if (exists type = typedTerm.typeModel) {
+                addNameProposalsForType(names, type, unplural, node.unit);
             }
         }
         
@@ -842,11 +826,13 @@ shared object nodes {
     }
     
     shared void addNameProposals(
-        MutableSet<String>|JSet<JString> names,
+        SetMutator<String>|JSet<JString> names,
         Boolean plural, String name,
         Boolean lowercase = true) {
+        
         value matcher = idPattern.matcher(javaString(name));
-        function lower(String str) => lowercase then str.lowercased else str;
+        function lower(String str) 
+                => lowercase then str.lowercased else str;
         while (matcher.find()) {
             value subname 
                     = lower(matcher.group(1)) 
@@ -859,7 +845,7 @@ shared object nodes {
                     pluralized in escaping.keywords
                         then "\\i" + pluralized
                         else pluralized;
-            if (is MutableSet<String> names) {
+            if (is SetMutator<String> names) {
                 names.add(escaped);
             } else {
                 names.add(javaString(escaped));
@@ -881,6 +867,37 @@ shared object nodes {
                 }
             }
         }*/
+    }
+    
+    void addNameProposalsForType(SetMutator<String>|JSet<JString> names, 
+            Type type, Boolean unplural, Unit? unit = null) {
+        if (!ModelUtil.isTypeUnknown(type)) {
+            if (!unplural, type.classOrInterface || type.typeParameter) {
+                addNameProposals(names, false, type.declaration.name);
+            }
+            if (exists unit) {
+                if (unit.isOptionalType(type),
+                    exists def = unit.getDefiniteType(type),
+                    def.classOrInterface || def.typeParameter) {
+                    addNameProposals(names, false, def.declaration.name);
+                }
+                if (unit.isIterableType(type),
+                    exists iter = unit.getIteratedType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+                if (unit.isJavaIterableType(type),
+                    exists iter = unit.getJavaIteratedType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+                if (unit.isJavaArrayType(type),
+                    exists iter = unit.getJavaArrayElementType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+            }
+        }
     }
     
     shared Tree.SpecifierOrInitializerExpression? getDefaultArgSpecifier(Tree.Parameter p) {
