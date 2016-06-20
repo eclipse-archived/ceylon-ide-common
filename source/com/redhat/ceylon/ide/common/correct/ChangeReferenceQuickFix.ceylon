@@ -99,7 +99,9 @@ shared object changeReferenceQuickFix {
 
     shared void addChangeReferenceProposals(QuickFixData data) {
         if (!data.useLazyFixes
-            || data.node is Tree.QualifiedType|Tree.QualifiedMemberExpression) {
+            || data.node is Tree.QualifiedType
+                          | Tree.QualifiedMemberExpression
+                          | Tree.QualifiedTypeExpression) {
             findChangeReferenceProposals(data);
         }
     }
