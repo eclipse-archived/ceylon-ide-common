@@ -626,6 +626,8 @@ shared object nodes {
                 node.specifierOrInitializerExpression?.expression
             case (is Tree.MethodDeclaration) 
                 node.specifierExpression?.expression
+            case (is Tree.Variable) 
+                node.specifierExpression?.expression
             else null;
         nameProposals(ex, rootNode, false, true).filter(not("it".equals)).each(names.add);
         return names;
