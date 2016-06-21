@@ -169,7 +169,7 @@ shared object specifyTypeQuickFix {
     InferredType inferType(Tree.CompilationUnit cu, Tree.Type type) {
         value itv = object extends InferTypeVisitor(type.unit) {
             shared actual void visit(Tree.TypedDeclaration that) {
-                if (that.type == type) {
+                if (exists t = that.type, t == type) {
                     declaration = that.declarationModel;
                     // union(that.getType().getTypeModel());
                 }
