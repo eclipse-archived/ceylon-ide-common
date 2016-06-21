@@ -22,7 +22,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeParameter,
     Declaration,
     ModelUtil,
-    TypeDeclaration
+    TypeDeclaration,
+    NothingType
 }
 
 import java.util {
@@ -164,16 +165,18 @@ shared class ObjectClassDefinitionGenerator(
                 }
             }
         }
-        for (superType in td.supertypeDeclarations) {
-            for (m in superType.members) {
-                if (m.shared) {
-                    Declaration? r = td.getMember(m.name, null, false);
-                    if (!(r?.refines(m) else false),
-                        // !r.getContainer().equals(ut) &&  
-                        !ambiguousNames.add(m.name)) {
-                        importProposals.importSignatureTypes {
-                            declaration = m;
-                        };
+        if (!td is NothingType) {
+            for (superType in td.supertypeDeclarations) {
+                for (m in superType.members) {
+                    if (m.shared) {
+                        Declaration? r = td.getMember(m.name, null, false);
+                        if (!(r?.refines(m) else false),
+                            // !r.getContainer().equals(ut) &&  
+                            !ambiguousNames.add(m.name)) {
+                            importProposals.importSignatureTypes {
+                                declaration = m;
+                            };
+                        }
                     }
                 }
             }
