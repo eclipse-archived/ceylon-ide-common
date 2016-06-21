@@ -44,11 +44,9 @@ shared object addNamedArgumentQuickFix {
                             + doc.getIndent(last);
                 }
             }
-            
-            value params = args.parameterList;
             variable String? result = null;
             variable value multipleResults = false;
-            for (param in params.parameters) {
+            for (param in args.parameterList.parameters) {
                 if (!param.defaulted, 
                     !javaString(param.name) in args.argumentNames) {
                     multipleResults = result exists;
@@ -61,14 +59,17 @@ shared object addNamedArgumentQuickFix {
             }
             
             if (loc == stop) {
-                change.addEdit(InsertEdit(stop, " "));
+                change.addEdit(InsertEdit {
+                    start = stop;
+                    text = " ";
+                });
             }
             
             data.addQuickFix {
                 description 
-                    = if (multipleResults)
-                    then "Fill in missing named arguments"
-                    else "Fill in missing named argument '``(result else "")``'";
+                    = if (exists name = result, !multipleResults)
+                    then "Fill in missing named argument '``name``'"
+                    else "Fill in missing named arguments";
                 change = change;
                 selection = DefaultRegion(loc);
             };
