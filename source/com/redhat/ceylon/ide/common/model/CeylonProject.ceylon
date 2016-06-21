@@ -471,10 +471,10 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     shared MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFilesMap = 
-            ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+            ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>(emptyMap, map);
 
-    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
-    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>();
+    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>(emptyMap, map);
+    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>(emptyMap, map);
     
     value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
     value virtualFileCache = WeakHashMap<NativeFile, SoftReference<FileVirtualFileAlias>>();
