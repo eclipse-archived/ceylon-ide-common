@@ -38,6 +38,7 @@ import java.util {
 
 shared interface WithParentVirtualFile satisfies VirtualFile {
     shared formal VirtualFile? parent;
+    shared formal String? getRelativePath(VirtualFile file);
 }
 
 shared interface BaseResourceVirtualFile
@@ -55,6 +56,18 @@ shared interface BaseResourceVirtualFile
     case (smaller) -1
     case (equal) 0
     case (larger) 1;
+    
+    shared actual default String? getRelativePath(VirtualFile ancestor) {
+        if (path == ancestor.path) {
+            return "";
+        }
+        value myPath = Path(path);
+        value ancestorPath = Path(ancestor.path);
+        if (ancestorPath.isPrefixOf(myPath)) {
+            return myPath.makeRelativeTo(ancestorPath).string;
+        }
+        return null;
+    }
     
     shared formal actual InputStream? inputStream;
     
