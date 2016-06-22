@@ -38,7 +38,6 @@ import java.util {
 
 shared interface WithParentVirtualFile satisfies VirtualFile {
     shared formal VirtualFile? parent;
-    shared formal String? getRelativePath(VirtualFile file);
 }
 
 shared interface BaseResourceVirtualFile
