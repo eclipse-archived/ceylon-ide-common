@@ -567,6 +567,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         defaultValue = []; 
     };
     
+    shared Boolean containsPhasedUnitWithRelativePath(String relativePath) =>
+            doWithPhasedUnitsObject { 
+        action(AnyPhasedUnitMap phasedUnitMap) => phasedUnitMap.containsRelativePath(relativePath);
+        defaultValue = false; 
+    };
+    
+    
     shared actual ExternalPhasedUnit? getPhasedUnit(
         "Either the **absolute path** or a [[virtual file|VirtualFile]]
          used to identify and retrieve the [[phased unit|PhasedUnit]]"
