@@ -60,9 +60,9 @@ shared class ImmutableMapWrapper<Key, Item>(
                 return this;
             }) synchronize(this, do);
     
-    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key), Boolean reuseExistingItems=true) => 
+    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key), Boolean reuseExistingItems=false) => 
             let(do = () {
-                if (immutableMap.size != newKeys.size
+                if (!reuseExistingItems || immutableMap.size != newKeys.size
                     || !immutableMap.keys.containsEvery(newKeys)) {
                     immutableMap = newMap(newKeys.map((key) => 
                         key -> (
@@ -91,11 +91,25 @@ shared class ImmutableMapWrapper<Key, Item>(
                 return this;
             }) synchronize(this, do);
                     
-    shared ImmutableMapWrapper<Key, Item> putAllKeys({Key*} keys, Item toItem(Key key)) => 
+    shared ImmutableMapWrapper<Key, Item> putAllKeys({Key*} keys, Item toItem(Key key), Boolean reuseExistingItems=false) => 
             let(do = () {
-                immutableMap = newMap(immutableMap
-                    .filterKeys((keyToKeep) => ! keyToKeep in keys)
-                        .chain(keys.map((key) => key->toItem(key))));
+                if (!reuseExistingItems || !immutableMap.keys.containsEvery(keys)) {
+                    immutableMap = newMap(immutableMap
+                        .filterKeys((keyToKeep) => ! keyToKeep in keys)
+                            .chain(keys.map((key) => 
+                        key -> (
+                            if (reuseExistingItems, exists item=immutableMap[key]) 
+                            then item 
+                            else toItem(key)))));
+                }
+                return this;
+            }) synchronize(this, do);
+
+    shared ImmutableMapWrapper<Key, Item> putIfAbsent(Key key, Item toItem()) => 
+            let(do = () {
+                if (! immutableMap[key] exists) {
+                    immutableMap = newMap({key->toItem(), *immutableMap});
+                }
                 return this;
             }) synchronize(this, do);
 

@@ -548,14 +548,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             sourceFoldersMap.resetKeys(
                 sourceNativeFolders, 
                 (nativeFolder) => 
-                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact)).items;
+                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact), true).items;
     
     "Virtual folders of existing resource folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
             resourceFoldersMap.resetKeys(
                 resourceNativeFolders, 
                 (nativeFolder) => 
-                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact)).items;
+                        vfsServices.createVirtualFolder(nativeFolder, ideArtifact), true).items;
 
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders => 
             sourceFolders.chain(resourceFolders);
