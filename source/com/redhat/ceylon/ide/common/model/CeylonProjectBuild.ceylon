@@ -119,7 +119,6 @@ shared final class Severity
  Since we already have quick fixes that do even better, it's just useless processing."
 shared Cancellable cancelDidYouMeanSearch => Cancellable.alwaysCancelled;
 
-
 shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(ceylonProject)
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -344,12 +343,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         Integer theStartLine,
         Message theTypecheckerMessage)
             extends SourceFileMessage(
-                theFile, 
-                theStartOffset,
-                theEndOffset,
-                theStartCol,
-                theStartLine,
-                theTypecheckerMessage) {
+            theFile, 
+            theStartOffset,
+            theEndOffset,
+            theStartCol,
+            theStartLine,
+            theTypecheckerMessage) {
         severity = Severity.error;
     }
     
@@ -361,12 +360,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         Integer theStartLine,
         Message theTypecheckerMessage)
             extends SourceFileMessage(
-                theFile, 
-                theStartOffset,
-                theEndOffset,
-                theStartCol,
-                theStartLine,
-                theTypecheckerMessage) {
+            theFile, 
+            theStartOffset,
+            theEndOffset,
+            theStartCol,
+            theStartLine,
+            theTypecheckerMessage) {
         severity = Severity.warning;
     }
     
@@ -380,7 +379,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             sourceFileMessages.filter((error) => error.file == file);
     
     shared Boolean sourceFileHasMessages(NativeFile file, Boolean searchedSeverity(Severity severity) => true) =>
-          messagesForSourceFile(file)
+            messagesForSourceFile(file)
             .any((message) => searchedSeverity(message.severity));
     
     shared Map<NativeFile,Set<String>> missingClasses => state.missingClasses.immutable;
@@ -536,16 +535,16 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     void initializeTheCeylonModel(BaseProgressMonitor monitor) => 
             withCeylonModelCaching {
-                void do() {
-                    ceylonProject.withSourceModel(false, void () {
-                        try(progress = monitor.Progress(1000, "Initializing the Ceylon model for project `` ceylonProject.name ``")) {
-                            typecheckDependencies(progress.newChild(300));
-                            initializeLanguageModule(progress.newChild(50));
-                            typecheck(progress.newChild(650), ceylonProject.parsedUnits);
-                        }
-                    }, 20);
+        void do() {
+            ceylonProject.withSourceModel(false, void () {
+                try(progress = monitor.Progress(1000, "Initializing the Ceylon model for project `` ceylonProject.name ``")) {
+                    typecheckDependencies(progress.newChild(300));
+                    initializeLanguageModule(progress.newChild(50));
+                    typecheck(progress.newChild(650), ceylonProject.parsedUnits);
                 }
-            };
+            }, 20);
+        }
+    };
     
     void resolveClasspath(BaseProgressMonitor monitor) {
         try(progress = monitor.Progress(1000, "Ceylon build of project `` ceylonProject.name ``")) {
@@ -588,7 +587,6 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             updateCeylonModel(progress.newChild(300));
             
-            performBinaryGeneration(progress.newChild(200));
             finished = true;
         } finally {
             if (!finished) {
@@ -646,10 +644,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             if (progress.cancelled) {
                 throw platformUtils.newOperationCanceledException();
             }
-
+            
             // Collect dependencies
             progress.subTask("Collecting dependencies for project: `` ceylonProject.name ``");
-
+            
             for (pu in phasedUnitsToTypecheck) {
                 UnitDependencyVisitor(pu).visit(pu.compilationUnit);
                 progress.worked(1);
@@ -666,7 +664,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             
             progress.subTask("Collecting problems for project: `` ceylonProject.name ``");
-
+            
             function retrieveErrors(TypecheckerAliases<NativeProject,NativeResource,NativeFolder,NativeFile>.ProjectPhasedUnitAlias projectPhasedUnit) {
                 value compilationUnit = projectPhasedUnit.compilationUnit;
                 compilationUnit.visit(WarningSuppressionVisitor<Warning>(javaClass<Warning>(),
@@ -822,8 +820,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             value incrementalTypecheckingPreliminaryPhases = {
                 ["validating tree", 1, void(PhasedUnit pu) => pu.validateTree()],
                 ["module descriptor parsing", 1, void(PhasedUnit pu) { pu.visitSrcModulePhase(); }], // The use of the specifier is prohibited here, 
-                                                                                                      // because visitSrcModulePhase() would seen as returning 
-                                                                                                      // Module though in fact can return null (Java method).
+                // because visitSrcModulePhase() would seen as returning 
+                // Module though in fact can return null (Java method).
                 ["module and package descriptor completion", 1, void(PhasedUnit pu) => pu.visitRemainingModulePhase()]
             };
             
@@ -853,7 +851,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         inputStream => virtualFile.inputStream;
         sourceRelativePath => virtualFile.rootRelativePath?.string else "<unknown>";
     }
-     
+    
     Boolean updateSourceArchives(BaseProgressMonitor monitor, {FileVirtualFileAlias*} updatedFiles) {
         assert(exists sourceModules = ceylonProject.modules?.filter(BaseIdeModule.isProjectModule)?.sequence());
         variable value success = true;
@@ -868,14 +866,14 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             for (m in sourceModules) {
                 try {
                     value sourceDirectories = ceylonProject.sourceFolders.map(
-                            (virtualFolder) => virtualFolder.toJavaFile).coalesced;
+                        (virtualFolder) => virtualFolder.toJavaFile).coalesced;
                     value sac = CeylonUtils.makeSourceArtifactCreator(outRepo, JavaIterable(sourceDirectories),
                         m.nameAsString, m.version, false, cmrLogger);
                     sac.copyStreams(JavaCollection<SourceStream>(updatedFiles
                         .filter((file)
-                            => file.sourceFile &&
-                                equalsWithNulls(file.ceylonModule, m))
-                        .map(VirtualFileSourceStream).coalesced.sequence()));
+                        => file.sourceFile &&
+                            equalsWithNulls(file.ceylonModule, m))
+                            .map(VirtualFileSourceStream).coalesced.sequence()));
                 } catch (IOException e) {
                     platformUtils.log(Status._ERROR, "Source generation failed for module ``m``", e);
                     success = false;
@@ -897,7 +895,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         // Full Build
                         
                         ceylonProject.state = ProjectState.typechecking;
-
+                        
                         phasedUnitsToTypecheck = ceylonProject.parsedUnits;
                         
                         // First typecheck PhasedUnits of dependencies (source archives)
@@ -934,16 +932,36 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         });
     });
     
-    shared void performBinaryGeneration(BaseProgressMonitor monitor) =>
-            synchronize(this, () {
-        withCeylonModelCaching(() {
-            try(progress = monitor.Progress(1000, "Binary Generation of project `` ceylonProject.name ``")) {
+    shared class BinaryGenerator() {
+        "A function capable of generating binaries. Returns true if the generation
+         was successful and [[State.jvmBackendGenerationRequired]]
+         can be cleared."
+        shared default Boolean build(CeylonProjectBuildAlias build,
+            Set<FileVirtualFileAlias> filesToBuild) {
+            
+            withCeylonModelCaching(() {
+                // TODO: implement binary generation.
+            });
+            return true;
+        }
+        
+        shared void registerBackendMessage(SourceFileMessage message) {
+            state.backendMessages.add(message);
+        }
+    }
+    
+    shared void performBinaryGeneration(BaseProgressMonitor monitor, BinaryGenerator generator) =>
+        synchronize(this, () {
+            try (progress = monitor.Progress(1000, "Binary Generation of project ``ceylonProject.name``")) {
                 state.backendMessages.clear();
                 state.missingClasses.clear();
-                // TODO: implement binary generation.
+                
+                value filesToBuild = state.jvmBackendGenerationRequired.clear();
+                if (!generator.build(this, filesToBuild)) {
+                    state.buildType.requireFullBuild();
+                }
             }
         });
-    });
     
     void cleanRemovedFilesFromCeylonModel([FileVirtualFileAlias*] filesRemovedFromCurrentProject) {
         for (file in filesRemovedFromCurrentProject) {
@@ -984,13 +1002,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         for (file in filesRemovedFromCurrentProject) {
             if (exists pkg = file.ceylonPackage,
                 exists relativeFilePath = file.rootRelativePath?.string) {
-
+                
                 Module m = pkg.\imodule;
                 value modulesOutputDirectory = ceylonProject.ceylonModulesOutputDirectory;
-
+                
                 Boolean explodeModules = false; // TODO : Part of what will be added in the next step
                 File? getCeylonClassesOutputDirectory(BaseCeylonProject p) => null; // TODO : Part of what will be added in the next step
-
+                
                 value ceylonOutputDirectory = if (explodeModules) then 
                 getCeylonClassesOutputDirectory(ceylonProject) else null;
                 
@@ -1028,7 +1046,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                             }
                             
                             if (explodeModules) {
-                               File(ceylonOutputDirectory, 
+                                File(ceylonOutputDirectory, 
                                     entryToDelete.replace("/", File.separator))
                                         .delete();
                             }
@@ -1060,7 +1078,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         "module-resources" + File.separator + relativeFilePath.replace("/", File.separator));
                     resourceFile.delete();
                 }
-
+                
                 
             }
         }
@@ -1089,13 +1107,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException();
                 }
-
+                
                 value filesRemovedFromCurrentProject = changedFiles
                         .filter((change) => change.type == ResourceChangeType.fileRemoval)
                         .map((change) => unsafeCast<FileVirtualFileRemoval>(change).resource)
                         .filter((file) => equalsWithNulls(file.ceylonProject, ceylonProject))
                         .sequence();
-
+                
                 progress.subTask("Cleaning files and markers for project `` ceylonProject.name ``");
                 cleanRemovedFilesFromCeylonModel(filesRemovedFromCurrentProject);
                 progress.worked(40);
@@ -1105,7 +1123,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException();
                 }
-
+                
                 for(removedFile in filesRemovedFromCurrentProject) {
                     state.frontendMessages.removeEvery((message) => message.file == removedFile);
                     state.backendMessages.removeEvery((message) => message.file == removedFile);
@@ -1116,7 +1134,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             }
         }
     }
-
+    
     void calculateDependencies(Set<FileVirtualFileChange> changedFiles, Cancellable cancellable) {
         
         value astAwareIncrementalBuild = true;
@@ -1152,11 +1170,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         Unit duplicateUnit = duplicateDeclaration.unit;
                         if (is SourceFile 
                             & IResourceAware<NativeProject, NativeFolder, NativeFile> duplicateUnit,
-                            exists duplicateDeclFile = duplicateUnit.resourceFile,
-                            exists duplicateDeclVirtualFile = 
-                                    ceylonProject.model.getProject(duplicateUnit.resourceProject)
-                                    ?.getOrCreateFileVirtualFile(duplicateDeclFile),
-                            duplicateDeclVirtualFile.existsOnDisk) {
+                        exists duplicateDeclFile = duplicateUnit.resourceFile,
+                        exists duplicateDeclVirtualFile = 
+                                ceylonProject.model.getProject(duplicateUnit.resourceProject)
+                                ?.getOrCreateFileVirtualFile(duplicateDeclFile),
+                        duplicateDeclVirtualFile.existsOnDisk) {
                             filesToAddInTypecheck.add(duplicateDeclVirtualFile);
                             filesToAddInCompile.add(duplicateDeclVirtualFile);
                         }
@@ -1200,12 +1218,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         value filesWithBackendError = backendMessages
                 .filter((message) => message.severity == Severity.error)
                 .map((message) => ceylonProject.getOrCreateFileVirtualFile(message.file));
-
+        
         value filesWithMissingClassFile = missingClasses.keys
                 .map((nativeFile) => ceylonProject.getOrCreateFileVirtualFile(nativeFile));
-                
+        
         for (file in filesWithBackendError
-                        .chain(filesWithMissingClassFile)) {
+            .chain(filesWithMissingClassFile)) {
             filesToAddInTypecheck.add(file);
             filesToAddInCompile.add(file);
         }
@@ -1213,15 +1231,15 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         state.ceylonModelUpdateRequired.addAll(filesToAddInTypecheck);
         state.jvmBackendGenerationRequired.addAll(filesToAddInCompile);
     }
-
+    
     
     {String*} getDependentsOf(FileVirtualFileAlias srcFile,
         TypeChecker currentFileTypeChecker) {
         
         if (ceylonProject.isCeylon(srcFile.nativeResource),
             exists phasedUnit = 
-                        currentFileTypeChecker.phasedUnits
-                            .getPhasedUnit(srcFile),
+                    currentFileTypeChecker.phasedUnits
+                    .getPhasedUnit(srcFile),
             exists unit = phasedUnit.unit) {
             
             return toCeylonStringIterable(unit.dependentsOf);
@@ -1238,7 +1256,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     Set<FileVirtualFileAlias> searchForDependantFiles(Set<FileVirtualFileChange> changedFiles, Boolean filterAccordingToStructureDelta, Boolean includeTransitiveDependencies,  Cancellable cancellable) {
         value analyzedFiles= HashSet<FileVirtualFileAlias>();
-
+        
         function shouldConsiderFile(FileVirtualFileAlias srcFile) {
             value alreadyAnalyzed = srcFile in analyzedFiles;
             analyzedFiles.add(srcFile);
@@ -1276,18 +1294,18 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 return null;
             }
         }
-
+        
         value changeDependents= HashSet<FileVirtualFileAlias>();
         changeDependents.addAll(changedFiles*.resource);
         
         function searchForNewDependencies() => { 
             for (srcFile in changeDependents) 
-                if (shouldConsiderFile(srcFile),
-                    exists currentFileCeylonProject = srcFile.ceylonProject,
-                    exists currentFileTypeChecker = currentFileCeylonProject.typechecker)
-                    for (dependingFilePath in getDependentsOf(srcFile, currentFileTypeChecker))
-                        if (exists depFile = dependencyToFile(dependingFilePath, currentFileCeylonProject))
-                            depFile
+            if (shouldConsiderFile(srcFile),
+                exists currentFileCeylonProject = srcFile.ceylonProject,
+                exists currentFileTypeChecker = currentFileCeylonProject.typechecker)
+            for (dependingFilePath in getDependentsOf(srcFile, currentFileTypeChecker))
+            if (exists depFile = dependencyToFile(dependingFilePath, currentFileCeylonProject))
+            depFile
         }.sequence();
         
         while(nonempty newDependencies = searchForNewDependencies()) {
