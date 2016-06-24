@@ -2,6 +2,12 @@ import com.redhat.ceylon.ide.common.platform {
     platformUtils,
     Status
 }
+import com.redhat.ceylon.ide.common.vfs {
+    FileVirtualFile
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    ProjectPhasedUnit
+}
 shared interface ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
         given NativeResource satisfies Object 
@@ -14,6 +20,8 @@ shared interface ModelListener<NativeProject, NativeResource, NativeFolder, Nati
         {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.SourceFileMessage>*}? frontendMessages, 
         {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.SourceFileMessage>*}? backendMessages, 
         {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.ProjectMessage>*}? projectMessages);
+    shared formal void modelFilesUpdated({FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} updatedFiles);
+    shared formal void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits);
 }
 
 shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -30,6 +38,8 @@ shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolde
         {<CeylonProjectBuildAlias.SourceFileMessage>*}? frontendMessages, 
         {<CeylonProjectBuildAlias.SourceFileMessage>*}? backendMessages, 
         {<CeylonProjectBuildAlias.ProjectMessage>*}? projectMessages) {}
+    shared actual default void modelFilesUpdated({FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} updatedFiles) {}
+    shared actual default void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits) {}
 }
 
 shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -71,4 +81,10 @@ shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFo
             {<CeylonProjectBuildAlias.SourceFileMessage>*}? backendMessages, 
             {<CeylonProjectBuildAlias.ProjectMessage>*}? projectMessages)  =>
                 forAllListeners(ModelListener.buildMessagesChanged)(project, frontendMessages, backendMessages, projectMessages);
+
+        shared actual void modelFilesUpdated({FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} updatedFiles) =>
+                forAllListeners(ModelListener.modelFilesUpdated)(updatedFiles);
+
+        shared actual void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits) =>
+                forAllListeners(ModelListener.modelPhasedUnitsTypechecked)(typecheckedUnits);
 }

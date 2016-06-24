@@ -924,6 +924,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     typecheck(progress.newChild(700), phasedUnitsToTypecheck);
                     state.buildType.resetFullBuild();
                     ceylonProject.state = ProjectState.typechecked;
+                    ceylonProject.model.modelFilesUpdated(filesRequiringCeylonModelUpdate);
+                    ceylonProject.model.modelPhasedUnitsTypechecked(phasedUnitsToTypecheck);
                     if (! updateSourceArchives(progress.newChild(100), filesRequiringCeylonModelUpdate)) {
                         requestFullBuild();
                     }
