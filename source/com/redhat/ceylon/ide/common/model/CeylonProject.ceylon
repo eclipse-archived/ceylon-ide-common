@@ -509,7 +509,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         shared actual Iterator<IdeModuleAlias> iterator() => 
                 typecheckerModules.listOfModules
                 .toArray(ObjectArray<Module>(typecheckerModules.listOfModules.size()))
-                .array.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
+                .iterable.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
         
         shared actual IdeModuleAlias default =>
                 unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.defaultModule);

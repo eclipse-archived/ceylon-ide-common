@@ -98,7 +98,7 @@ shared class LocalFolderVirtualFile(file)
     children 
         => let(ObjectArray<File>? theChildren = file.listFiles())
                 if (exists folderChildren = theChildren)
-                    then JavaList(folderChildren.array.coalesced
+                    then JavaList(folderChildren.iterable.coalesced
                                 .map {
                                     LocalResourceVirtualFileAlias collecting(File f) 
                                             => if (f.directory)
