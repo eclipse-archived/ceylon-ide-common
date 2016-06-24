@@ -1271,22 +1271,23 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
     
     shared actual void visit(Tree.BaseMemberExpression that) {
         super.visit(that);
-        value currentDec = that.declaration;
-        for (bme in results) {
-            if (exists dec = bme.declaration) {
-                if (dec == currentDec) {
-                    return;
-                }
-                if (is TypedDeclaration currentDec,
-                    exists od = currentDec.originalDeclaration,
-                    od == dec) {
-                    return;
+        if (exists currentDec = that.declaration) {
+            for (bme in results) {
+                if (exists dec = bme.declaration) {
+                    if (dec == currentDec) {
+                        return;
+                    }
+                    if (is TypedDeclaration currentDec,
+                        exists od = currentDec.originalDeclaration,
+                        od == dec) {
+                        return;
+                    }
                 }
             }
-        }
-        
-        if (isLocalReference(currentDec, scope, targetScope)) {
-            results.add(that);
+            
+            if (isLocalReference(currentDec, scope, targetScope)) {
+                results.add(that);
+            }
         }
     }
 }
