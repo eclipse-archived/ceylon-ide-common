@@ -14,6 +14,9 @@ import ceylon.interop.java {
 import com.redhat.ceylon.cmr.api {
     ArtifactContext
 }
+import com.redhat.ceylon.common {
+    Constants
+}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnitMap,
     PhasedUnit
@@ -31,6 +34,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.compiler.typechecker.util {
     NewlineFixingStringStream
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
 }
 import com.redhat.ceylon.ide.common.typechecker {
     ExternalPhasedUnit,
@@ -57,11 +64,7 @@ import com.redhat.ceylon.ide.common.vfs {
 import com.redhat.ceylon.model.cmr {
     ArtifactResult,
     JDKUtils,
-    ArtifactResultType,
-    PathFilter,
-    VisibilityType,
-    Repository,
-    ImportType
+    ArtifactResultType
 }
 import com.redhat.ceylon.model.loader.model {
     LazyModule
@@ -98,13 +101,6 @@ import java.util.zip {
 import org.antlr.runtime {
     CommonToken,
     CommonTokenStream
-}
-import com.redhat.ceylon.common {
-    Constants
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
 }
 
 shared class ModuleType of 
@@ -162,7 +158,7 @@ shared abstract class BaseIdeModule()
     
     shared formal {PhasedUnit*} phasedUnits;
     shared JList<PhasedUnit> phasedUnitsAsJavaList
-        => toJavaList(phasedUnits);
+            => toJavaList(phasedUnits);
 
     shared formal ExternalPhasedUnit? getPhasedUnit(
         "Either the **absolute path** or a [[virtual file|VirtualFile]]
@@ -189,9 +185,6 @@ shared abstract class BaseIdeModule()
     
     shared formal {BaseIdeModule*} moduleInReferencingProjects;
     
-    shared actual default JList<Package> allVisiblePackages => super.allVisiblePackages;
-    shared actual default JList<Package> allReachablePackages => super.allReachablePackages;
-
     shared formal void refresh();
 }
 
@@ -226,11 +219,10 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     shared actual Boolean isProjectModule => 
             equalsWithNulls(ModuleType._PROJECT_MODULE, _moduleType);
-    assign isProjectModule {
+    assign isProjectModule =>
         _moduleType = ModuleType._PROJECT_MODULE;
-    }
     
-    shared actual Boolean isDefaultModule => 
+    isDefaultModule => 
             this == moduleManager.modules.defaultModule;
     
     shared actual Boolean isJDKModule {
@@ -248,25 +240,25 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         return ModuleType._SDK_MODULE == existingModuleType;
     }
     
-    shared actual Boolean isCeylonArchive => 
+    isCeylonArchive => 
             isCeylonBinaryArchive || isSourceArchive;
     
-    shared actual Boolean isJavaBinaryArchive => 
+    isJavaBinaryArchive => 
             equalsWithNulls(ModuleType._JAVA_BINARY_ARCHIVE, _moduleType);
     
-    shared actual Boolean isCeylonBinaryArchive => 
+    isCeylonBinaryArchive => 
             equalsWithNulls(ModuleType._CEYLON_BINARY_ARCHIVE, _moduleType);
     
-    shared actual Boolean isSourceArchive => 
+    isSourceArchive => 
             equalsWithNulls(ModuleType._CEYLON_SOURCE_ARCHIVE, _moduleType);
     
-    shared actual Boolean isUnresolved => 
+    isUnresolved => 
             (! artifact exists) && !available;
     
-    shared actual String repositoryDisplayString =>
+    repositoryDisplayString =>
             if (isJDKModule) 
-    then "Java SE Modules"
-    else _repositoryDisplayString;
+                then "Java SE Modules"
+                else _repositoryDisplayString;
     
     function switchExtension(String sap, String oldExtension, String newExtension) => 
             sap.initial(sap.size - oldExtension.size) + newExtension;
@@ -356,9 +348,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             }
         }
         
-        shared actual SoftReference<ExternalPhasedUnit> toStoredType(ExternalPhasedUnit phasedUnit) {
-            return SoftReference<ExternalPhasedUnit>(phasedUnit);
-        }
+        toStoredType(ExternalPhasedUnit phasedUnit) 
+                => SoftReference<ExternalPhasedUnit>(phasedUnit);
         
         shared actual void removePhasedUnitForRelativePath(String relativePath) {
             JString relPath = javaString(relativePath);
@@ -369,9 +360,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         
     }
     
-    shared actual File? artifact => _artifact;
+    artifact => _artifact;
     
-    shared actual void setArtifactResult(ArtifactResult artifactResult) {
+    setArtifactResult(ArtifactResult artifactResult) =>
         synchronize {
             on = this;
             void do() {
@@ -433,14 +424,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     value carPath = existingArtifact.path;
                     _sourceArchivePath = switchExtension(
                         carPath, 
-                        ArtifactContext.\iJAR, 
-                        if (artifactResult.type() == ArtifactResultType.\iMAVEN) 
-                        then ArtifactContext.\iLEGACY_SRC 
-                        else ArtifactContext.\iSRC);
+                        ArtifactContext.jar, 
+                        if (artifactResult.type() == ArtifactResultType.maven) 
+                        then ArtifactContext.legacySrc 
+                        else ArtifactContext.src);
                 }
             }
         };
-    }
     
     void fillSourceRelativePaths() {
         _classesToSources = toCeylonStringMap(
@@ -472,7 +462,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             }
         }
         if (!sourcePathsFilled) {
-            _classesToSources.items.each(void (String s) { 
+            _classesToSources.items.each((s) { 
                 sourceRelativePaths.add(s); 
             });
         }
@@ -488,59 +478,50 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    shared actual void setSourcePhasedUnits(ExternalModulePhasedUnits modulePhasedUnits) =>
+    setSourcePhasedUnits(ExternalModulePhasedUnits modulePhasedUnits) =>
             synchronize { 
-        on = this; 
-        void do() {
-            sourceModulePhasedUnits = WeakReference<ExternalModulePhasedUnits>(modulePhasedUnits);
-        }
-    };
+                on = this; 
+                void do() {
+                    sourceModulePhasedUnits = WeakReference<ExternalModulePhasedUnits>(modulePhasedUnits);
+                }
+            };
     
-    shared actual ArtifactResultType artifactType =>
-            _artifactType;
+    artifactType => _artifactType;
     
     shared actual Map<String, String> classesToSources {
         if (_classesToSources.empty && nameAsString == "java.base") {
             assert(is AnyIdeModule languageIdeModule=languageModule);
-            _classesToSources = HashMap { 
-                *languageIdeModule.classesToSources.filter {
-                    function selecting(String->String entry) =>
-                            entry.key.startsWith("com/redhat/ceylon/compiler/java/language/");
-                }.map {
-                    function collecting(String->String entry) =>
-                            entry.key.replace("com/redhat/ceylon/compiler/java/language/", "java/lang/") -> entry.item;
-                }
+            _classesToSources = HashMap {
+                *languageIdeModule
+                    .classesToSources
+                    .filter((key->_) => key.startsWith("com/redhat/ceylon/compiler/java/language/"))
+                    .map ((key->item) => key.replace("com/redhat/ceylon/compiler/java/language/", "java/lang/") -> item)
             };
         }
         return _classesToSources;
     }
     
-    shared actual Boolean containsJavaImplementations() =>
+    containsJavaImplementations() =>
             _classesToSources.items
             .any((sourceFile) => sourceFile.endsWith(".java"));
     
-    shared actual String? toSourceUnitRelativePath(String? binaryUnitRelativePath) =>
+    toSourceUnitRelativePath(String? binaryUnitRelativePath) =>
             if (exists binaryUnitRelativePath)
-    then classesToSources[binaryUnitRelativePath]
-    else null;
+            then classesToSources[binaryUnitRelativePath]
+            else null;
     
-    shared actual String? getJavaImplementationFile(String? ceylonFileRelativePath) =>
+    getJavaImplementationFile(String? ceylonFileRelativePath) =>
             if (exists ceylonFileRelativePath) 
-    then javaImplFilesToCeylonDeclFiles
-            .find { 
-        function selecting(String->String entry) 
-                => entry.item == ceylonFileRelativePath; 
-    }?.key
-    else null;
+            then javaImplFilesToCeylonDeclFiles
+                .find((_->declFile) => declFile == ceylonFileRelativePath)?.key
+            else null;
     
-    shared actual {String*} toBinaryUnitRelativePaths(String? sourceUnitRelativePath) =>
+    toBinaryUnitRelativePaths(String? sourceUnitRelativePath) =>
             if (exists sourceUnitRelativePath) 
-    then _classesToSources
-            .filter { 
-        function selecting(String->String classToSource) 
-                => classToSource.item == sourceUnitRelativePath;
-    }.map((classToSource) => classToSource.key)
-    else empty;
+            then _classesToSources
+                .filter((_->source) => source == sourceUnitRelativePath)
+                .map(Entry.key)
+            else empty;
     
     alias AnyPhasedUnitMap => PhasedUnitMap<out PhasedUnit, out PhasedUnit | SoftReference<ExternalPhasedUnit>>;
     
@@ -561,48 +542,49 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         return defaultValue;
     }
     
-    shared actual {PhasedUnit*} phasedUnits =>
+    phasedUnits =>
             doWithPhasedUnitsObject { 
-        function action(AnyPhasedUnitMap phasedUnitMap) => CeylonIterable(phasedUnitMap.phasedUnits);
-        defaultValue = []; 
-    };
+                action(AnyPhasedUnitMap phasedUnitMap) 
+                        => CeylonIterable(phasedUnitMap.phasedUnits);
+                defaultValue = []; 
+            };
     
     shared Boolean containsPhasedUnitWithRelativePath(String relativePath) =>
             doWithPhasedUnitsObject { 
-        action(AnyPhasedUnitMap phasedUnitMap) => phasedUnitMap.containsRelativePath(relativePath);
-        defaultValue = false; 
-    };
-    
+                action(AnyPhasedUnitMap phasedUnitMap) 
+                        => phasedUnitMap.containsRelativePath(relativePath);
+                defaultValue = false; 
+            };
     
     shared actual ExternalPhasedUnit? getPhasedUnit(
         "Either the **absolute path** or a [[virtual file|VirtualFile]]
          used to identify and retrieve the [[phased unit|PhasedUnit]]"
         String | Path | VirtualFile from) =>
             if (exists existingSourceArchivePath=_sourceArchivePath) 
-    then doWithPhasedUnitsObject {
-        function action(AnyPhasedUnitMap phasedUnitMap) {
-            PhasedUnit? phasedUnit;
-            switch (from)
-            case(is Path) {
-                value searchedPrefix = Path("``_sourceArchivePath else ""``!");
-                value relativePath = from.makeRelativeTo(searchedPrefix);
-                phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePath.string);
+            then doWithPhasedUnitsObject {
+                function action(AnyPhasedUnitMap phasedUnitMap) {
+                    PhasedUnit? phasedUnit;
+                    switch (from)
+                    case(is Path) {
+                        value searchedPrefix = Path("``_sourceArchivePath else ""``!");
+                        value relativePath = from.makeRelativeTo(searchedPrefix);
+                        phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePath.string);
+                    }
+                    case(is String) {
+                        phasedUnit = phasedUnitMap.getPhasedUnit(from);
+                    }
+                    case(is VirtualFile) {
+                        phasedUnit = phasedUnitMap.getPhasedUnit(from);
+                    }
+                    assert(is ExternalPhasedUnit? phasedUnit);
+                    return phasedUnit;
+                }
+                defaultValue = null; 
             }
-            case(is String) {
-                phasedUnit = phasedUnitMap.getPhasedUnit(from);
-            }
-            case(is VirtualFile) {
-                phasedUnit = phasedUnitMap.getPhasedUnit(from);
-            }
-            assert(is ExternalPhasedUnit? phasedUnit);
-            return phasedUnit;
-        }
-        defaultValue = null; 
-    }
-    else null;
+            else null;
     
     
-    shared actual ExternalPhasedUnit? getPhasedUnitFromRelativePath(String relativePathToSource) =>
+    getPhasedUnitFromRelativePath(String relativePathToSource) =>
             doWithPhasedUnitsObject { 
                 function action(AnyPhasedUnitMap phasedUnitMap) { 
                     PhasedUnit? phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePathToSource);
@@ -612,13 +594,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 defaultValue = null; 
             };
     
-    shared actual JList<Package> allVisiblePackages => 
+    allVisiblePackages => 
             let(do=() {
                 loadAllPackages(HashSet<String>());
                 return super.allVisiblePackages;
             }) synchronize(modelLoader, do);
     
-    shared actual JList<Package> allReachablePackages => 
+    allReachablePackages => 
             let(do = () {
                 loadAllPackages(HashSet<String>());
                 return super.allReachablePackages;
@@ -764,8 +746,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         else null;
     }
     
-    shared actual String? sourceArchivePath =>
-            _sourceArchivePath;
+    sourceArchivePath => _sourceArchivePath;
     
     shared actual CeylonProjectAlias? originalProject =>
             _originalProject?.get();
@@ -783,11 +764,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         return null;
     }
     
-    shared actual Boolean containsClass(String className) =>
+    containsClass(String className) =>
             _classesToSources.defines(className);
-    
-    shared actual JList<Package> packages => 
-            super.packages;
     
     alias AnyIdeModule => IdeModule<out Object, out Object, out Object, out Object>;
     
@@ -809,7 +787,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
-    void clearCacheLocally(TypeDeclaration declaration) => super.clearCache(declaration);
+    void clearCacheLocally(TypeDeclaration declaration) 
+            => super.clearCache(declaration);
     
     ModuleDependencies? projectModuleDependencies {
         if (!exists deps=_projectModuleDependencies) {
@@ -821,17 +800,17 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         return _projectModuleDependencies;
     }
     
-    shared actual {Module*} referencingModules =>
+    referencingModules =>
             switch (value deps = projectModuleDependencies)
-    case (is Object) CeylonIterable(deps.getReferencingModules(this))
-    else [];
+            case (is Object) CeylonIterable(deps.getReferencingModules(this))
+            else [];
     
-    shared actual {Module*} transitiveDependencies =>
+    transitiveDependencies =>
             switch (value deps = projectModuleDependencies)
-    case (is Object) CeylonIterable(deps.getTransitiveDependencies(this))
-    else [];
+            case (is Object) CeylonIterable(deps.getTransitiveDependencies(this))
+            else [];
     
-    shared actual Boolean resolutionFailed => resolutionException exists;
+    resolutionFailed => resolutionException exists;
     
     shared actual void setResolutionException(Exception resolutionException) {
         if (is RuntimeException resolutionException) {
@@ -1019,17 +998,17 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             if (isCeylonBinaryArchive || isJavaBinaryArchive) {
                 jarPackages.clear();
                 loadPackageList(object satisfies ArtifactResult {
-                    shared actual VisibilityType? visibilityType() => null;
-                    shared actual String? version() => null;
-                    shared actual ArtifactResultType? type()  => null;
-                    shared actual String? namespace() => null;
-                    shared actual String? name() => null;
-                    shared actual ImportType? importType() => null;
-                    shared actual JList<ArtifactResult>? dependencies() => null;
-                    shared actual File? artifact() => null;
-                    shared actual String? repositoryDisplayString() => null;
-                    shared actual PathFilter? filter() => null;
-                    shared actual Repository? repository() => null;
+                    visibilityType() => null;
+                    version() => null;
+                    type()  => null;
+                    namespace() => null;
+                    name() => null;
+                    importType() => null;
+                    dependencies() => null;
+                    artifact() => null;
+                    repositoryDisplayString() => null;
+                    filter() => null;
+                    repository() => null;
                 });
             }
         }
