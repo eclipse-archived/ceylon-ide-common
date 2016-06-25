@@ -1039,12 +1039,3 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     }
 
 }
-
-
-
-
-
-
-
-
-
