@@ -243,8 +243,7 @@ shared object ideQuickFixManager {
         case (20010) {
             addAnnotations.addMakeContainerNativeProposal(node, data);
         }
-        else {
-        }
+        else {}
     }
     
     void addCreationProposals(QuickFixData data) {
@@ -258,9 +257,9 @@ shared object ideQuickFixManager {
             object extends Visitor() {
                 shared actual void visit(Tree.ExtendedType that) {
                     super.visit(that);
-                    if (that.type == node) {
-                        createQuickFix.addCreateProposals(data, 
-                            that.invocationExpression.primary);
+                    if (that.type == node,
+                        exists p = that.invocationExpression?.primary) {
+                        createQuickFix.addCreateProposals(data, p);
                     }
                 }
             }.visit(data.rootNode);
