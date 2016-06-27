@@ -1,7 +1,5 @@
 import com.redhat.ceylon.model.loader.mirror {
-    MethodMirror,
-    ClassMirror,
-    AnnotationMirror
+    MethodMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue
@@ -10,21 +8,21 @@ import com.redhat.ceylon.model.typechecker.model {
 shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
         satisfies MethodMirror {
     
-    shared actual Boolean abstract => decl.abstraction;
+    abstract => decl.abstraction;
     
-    shared actual Boolean default => decl.default;
+    default => decl.default;
     
-    shared actual Boolean defaultAccess => !decl.shared;
+    defaultAccess => !decl.shared;
     
-    shared actual ClassMirror? enclosingClass => null;
+    enclosingClass => null;
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual Boolean protected => false;
+    protected => false;
     
-    shared actual Boolean public => decl.shared;
+    public => decl.shared;
     
     shared actual default Boolean static => false;
     
-    shared actual Boolean staticInit => false;
+    staticInit => false;
 }

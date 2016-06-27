@@ -14,10 +14,8 @@ import com.redhat.ceylon.model.loader.mirror {
     ClassMirror,
     TypeParameterMirror,
     FieldMirror,
-    PackageMirror,
     TypeMirror,
-    MethodMirror,
-    AnnotationMirror
+    MethodMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -41,11 +39,11 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
     late List<MethodMirror> methods;
     late List<ClassMirror> innerClasses;
     
-    shared actual Boolean annotationType => decl.annotation;
+    annotationType => decl.annotation;
     
-    shared actual Boolean anonymous => decl.anonymous;
+    anonymous => decl.anonymous;
     
-    shared actual Boolean defaultAccess => !decl.shared;
+    defaultAccess => !decl.shared;
     
     shared actual List<FieldMirror> directFields {
         scanMembers();
@@ -62,23 +60,23 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
         return methods;
     }
     
-    shared actual ClassMirror? enclosingClass => null;
+    enclosingClass => null;
     
-    shared actual MethodMirror? enclosingMethod => null;
+    enclosingMethod => null;
     
-    shared actual Boolean enum => decl.javaEnum;
+    enum => decl.javaEnum;
     
-    shared actual Boolean final => if (is ClassOrInterface d = decl) then d.final else true;
+    final => if (is ClassOrInterface d = decl) then d.final else true;
     
-    shared actual String flatName => qualifiedName.replace("::", ".");
+    flatName => qualifiedName.replace("::", ".");
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual String? getCacheKey(Module? \imodule) => null;
+    getCacheKey(Module? \imodule) => null;
     
-    shared actual Boolean innerClass => false;
+    innerClass => false;
     
-    shared actual Boolean \iinterface => decl is Interface;
+    \iinterface => decl is Interface;
     
     shared actual List<TypeMirror> interfaces {
         value types = ArrayList<TypeMirror>();
@@ -90,28 +88,28 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
         return types;
     }
     
-    shared actual Boolean javaSource => false;
+    javaSource => false;
     
-    shared actual Boolean loadedFromSource => false;
+    loadedFromSource => false;
     
-    shared actual Boolean localClass => false;
+    localClass => false;
     
     shared actual default String name => decl.name;
     
-    shared actual PackageMirror? \ipackage => null;
+    \ipackage => null;
     
-    shared actual Boolean protected => false;
+    protected => false;
     
-    shared actual Boolean public => decl.shared;
+    public => decl.shared;
     
-    shared actual String qualifiedName => getJavaQualifiedName(decl);
+    qualifiedName => getJavaQualifiedName(decl);
     
-    shared actual Boolean static => false;
+    static => false;
     
-    shared actual TypeMirror? superclass 
+    superclass 
             => if (exists s = supertype) then JTypeMirror(s) else null;
     
-    shared default actual List<TypeParameterMirror> typeParameters
+    shared actual default List<TypeParameterMirror> typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
     void scanMembers() {
@@ -141,9 +139,8 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
         });
     }
     
-    shared default void scanExtraMembers(ArrayList<MethodMirror> methods) {
-        
-    }
+    shared default void scanExtraMembers(ArrayList<MethodMirror> methods)
+            => noop();
     
     shared formal Type? supertype;
     shared formal List<Type> satisfiedTypes;

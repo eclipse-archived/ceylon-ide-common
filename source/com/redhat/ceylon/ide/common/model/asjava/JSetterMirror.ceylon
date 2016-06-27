@@ -1,38 +1,36 @@
 import com.redhat.ceylon.model.loader.mirror {
     TypeParameterMirror,
-    VariableMirror,
-    TypeMirror
+    VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
 import java.util {
-    List,
     Collections
 }
 
 shared class JSetterMirror(Value decl) extends AbstractMethodMirror(decl) {
     
-    shared actual Boolean constructor => false;
+    constructor => false;
     
-    shared actual Boolean declaredVoid => true;
+    declaredVoid => true;
 
-    shared actual Boolean final => true;
+    final => true;
     
-    shared actual String name => "set" + capitalize(decl.name);
+    name => "set" + capitalize(decl.name);
     
-    shared actual List<VariableMirror> parameters
+    parameters
             => Collections.singletonList<VariableMirror>(JVariableMirror(decl));
     
-    shared actual TypeMirror returnType => JTypeMirror(decl.type);
+    returnType => JTypeMirror(decl.type);
     
-    shared actual List<TypeParameterMirror> typeParameters
+    typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
-    shared actual Boolean variadic => false;
+    variadic => false;
     
-    shared actual Boolean defaultMethod => false;
+    defaultMethod => false;
     
     String capitalize(String str) 
             => (str.first?.uppercased?.string else "") + str.rest;

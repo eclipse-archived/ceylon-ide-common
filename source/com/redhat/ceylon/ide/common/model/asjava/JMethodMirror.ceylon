@@ -1,7 +1,10 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.model.loader.mirror {
     TypeParameterMirror,
-    VariableMirror,
-    TypeMirror
+    VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Function
@@ -12,20 +15,17 @@ import java.util {
     Collections,
     ArrayList
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 shared class JMethodMirror(Function decl, Boolean forceStatic = false)
         extends AbstractMethodMirror(decl) {
     
-    shared actual Boolean constructor => false;
+    constructor => false;
     
-    shared actual Boolean declaredVoid => decl.declaredVoid;
+    declaredVoid => decl.declaredVoid;
     
-    shared actual Boolean final => true;
+    final => true;
     
-    shared actual String name => decl.name;
+    name => decl.name;
     
     shared actual List<VariableMirror> parameters {
         List<VariableMirror> vars = ArrayList<VariableMirror>();
@@ -36,14 +36,14 @@ shared class JMethodMirror(Function decl, Boolean forceStatic = false)
         return vars;
     }
     
-    shared actual TypeMirror returnType => ceylonToJavaMapper.mapType(decl.type);
+    returnType => ceylonToJavaMapper.mapType(decl.type);
     
-    shared actual List<TypeParameterMirror> typeParameters
+    typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
-    shared actual Boolean variadic => decl.variable;
+    variadic => decl.variable;
     
-    shared actual Boolean defaultMethod => false;
+    defaultMethod => false;
     
     static => forceStatic then true else super.static;
 }

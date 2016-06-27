@@ -1,19 +1,17 @@
 import com.redhat.ceylon.model.loader.mirror {
     MethodMirror,
     TypeParameterMirror,
-    ClassMirror,
-    VariableMirror,
-    TypeMirror,
-    AnnotationMirror
-}
-import java.util {
-    List,
-    Collections,
-    ArrayList
+    VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Class,
     ParameterList
+}
+
+import java.util {
+    List,
+    Collections,
+    ArrayList
 }
 
 class JConstructorMirror(Class cls, ParameterList pl) satisfies MethodMirror {
@@ -30,11 +28,11 @@ class JConstructorMirror(Class cls, ParameterList pl) satisfies MethodMirror {
     
     defaultMethod => false;
     
-    shared actual ClassMirror? enclosingClass => null;
+    enclosingClass => null;
     
     final => false;
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
     name => cls.name;
     
@@ -52,7 +50,7 @@ class JConstructorMirror(Class cls, ParameterList pl) satisfies MethodMirror {
     
     public => cls.shared;
     
-    shared actual TypeMirror? returnType => null; // TODO I think
+    returnType => null; // TODO I think
     
     static => false;
     

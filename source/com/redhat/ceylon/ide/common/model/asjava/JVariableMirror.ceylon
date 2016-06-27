@@ -1,7 +1,5 @@
 import com.redhat.ceylon.model.loader.mirror {
-    VariableMirror,
-    TypeMirror,
-    AnnotationMirror
+    VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
@@ -10,14 +8,14 @@ import com.redhat.ceylon.model.typechecker.model {
 
 class JVariableMirror(Parameter|Value p) satisfies VariableMirror {
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual String name => 
+    name => 
             switch (p)
             case (is Parameter) p.name
             else p.name;
 
-    shared actual TypeMirror type => ceylonToJavaMapper.mapType(
+    type => ceylonToJavaMapper.mapType(
         switch (p)
         case (is Parameter) p.type
         else p.type

@@ -1,26 +1,23 @@
+import com.redhat.ceylon.compiler.java.codegen {
+    CodegenUtil
+}
+import com.redhat.ceylon.model.loader {
+    NamingBase
+}
+import com.redhat.ceylon.model.loader.mirror {
+    MethodMirror,
+    TypeParameterMirror,
+    VariableMirror
+}
 import com.redhat.ceylon.model.typechecker.model {
     Value,
     Declaration,
     Function
 }
-import com.redhat.ceylon.compiler.java.codegen {
-    CodegenUtil
-}
+
 import java.util {
     ArrayList,
-    List,
     Collections
-}
-import com.redhat.ceylon.model.loader.mirror {
-    MethodMirror,
-    TypeParameterMirror,
-    ClassMirror,
-    VariableMirror,
-    TypeMirror,
-    AnnotationMirror
-}
-import com.redhat.ceylon.model.loader {
-    NamingBase
 }
 
 shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror(decl) {
@@ -38,51 +35,50 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
     
     name => super.name + "_";
     
-    shared actual void scanExtraMembers(ArrayList<MethodMirror> methods) { 
-        methods.add(GetMethod(this));
-    }
+    scanExtraMembers(ArrayList<MethodMirror> methods)
+            => methods.add(GetMethod(this));
 }
 
 shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     shared Declaration declaration => obj.decl;
     
-    shared actual Boolean abstract => false;
+    abstract => false;
     
-    shared actual Boolean constructor => false;
+    constructor => false;
     
-    shared actual Boolean declaredVoid => false;
+    declaredVoid => false;
     
-    shared actual Boolean default => false;
+    default => false;
     
-    shared actual Boolean defaultAccess => false;
+    defaultAccess => false;
     
-    shared actual ClassMirror enclosingClass => obj;
+    enclosingClass => obj;
     
-    shared actual Boolean final => true;
+    final => true;
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual String name => NamingBase.Unfix.get_.string;
+    name => NamingBase.Unfix.get_.string;
     
-    shared actual List<VariableMirror> parameters
+    parameters
             => Collections.emptyList<VariableMirror>();
     
-    shared actual Boolean protected => false;
+    protected => false;
     
-    shared actual Boolean public => true;
+    public => true;
     
-    shared actual TypeMirror returnType => ceylonToJavaMapper.mapType(obj.decl.type);
+    returnType => ceylonToJavaMapper.mapType(obj.decl.type);
     
-    shared actual Boolean static => true;
+    static => true;
     
-    shared actual Boolean staticInit => false;
+    staticInit => false;
     
-    shared actual List<TypeParameterMirror> typeParameters
+    typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
-    shared actual Boolean variadic => false;
+    variadic => false;
     
-    shared actual Boolean defaultMethod => false;
+    defaultMethod => false;
 }
 
 shared String getJavaQualifiedName(Declaration decl) {
