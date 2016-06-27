@@ -83,6 +83,7 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         shared actual Boolean \iexists() => true;
         shared actual Boolean folder => false;
         shared actual InputStream inputStream => ByteArrayInputStream(javaString(contents + " ").bytes);
+        shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
     class TestDirectory(String path) extends TestVirtualFile(path) {
@@ -108,6 +109,7 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
                 return file;
             }
         }
+        shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
 
