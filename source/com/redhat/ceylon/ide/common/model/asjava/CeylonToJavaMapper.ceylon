@@ -1,3 +1,7 @@
+import ceylon.interop.java {
+    CeylonIterable
+}
+
 import com.redhat.ceylon.model.loader.mirror {
     TypeMirror
 }
@@ -22,21 +26,39 @@ shared object ceylonToJavaMapper {
     }
     
     shared TypeMirror mapType(Type type) {
-        if (type.integer) {
+        Type simplifiedType;
+        
+        if (type.union) {
+            value types = CeylonIterable(type.caseTypes);
+            value nullType = types.find((t) => t.null);
+            
+            if (exists nullType, type.caseTypes.size() == 2) {
+                // Return the non-null type
+                value nonNull = types.find((t) => t != nullType);
+                assert(exists nonNull);
+                simplifiedType = nonNull;
+            } else {
+                return objectMirror;
+            }
+        } else {
+            simplifiedType = type;
+        }
+
+        if (simplifiedType.integer) {
             return longMirror;
-        } else if (type.float) {
+        } else if (simplifiedType.float) {
             return doubleMirror;
-        } else if (type.boolean) {
+        } else if (simplifiedType.boolean) {
             return booleanMirror;
-        } else if (type.character) {
+        } else if (simplifiedType.character) {
             return intMirror;
-        } else if (type.byte) {
+        } else if (simplifiedType.byte) {
             return byteMirror;
-        } else if (type.isString()) {
+        } else if (simplifiedType.isString()) {
             return stringMirror;
         }
         
-        return JTypeMirror(type);
+        return JTypeMirror(simplifiedType);
     }
     
     JToplevelFunctionMirror|JMethodMirror mapFunction(Function func) {
@@ -48,15 +70,13 @@ shared object ceylonToJavaMapper {
     <JGetterMirror|JSetterMirror|JObjectMirror>[] mapValue(Value decl) {
         value mirrors = Array<JGetterMirror|JSetterMirror|JObjectMirror|Null>.ofSize(2, null);
         
-        if (decl.shared) {
-            if (decl.toplevel) {
-                mirrors.set(0, JObjectMirror(decl));
-            } else {
-                mirrors.set(0, JGetterMirror(decl));
-                
-                if (decl.variable) {
-                    mirrors.set(1, JSetterMirror(decl));
-                }
+        if (decl.toplevel) {
+            mirrors.set(0, JObjectMirror(decl));
+        } else if (decl.shared) {
+            mirrors.set(0, JGetterMirror(decl));
+            
+            if (decl.variable) {
+                mirrors.set(1, JSetterMirror(decl));
             }
         }
         
