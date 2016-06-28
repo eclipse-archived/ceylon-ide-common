@@ -75,7 +75,10 @@ shared object convertToDefaultConstructorQuickFix {
                 
                 value model = p.parameterModel;
                 value paramDef = StringBuilder();
-                value pname = model.name;
+                String? pname = model.name;
+                if (!exists pname) {
+                    return;
+                }
                 value unit = statement.unit;
                 Integer end;
                 value start = p.startIndex.intValue();
