@@ -53,7 +53,7 @@ import ceylon.collection {
     MutableSet
 }
 
-shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
+shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects model, BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() 
         satisfies LazyModuleManagerEx {
 
@@ -240,8 +240,9 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
 }
 
 shared abstract class IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>(
+    shared actual CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile> model,
     CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? theCeylonProject)
-        extends BaseIdeModuleManager(theCeylonProject)
+        extends BaseIdeModuleManager(model, theCeylonProject)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
