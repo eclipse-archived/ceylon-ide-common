@@ -76,6 +76,7 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         shared actual String path;
         suppressWarnings("expressionTypeNothing")
         shared actual Integer compareTo(VirtualFile? t) => nothing;
+        shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
     class TestFile(String path, String contents) extends TestVirtualFile(path) {
@@ -83,7 +84,6 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         shared actual Boolean \iexists() => true;
         shared actual Boolean folder => false;
         shared actual InputStream inputStream => ByteArrayInputStream(javaString(contents + " ").bytes);
-        shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
     class TestDirectory(String path) extends TestVirtualFile(path) {
@@ -109,7 +109,6 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
                 return file;
             }
         }
-        shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
 
