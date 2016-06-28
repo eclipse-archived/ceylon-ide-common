@@ -309,7 +309,7 @@ shared object ideQuickFixManager {
         operatorQuickFix.addParenthesesProposals(data, oe);
         
         verboseRefinementQuickFix.addVerboseRefinementProposal(data, statement);
-        verboseRefinementQuickFix.addShortcutRefinementProposal(data, statement);
+        verboseRefinementQuickFix.addShortcutRefinementProposal(data, declaration);
         
         addAnnotationQuickFix.addContextualAnnotationProposals(data, declaration, currentOffset);
         specifyTypeQuickFix.addTypingProposals(data, declaration);
