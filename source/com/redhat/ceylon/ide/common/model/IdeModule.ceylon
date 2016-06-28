@@ -905,6 +905,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     existingPhasedUnit.scanDeclarations();
                     existingPhasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
                     existingPhasedUnit.validateRefinement();
+                    moduleManager.model.externalPhasedUnitsTypechecked({existingPhasedUnit}, false);                    
                 }
             }
             catch (e) {

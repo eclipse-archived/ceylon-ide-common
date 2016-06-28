@@ -6,7 +6,8 @@ import com.redhat.ceylon.ide.common.vfs {
     FileVirtualFile
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit
+    ProjectPhasedUnit,
+    ExternalPhasedUnit
 }
 shared interface ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object 
@@ -22,6 +23,7 @@ shared interface ModelListener<NativeProject, NativeResource, NativeFolder, Nati
         {<CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>.ProjectMessage>*}? projectMessages);
     shared formal void modelFilesUpdated({FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} updatedFiles);
     shared formal void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits);
+    shared formal void externalPhasedUnitsTypechecked({ExternalPhasedUnit*} typecheckedUnits, Boolean fullyTypechecked);
 }
 
 shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -40,6 +42,7 @@ shared interface ModelListenerAdapter<NativeProject, NativeResource, NativeFolde
         {<CeylonProjectBuildAlias.ProjectMessage>*}? projectMessages) {}
     shared actual default void modelFilesUpdated({FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} updatedFiles) {}
     shared actual default void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits) {}
+    shared actual default void externalPhasedUnitsTypechecked({ExternalPhasedUnit*} typecheckedUnits, Boolean fullyTypechecked) {}
 }
 
 shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -60,7 +63,11 @@ shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFo
                     } catch(Throwable t) {
                         value messagePrefix = "A Ceylon Model listener (``listener``) has triggered the following ";
                         if (is Exception e=t) {
-                            platformUtils.log(Status._ERROR, messagePrefix + "exception:", e);
+                            if (! platformUtils.isOperationCanceledException(e)) {
+                                platformUtils.log(Status._ERROR, messagePrefix + "exception:", e);
+                            } else {
+                                platformUtils.log(Status._DEBUG, messagePrefix + "exception:", e);
+                            }
                         } else {
                             platformUtils.log(Status._ERROR, messagePrefix + "error: `` t.string ``");
                         }
@@ -87,4 +94,7 @@ shared interface ModelListenerDispatcher<NativeProject, NativeResource, NativeFo
 
         shared actual void modelPhasedUnitsTypechecked({ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>*} typecheckedUnits) =>
                 forAllListeners(ModelListener.modelPhasedUnitsTypechecked)(typecheckedUnits);
+
+        shared actual default void externalPhasedUnitsTypechecked({ExternalPhasedUnit*} typecheckedUnits, Boolean fullyTypechecked) =>
+                forAllListeners(ModelListener.externalPhasedUnitsTypechecked)(typecheckedUnits, fullyTypechecked);
 }

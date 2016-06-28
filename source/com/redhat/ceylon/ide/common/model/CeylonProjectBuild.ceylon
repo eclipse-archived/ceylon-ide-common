@@ -56,7 +56,8 @@ import com.redhat.ceylon.ide.common.platform {
     Status
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    TypecheckerAliases
+    TypecheckerAliases,
+    ExternalPhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     ImmutableMapWrapper,
@@ -734,6 +735,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             dependencyTypecheckingPhases.each(unflatten(
                 applyTypecheckingPhase(dependencies, progress)));
+            
+            ceylonProject.model.externalPhasedUnitsTypechecked(dependencies.narrow<ExternalPhasedUnit>(), false);
         }
     }
     
