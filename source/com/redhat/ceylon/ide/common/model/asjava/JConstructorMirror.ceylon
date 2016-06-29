@@ -14,7 +14,10 @@ import java.util {
     ArrayList
 }
 
-class JConstructorMirror(Class cls, ParameterList pl) satisfies MethodMirror {
+class JConstructorMirror(Class cls, ParameterList pl)
+        satisfies MethodMirror & DeclarationMirror {
+    
+    declaration => cls;
     
     abstract => false;
     

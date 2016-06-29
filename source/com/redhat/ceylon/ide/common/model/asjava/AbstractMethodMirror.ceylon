@@ -6,7 +6,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
-        satisfies MethodMirror {
+        satisfies MethodMirror & DeclarationMirror {
+    
+    declaration => decl;
     
     abstract => decl.abstraction;
     

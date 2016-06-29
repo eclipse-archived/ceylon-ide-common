@@ -32,12 +32,16 @@ import java.util {
     ArrayList
 }
 
-shared abstract class AbstractClassMirror(shared default Declaration decl) satisfies ClassMirror {
+shared abstract class AbstractClassMirror(shared default Declaration decl)
+        satisfies ClassMirror & DeclarationMirror {
+    
     variable Boolean initialized = false;
     
     late List<FieldMirror> fields;
     late List<MethodMirror> methods;
     late List<ClassMirror> innerClasses;
+
+    declaration => decl;
     
     annotationType => decl.annotation;
     
@@ -102,7 +106,7 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
     
     public => decl.shared;
     
-    qualifiedName => getJavaQualifiedName(decl);
+    qualifiedName => getJavaQualifiedName(decl).replace("::", ".");
     
     static => false;
     
