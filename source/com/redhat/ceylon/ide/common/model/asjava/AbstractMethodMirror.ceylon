@@ -4,6 +4,12 @@ import com.redhat.ceylon.model.loader.mirror {
 import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue
 }
+import java.util {
+    Collections
+}
+import java.lang {
+    JString=String
+}
 
 shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
         satisfies MethodMirror & DeclarationMirror {
@@ -20,6 +26,8 @@ shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
     
     getAnnotation(String? string) => null;
     
+    annotationNames => Collections.emptySet<JString>();
+
     protected => false;
     
     public => decl.shared;

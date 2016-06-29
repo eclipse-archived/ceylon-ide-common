@@ -31,6 +31,9 @@ import java.util {
     Collections,
     ArrayList
 }
+import java.lang {
+    JString=String
+}
 
 shared abstract class AbstractClassMirror(shared default Declaration decl)
         satisfies ClassMirror & DeclarationMirror {
@@ -75,6 +78,8 @@ shared abstract class AbstractClassMirror(shared default Declaration decl)
     flatName => qualifiedName.replace("::", ".");
     
     getAnnotation(String? string) => null;
+    
+    annotationNames => Collections.emptySet<JString>();
     
     getCacheKey(Module? \imodule) => null;
     

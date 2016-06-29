@@ -19,6 +19,9 @@ import java.util {
     ArrayList,
     Collections
 }
+import java.lang {
+    JString=String
+}
 
 shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror(decl) {
     abstract => false;
@@ -58,6 +61,8 @@ shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     
     getAnnotation(String? string) => null;
     
+    annotationNames => Collections.emptySet<JString>();
+
     name => NamingBase.Unfix.get_.string;
     
     parameters

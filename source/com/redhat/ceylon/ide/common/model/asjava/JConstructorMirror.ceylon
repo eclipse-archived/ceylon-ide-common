@@ -13,6 +13,9 @@ import java.util {
     Collections,
     ArrayList
 }
+import java.lang {
+    JString=String
+}
 
 class JConstructorMirror(Class cls, ParameterList pl)
         satisfies MethodMirror & DeclarationMirror {
@@ -37,6 +40,8 @@ class JConstructorMirror(Class cls, ParameterList pl)
     
     getAnnotation(String? string) => null;
     
+    annotationNames => Collections.emptySet<JString>();
+
     name => cls.name;
     
     shared actual List<VariableMirror> parameters {
