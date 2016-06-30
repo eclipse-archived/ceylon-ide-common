@@ -53,22 +53,39 @@ import org.antlr.runtime {
     RecognitionException,
     CommonToken
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
 
-shared interface CeylonSourceParser<ResultPhasedUnit>
-        given ResultPhasedUnit satisfies PhasedUnit {
-    shared default CeylonLexer buildLexer(ANTLRStringStream stringStream)
-            => CeylonLexer(stringStream);
+shared class ParseResult(
+    shared Tree.CompilationUnit compilationUnit,
+    shared List<CommonToken> tokens) {
+}
 
-    shared default CommonTokenStream buildTokenStream(CeylonLexer lexer)
-            => CommonTokenStream(lexer);
-
-    shared default CeylonParser buildParser(CommonTokenStream tokenStream)
-            => CeylonParser(tokenStream);
-
-    shared ResultPhasedUnit parseSourceCodeToPhasedUnit(
-        ModuleManager moduleManager,
-        Reader sourceCode,
-        Package pkg) {
+shared interface SourceCodeParser {
+    
+    function buildLexer(ANTLRStringStream stringStream) => 
+            if (exists custom = platformServices.parser().buildCustomizedLexer)
+    then custom(stringStream)
+    else CeylonLexer(stringStream);
+    
+    function buildTokenStream(CeylonLexer lexer) => 
+            if (exists custom = platformServices.parser().buildCustomizedTokenStream)
+    then custom(lexer)
+    else CommonTokenStream(lexer);
+    
+    function buildParser(CommonTokenStream tokenStream) => 
+            if (exists custom = platformServices.parser().buildCustomizedParser)
+    then custom(tokenStream)
+    else CeylonParser(tokenStream);
+    
+    function getTokens(CeylonLexer lexer, CommonTokenStream tokenStream) =>
+            if (exists custom = platformServices.parser().buildCustomizedTokens)
+    then custom(lexer, tokenStream)
+    else unsafeCast<List<CommonToken>>(tokenStream.tokens);
+    
+    shared ParseResult parseSourceCode(
+        Reader sourceCode) {
         ANTLRStringStream input;
         try {
             input = NewlineFixingStringStream.fromReader(sourceCode);
@@ -81,7 +98,7 @@ shared interface CeylonSourceParser<ResultPhasedUnit>
         }
         CeylonLexer lexer = buildLexer(input);
         CommonTokenStream tokenStream = buildTokenStream(lexer);
-
+        
         CeylonParser parser = buildParser(tokenStream);
         Tree.CompilationUnit cu;
         try {
@@ -90,22 +107,37 @@ shared interface CeylonSourceParser<ResultPhasedUnit>
         catch (RecognitionException e) {
             throw RuntimeException(e);
         }
-
+        
         value lexerErrors = lexer.errors;
         for (le in lexerErrors) {
             cu.addLexError(le);
         }
         lexerErrors.clear();
-
+        
         value parserErrors = parser.errors;
         for (pe in parserErrors) {
             cu.addParseError(pe);
         }
         parserErrors.clear();
-
-        value tokens = unsafeCast<List<CommonToken>>(tokenStream.tokens);
-        return createPhasedUnit(cu, pkg, tokens);
+        
+        value tokens = getTokens(lexer, tokenStream);
+        return ParseResult(cu, tokens);
     }
+}
+
+shared object sourceCodeParser satisfies SourceCodeParser {
+}
+
+shared interface CeylonSourceParser<ResultPhasedUnit>
+        satisfies SourceCodeParser
+        given ResultPhasedUnit satisfies PhasedUnit {
+
+    shared ResultPhasedUnit parseSourceCodeToPhasedUnit(
+        ModuleManager moduleManager,
+        Reader sourceCode,
+        Package pkg) =>
+            let (parseResult = parseSourceCode(sourceCode)) 
+            createPhasedUnit(parseResult.compilationUnit, pkg, parseResult.tokens);
 
     shared ResultPhasedUnit parseFileToPhasedUnit(
         ModuleManager moduleManager,

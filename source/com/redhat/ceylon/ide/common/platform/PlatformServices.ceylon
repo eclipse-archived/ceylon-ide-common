@@ -17,6 +17,7 @@ shared interface PlatformServices {
     shared formal CommonDocument? gotoLocation(Unit unit, Integer offset, Integer length);
     
     shared formal LinkedMode createLinkedMode(CommonDocument document);
+    shared default ParserServices parser() => defaultParserServices;
 }
 
 suppressWarnings("expressionTypeNothing")
@@ -36,6 +37,7 @@ variable PlatformServices _platformServices
     document => nothing;
     gotoLocation(Unit unit, Integer offset, Integer length) => null;
     createLinkedMode(CommonDocument document) => NoopLinkedMode(document);
+    parser() => defaultParserServices;
 };
 
 shared PlatformServices platformServices => _platformServices;
