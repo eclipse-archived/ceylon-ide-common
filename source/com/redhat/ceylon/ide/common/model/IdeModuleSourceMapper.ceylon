@@ -219,8 +219,7 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 				assert(is ZipEntryVirtualFile zipEntry=file);
 				assert(is ZipFileVirtualFile zipArchive=srcDir);
 				value sourceParser = object satisfies CeylonSourceParser<ExternalPhasedUnit> {
-					
-					shared actual ExternalPhasedUnit createPhasedUnit(
+					createPhasedUnit(
 						Tree.CompilationUnit cu,
 						Package pkg,
 						List<CommonToken> tokens) => 
@@ -245,7 +244,7 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 								typeChecker, 
 								tokens);
 					
-					shared actual String charset(BaseFileVirtualFile file) => 
+					charset(BaseFileVirtualFile file) => 
 							/* TODO: is this correct? does this file actually
 							  live in the project, or is it external?
 							  should VirtualFile have a getCharset()? */
