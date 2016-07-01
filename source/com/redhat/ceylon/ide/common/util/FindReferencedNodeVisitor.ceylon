@@ -15,7 +15,8 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     
     Boolean isDeclaration(Declaration? dec) {
         if (exists dec, exists declaration, dec==declaration) {
-            if (is Declaration declaration, dec.native, 
+            if (is Declaration declaration, 
+                declaration.native && dec.native, 
                 dec.nativeBackends != declaration.nativeBackends) {
                 return false;
             }

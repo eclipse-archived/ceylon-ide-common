@@ -18,9 +18,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonUnit,
-    CeylonBinaryUnit,
-    BaseIdeModule
+    CeylonUnit
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -364,18 +362,6 @@ shared object nodes {
     shared Integer getNodeEndOffset(Node? node)
             => node?.endIndex?.intValue() else 0;
     
-    "Get the Node referenced by the given model, searching
-     in all relevant compilation units."
-    shared Node? getReferencedNode(Referenceable? model, Tree.CompilationUnit? cu = null) {
-        if (exists model,
-            exists rn = cu else (if (is CeylonUnit unit = model.unit)
-                                 then unit.compilationUnit
-                                 else null)) {
-            return getReferencedNodeInUnit(model, rn);
-        }
-        return null;
-    }
-    
     shared Referenceable? getReferencedModel(Node node) {
         if (is Tree.ImportPath node) {
             value importPath = node;
@@ -404,7 +390,8 @@ shared object nodes {
     }
     
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
-        if (exists node, exists dec = getReferencedDeclaration(node)) {
+        if (exists node, 
+            exists dec = getReferencedDeclaration(node)) {
             if (exists unit = dec.unit,
                 exists nodeUnit = node.unit,
                 unit == nodeUnit) {
@@ -479,58 +466,26 @@ shared object nodes {
         }
     }
     
-    "Find the Node defining the given model within the given CompilationUnit."
-    shared Node? getReferencedNodeInUnit(variable Referenceable? model, Tree.CompilationUnit? rootNode) {
-        if (exists rootNode, exists m = model) {
-            if (is Declaration decl = model) {
-                if (exists unit = decl.unit, !unit.filename.lowercased.endsWith(".ceylon")) {
-                    variable Boolean foundTheCeylonDeclaration = false;
-                    
-                    if (is CeylonBinaryUnit<out Anything,out Anything,out Anything> unit,
-                        is BaseIdeModule mod = unit.\ipackage.\imodule) {
-                        value sourceRelativePath = mod.toSourceUnitRelativePath(unit.relativePath);
-                        if (exists sourceRelativePath) {
-                            value ceylonSourceRelativePath = mod.getCeylonDeclarationFile(sourceRelativePath);
-                            if (exists ceylonSourceRelativePath) {
-                                value externalPhasedUnit = mod.getPhasedUnitFromRelativePath(ceylonSourceRelativePath);
-                                if (exists externalPhasedUnit) {
-                                    value sourceFile = externalPhasedUnit.unit;
-                                    
-                                    for (sourceDecl in sourceFile.declarations) {
-                                        if (sourceDecl.qualifiedNameString==decl.qualifiedNameString) {
-                                            model = sourceDecl;
-                                            foundTheCeylonDeclaration = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (!foundTheCeylonDeclaration) {
-                        if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
-                            if (exists headerDeclaration
-                                        = ModelUtil.getNativeHeader(decl)) {
-                                if (exists overloads = headerDeclaration.overloads) {
-                                    for (overload in overloads) {
-                                        if (overload.nativeBackends.header()) {
-                                            model = overload;
-                                            foundTheCeylonDeclaration = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    "Get the Node referenced by the given model, using the
+     given [[rootNode]] if specified."
+    shared Node? getReferencedNode(Referenceable? model,
+            //TODO: this argument is probably always useless 
+            Tree.CompilationUnit? rootNode = null) {
+        if (exists model) {
+            if (exists rootNode) {
+                return findReferencedNode(rootNode, model);
             }
-            value visitor = FindReferencedNodeVisitor(model);
-            rootNode.visit(visitor);
-            return visitor.declarationNode;
+            else if (is CeylonUnit unit = model.unit,
+                    exists node = unit.compilationUnit) {
+                return findReferencedNode(node, model);
+            }
+            else {
+                return null;
+            }
         }
-        
-        return null;
+        else {
+            return null;
+        }
     }
     
     shared void appendParameters(StringBuilder result, 

@@ -15,7 +15,7 @@ shared object addTypeParameterQuickFix {
         assert (is Tree.TypeConstraint tcn = data.node);
         value tp = tcn.declarationModel;
         assert (is Tree.Declaration decNode 
-            = nodes.getReferencedNodeInUnit {
+            = nodes.getReferencedNode {
                 model = tp.declaration;
                 rootNode = data.rootNode;
             });

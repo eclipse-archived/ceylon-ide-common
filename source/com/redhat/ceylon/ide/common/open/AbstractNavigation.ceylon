@@ -6,12 +6,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonUnit,
-    CeylonBinaryUnit,
     IResourceAware,
-    JavaUnit,
     ExternalSourceFile,
-    AnyCeylonBinaryUnit
+    AnyCeylonBinaryUnit,
+    AnyJavaUnit
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -44,12 +42,12 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
     
     "Returns a tuple [sourceId, target] where `sourceId` is the node
      referencing the `target `."
-    shared [Node,Node]? findTarget(Tree.CompilationUnit cu, JList<CommonToken> tokens,
-        DefaultRegion region) {
+    shared [Node,Node]? findTarget(Tree.CompilationUnit rootNode, 
+            JList<CommonToken> tokens, DefaultRegion region) {
 
         value supportedBackends = Backends.any;
 
-        value node = nodes.findNode(cu, tokens, region.start, region.end);
+        value node = nodes.findNode(rootNode, tokens, region.start, region.end);
 
         switch (node)
         case (is Null) {
@@ -62,8 +60,8 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             }
         }
         case (is Tree.ImportPath) {
-            value packageDescriptors = cu.packageDescriptors;
-            value moduleDescriptors = cu.moduleDescriptors;
+            value packageDescriptors = rootNode.packageDescriptors;
+            value moduleDescriptors = rootNode.moduleDescriptors;
 
             if (!packageDescriptors.empty
                     && packageDescriptors.get(0).importPath == node
@@ -159,28 +157,26 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
 
     shared default Target? gotoDeclaration(Referenceable? model) {
         if (exists model) {
-            if (is CeylonUnit ceylonUnit = model.unit) {
-                if (exists node = nodes.getReferencedNodeInUnit {
-                    model = model;
-                    rootNode = ceylonUnit.compilationUnit;
-                }) {
-                    return gotoNode(node, null);
-                }
-                else if (is CeylonBinaryUnit<out Anything,out Anything,out Anything> 
-                            ceylonUnit) {
+            if (exists node = nodes.getReferencedNode(model)) {
+                return gotoNode(node, null);
+            }
+            else {
+                switch (unit = model.unit)
+                case (is AnyCeylonBinaryUnit) {
                     //special case for Java source in ceylon.language!
                     if (exists path 
-                            = toJavaString(ceylonUnit.sourceRelativePath), 
+                            = toJavaString(unit.sourceRelativePath), 
                         path.endsWith(".java"), 
                         is Declaration model) {
                         return gotoJavaNode(model);
                     }
                 }
-            }
-            else if (is Declaration model,
-                is JavaUnit<out Anything,out Anything,out Anything,out Anything,out Anything> 
-                        unit = model.unit) {
-                return gotoJavaNode(model);
+                case (is AnyJavaUnit) {
+                    if (is Declaration model) {
+                        return gotoJavaNode(model);
+                    }
+                }
+                else {}
             }
         }
         return null;
@@ -221,9 +217,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
                     then filePath(fileResource) 
                     else Path(unit.fullPath);
             }
-            if (is ExternalSourceFile |
-                   CeylonBinaryUnit<out Anything,out Anything,out Anything>
-                   unit) {
+            if (is ExternalSourceFile|AnyCeylonBinaryUnit unit) {
                 assert (exists externalPhasedUnit = unit.phasedUnit);
                 return Path(externalPhasedUnit.unitFile.path);
             }

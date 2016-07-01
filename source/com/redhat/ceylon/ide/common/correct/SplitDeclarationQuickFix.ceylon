@@ -96,7 +96,10 @@ shared object splitDeclarationQuickFix {
             });
 
             value containerNode 
-                    = nodes.getReferencedNodeInUnit(container, data.rootNode);
+                    = nodes.getReferencedNode { 
+                        model = container; 
+                        rootNode = data.rootNode; 
+                    };
             
             Tree.Body? body;
             switch (containerNode)

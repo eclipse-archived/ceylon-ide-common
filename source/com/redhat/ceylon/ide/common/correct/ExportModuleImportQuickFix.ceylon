@@ -2,6 +2,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.imports {
     moduleImportUtil
 }
@@ -11,9 +14,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Declaration
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared object exportModuleImportQuickFix {
@@ -31,7 +31,10 @@ shared object exportModuleImportQuickFix {
         value rootNode = data.rootNode;
         
         if (is Tree.InitializerParameter n = node) {
-            node = nodes.getReferencedNodeInUnit(nodes.getReferencedModel(n), rootNode);
+            node = nodes.getReferencedNode { 
+                model = nodes.getReferencedModel(n); 
+                rootNode = rootNode; 
+            };
         }
         
         if (is Tree.TypedDeclaration n = node) {

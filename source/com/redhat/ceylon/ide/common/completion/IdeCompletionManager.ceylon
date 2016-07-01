@@ -780,9 +780,8 @@ shared object completionManager
 
                 if (!dec.toplevel, 
                     !dec.classOrInterfaceMember, 
-                    dec.unit == unit, 
-                    exists decNode 
-                            = nodes.getReferencedNodeInUnit(dec, cu),
+                    dec.unit == unit,
+                    exists decNode = nodes.getReferencedNode(dec, cu),
                     exists id = nodes.getIdentifyingNode(decNode), 
                     offset < id.startIndex.intValue()) {
                     continue;
