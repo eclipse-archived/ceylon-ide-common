@@ -26,7 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit,
     TypedDeclaration,
-    Scope,
     ModelUtil
 }
 
