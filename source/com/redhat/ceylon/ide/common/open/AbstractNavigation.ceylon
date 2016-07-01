@@ -1,3 +1,6 @@
+import com.redhat.ceylon.common {
+    Backends
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
@@ -9,6 +12,9 @@ import com.redhat.ceylon.ide.common.model {
     JavaUnit,
     ExternalSourceFile,
     AnyCeylonBinaryUnit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -30,12 +36,7 @@ import java.lang {
 import java.util {
     JList=List
 }
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
-import com.redhat.ceylon.common {
-    Backends
-}
+
 import org.antlr.runtime {
     CommonToken
 }
@@ -132,54 +133,29 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         if (backends.none()) {
             return null;
         }
-        variable Scope? containerToSearchHeaderIn = null;
-
+        
         if (is AnyCeylonBinaryUnit binaryUnit = dec.unit) {
+            //declarations obtained directly from Java 
+            //binaries don't include all the native impls,
+            //so look for it in the corresponding source
             if (exists phasedUnit = binaryUnit.phasedUnit) {
                 value sourceFile = phasedUnit.unit;
                 value sourceRelativePath = binaryUnit.ceylonModule
                         .toSourceUnitRelativePath(binaryUnit.relativePath);
-
-                if (exists sourceRelativePath,
-                    sourceRelativePath.endsWith(".ceylon")) {
-
-                    for (sourceDecl in sourceFile.declarations) {
-                        if (sourceDecl == dec) {
-                            containerToSearchHeaderIn = sourceDecl.container;
-                            break;
-                        }
-                    }
-                } else {
-                    for (sourceDecl in sourceFile.declarations) {
-                        if (sourceDecl.qualifiedNameString
-                                == dec.qualifiedNameString) {
-
-                            containerToSearchHeaderIn = sourceDecl.container;
-                            break;
-                        }
+                value isCeylon = sourceRelativePath?.endsWith(".ceylon") else false;
+                for (sourceDecl in sourceFile.declarations) {
+                    Boolean thisOne = isCeylon 
+                        then sourceDecl == dec
+                        else sourceDecl.qualifiedNameString
+                                == dec.qualifiedNameString;
+                    if (thisOne) {
+                        return ModelUtil.getNativeDeclaration(sourceDecl, backends);
                     }
                 }
             }
-        } else {
-            containerToSearchHeaderIn = dec.container;
         }
-
-        if (exists container = containerToSearchHeaderIn) {
-            Declaration? headerDeclaration = ModelUtil.getNativeHeader(container, dec.name);
-
-            if (!exists headerDeclaration) {
-                return null;
-            } else if (headerDeclaration.native) {
-                return null;
-            }
-            if (backends.header()) {
-                return headerDeclaration;
-            } else {
-                return ModelUtil.getNativeDeclaration(headerDeclaration, backends);
-            }
-        }
-
-        return dec;
+        
+        return ModelUtil.getNativeDeclaration(dec, backends);
     }
 
     shared default Target? gotoDeclaration(Referenceable? model) {
@@ -237,8 +213,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         return null;
     }
     
-    shared Path? getNodePath(Node node) 
-            => getUnitPath(node.unit);
+    shared Path? getNodePath(Node node) => getUnitPath(node.unit);
 
     shared Path? getUnitPath(Unit? unit) {
         if (exists unit) {
