@@ -43,10 +43,9 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
     "Returns a tuple [sourceId, target] where `sourceId` is the node
      referencing the `target `."
     shared [Node,Node]? findTarget(Tree.CompilationUnit rootNode, 
-            JList<CommonToken> tokens, DefaultRegion region) {
-
-        value supportedBackends = Backends.any;
-
+            JList<CommonToken> tokens, DefaultRegion region,
+            Backends supportedBackends = Backends.any) {
+        
         value node = nodes.findNode(rootNode, tokens, region.start, region.end);
 
         switch (node)
