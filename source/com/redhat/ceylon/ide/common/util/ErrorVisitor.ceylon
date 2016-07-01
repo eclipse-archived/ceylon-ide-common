@@ -89,7 +89,8 @@ shared abstract class ErrorVisitor() extends Visitor() {
         value owe = warnForErrors;
         warnForErrors = false;
         for (c in that.compilerAnnotations) {
-            if (c.identifier.text.equals("error")) {
+            if (exists id = c.identifier, 
+                id.text == "error") {
                 warnForErrors = true;
             }
         }
