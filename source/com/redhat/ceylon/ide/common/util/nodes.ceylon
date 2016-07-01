@@ -497,7 +497,7 @@ shared object nodes {
                                     value sourceFile = externalPhasedUnit.unit;
                                     
                                     for (sourceDecl in sourceFile.declarations) {
-                                        if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
+                                        if (sourceDecl.qualifiedNameString==decl.qualifiedNameString) {
                                             model = sourceDecl;
                                             foundTheCeylonDeclaration = true;
                                             break;
