@@ -40,14 +40,23 @@ import org.antlr.runtime {
 
 shared abstract class AbstractNavigation<Target,NativeFile>() {
     
-    "Returns a tuple [sourceId, target] where `sourceId` is the node
+    "Returns a pair [sourceId, target] where `sourceId` is the node
      referencing the `target `."
     shared [Node,Node]? findTarget(Tree.CompilationUnit rootNode, 
             JList<CommonToken> tokens, DefaultRegion region,
             Backends supportedBackends = Backends.any) {
-        
         value node = nodes.findNode(rootNode, tokens, region.start, region.end);
-
+        value id = nodes.getIdentifyingNode(node);
+        if (exists node, exists id, 
+            exists result = getTarget(rootNode, node, supportedBackends)) {
+            return [id, result];
+        }
+        return null;
+    }
+        
+    shared Node? getTarget(Tree.CompilationUnit rootNode, 
+        Node? node, Backends supportedBackends = Backends.any) {
+            
         switch (node)
         case (is Null) {
             return null;
@@ -73,14 +82,9 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         }
         else {}
 
-        assert(exists node);
+        assert (exists node);
 
-        value id = nodes.getIdentifyingNode(node);
-        if (!exists id) {
-            return null;
-        }
-
-        variable Referenceable? referenceable = nodes.getReferencedModel(node);
+        variable value referenceable = nodes.getReferencedModel(node);
         switch (_referenceable = referenceable)
         case (is Null) {
             return null;
@@ -119,10 +123,7 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             }
         }
 
-        if (exists r = nodes.getReferencedNode(referenceable)) {
-            return [id, r];
-        }
-        return null;
+        return nodes.getReferencedNode(referenceable);
     }
 
     shared Referenceable? resolveNative(Declaration dec, Backends backends) {
