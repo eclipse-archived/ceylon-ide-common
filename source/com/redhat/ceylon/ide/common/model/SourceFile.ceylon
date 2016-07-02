@@ -26,8 +26,8 @@ shared abstract class SourceFile(IdePhasedUnit phasedUnit)
         super.\ipackage = \ipackage;
         if (is SingleSourceUnitPackage p,
             !p.unit exists,
-            filename.equals(ModuleManager.\iPACKAGE_FILE)) {
-            if (p.fullPathOfSourceUnitToTypecheck.equals(fullPath)) {
+            filename.equals(ModuleManager.packageFile)) {
+            if (p.fullPathOfSourceUnitToTypecheck==fullPath) {
                 p.unit = this;
             }
         }

@@ -878,7 +878,7 @@ shared abstract class InvocationCompletionProposal
         value pname = dec.unit.\ipackage.nameAsString;
         value isInLanguageModule 
                 = !qualifier exists
-                && pname == Module.\iLANGUAGE_MODULE_NAME;
+                && pname == Module.languageModuleName;
         value qdec = qualifier?.declaration;
         
         if (is Value dec, 
@@ -999,7 +999,7 @@ shared abstract class InvocationCompletionProposal
             value dec = dwp.declaration;
             value pname = dec.unit.\ipackage.nameAsString;
             value isInLanguageModule 
-                    = pname == Module.\iLANGUAGE_MODULE_NAME;
+                    = pname == Module.languageModuleName;
             
             if (is TypeDeclaration dec, 
                 !dwp.unimported, 

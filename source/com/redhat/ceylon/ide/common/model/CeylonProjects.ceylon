@@ -42,7 +42,7 @@ shared abstract class BaseCeylonProjects() {
 }
 
 shared T withCeylonModelCaching<T>(T() do) {
-    JBoolean? was = TypeCache.setEnabled(JBoolean.\iTRUE);
+    JBoolean? was = TypeCache.setEnabled(JBoolean.true);
     try {
         return do();
     } finally {

@@ -40,7 +40,7 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             path == node) {
             assert (is Tree.ImportPath node);
             completionManager.addPackageCompletions(ctx, offset, prefix, node, node,
-                nextTokenType(ctx, token) != CeylonLexer.\iLBRACE, monitor);
+                nextTokenType(ctx, token) != CeylonLexer.lbrace, monitor);
         }
     }
     shared actual void visit(Tree.PackageLiteral that) {
@@ -56,7 +56,7 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            value withBody = nextTokenType(ctx, token) != CeylonLexer.\iSTRING_LITERAL;
+            value withBody = nextTokenType(ctx, token) != CeylonLexer.stringLiteral;
             completionManager.addModuleCompletions(ctx, offset, prefix, node, node, withBody, monitor);
         }
     }

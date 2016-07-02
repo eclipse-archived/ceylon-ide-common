@@ -208,7 +208,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     variable IdeModuleAlias? _originalModule = null;
     variable MutableSet<String> originalUnitsToRemove = HashSet<String> { stability = linked; };
     variable MutableSet<String> originalUnitsToAdd = HashSet<String> { stability = linked; };
-    variable ArtifactResultType _artifactType = ArtifactResultType.\iOTHER;
+    variable ArtifactResultType _artifactType = ArtifactResultType.other;
     variable Exception? resolutionException = null;
     variable ModuleDependencies? _projectModuleDependencies = null;
     
@@ -270,7 +270,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
         if (isSourceArchive) {
             assert(exists sap=_sourceArchivePath);
-            return File(switchExtension(sap, ArtifactContext.\iSRC, ArtifactContext.\iCAR));
+            return File(switchExtension(sap, ArtifactContext.src, ArtifactContext.car));
         }
         return null;
     }
@@ -369,22 +369,22 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 value existingArtifact = artifactResult.artifact();
                 _artifact = existingArtifact;
                 _repositoryDisplayString = artifactResult.repositoryDisplayString();
-                if (_repositoryDisplayString == Constants.\iREPO_URL_CEYLON.replaceFirst("https", "http")) {
-                    _repositoryDisplayString = Constants.\iREPO_URL_CEYLON;
+                if (_repositoryDisplayString == Constants.repoUrlCeylon.replaceFirst("https", "http")) {
+                    _repositoryDisplayString = Constants.repoUrlCeylon;
                 }
-                if (existingArtifact.name.endsWith(ArtifactContext.\iSRC)) {
+                if (existingArtifact.name.endsWith(ArtifactContext.src)) {
                     _moduleType = ModuleType._CEYLON_SOURCE_ARCHIVE;
                 }
-                else if (existingArtifact.name.endsWith(ArtifactContext.\iCAR)) {
+                else if (existingArtifact.name.endsWith(ArtifactContext.car)) {
                     _moduleType = ModuleType._CEYLON_BINARY_ARCHIVE;
                 }
-                else if (existingArtifact.name.endsWith(ArtifactContext.\iJAR)) {
+                else if (existingArtifact.name.endsWith(ArtifactContext.jar)) {
                     _moduleType = ModuleType._JAVA_BINARY_ARCHIVE;
                 }
                 _artifactType = artifactResult.type();
                 if (isCeylonBinaryArchive) {
                     String carPath = existingArtifact.path;
-                    _sourceArchivePath = switchExtension(carPath, ArtifactContext.\iCAR, ArtifactContext.\iSRC);
+                    _sourceArchivePath = switchExtension(carPath, ArtifactContext.car, ArtifactContext.src);
                     try {
                         fillSourceRelativePaths();
                     }

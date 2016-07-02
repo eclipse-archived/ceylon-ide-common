@@ -318,9 +318,9 @@ shared abstract class BaseCeylonProject() {
         if (!force) {
             value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
             value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
-            value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.\iCEYLON_CONFIG_DIR)), "bootstrap");
-            value propsFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_PROPERTIES);
-            value jarFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_JAR);
+            value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.ceylonConfigDir)), "bootstrap");
+            value propsFile = File(bootstrapDir, Bootstrap.fileBootstrapProperties);
+            value jarFile = File(bootstrapDir, Bootstrap.fileBootstrapJar);
             if (scriptFile.\iexists() || batFile.\iexists() || propsFile.\iexists() || jarFile.\iexists()) {
                 return false;
             }
@@ -427,7 +427,7 @@ shared abstract class BaseCeylonProject() {
                     if (readonly) 
                     then sourceModelLock.readLock() 
                     else sourceModelLock.writeLock();
-            if (theLock.tryLock(waitForModelInSeconds, TimeUnit.\iSECONDS)) {
+            if (theLock.tryLock(waitForModelInSeconds, TimeUnit.seconds)) {
                 try {
                     return do();
                 } finally {
@@ -769,7 +769,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                         exists name = parts[0],
                         exists version = parts[1],
                         exists file = repositoryManager.getArtifact(
-                            ArtifactContext(null, name, version, ArtifactContext.\iJAR))) {
+                            ArtifactContext(null, name, version, ArtifactContext.jar))) {
                     
                         // OK
                     } else {
@@ -817,7 +817,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 //or we should use the default one.
                 Module languageModule = context.modules.languageModule;
                 if (! languageModule.version exists) {
-                    languageModule.version = TypeChecker.\iLANGUAGE_MODULE_VERSION;
+                    languageModule.version = TypeChecker.languageModuleVersion;
                 }
                 
                 if (progress.cancelled) {
@@ -922,11 +922,11 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                     for (_module in newTypechecker.context.modules.listOfModules) {
                         if (is BaseIdeModule _module) {
                             if (_module.isCeylonArchive
-                                && ModelUtil.isForBackend(_module.nativeBackends, Backend.\iJavaScript.asSet())) {
+                                && ModelUtil.isForBackend(_module.nativeBackends, Backend.javaScript.asSet())) {
                                 value importedModuleImports = 
                                         CeylonIterable(moduleSourceMapper.retrieveModuleImports(_module))
                                         .filter((moduleImport) => 
-                                    ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.\iJavaScript.asSet()))
+                                    ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.javaScript.asSet()))
                                         .sequence();
                                 if (nonempty importedModuleImports) {
                                     File? artifact = repositoryManager.getArtifact(
@@ -934,7 +934,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                                             null,
                                             _module.nameAsString, 
                                             _module.version, 
-                                            ArtifactContext.\iJS));
+                                            ArtifactContext.js));
                                     if (artifact is Null) {
                                         for (importInError in importedModuleImports) {
                                             moduleSourceMapper.attachErrorToModuleImport(importInError, 

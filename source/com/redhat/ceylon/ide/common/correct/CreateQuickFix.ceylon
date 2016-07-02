@@ -271,7 +271,7 @@ shared object createQuickFix {
                 document = data.document;
             }) {
                 if (is Tree.BaseMemberExpression node, 
-                    node.identifier.token.type != CeylonLexer.\iAIDENTIFIER) {
+                    node.identifier.token.type != CeylonLexer.aidentifier) {
                     createParameterQuickFix.addCreateParameterProposal(data, vfdg);
                 }
                 addCreateProposalsInternal {

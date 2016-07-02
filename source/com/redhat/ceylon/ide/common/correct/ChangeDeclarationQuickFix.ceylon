@@ -29,7 +29,7 @@ shared object changeDeclarationQuickFix {
                 keyword = "interface";
             }
             case (is Tree.AnyMethod) {
-                if (token.type==CeylonLexer.\iVOID_MODIFIER) {
+                if (token.type==CeylonLexer.voidModifier) {
                     return;
                 }
                 keyword = "value";

@@ -95,7 +95,7 @@ shared class UnknownTypeMirror(shared actual String qualifiedName = "unknown")
     
     declaredClass => unknownClassMirror;
     
-    kind => TypeKind.\iDECLARED;
+    kind => TypeKind.declared;
     
     shared actual TypeMirror? lowerBound => null;
     

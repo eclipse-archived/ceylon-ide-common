@@ -70,7 +70,7 @@ shared object splitIfStatementQuickFix {
                     }
                 }
             } else if (exists block = elseClause.block,
-                       block.token.type == CeylonLexer.\iIF_CLAUSE) {
+                       block.token.type == CeylonLexer.ifClause) {
                 value statements = block.statements;
 
                 if (statements.size() == 1) {

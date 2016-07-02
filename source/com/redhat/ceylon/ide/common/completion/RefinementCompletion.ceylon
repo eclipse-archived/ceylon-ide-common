@@ -279,7 +279,7 @@ shared abstract class RefinementCompletionProposal
         }
         value pname = dec.unit.\ipackage.nameAsString;
         value inLanguageModule 
-                = pname == Module.\iLANGUAGE_MODULE_NAME;
+                = pname == Module.languageModuleName;
         
         if (is Value dec, 
             dec!=declaration,

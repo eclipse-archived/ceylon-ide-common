@@ -48,7 +48,7 @@ shared abstract class ErrorVisitor() extends Visitor() {
                     endOffset = token.stopIndex + 1;
                     startCol = token.charPositionInLine;
                     startLine = token.line;
-                    if (token.type == CeylonParser.\iEOF) {
+                    if (token.type == CeylonParser.eof) {
                         startOffset--;
                         endOffset--;
                     }

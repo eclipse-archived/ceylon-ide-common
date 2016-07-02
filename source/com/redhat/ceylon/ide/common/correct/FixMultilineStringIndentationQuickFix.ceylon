@@ -78,11 +78,11 @@ shared object fixMultilineStringIndentationQuickFix {
     Integer getStartQuoteLength(Integer type) {
         Integer startQuoteLength;
         
-        if (type in [CeylonLexer.\iSTRING_LITERAL, CeylonLexer.\iASTRING_LITERAL, CeylonLexer.\iSTRING_START]) {
+        if (type in [CeylonLexer.stringLiteral, CeylonLexer.astringLiteral, CeylonLexer.stringStart]) {
             startQuoteLength = 1;
-        } else if (type in [CeylonLexer.\iSTRING_MID, CeylonLexer.\iSTRING_END]) {
+        } else if (type in [CeylonLexer.stringMid, CeylonLexer.stringEnd]) {
             startQuoteLength = 2;
-        } else if (type in [CeylonLexer.\iVERBATIM_STRING, CeylonLexer.\iAVERBATIM_STRING]) {
+        } else if (type in [CeylonLexer.verbatimString, CeylonLexer.averbatimString]) {
             startQuoteLength = 3;
         } else {
             startQuoteLength = -1;

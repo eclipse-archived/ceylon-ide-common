@@ -483,22 +483,22 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                                 imt.startIndex.intValue());
                             
                             variable CommonToken prev = tokens.get(ti - 1);
-                            if (prev.channel == CommonToken.\iHIDDEN_CHANNEL) {
+                            if (prev.channel == CommonToken.hiddenChannel) {
                                 prev = tokens.get(ti - 2);
                             }
                             
                             variable CommonToken next = tokens.get(ti + 1);
-                            if (next.channel == CommonToken.\iHIDDEN_CHANNEL) {
+                            if (next.channel == CommonToken.hiddenChannel) {
                                 next = tokens.get(ti + 2);
                             }
                             
-                            if (prev.type == CeylonLexer.\iCOMMA) {
+                            if (prev.type == CeylonLexer.comma) {
                                 textChange.addEdit( 
                                     DeleteEdit {
                                         start = prev.startIndex;
                                         length = imt.startIndex.intValue() - prev.startIndex;
                                     });
-                            } else if (next.type == CeylonLexer.\iCOMMA) {
+                            } else if (next.type == CeylonLexer.comma) {
                                 textChange.addEdit( 
                                     DeleteEdit {
                                         start = imt.endIndex.intValue();
@@ -528,7 +528,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
             value prevIndex = from.tokenIndex - 1;
             if (prevIndex >= 0, 
                 exists tok = tokens.get(prevIndex),
-                tok.channel == Token.\iHIDDEN_CHANNEL) {
+                tok.channel == Token.hiddenChannel) {
                 from = tok;
             }
             

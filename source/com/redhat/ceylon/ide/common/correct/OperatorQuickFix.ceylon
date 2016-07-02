@@ -285,8 +285,8 @@ shared object operatorQuickFix {
     void addRemoveParenthesesProposal(QuickFixData data, Node node) {
         if (exists token = node.token,
             exists endToken = node.endToken,
-            token.type == CeylonLexer.\iLPAREN,
-            endToken.type == CeylonLexer.\iRPAREN) {
+            token.type == CeylonLexer.lparen,
+            endToken.type == CeylonLexer.rparen) {
             
             value change = platformServices.document.createTextChange {
                 name = "Remove Parentheses";

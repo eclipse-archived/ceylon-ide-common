@@ -23,8 +23,8 @@ shared object convertStringQuickFix {
     shared void addConvertToVerbatimProposal(QuickFixData data) {
         if (is Tree.StringLiteral literal = data.node) {
             value token = literal.token;
-            if (token.type==CeylonLexer.\iASTRING_LITERAL || 
-                token.type==CeylonLexer.\iSTRING_LITERAL) {
+            if (token.type==CeylonLexer.astringLiteral || 
+                token.type==CeylonLexer.stringLiteral) {
                 value change 
                         = platformServices.document.createTextChange {
                     name = "Convert to Verbatim String";
@@ -48,8 +48,8 @@ shared object convertStringQuickFix {
     shared void addConvertFromVerbatimProposal(QuickFixData data) {
         if (is Tree.StringLiteral literal = data.node) {
             value token = literal.token;
-            if (token.type==CeylonLexer.\iAVERBATIM_STRING || 
-                token.type==CeylonLexer.\iVERBATIM_STRING) {
+            if (token.type==CeylonLexer.averbatimString || 
+                token.type==CeylonLexer.verbatimString) {
                 value change 
                         = platformServices.document.createTextChange {
                     name = "Convert to Ordinary String";
@@ -121,7 +121,7 @@ shared object convertStringQuickFix {
                     }
                 } else {
                     value stt = s.token.type;
-                    if (stt in [CeylonLexer.\iSTRING_END, CeylonLexer.\iSTRING_MID]) {
+                    if (stt in [CeylonLexer.stringEnd, CeylonLexer.stringMid]) {
                         change.addEdit(ReplaceEdit {
                             start = s.startIndex.intValue();
                             length = 2;
@@ -129,7 +129,7 @@ shared object convertStringQuickFix {
                         });
                     }
                     
-                    if (stt in [CeylonLexer.\iSTRING_START, CeylonLexer.\iSTRING_MID]) {
+                    if (stt in [CeylonLexer.stringStart, CeylonLexer.stringMid]) {
                         change.addEdit(ReplaceEdit {
                             start = s.endIndex.intValue() - 2;
                             length = 2;

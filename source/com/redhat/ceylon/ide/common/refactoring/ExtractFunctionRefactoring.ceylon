@@ -356,7 +356,7 @@ shared class ExtractFunctionRefactoring(
     }
     
     function fakeToken(Tree.This tr) {
-        value tok = CommonToken(CeylonLexer.\iLIDENTIFIER, "that");
+        value tok = CommonToken(CeylonLexer.lidentifier, "that");
         tok.startIndex = tr.startIndex.intValue();
         tok.stopIndex = tr.stopIndex.intValue();
         tok.tokenIndex = tr.token.tokenIndex;
@@ -645,9 +645,9 @@ shared class ExtractFunctionRefactoring(
                 .append(nodes.text(tokens, s));
             variable Integer i = s.endToken.tokenIndex;
             variable CommonToken tok;
-            while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
+            while ((tok = tokens.get(++i)).channel == Token.hiddenChannel) {
                 value text = tok.text;
-                if (tok.type == CeylonLexer.\iLINE_COMMENT) {
+                if (tok.type == CeylonLexer.lineComment) {
                     definition
                         .append(" ")
                         .append(text.trimmed);
@@ -656,7 +656,7 @@ shared class ExtractFunctionRefactoring(
                     }
                 }
                 
-                if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
+                if (tok.type == CeylonLexer.multiComment) {
                     definition
                         .append(" ")
                         .append(text);

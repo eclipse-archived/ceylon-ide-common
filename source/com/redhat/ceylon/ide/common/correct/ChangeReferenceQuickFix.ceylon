@@ -53,7 +53,7 @@ shared object changeReferenceQuickFix {
             value pn = dec.container.qualifiedNameString;
             pkg = " in '" + pn + "'";
             if (!pn.empty,
-                !pn.equals(Module.\iLANGUAGE_MODULE_NAME),
+                pn!=Module.languageModuleName,
                 exists node = nodes.findNode {
                     node = data.rootNode;
                     tokens = null;

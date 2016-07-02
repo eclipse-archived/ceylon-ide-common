@@ -165,16 +165,15 @@ shared object initializerQuickFix {
             }
             
             value pname = d.unit.\ipackage.nameAsString;
-            value inLangModule = pname.equals(Module.\iLANGUAGE_MODULE_NAME);
+            value inLangModule = pname.equals(Module.languageModuleName);
             if (is Value d) {
-                value \ivalue = d;
                 if (inLangModule) {
-                    if (isIgnoredLanguageModuleValue(\ivalue)) {
+                    if (isIgnoredLanguageModuleValue(d)) {
                         continue;
                     }
                 }
                 
-                if (exists vt = \ivalue.type,
+                if (exists vt = d.type,
                     !vt.nothing,
                     (isTypeParamInBounds(td, vt) || vt.isSubtypeOf(type))) {
                     
@@ -182,15 +181,15 @@ shared object initializerQuickFix {
                 }
             }
             
-            if (is Function method=d) {
+            if (is Function d) {
                 if (!d.annotation) {
                     if (inLangModule) {
-                        if (isIgnoredLanguageModuleMethod(method)) {
+                        if (isIgnoredLanguageModuleMethod(d)) {
                             continue;
                         }
                     }
                     
-                    if (exists mt = method.type,
+                    if (exists mt = d.type,
                         !mt.nothing,
                         (isTypeParamInBounds(td, mt) || mt.isSubtypeOf(type))) {
                         
@@ -200,25 +199,24 @@ shared object initializerQuickFix {
             }
             
             if (is Class d) {
-                value clazz = d;
-                if (!clazz.abstract, !d.annotation) {
+                if (!d.abstract, !d.annotation) {
                     if (inLangModule) {
-                        if (isIgnoredLanguageModuleClass(clazz)) {
+                        if (isIgnoredLanguageModuleClass(d)) {
                             continue;
                         }
                     }
                     
-                    if (exists ct = clazz.type,
+                    if (exists ct = d.type,
                         !ct.nothing,
                         (isTypeParamInBounds(td, ct)
                             || ct.declaration.equals(type.declaration)
                             || ct.isSubtypeOf(type))) {
                         
-                        if (clazz.parameterList exists) {
+                        if (d.parameterList exists) {
                             addNestedCompletionProposal(document, props, d, loc);
                         }
                         
-                        for (m in clazz.members) {
+                        for (m in d.members) {
                             if (m is Constructor, m.shared, m.name exists) {
                                 addNestedCompletionProposal(document, props, m, loc);
                             }

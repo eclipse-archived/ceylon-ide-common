@@ -104,7 +104,7 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                         declarationUnit.\ipackage
                         .\imodule
                         .nameAsString;
-                if (moduleName != Module.\iLANGUAGE_MODULE_NAME, 
+                if (moduleName != Module.languageModuleName, 
                     !JDKUtils.isJDKModule(moduleName),
                     !JDKUtils.isOracleJDKModule(moduleName),
                     exists currentUnitProjectRelativePath = phasedUnit.unitFile.projectRelativePath) {

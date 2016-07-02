@@ -309,7 +309,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                         Token? et = that.endToken;
                         Token? set = subnode.endToken;
                         if (!set exists
-                            || (set?.type else 0)!=CL.\iRPAREN
+                            || (set?.type else 0)!=CL.rparen
                             || subnode.stopIndex.intValue() 
                                     > endOfCodeInLine) {
                             
@@ -322,7 +322,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                                         = endOfCodeInLine + 1 + 3;
                             }
                         } else if (!et exists
-                            || (et?.type else 0)!=CL.\iRBRACE
+                            || (et?.type else 0)!=CL.rbrace
                             || that.stopIndex.intValue() > endOfCodeInLine) {
                             
                             if (!change.hasEdits) {
@@ -346,8 +346,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 if (withinLine(that)) {
                     Token? et = that.endToken;
                     if (!et exists
-                        || (et?.type else 0)!=CL.\iSEMICOLON
-                        && (et?.type else 0)!=CL.\iRBRACE
+                        || (et?.type else 0)!=CL.semicolon
+                        && (et?.type else 0)!=CL.rbrace
                         || that.stopIndex.intValue() 
                                 > endOfCodeInLine) {
                         
@@ -371,7 +371,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 if (withinLine(that)) {
                     Token? et = that.endToken;
                     if (!et exists
-                        || (et?.type else 0)!=CL.\iSEMICOLON
+                        || (et?.type else 0)!=CL.semicolon
                         || that.stopIndex.intValue() 
                                 > endOfCodeInLine) {
                         
@@ -417,8 +417,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 stop.intValue() <= endOfCodeInLine &&
                 start.intValue() >= startOfCodeInLine,
                 exists st = that.mainToken,
-                st.type == CL.\iLPAREN,
-                (that.mainEndToken?.type else -1)!=CL.\iRPAREN,
+                st.type == CL.lparen,
+                (that.mainEndToken?.type else -1)!=CL.rparen,
                 !change.hasEdits) {
                 
                 change.addEdit(InsertEdit {
@@ -430,73 +430,73 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         
         shared actual void visit(Tree.ParameterList that) {
             super.visit(that);
-            terminate(that, CL.\iRPAREN, ")");
+            terminate(that, CL.rparen, ")");
         }
         
         shared actual void visit(Tree.IndexExpression that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACKET, "]");
+            terminate(that, CL.rbracket, "]");
         }
         
         shared actual void visit(Tree.TypeParameterList that) {
             super.visit(that);
-            terminate(that, CL.\iLARGER_OP, ">");
+            terminate(that, CL.largerOp, ">");
         }
         
         shared actual void visit(Tree.TypeArgumentList that) {
             super.visit(that);
-            terminate(that, CL.\iLARGER_OP, ">");
+            terminate(that, CL.largerOp, ">");
         }
         
         shared actual void visit(Tree.PositionalArgumentList that) {
             super.visit(that);
-            if (exists t = that.token, t.type == CL.\iLPAREN) {
-                terminate(that, CL.\iRPAREN, ")");
+            if (exists t = that.token, t.type == CL.lparen) {
+                terminate(that, CL.rparen, ")");
             }
         }
         
         shared actual void visit(Tree.NamedArgumentList that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, " }");
+            terminate(that, CL.rbrace, " }");
         }
         
         shared actual void visit(Tree.SequenceEnumeration that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, " }");
+            terminate(that, CL.rbrace, " }");
         }
         
         shared actual void visit(Tree.IterableType that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, "}");
+            terminate(that, CL.rbrace, "}");
         }
         
         shared actual void visit(Tree.Tuple that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACKET, "]");
+            terminate(that, CL.rbracket, "]");
         }
         
         shared actual void visit(Tree.TupleType that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACKET, "]");
+            terminate(that, CL.rbracket, "]");
         }
         
         shared actual void visit(Tree.ConditionList that) {
             super.visit(that);
             if (!that.mainToken.text.startsWith("<missing ")) {
-                terminate(that, CL.\iRPAREN, ")");
+                terminate(that, CL.rparen, ")");
             }
         }
         
         shared actual void visit(Tree.ForIterator that) {
             super.visit(that);
             if (!that.mainToken.text.startsWith("<missing ")) {
-                terminate(that, CL.\iRPAREN, ")");
+                terminate(that, CL.rparen, ")");
             }
         }
         
         shared actual void visit(Tree.ImportMemberOrTypeList that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, " }");
+            terminate(that, CL.rbrace, " }");
         }
         
         shared actual void visit(Tree.Import that) {
@@ -521,7 +521,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
             super.visit(that);
             if (that.importPath exists 
              || that.quotedLiteral exists) {
-                terminate(that, CL.\iSEMICOLON, ";");
+                terminate(that, CL.semicolon, ";");
             }
             
             if (!that.version exists,
@@ -539,33 +539,33 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         
         shared actual void visit(Tree.ImportModuleList that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, " }");
+            terminate(that, CL.rbrace, " }");
         }
         
         shared actual void visit(Tree.PackageDescriptor that) {
             super.visit(that);
-            terminate(that, CL.\iSEMICOLON, ";");
+            terminate(that, CL.semicolon, ";");
         }
         
         shared actual void visit(Tree.Directive that) {
             super.visit(that);
-            terminate(that, CL.\iSEMICOLON, ";");
+            terminate(that, CL.semicolon, ";");
         }
         
         shared actual void visit(Tree.Body that) {
             super.visit(that);
-            terminate(that, CL.\iRBRACE, " }");
+            terminate(that, CL.rbrace, " }");
         }
         
         shared actual void visit(Tree.MetaLiteral that) {
             super.visit(that);
-            terminate(that, CL.\iBACKTICK, "`");
+            terminate(that, CL.backtick, "`");
         }
         
         shared actual void visit(Tree.StatementOrArgument that) {
             super.visit(that);
             if (is Tree.SpecifiedArgument that) {
-                terminate(that, CL.\iSEMICOLON, ";");
+                terminate(that, CL.semicolon, ";");
             }
         }
         
@@ -655,9 +655,9 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
     Boolean skipToken(List<CommonToken> tokens, Integer offset) {
         value ti = nodes.getTokenIndexAtCharacter(tokens, offset);
         value type = tokens.get(ti<0 then -ti else ti).type;
-        return type==CL.\iWS
-            || type==CL.\iMULTI_COMMENT
-            || type==CL.\iLINE_COMMENT;
+        return type==CL.ws
+            || type==CL.multiComment
+            || type==CL.lineComment;
     }
 
 }

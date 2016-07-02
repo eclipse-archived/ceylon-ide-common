@@ -248,7 +248,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     shared abstract class ProjectMessage(
         String theMessage,
         NativeProject theProject,
-        Backend theBackend=Backend.\iHeader)
+        Backend theBackend=Backend.header)
             of ProjectWarning | ProjectError
             extends BuildMessage() {
         shared NativeProject project = theProject;
@@ -280,7 +280,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     shared class ProjectError(
         String theMessage,
         NativeProject theProject,
-        Backend theBackend=Backend.\iHeader)
+        Backend theBackend=Backend.header)
             extends ProjectMessage(theMessage, theProject, theBackend) {
         severity = Severity.error;
     }
@@ -288,7 +288,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     shared class ProjectWarning(
         String theMessage,
         NativeProject theProject,
-        Backend theBackend=Backend.\iHeader)
+        Backend theBackend=Backend.header)
             extends ProjectMessage(theMessage, theProject, theBackend) {
         severity = Severity.warning;
     }
@@ -488,8 +488,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         if (exists isInSourceFolder = file.isSource,
                             isInSourceFolder) {
                             value fileName = file.name;
-                            if (fileName == ModuleManager.\iPACKAGE_FILE || 
-                                fileName == ModuleManager.\iMODULE_FILE) {
+                            if (fileName == ModuleManager.packageFile || 
+                                fileName == ModuleManager.moduleFile) {
                                 
                                 //a package or module descriptor has been added, removed, or changed
                                 if (astAwareIncrementalBuild,
@@ -504,7 +504,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                                 } else {
                                     
                                     state.buildType.requireFullBuild();
-                                    if (fileName == ModuleManager.\iMODULE_FILE) {
+                                    if (fileName == ModuleManager.moduleFile) {
                                         state.buildType.requireClasspathResolution();
                                     }
                                 }
@@ -840,7 +840,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             value languageModule = loader.languageModule;
             loader.loadPackage(languageModule, "com.redhat.ceylon.compiler.java.metadata", true);
             progress.worked(250);
-            loader.loadPackage(languageModule, Module.\iLANGUAGE_MODULE_NAME, true);
+            loader.loadPackage(languageModule, Module.languageModuleName, true);
             progress.worked(250);
             loader.loadPackage(languageModule, "ceylon.language.descriptor", true);
             progress.worked(250);

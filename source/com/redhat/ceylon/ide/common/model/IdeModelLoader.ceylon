@@ -129,7 +129,7 @@ shared abstract class BaseIdeModelLoader(
                 let (do = () {
                     if(! super.\ipackage exists){
                         super.\ipackage = modules.languageModule
-                            .getDirectPackage(Module.\iLANGUAGE_MODULE_NAME);
+                            .getDirectPackage(Module.languageModuleName);
                     }
                     return super.\ipackage;
                 }) synchronize(lock, do); 
@@ -185,7 +185,7 @@ shared abstract class BaseIdeModelLoader(
        value lm = languageModule;
        if (moduleManager.loadDependenciesFromModelLoaderFirst
            && !isBootstrap) {
-           findOrCreatePackage(lm, \iCEYLON_LANGUAGE);
+           findOrCreatePackage(lm, ceylonLanguage);
        }
        return lm;
    }
@@ -624,9 +624,9 @@ shared abstract class BaseIdeModelLoader(
                if (ideModule.isCeylonBinaryArchive) {
                    for (p in ideModule.packages) {
                        if (! p.unit exists) {
-                           variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME);
+                           variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.packageDescriptorClassName);
                            if (! packageClassMirror exists) {
-                               packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME.rest);
+                               packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.packageDescriptorClassName.rest);
                            }
                            // some modules do not declare their main package, because they don't have any declaration to share
                            // there, for example, so this can be null
@@ -637,9 +637,9 @@ shared abstract class BaseIdeModelLoader(
                        }
                        if (p.nameAsString == ideModule.nameAsString) {
                            if (! ideModule.unit exists) {
-                               variable ClassMirror? moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iMODULE_DESCRIPTOR_CLASS_NAME);
+                               variable ClassMirror? moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.moduleDescriptorClassName);
                                if (! moduleClassMirror exists) {
-                                   moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iOLD_MODULE_DESCRIPTOR_CLASS_NAME);
+                                   moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.oldModuleDescriptorClassName);
                                }
                                if (is IdeClassMirror mcm=moduleClassMirror) {
                                    assert(is LazyPackage p);
@@ -803,7 +803,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
                             }
                         });
 
-                if(mod.nameAsString == \iJAVA_BASE_MODULE_NAME
+                if(mod.nameAsString == javaBaseModuleName
                     && packageName == "java.lang") {
                     loadJavaBaseArrays();
                 }

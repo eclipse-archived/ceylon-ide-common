@@ -110,8 +110,8 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             moduleManager.sourceModules.add(theModule.nameAsString);
         }
         if (moduleManager.isModuleLoadedFromSource(theModule.nameAsString), 
-            artifactFile.name.endsWith(ArtifactContext.\iCAR)) {
-            value artifactContext = ArtifactContext(null, theModule.nameAsString, theModule.version, ArtifactContext.\iSRC);
+            artifactFile.name.endsWith(ArtifactContext.car)) {
+            value artifactContext = ArtifactContext(null, theModule.nameAsString, theModule.version, ArtifactContext.src);
             RepositoryManager repositoryManager = context.repositoryManager;
             variable Exception? exceptionOnGetArtifact = null;
             variable ArtifactResult? sourceArtifact = null;

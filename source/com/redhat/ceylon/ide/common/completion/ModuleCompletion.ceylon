@@ -101,7 +101,7 @@ shared interface ModuleCompletion {
                     
                     for (mod in results.results) {
                         value name = mod.name;
-                        if (!name.equals(Module.\iDEFAULT_MODULE_NAME),
+                        if (name!=Module.defaultModuleName,
                             !moduleAlreadyImported(ctx, name)) {
                             
                             if (supportsLinkedModeInArguments) {

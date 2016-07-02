@@ -81,7 +81,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
         progress.worked(1);
         if (is NativeFolder resource,
             resource == nativeRootDir) {
-            value moduleFile = vfsServices.findFile(resource, ModuleManager.\iMODULE_FILE);
+            value moduleFile = vfsServices.findFile(resource, ModuleManager.moduleFile);
             if (exists moduleFile) {
                 moduleSourceMapper.addTopLevelModuleError();
             }
@@ -107,7 +107,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 }
             }
 
-            value moduleFile = vfsServices.findFile(resource, ModuleManager.\iMODULE_FILE);
+            value moduleFile = vfsServices.findFile(resource, ModuleManager.moduleFile);
             if (exists moduleFile) {
                 // First create the package with the default module and we'll change the package
                 // after since the module doesn't exist for the moment and the package is necessary

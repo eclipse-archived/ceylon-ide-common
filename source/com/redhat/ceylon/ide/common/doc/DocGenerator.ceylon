@@ -366,65 +366,65 @@ shared interface DocGenerator {
     String getCodepointGeneralCategoryName(Integer codepoint)
             => let (t = JCharacter.getType(codepoint).byte)
                  // we can't use a switch, see https://github.com/ceylon/ceylon-spec/issues/938 
-                 if (t == JCharacter.\iCOMBINING_SPACING_MARK) 
+                 if (t == JCharacter.combiningSpacingMark) 
                     then "Mark, combining spacing"
-            else if (t == JCharacter.\iCONNECTOR_PUNCTUATION) 
+            else if (t == JCharacter.connectorPunctuation) 
                     then "Punctuation, connector"
-            else if (t == JCharacter.\iCONTROL) 
+            else if (t == JCharacter.control) 
                     then "Other, control"
-            else if (t == JCharacter.\iCURRENCY_SYMBOL) 
+            else if (t == JCharacter.currencySymbol) 
                     then "Symbol, currency"
-            else if (t == JCharacter.\iDASH_PUNCTUATION) 
+            else if (t == JCharacter.dashPunctuation) 
                     then "Punctuation, dash"
-            else if (t == JCharacter.\iDECIMAL_DIGIT_NUMBER) 
+            else if (t == JCharacter.decimalDigitNumber) 
                     then "Number, decimal digit"
-            else if (t == JCharacter.\iENCLOSING_MARK) 
+            else if (t == JCharacter.enclosingMark) 
                     then "Mark, enclosing"
-            else if (t == JCharacter.\iEND_PUNCTUATION) 
+            else if (t == JCharacter.endPunctuation) 
                     then "Punctuation, close"
-            else if (t == JCharacter.\iFINAL_QUOTE_PUNCTUATION) 
+            else if (t == JCharacter.finalQuotePunctuation) 
                     then "Punctuation, final quote"
-            else if (t == JCharacter.\iFORMAT) 
+            else if (t == JCharacter.format) 
                     then "Other, format"
-            else if (t == JCharacter.\iINITIAL_QUOTE_PUNCTUATION) 
+            else if (t == JCharacter.initialQuotePunctuation) 
                     then "Punctuation, initial quote"
-            else if (t == JCharacter.\iLETTER_NUMBER) 
+            else if (t == JCharacter.letterNumber) 
                     then "Number, letter"
-            else if (t == JCharacter.\iLINE_SEPARATOR) 
+            else if (t == JCharacter.lineSeparator) 
                     then "Separator, line"
-            else if (t == JCharacter.\iLOWERCASE_LETTER) 
+            else if (t == JCharacter.lowercaseLetter) 
                     then "Letter, lowercase"
-            else if (t == JCharacter.\iMATH_SYMBOL) 
+            else if (t == JCharacter.mathSymbol) 
                     then "Symbol, math"
-            else if (t == JCharacter.\iMODIFIER_LETTER) 
+            else if (t == JCharacter.modifierLetter) 
                     then "Letter, modifier"
-            else if (t == JCharacter.\iMODIFIER_SYMBOL) 
+            else if (t == JCharacter.modifierSymbol) 
                     then "Symbol, modifier"
-            else if (t == JCharacter.\iNON_SPACING_MARK) 
+            else if (t == JCharacter.nonSpacingMark) 
                     then "Mark, nonspacing"
-            else if (t == JCharacter.\iOTHER_LETTER) 
+            else if (t == JCharacter.otherLetter) 
                     then "Letter, other"
-            else if (t == JCharacter.\iOTHER_NUMBER) 
+            else if (t == JCharacter.otherNumber) 
                     then "Number, other"
-            else if (t == JCharacter.\iOTHER_PUNCTUATION) 
+            else if (t == JCharacter.otherPunctuation) 
                     then "Punctuation, other"
-            else if (t == JCharacter.\iOTHER_SYMBOL) 
+            else if (t == JCharacter.otherSymbol) 
                     then "Symbol, other"
-            else if (t == JCharacter.\iPARAGRAPH_SEPARATOR) 
+            else if (t == JCharacter.paragraphSeparator) 
                     then "Separator, paragraph"
-            else if (t == JCharacter.\iPRIVATE_USE) 
+            else if (t == JCharacter.privateUse) 
                     then "Other, private use"
-            else if (t == JCharacter.\iSPACE_SEPARATOR) 
+            else if (t == JCharacter.spaceSeparator) 
                     then "Separator, space"
-            else if (t == JCharacter.\iSTART_PUNCTUATION) 
+            else if (t == JCharacter.startPunctuation) 
                     then "Punctuation, open"
-            else if (t == JCharacter.\iSURROGATE) 
+            else if (t == JCharacter.surrogate) 
                     then "Other, surrogate"
-            else if (t == JCharacter.\iTITLECASE_LETTER) 
+            else if (t == JCharacter.titlecaseLetter) 
                     then "Letter, titlecase"
-            else if (t == JCharacter.\iUNASSIGNED) 
+            else if (t == JCharacter.unassigned) 
                     then "Other, unassigned"
-            else if (t == JCharacter.\iUPPERCASE_LETTER) 
+            else if (t == JCharacter.uppercaseLetter) 
                     then "Letter, uppercase"
             else "&lt;Unknown&gt;";
 
@@ -598,7 +598,7 @@ shared interface DocGenerator {
 
         value nativeBackends = mod.nativeBackends;
         if (!nativeBackends.none(), 
-            !Backends.\iHEADER == nativeBackends) {
+            !Backends.header == nativeBackends) {
             value buf2 = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf2, nativeBackends);
             buf.append("(")
@@ -637,7 +637,7 @@ shared interface DocGenerator {
         }
         
         value nativeBackends = imp.nativeBackends;
-        if (!nativeBackends.none(), !Backends.\iHEADER == nativeBackends) {
+        if (!nativeBackends.none(), !Backends.header == nativeBackends) {
             value buf2 = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf2, nativeBackends);
             buf.append("(")
@@ -740,7 +740,7 @@ shared interface DocGenerator {
         }
         if (exists backends = decl.nativeBackends, 
             !backends.none(),
-            backends != Backends.\iHEADER) {
+            backends != Backends.header) {
             
             value buf = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf, backends);
@@ -1251,7 +1251,7 @@ shared interface DocGenerator {
             }
         } else if (exists annotatedMirror = toAnnotatedMirror(annotated)) {
             if (exists annotationMirror = 
-                            annotatedMirror.getAnnotation(LanguageAnnotation.\iTHROWS.annotationType),
+                            annotatedMirror.getAnnotation(LanguageAnnotation.throws.annotationType),
                 exists thrownExceptions = 
                             unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
                 for (thrown in thrownExceptions) {
@@ -1380,7 +1380,7 @@ shared interface DocGenerator {
             }
         } else if (exists annotatedMirror=toAnnotatedMirror(annotated)){
             if (exists annotationMirror = 
-                annotatedMirror.getAnnotation(LanguageAnnotation.\iSEE.annotationType),
+                annotatedMirror.getAnnotation(LanguageAnnotation.see.annotationType),
             exists seeAnnotations = 
                     unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
                 for (see in seeAnnotations) {

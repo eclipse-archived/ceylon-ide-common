@@ -19,7 +19,7 @@ shared object joinIfStatementsQuickFix {
         if (is Tree.IfStatement statement) {
             if (exists elseClause = statement.elseClause) {
                 if (exists block = elseClause.block,
-                    block.token.type != CeylonLexer.\iIF_CLAUSE, 
+                    block.token.type != CeylonLexer.ifClause, 
                     is Tree.IfStatement inner = block.statements[0],
                     exists icl = inner.ifClause.conditionList) {
                     

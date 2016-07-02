@@ -549,10 +549,10 @@ shared object nodes {
                 value token = tokenIterator.next();
                 value type = token.type;
                 value text = token.text;
-                if (type == CeylonLexer.\iLIDENTIFIER, 
+                if (type == CeylonLexer.lidentifier, 
                         getTokenLength(token) > text.size) {
                     exp.append("\\i");
-                } else if (type == CeylonLexer.\iUIDENTIFIER, 
+                } else if (type == CeylonLexer.uidentifier, 
                         getTokenLength(token) > text.size) {
                     exp.append("\\I");
                 }

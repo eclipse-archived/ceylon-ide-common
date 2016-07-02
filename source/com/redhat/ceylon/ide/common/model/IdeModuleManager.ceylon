@@ -76,7 +76,7 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
     }
     sourceModules = HashSet<String>();
     if (!loadDependenciesFromModelLoaderFirst) {
-        sourceModules.add(Module.\iLANGUAGE_MODULE_NAME);
+        sourceModules.add(Module.languageModuleName);
     }
 
     shared actual default BaseIdeModelLoader modelLoader {
@@ -104,7 +104,7 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
     shared actual void initCoreModules(variable Modules modules) {
         setModules(modules);
         if (!exists m = modules.languageModule) {
-            value defaultModuleName = Collections.singletonList(javaString(Module.\iDEFAULT_MODULE_NAME));
+            value defaultModuleName = Collections.singletonList(javaString(Module.defaultModuleName));
             BaseIdeModule defaultModule = createModule(defaultModuleName, "unversioned");
             //defaultModule.default = true;
             defaultModule.available = true;
@@ -112,7 +112,7 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
             modules.listOfModules.add(defaultModule);
             modules.defaultModule = defaultModule;
             JList<JString> languageName = toJavaStringList {"ceylon", "language"};
-            variable Module languageModule = createModule(languageName, TypeChecker.\iLANGUAGE_MODULE_VERSION);
+            variable Module languageModule = createModule(languageName, TypeChecker.languageModuleVersion);
             languageModule.languageModule = languageModule;
             languageModule.available = false;
             modules.languageModule = languageModule;
@@ -226,13 +226,13 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
         // manager even for the JS backend.
         // TODO At some point we'll need an actual module manager for the
         // JS backend and an IDE that can somehow merge the two when needed
-        variable value backends = Backends.\iANY;
+        variable value backends = Backends.any;
         if (exists theProject = ceylonProject) {
             if (theProject.compileToJava) {
-                backends = backends.merged(Backend.\iJava);
+                backends = backends.merged(Backend.java);
             }
             if (theProject.compileToJs) {
-                backends = backends.merged(Backend.\iJavaScript);
+                backends = backends.merged(Backend.javaScript);
             }
         }
         return backends;

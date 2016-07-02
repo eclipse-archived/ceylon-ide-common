@@ -162,7 +162,7 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
     Package? pkg = decl.unit.\ipackage;
     String qname = decl.qualifiedNameString;
     
-    if (exists pkg, (Module.\iLANGUAGE_MODULE_NAME.equals(pkg.nameAsString) || (if (exists unit) then pkg.equals(unit.\ipackage) else false))) {
+    if (exists pkg, (Module.languageModuleName.equals(pkg.nameAsString) || (if (exists unit) then pkg.equals(unit.\ipackage) else false))) {
         if (decl.toplevel) {
             return decl.nameAsString;
         } else {
@@ -205,7 +205,7 @@ Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     value tokens = cpc.tokens;
     while (i < tokens.size()) {
         CommonToken tok = tokens.get(i);
-        if (tok.channel != CommonToken.\iHIDDEN_CHANNEL) {
+        if (tok.channel != CommonToken.hiddenChannel) {
             return tok.type;
         }
         i++;
@@ -348,8 +348,8 @@ shared Boolean isIgnoredLanguageModuleClass(Class clazz) {
             || clazz.annotation;
 }
 
-shared Boolean isIgnoredLanguageModuleValue(Value \ivalue) {
-    value name = \ivalue.name;
+shared Boolean isIgnoredLanguageModuleValue(Value val) {
+    value name = val.name;
     return name.equals("process")
             || name.equals("runtime") 
             || name.equals("system") 
@@ -388,13 +388,13 @@ Integer findCharCount(Integer count, CommonDocument document,
 
     assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
 
-    value \iNONE = 0;
-    value \iBRACKET = 1;
-    value \iBRACE = 2;
-    value \iPAREN = 3;
-    value \iANGLE = 4;
+    value none = 0;
+    value bracket = 1;
+    value brace = 2;
+    value paren = 3;
+    value angle = 4;
 
-    variable value nestingMode = \iNONE;
+    variable value nestingMode = none;
     variable value nestingLevel = 0;
 
     variable value charCount = 0;
@@ -442,23 +442,23 @@ Integer findCharCount(Integer count, CommonDocument document,
             if (considerNesting) {
                 switch (curr)
                 case ('[') {
-                    if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
-                        nestingMode = \iBRACKET;
+                    if (nestingMode==bracket || nestingMode==none) {
+                        nestingMode = bracket;
                         nestingLevel++;
                     }
                 }
                 case (']') {
-                    if (nestingMode == \iBRACKET && --nestingLevel == 0) {
-                        nestingMode = \iNONE;
+                    if (nestingMode == bracket && --nestingLevel == 0) {
+                        nestingMode = none;
                     }
                 }
                 case ('(') {
-                    if (nestingMode == \iANGLE) {
-                        nestingMode = \iPAREN;
+                    if (nestingMode == angle) {
+                        nestingMode = paren;
                         nestingLevel = 1;
                     }
-                    if (nestingMode==\iPAREN || nestingMode==\iNONE) {
-                        nestingMode = \iPAREN;
+                    if (nestingMode==paren || nestingMode==none) {
+                        nestingMode = paren;
                         nestingLevel++;
                     }
                 }            
@@ -466,19 +466,19 @@ Integer findCharCount(Integer count, CommonDocument document,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iPAREN) {
+                    if (nestingMode == paren) {
                         if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
+                            nestingMode = none;
                         }
                     }
                 }
                 case ('{') {
-                    if (nestingMode == \iANGLE) {
-                        nestingMode = \iBRACE;
+                    if (nestingMode == angle) {
+                        nestingMode = brace;
                         nestingLevel = 1;
                     }
-                    if (nestingMode==\iBRACE || nestingMode==\iNONE) {
-                        nestingMode = \iBRACE;
+                    if (nestingMode==brace || nestingMode==none) {
+                        nestingMode = brace;
                         nestingLevel++;
                     }
                 }
@@ -486,13 +486,13 @@ Integer findCharCount(Integer count, CommonDocument document,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iBRACE && --nestingLevel == 0) {
-                        nestingMode = \iNONE;
+                    if (nestingMode == brace && --nestingLevel == 0) {
+                        nestingMode = none;
                     }
                 }
                 case ('<') {
-                    if (nestingMode==\iANGLE || nestingMode==\iNONE) {
-                        nestingMode = \iANGLE;
+                    if (nestingMode==angle || nestingMode==none) {
+                        nestingMode = angle;
                         nestingLevel++;
                     }
                 }
@@ -500,9 +500,9 @@ Integer findCharCount(Integer count, CommonDocument document,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iANGLE) {
+                    if (nestingMode == angle) {
                         if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
+                            nestingMode = none;
                         }
                     }
                 }
