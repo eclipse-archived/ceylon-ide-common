@@ -126,6 +126,12 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         return nodes.getReferencedNode(referenceable);
     }
 
+    function same(Boolean isCeylon, Declaration sourceDecl, Declaration dec)
+            => isCeylon
+            then sourceDecl == dec
+            else sourceDecl.qualifiedNameString
+                    == dec.qualifiedNameString;
+    
     shared Referenceable? resolveNative(Declaration dec, Backends backends) {
         if (backends.none()) {
             return null;
@@ -135,18 +141,18 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             //declarations obtained directly from Java 
             //binaries don't include all the native impls,
             //so look for it in the corresponding source
+            //TODO: this code simply doesn't handle the case
+            //      of the native Java source code in the
+            //      language module, since it only iterates
+            //      Ceylon source declarations
             if (exists phasedUnit = binaryUnit.phasedUnit) {
-                value sourceFile = phasedUnit.unit;
                 value sourceRelativePath = binaryUnit.ceylonModule
                         .toSourceUnitRelativePath(binaryUnit.relativePath);
                 value isCeylon = sourceRelativePath?.endsWith(".ceylon") else false;
-                for (sourceDecl in sourceFile.declarations) {
-                    Boolean thisOne = isCeylon 
-                        then sourceDecl == dec
-                        else sourceDecl.qualifiedNameString
-                                == dec.qualifiedNameString;
-                    if (thisOne) {
-                        return ModelUtil.getNativeDeclaration(sourceDecl, backends);
+                for (sourceDecl in phasedUnit.declarations) {
+                    if (same(isCeylon, sourceDecl, dec),
+                        ModelUtil.isForBackend(backends, sourceDecl.nativeBackends)) {
+                        return sourceDecl;
                     }
                 }
             }
