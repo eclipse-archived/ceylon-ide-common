@@ -31,12 +31,12 @@ shared interface AbstractImportsCleaner {
      be imported between the different `proposals`"
     shared formal Declaration? select(List<Declaration> proposals);
     
-    shared void cleanImports(Tree.CompilationUnit? rootNode,
+    shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
         CommonDocument doc) {
         
-        value change = platformServices.document.createTextChange("Organize Imports", doc);
-        
         if (exists rootNode) {
+            value change = platformServices.document.createTextChange("Organize Imports", doc);
+        
             value imp = imports(rootNode, doc);
             value importList = rootNode.importList;
             if (!(imp.trimmed.empty && importList.imports.empty)) {
@@ -54,12 +54,16 @@ shared interface AbstractImportsCleaner {
                     extra = "";
                 }
                 
-                if (doc.getText(start, length) != imp + extra) {
+                Boolean changed = doc.getText(start, length) != imp + extra;
+                if (changed) {
                     change.addEdit(ReplaceEdit(start, length, imp + extra));
                     change.apply();
                 }
+                return changed;
             }
         }
+        
+        return false;
     }
     
     String imports(Tree.CompilationUnit cu, CommonDocument doc) {
