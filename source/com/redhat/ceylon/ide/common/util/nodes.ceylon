@@ -471,17 +471,16 @@ shared object nodes {
     shared Node? getReferencedNode(Referenceable? model,
             //TODO: this argument is probably always useless 
             Tree.CompilationUnit? rootNode = null) {
-        if (exists model) {
-            if (exists rootNode) {
-                return findReferencedNode(rootNode, model);
-            }
-            else if (is CeylonUnit unit = model.unit,
-                    exists node = unit.compilationUnit) {
-                return findReferencedNode(node, model);
-            }
-            else {
-                return null;
-            }
+        if (!exists model) {
+            return null;
+        }
+        
+        if (exists rootNode) {
+            return findReferencedNode(rootNode, model);
+        }
+        else if (is CeylonUnit unit = model.unit,
+                exists node = unit.compilationUnit) {
+            return findReferencedNode(node, model);
         }
         else {
             return null;

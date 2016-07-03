@@ -56,11 +56,12 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         
     shared Node? getTarget(Tree.CompilationUnit rootNode, 
         Node? node, Backends supportedBackends = Backends.any) {
-            
-        switch (node)
-        case (is Null) {
+        
+        if (!exists node) {
             return null;
         }
+        
+        switch (node)
         case (is Tree.Declaration) {
             if (node.declarationModel.nativeBackends == supportedBackends) {
                 //we're already at the declaration itself
@@ -81,21 +82,18 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             }
         }
         else {}
-
-        assert (exists node);
-
+        
         variable value referenceable = nodes.getReferencedModel(node);
-        switch (_referenceable = referenceable)
+        switch (ref = referenceable)
         case (is Null) {
             return null;
         }
         case (is Declaration) {
-            variable value dec = _referenceable;
-
+            variable value dec = ref;
             //look for the "original" declaration,
             //ignoring narrowing synthetic declarations
-            if (is TypedDeclaration _referenceable) {
-                variable TypedDeclaration? od = _referenceable;
+            if (is TypedDeclaration ref) {
+                variable TypedDeclaration? od = ref;
                 while (exists _od = od) {
                     referenceable = dec = _od;
                     od = _od.originalDeclaration;
@@ -162,33 +160,36 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
     }
 
     shared default Target? gotoDeclaration(Referenceable? model) {
-        if (exists model) {
-            if (exists node = nodes.getReferencedNode(model)) {
-                return gotoNode(node, null);
-            }
-            else {
-                switch (unit = model.unit)
-                case (is AnyCeylonBinaryUnit) {
-                    //special case for Java source in ceylon.language!
-                    if (exists path 
-                            = toJavaString(unit.sourceRelativePath), 
-                        path.endsWith(".java"), 
-                        is Declaration model) {
-                        return gotoJavaNode(model);
-                    }
-                }
-                case (is AnyJavaUnit) {
-                    if (is Declaration model) {
-                        return gotoJavaNode(model);
-                    }
-                }
-                else {}
-            }
+        if (!exists model) {
+            return null;
         }
-        return null;
+        
+        if (exists node = nodes.getReferencedNode(model)) {
+            return gotoNode(node);
+        }
+        else {
+            //model.unit can be null in IntelliJ, no idea why!
+            switch (Unit? unit = model.unit)
+            case (is AnyCeylonBinaryUnit) {
+                //special case for Java source in ceylon.language!
+                if (exists path 
+                        = toJavaString(unit.sourceRelativePath), 
+                    path.endsWith(".java"), 
+                    is Declaration model) {
+                    return gotoJavaNode(model);
+                }
+            }
+            case (is AnyJavaUnit) {
+                if (is Declaration model) {
+                    return gotoJavaNode(model);
+                }
+            }
+            else {}
+            return null;
+        }
     }
     
-    shared Target? gotoNode(Node node, Tree.CompilationUnit? rootNode) {
+    shared Target? gotoNode(Node node, Tree.CompilationUnit? rootNode=null) {
         if (exists identifyingNode 
                 = nodes.getIdentifyingNode(node)) {
             value length = identifyingNode.distance;
