@@ -29,7 +29,8 @@ shared object convertSwitchToIfQuickFix {
             String name;
             if (exists e = switched.expression) {
                 if (is Tree.BaseMemberExpression t = e.term,
-                    exists d = t.declaration) {
+                    exists d = t.declaration,
+                    scl.startIndex exists) {
                     name = d.name;
                     change.addEdit(DeleteEdit {
                         start = sc.startIndex.intValue();
