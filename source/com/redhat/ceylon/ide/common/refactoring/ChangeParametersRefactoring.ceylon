@@ -131,12 +131,11 @@ shared String|Type parseTypeExpression(String typeText, Unit unit, Scope scope) 
         variable String? err = null;
         
         object extends ErrorVisitor() {
-            shared actual void handleMessage(
+            handleMessage(
                 Integer startOffset, Integer endOffset,
                 Integer startCol, Integer startLine, 
-                Message error) {
-                err = error.message; 
-            }
+                Message error) 
+                    => err = error.message;
         }.visit(staticType);
         
         return err else staticType.typeModel;
@@ -155,14 +154,14 @@ class FindInvocationsVisitor(Declaration declaration)
     
     shared actual void visit(Tree.InvocationExpression that) {
         super.visit(that);
-        if (is Tree.MemberOrTypeExpression mte = that.primary) {
-            if (mte.declaration.refines(declaration)) {
-                if (exists pal = that.positionalArgumentList) {
-                    posResults.add(pal);
-                }
-                if (exists nal = that.namedArgumentList) {
-                    namedResults.add(nal);
-                }
+        if (is Tree.MemberOrTypeExpression mte = that.primary,
+            exists d = mte.declaration, 
+            d.refines(declaration)) {
+            if (exists pal = that.positionalArgumentList) {
+                posResults.add(pal);
+            }
+            if (exists nal = that.namedArgumentList) {
+                namedResults.add(nal);
             }
         }
     }
@@ -206,14 +205,10 @@ shared abstract class ChangeParametersRefactoring(
                then inSameProject(declaration)
                else false;
     
-    shared Boolean affectsOtherFiles {
-        if (exists declaration) {
-            return declaration.toplevel || declaration.shared;
-        }
-        else {
-            return false;
-        }
-    }
+    shared Boolean affectsOtherFiles 
+            => if (exists declaration) 
+            then declaration.toplevel || declaration.shared 
+            else false;
     
     "Applies the changes made in the `ParameterList`."
     shared CompositeChange build(ParameterList params) {
