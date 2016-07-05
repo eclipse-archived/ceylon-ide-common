@@ -9,7 +9,8 @@ import ceylon.collection {
 import ceylon.interop.java {
     createJavaObjectArray,
     CeylonIterable,
-    javaString
+    javaString,
+    JavaRunnable
 }
 
 import com.redhat.ceylon.common {
@@ -45,7 +46,6 @@ import com.redhat.ceylon.ide.common.platform {
 }
 import com.redhat.ceylon.ide.common.util {
     unsafeCast,
-    synchronize,
     equalsWithNulls
 }
 import com.redhat.ceylon.model.cmr {
@@ -95,6 +95,9 @@ import java.util {
     JArrayList=ArrayList,
     Collections
 }
+import java.util.concurrent {
+    JCallable = Callable
+}
 
 shared abstract class BaseIdeModelLoader(
             BaseIdeModuleManager theModuleManager,
@@ -122,6 +125,17 @@ shared abstract class BaseIdeModelLoader(
    
     shared Map<String, SourceDeclarationHolder> sourceDeclarations => _sourceDeclarations;
 
+    shared void runWithLock(void action()) {
+        synchronizedRun(JavaRunnable(action));
+    }
+
+    shared T callWithLock<T>(T fun())
+    {
+        return synchronizedCall(object satisfies JCallable<T&Object> {
+            call() => fun() else null;
+        });
+    }
+    
     shared class GlobalTypeFactory(Context context) 
            extends TypeFactory(context) {
        
@@ -132,7 +146,7 @@ shared abstract class BaseIdeModelLoader(
                             .getDirectPackage(Module.languageModuleName);
                     }
                     return super.\ipackage;
-                }) synchronize(lock, do); 
+                }) callWithLock(do); 
             
        assign \ipackage {
            super.\ipackage = \ipackage;
@@ -148,9 +162,8 @@ shared abstract class BaseIdeModelLoader(
    
    
    shared void resetJavaModelSourceIfNecessary(Runnable resetAction) {
-       synchronize {
-           on = lock;
-           void do() {
+       callWithLock {
+           void fun() {
                if (mustResetLookupEnvironment) {
                    resetAction.run();
                    mustResetLookupEnvironment = false;
@@ -179,7 +192,7 @@ shared abstract class BaseIdeModelLoader(
                }
            }
            return pkg;
-       }) synchronize(lock, do);
+       }) callWithLock(do);
        
    shared actual Module loadLanguageModuleAndPackage() {
        value lm = languageModule;
@@ -230,7 +243,7 @@ shared abstract class BaseIdeModelLoader(
            }
            mustResetLookupEnvironment = true;
        }
-       synchronize(lock, do);
+       runWithLock(do);
    }
    
    void retrieveInnerDeclarations(Declaration declaration,
@@ -270,24 +283,24 @@ shared abstract class BaseIdeModelLoader(
            packageExistence.remove(packageCacheKey);
            mustResetLookupEnvironment = true;
        }
-       synchronize(lock, do);
+       runWithLock(do);
    }
    
    shared void clearClassMirrorCacheForClass(BaseIdeModule mod, String classNameToRemove) {
-       synchronize(lock, () {
+       runWithLock(() {
            classMirrorCache.remove(cacheKeyByModule(mod, classNameToRemove));        
            mustResetLookupEnvironment = true;
        });
    }
    
    shared actual void setupSourceFileObjects(JList<out Object> treeHolders) {
-       synchronize (lock, () {
+       runWithLock(() {
            addSourcePhasedUnits(treeHolders, true);
        });
    }
    
     shared void addSourcePhasedUnits(JList<out Object> treeHolders, Boolean isSourceToCompile) {
-       synchronize (lock, () {
+       runWithLock(() {
            for (Object treeHolder in treeHolders) {
                if (is PhasedUnit treeHolder) {
                    value pkgName = treeHolder.\ipackage.qualifiedNameString;
@@ -343,7 +356,7 @@ shared abstract class BaseIdeModelLoader(
             super.loadJDKModules();
    
     shared actual LazyPackage findOrCreateModulelessPackage(String pkgName) =>
-            synchronize(lock, () => unsafeCast<LazyPackage>(findPackage(pkgName)));
+            callWithLock(() => unsafeCast<LazyPackage>(findPackage(pkgName)));
    
     shared actual Boolean isModuleInClassPath(Module mod) {
        if (mod.signature in modulesInClassPath) {
@@ -502,7 +515,7 @@ shared abstract class BaseIdeModelLoader(
                result = foundSourceDeclaration.modelDeclaration;
            }
            return result;
-       }) synchronize (lock, do);
+       }) callWithLock(do);
    }
    
    shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
@@ -552,7 +565,7 @@ shared abstract class BaseIdeModelLoader(
                return null;
            }
            
-       }) synchronize(lock, do);
+       }) callWithLock(do);
    }
    
    shared formal void addModuleToClasspathInternal(ArtifactResult? artifact);
@@ -812,7 +825,6 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             } else {
                 return false;
             }
-        }) synchronize(lock, do);
-        
+        }) callWithLock(do);
     }
 }
