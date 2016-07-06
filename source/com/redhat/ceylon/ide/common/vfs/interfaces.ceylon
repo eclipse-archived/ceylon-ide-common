@@ -137,7 +137,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
     shared actual default Boolean equals(Object that) => 
             if (is ResourceVirtualFile<out Object,out Object,out Object,out Object> that) 
             then nativeResource == that.nativeResource && 
-                    nativeProject==that.nativeProject
+                    nativeProject == that.nativeProject
             else false;
     
     shared actual default Integer hash {
