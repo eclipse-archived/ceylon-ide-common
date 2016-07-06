@@ -51,7 +51,7 @@ import java.lang.ref {
     WeakReference
 }
 
-DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
+shared DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
 
 shared alias AnyProjectSourceFile
         => ProjectSourceFile<out Anything, out Anything, out Anything, out Anything>;
