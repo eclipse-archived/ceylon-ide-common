@@ -257,7 +257,8 @@ shared object ideQuickFixManager {
             object extends Visitor() {
                 shared actual void visit(Tree.ExtendedType that) {
                     super.visit(that);
-                    if (that.type == node,
+                    if (exists type = that.type,
+                        type == node,
                         exists p = that.invocationExpression?.primary) {
                         createQuickFix.addCreateProposals(data, p);
                     }
