@@ -620,7 +620,7 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
             } else if (is Value decl, t.declaration.anonymous, !t.typeConstructor) {
                 builder.append("object");
             } else if (is Functional decl) {
-                builder.append(if (decl.declaredVoid) then "void" else typeName);
+                builder.append(decl.declaredVoid then "void" else typeName);
             } else {
                 builder.append(typeName);
             }
@@ -646,7 +646,7 @@ void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
     Boolean descriptionOnly) {
     
     if (is Functional fp = p.model) {
-        result.append(if (fp.declaredVoid) then "void" else "function");
+        result.append(fp.declaredVoid then "void" else "function");
     } else {
         result.append("value");
     }
@@ -659,8 +659,8 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
     
     if (is Function d) {
         if (exists ci, !ci.anonymous) {
-            if (d.name.equals("equals")) {
-                value pl = (d).parameterLists;
+            if (d.name=="equals") {
+                value pl = d.parameterLists;
                 if (!pl.empty) {
                     value ps = pl.get(0).parameters;
                     if (!ps.empty) {
@@ -683,7 +683,7 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
         }
     } else if (is Value d) {
         if (exists ci, !ci.anonymous) {
-            if (d.name.equals("hash")) {
+            if (d.name=="hash") {
                 appendHashImpl(unit, indent, result, ci);
                 return;
             }
@@ -828,8 +828,11 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
             if (found) {
                 result.append(" && ").append(indent);
             }
-            result.append(name).append("==")
-                    .append(name).append(".").append(name);
+            result.append(name)
+                  .append("==")
+                  .append(p.name)
+                  .append(".")
+                  .append(name);
             found = true;
         }
     }
