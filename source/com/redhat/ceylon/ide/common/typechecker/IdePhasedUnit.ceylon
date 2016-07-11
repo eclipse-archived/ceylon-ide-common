@@ -5,7 +5,8 @@ import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+    Tree,
+    Node
 }
 import com.redhat.ceylon.ide.common.model {
     BaseIdeModuleSourceMapper
@@ -30,6 +31,9 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils
 }
 
 shared abstract class IdePhasedUnit
@@ -75,4 +79,10 @@ shared abstract class IdePhasedUnit
     shared actual default BaseFileVirtualFile unitFile => _unitFile;
     shared actual default BaseFolderVirtualFile srcDir => _srcDir;
     
+    shared actual Boolean handleException(Exception e, Node that) {
+        if (platformUtils.isOperationCanceledException(e)) {
+            throw e;
+        }
+        return false;
+    }
 }
