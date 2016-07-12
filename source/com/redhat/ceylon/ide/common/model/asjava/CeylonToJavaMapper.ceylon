@@ -3,7 +3,9 @@ import ceylon.interop.java {
 }
 
 import com.redhat.ceylon.model.loader.mirror {
-    TypeMirror
+    TypeMirror,
+    ClassMirror,
+    MethodMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -12,22 +14,34 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     ClassOrInterface
 }
+import com.redhat.ceylon.model.loader.model {
+    LazyClass,
+    LazyInterface,
+    LazyFunction
+}
 
-shared alias JavaMirror => JClassMirror|JObjectMirror|JGetterMirror|JSetterMirror|JMethodMirror|JToplevelFunctionMirror;
+shared alias JavaMirror => ClassMirror|MethodMirror;
 
 shared object ceylonToJavaMapper {
     
+    function mapClassOrInterface(ClassOrInterface decl) {
+        return [
+            switch(decl)
+            case (is LazyClass) decl.classMirror
+            case (is LazyInterface) decl.classMirror
+            else JClassMirror(decl)
+        ];
+    }
+    
     shared JavaMirror[] mapDeclaration(Declaration decl) {
         return switch (decl)
-        case (is ClassOrInterface) sequence({JClassMirror(decl)})
+        case (is ClassOrInterface) mapClassOrInterface(decl)
         case (is Value) mapValue(decl)
-        case (is Function) sequence({mapFunction(decl)})
+        case (is Function) [mapFunction(decl)]
         else empty; 
     }
     
     shared TypeMirror mapType(Type type) {
-        Type simplifiedType;
-        
         if (type.union) {
             value types = CeylonIterable(type.caseTypes);
             value nullType = types.find((t) => t.null);
@@ -36,33 +50,33 @@ shared object ceylonToJavaMapper {
                 // Return the non-null type
                 value nonNull = types.find((t) => t != nullType);
                 assert(exists nonNull);
-                simplifiedType = nonNull;
+                return mapType(nonNull);
             } else {
                 return objectMirror;
             }
-        } else {
-            simplifiedType = type;
         }
 
-        if (simplifiedType.integer) {
+        if (type.integer) {
             return longMirror;
-        } else if (simplifiedType.float) {
+        } else if (type.float) {
             return doubleMirror;
-        } else if (simplifiedType.boolean) {
+        } else if (type.boolean) {
             return booleanMirror;
-        } else if (simplifiedType.character) {
+        } else if (type.character) {
             return intMirror;
-        } else if (simplifiedType.byte) {
+        } else if (type.byte) {
             return byteMirror;
-        } else if (simplifiedType.isString()) {
+        } else if (type.isString()) {
             return stringMirror;
         }
         
-        return JTypeMirror(simplifiedType);
+        return JTypeMirror(type);
     }
     
-    JToplevelFunctionMirror|JMethodMirror mapFunction(Function func) {
-        return func.toplevel
+    JToplevelFunctionMirror|MethodMirror mapFunction(Function func) {
+        return if (is LazyFunction func)
+        then func.methodMirror
+        else if (func.toplevel)
         then JToplevelFunctionMirror(func)
         else JMethodMirror(func);
     }

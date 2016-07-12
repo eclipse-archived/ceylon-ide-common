@@ -111,3 +111,6 @@ shared class UnknownTypeMirror(shared actual String qualifiedName = "unknown")
     
     shared actual TypeMirror? upperBound => null;
 }
+
+shared object unknownTypeMirror extends UnknownTypeMirror() {
+}

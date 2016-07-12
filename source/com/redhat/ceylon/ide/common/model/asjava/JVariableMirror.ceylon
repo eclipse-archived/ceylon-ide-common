@@ -1,15 +1,20 @@
+import com.redhat.ceylon.ide.common.model {
+    unknownTypeMirror
+}
 import com.redhat.ceylon.model.loader.mirror {
     VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
-    Value
+    Value,
+    Type
+}
+
+import java.lang {
+    JString=String
 }
 import java.util {
     Collections
-}
-import java.lang {
-    JString=String
 }
 
 class JVariableMirror(Parameter|Value p) satisfies VariableMirror {
@@ -23,9 +28,12 @@ class JVariableMirror(Parameter|Value p) satisfies VariableMirror {
             case (is Parameter) p.name
             else p.name;
 
-    type => ceylonToJavaMapper.mapType(
-        switch (p)
-        case (is Parameter) p.type
-        else p.type
-    );
+    type => 
+            let (Type? t = switch (p)
+                           case (is Parameter) p.type
+                           else p.type
+            )
+            if (exists t)
+            then ceylonToJavaMapper.mapType(t)
+            else unknownTypeMirror;
 }
