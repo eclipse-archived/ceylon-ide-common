@@ -160,7 +160,7 @@ shared object createParameterQuickFix {
     
     shared void addCreateParameterProposals(QuickFixData data) {
         value fav = FindInvocationVisitor(data.node);
-        (fav of Visitor).visit(data.rootNode);
+        fav.visit(data.rootNode);
         if (is Tree.MemberOrTypeExpression prim 
                 = fav.result?.primary, 
             exists pr = prim.target) {
@@ -240,8 +240,7 @@ shared object createParameterQuickFix {
         variable String def, String desc, Declaration? typeDec, Type t) {
         
         if (exists typeDec, is Functional typeDec, 
-            is AnyModifiableSourceFile unit 
-                    = (typeDec of Declaration).unit, 
+            is AnyModifiableSourceFile unit = typeDec.unit, 
             exists phasedUnit = unit.phasedUnit) {
             value fdv = FindDeclarationNodeVisitor(typeDec);
             correctionUtil.getRootNode(phasedUnit).visit(fdv);
@@ -276,8 +275,7 @@ shared object createParameterQuickFix {
         variable String pdef, String adef, String desc, Declaration typeDec, Type t) {
         
         if (is ClassOrInterface typeDec, 
-            is AnyModifiableSourceFile unit 
-                    = (typeDec of Declaration).unit, 
+            is AnyModifiableSourceFile unit = typeDec.unit, 
             exists phasedUnit = unit.phasedUnit) {
 
             value fdv = FindDeclarationNodeVisitor(typeDec);

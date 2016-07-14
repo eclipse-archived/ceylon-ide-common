@@ -250,7 +250,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
             if (declaration.parameter) {
                 assert (is FunctionOrValue declaration);
                 assert (is Declaration container = declaration.container);
-                if ((container of Declaration).toplevel || container.shared) {
+                if (container.toplevel || container.shared) {
                     return true;
                 }
             }

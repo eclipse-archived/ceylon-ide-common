@@ -111,7 +111,7 @@ shared object initializerQuickFix {
             value sb = StringBuilder();
             sb.append(getProposedName(null, dec, dec.unit));
             if (is Functional dec) {
-                appendPositionalArgs(dec, null, (dec of Declaration).unit,
+                appendPositionalArgs(dec, null, dec.unit,
                     sb, false, description, false);
             }
             

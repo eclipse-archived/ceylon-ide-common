@@ -1092,7 +1092,7 @@ shared interface DocGenerator {
     }
 
     void addPackageInfo(Declaration decl, StringBuilder builder) {
-        if (exists pkg = (decl of Referenceable).unit.\ipackage, 
+        if (exists pkg = decl.unit.\ipackage, 
             decl.toplevel) {
             value label = if (pkg.nameAsString.empty)
                 then "<span>Member of default package.</span>"

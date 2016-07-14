@@ -47,7 +47,7 @@ shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit)
                 while (container is Declaration) {
                     assert(is Declaration ancestor = container);
                     ancestors.push(ancestor);
-                    container = (ancestor of Declaration).container;
+                    container = ancestor.container;
                 }
                 if (container.equals(sourceUnitPackage)) {
                     variable Scope? curentBinaryScope = binaryPackage;

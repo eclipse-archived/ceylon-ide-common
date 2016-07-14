@@ -691,7 +691,7 @@ shared object completionManager
         }
         else if (is Tree.ArgumentList node) {
             value fiv = FindInvocationVisitor(node);
-            (fiv of Visitor).visit(cu);
+            fiv.visit(cu);
             if (exists ie = fiv.result) {
                 addParametersProposal {
                     offset = offset;
