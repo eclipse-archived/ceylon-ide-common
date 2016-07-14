@@ -833,6 +833,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
     }
     
+    shared default void encloseOnTheFlyTypechecking(void typechecking()) {
+        typechecking();
+    }
 
     ExternalPhasedUnit? buildPhasedUnitForBinaryUnit(String? sourceUnitFullPath) {
         if (!_sourceArchivePath exists || !sourceUnitFullPath exists) {
@@ -899,12 +902,14 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     }
                 }
                 if (exists existingPhasedUnit = phasedUnit) {
-                    existingPhasedUnit.validateTree();
-                    existingPhasedUnit.visitSrcModulePhase();
-                    existingPhasedUnit.visitRemainingModulePhase();
-                    existingPhasedUnit.scanDeclarations();
-                    existingPhasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
-                    existingPhasedUnit.validateRefinement();
+                    encloseOnTheFlyTypechecking(() {
+                        existingPhasedUnit.validateTree();
+                        existingPhasedUnit.visitSrcModulePhase();
+                        existingPhasedUnit.visitRemainingModulePhase();
+                        existingPhasedUnit.scanDeclarations();
+                        existingPhasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
+                        existingPhasedUnit.validateRefinement();
+                    });
                     moduleManager.model.externalPhasedUnitsTypechecked({existingPhasedUnit}, false);                    
                 }
             }
