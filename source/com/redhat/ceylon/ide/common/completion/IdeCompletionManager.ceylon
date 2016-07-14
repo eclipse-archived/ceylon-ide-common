@@ -1662,10 +1662,12 @@ shared object completionManager
     
     Proposals getUnparsedProposals(Node? node, String prefix, 
         Cancellable? cancellable)
-            => if (exists node,
-                    exists pkg = node.unit?.\ipackage)
+            => if (exists node, 
+                    exists unit = node.unit,
+                    exists pkg = unit.\ipackage)
                 then pkg.\imodule
-                    .getAvailableDeclarations(prefix, 0, cancellable)
+                    .getAvailableDeclarations(unit, 
+                        prefix, 0, cancellable)
                 else noProposals;
 }
 
