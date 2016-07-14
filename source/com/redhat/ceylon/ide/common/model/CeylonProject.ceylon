@@ -17,6 +17,9 @@ import com.redhat.ceylon.cmr.ceylon {
         CeylonRepoManagerBuilder
     }
 }
+import com.redhat.ceylon.cmr.spi {
+    ContentStore
+}
 import com.redhat.ceylon.common {
     Constants,
     FileUtil,
@@ -364,6 +367,11 @@ shared abstract class BaseCeylonProject() {
             .chain(c.globalLookupRepos)
             .chain(c.projectRemoteRepos)
             .chain(c.otherRemoteRepos);
+
+    shared {File*} ceylonRepositoryBaseDirectories => CeylonIterable(repositoryManager.repositories)
+                .map((repo) => repo.root.getService(javaClass<ContentStore>()) else null)
+                .coalesced
+                .flatMap((contentStore) => CeylonIterable(contentStore.baseDirectories));
 
     shared default Boolean isJavaLikeFileName(String fileName) =>
             fileName.endsWith(".java");
