@@ -421,13 +421,14 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             value astAwareIncrementalBuild = true;
             
             // get the modules
-            value outputRepoMap = map(ceylonProject.referencedCeylonProjects
+            value projectInfoMap = map(ceylonProject.referencedCeylonProjects
                 .follow(ceylonProject)
                     .map((project) => 
                 project.ideArtifact -> [ 
             Path(project.configuration.outputRepoProjectRelativePath),
             vfsServices.fromJavaFile(project.configuration.projectConfigFile, project.ideArtifact),
-            vfsServices.fromJavaFile(project.ideConfiguration.ideConfigFile, project.ideArtifact)
+            vfsServices.fromJavaFile(project.ideConfiguration.ideConfigFile, project.ideArtifact),
+            project.ceylonRepositoryBaseDirectories
             ]));
             
             value overridesResource =
@@ -437,44 +438,52 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             else null;
             
             for (change in changesToAnalyze) {
+                NativeResource changeResource;
+                NativeProject changeProject;
+                Path? projectRelativePath;
                 switch(change)
                 case(is [NativeResourceChange, NativeProject]) {
                     // Change outside project sources or resources
-                    value [nonModelChange, changeProject] = change;
-                    value resource = nonModelChange.resource;
+                    value [nonModelChange, theChangeProject] = change;
+                    changeProject = theChangeProject;
+                    changeResource = nonModelChange.resource;
+                    projectRelativePath = vfsServices.getProjectRelativePath(changeResource, changeProject);
                     switch(nonModelChange)
                     case(is NativeFolderRemoval) {
-                        if (exists relativePath = vfsServices.getProjectRelativePath(resource, changeProject),
-                            exists [outputRepo, _, __] = outputRepoMap.get(changeProject),
-                            outputRepo.isPrefixOf(relativePath)) {
+                        if (exists projectRelativePath,
+                            exists [outputRepo, _, __, ___] = projectInfoMap.get(changeProject),
+                            outputRepo.isPrefixOf(projectRelativePath)) {
                             state.buildType.requireFullBuild();
                             state.buildType.requireClasspathResolution();
                         }
                     }
                     case(is NativeFileChange) {
                         if (exists overridesResource, 
-                            resource == overridesResource) {
+                            changeResource == overridesResource) {
                             state.buildType.requireFullBuild();
                             state.buildType.requireClasspathResolution();
                         }
-                        if (exists [_, configResource, ideConfigResource] = outputRepoMap.get(changeProject)) {
+                        if (exists [_, configResource, ideConfigResource, __] = projectInfoMap.get(changeProject)) {
                             if (exists configResource,
-                                resource == configResource) {
+                                changeResource == configResource) {
                                 state.buildType.requireFullBuild();
                                 state.buildType.requireClasspathResolution();
                             }
                             if (exists ideConfigResource,
-                                resource == ideConfigResource) {
+                                changeResource == ideConfigResource) {
                                 state.buildType.requireFullBuild();
                                 state.buildType.requireClasspathResolution();
                             }
                         }
                     }
                     else {}
-                    
                 }
                 case(is ResourceVirtualFileChange) {
                     // Change in project sources or resources
+                    assert(exists theChangeProject = change.resource.ceylonProject?.ideArtifact);
+                    changeProject = theChangeProject;
+                    changeResource = change.resource.nativeResource;
+                    projectRelativePath = vfsServices.getProjectRelativePath(changeResource, changeProject);
                     switch(change)
                     case(is FolderVirtualFileRemoval) {
                         // Check if a folder with an existing package is removed
@@ -513,6 +522,16 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         
                     }
                     else {}
+                }
+                if (exists javaFile = vfsServices.getJavaFile(changeResource),
+                    exists [_, __, ___, localProjectRepositories] = projectInfoMap.get(changeProject),
+                    localProjectRepositories.filter((repo) 
+                            => ! ceylonProject.model.ceylonProjects.any((p)
+                                => repo == p.ceylonModulesOutputDirectory)) // don't take output repos
+                        .any((repo) => Path(repo.absolutePath).isPrefixOf(Path(javaFile.absolutePath)))) {
+                    // A file has been touched inside a non-output local repository.
+                    state.buildType.requireFullBuild();
+                    state.buildType.requireClasspathResolution();
                 }
             }
             
