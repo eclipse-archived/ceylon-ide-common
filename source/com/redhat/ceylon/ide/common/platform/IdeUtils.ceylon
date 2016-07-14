@@ -1,8 +1,12 @@
 import java.lang {
-    RuntimeException
+    RuntimeException,
+    ClassLoader
 }
 import com.redhat.ceylon.common.log {
     Logger
+}
+import ceylon.interop.java {
+    javaClassFromInstance
 }
 shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
     String _string;
@@ -32,6 +36,8 @@ shared interface IdeUtils {
         info(String str) => process.writeErrorLine("Note: ``str``");
         debug(String str) => noop();
     };
+    
+    shared formal ClassLoader pluginClassLoader;
 }
 
 shared class DefaultIdeUtils() satisfies IdeUtils {
@@ -54,4 +60,6 @@ shared class DefaultIdeUtils() satisfies IdeUtils {
     
     isOperationCanceledException(Exception exception) 
             => exception is OperationCancelledException;
+    
+    pluginClassLoader => javaClassFromInstance(this).classLoader;
 }

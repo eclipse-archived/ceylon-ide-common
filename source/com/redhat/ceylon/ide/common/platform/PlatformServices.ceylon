@@ -1,9 +1,24 @@
 import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
+import java.lang {
+    Thread
+}
+import com.redhat.ceylon.cmr.api {
+    RepositoryManagerBuilder
+}
 
 shared interface PlatformServices {
-    shared void register() => _platformServices = this;
+    shared void register() {
+        _platformServices = this;
+        value oldClassLoader = Thread.currentThread().contextClassLoader;
+        Thread.currentThread().contextClassLoader = utils().pluginClassLoader;
+        try {
+            RepositoryManagerBuilder(utils().cmrLogger).repositoryBuilder();
+        } finally {
+            Thread.currentThread().contextClassLoader = oldClassLoader;
+        }
+    }
     
     shared formal IdeUtils utils();
     shared formal ModelServices<NativeProject, NativeResource, NativeFolder, NativeFile> 
