@@ -42,29 +42,32 @@ shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit)
             if (binaryDeclarationSource) {
                 assert(is SingleSourceUnitPackage sourceUnitPackage = \ipackage);
                 Package binaryPackage = sourceUnitPackage.modelPackage;
-                Stack<Declaration> ancestors = Stack<Declaration>();
+                value ancestors = Stack<Declaration>();
                 variable Scope container = sourceDeclaration.container;
-                while (container is Declaration) {
-                    assert(is Declaration ancestor = container);
+                while (is Declaration ancestor = container) {
                     ancestors.push(ancestor);
                     container = ancestor.container;
                 }
-                if (container.equals(sourceUnitPackage)) {
-                    variable Scope? curentBinaryScope = binaryPackage;
+                if (container==sourceUnitPackage) {
+                    variable Scope? currentBinaryScope = binaryPackage;
                     while (!ancestors.empty()) {
-                        variable Declaration? binaryAncestor = curentBinaryScope?.getDirectMember(ancestors.pop().name, null, false);
-                        if (is Value valueAncestor=binaryAncestor) {
+                        variable Declaration? binaryAncestor 
+                                = currentBinaryScope?.getDirectMember(
+                                    ancestors.pop().name, null, false);
+                        if (is Value valueAncestor = binaryAncestor) {
                             binaryAncestor = valueAncestor.typeDeclaration;
                         }
-                        if (is Scope scopeAncestor=binaryAncestor) {
-                            curentBinaryScope = scopeAncestor;
+                        if (is Scope scopeAncestor = binaryAncestor) {
+                            currentBinaryScope = scopeAncestor;
                         }
                         else {
                             break;
                         }
                     }
-                    if (exists foundBinaryScope=curentBinaryScope) {
-                        binaryDeclaration = foundBinaryScope.getDirectMember(sourceDeclaration.name, null, false);
+                    if (exists foundBinaryScope = currentBinaryScope) {
+                        binaryDeclaration = 
+                                foundBinaryScope.getDirectMember(
+                                    sourceDeclaration.name, null, false);
                     }
                 }
             }
