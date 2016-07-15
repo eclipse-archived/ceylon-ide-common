@@ -8,6 +8,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil,
     Visitor
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
@@ -45,12 +51,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
 }
 
 shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -124,12 +124,12 @@ shared {Declaration*} overloads(Declaration dec) {
 // see CompletionUtil.getParameters
 List<Parameter> getParameters(ParameterList pl,
     Boolean includeDefaults, Boolean namedInvocation) {
-    List<Parameter> ps = pl.parameters;
+    value ps = pl.parameters;
     if (includeDefaults) {
         return ps;
     }
     else {
-        List<Parameter> list = ArrayList<Parameter>();
+        value list = ArrayList<Parameter>();
         for (p in ps) {
             if (!p.defaulted || 
                 (namedInvocation && spreadable(p, ps))) {
@@ -143,9 +143,10 @@ List<Parameter> getParameters(ParameterList pl,
 Boolean spreadable(Parameter param, List<Parameter> list) {
     value lastParam = list.get(list.size() - 1);
     if (param == lastParam, param.model is Value) {
-        Type? type = param.type;
-        value unit = param.declaration.unit;
-        return type exists && unit.isIterableParameterType(type);
+        return if (exists type = param.type) 
+            then param.declaration.unit
+                .isIterableParameterType(type)
+            else false;
     } else {
         return false;
     }
@@ -159,10 +160,11 @@ Boolean isPackageDescriptor(Tree.CompilationUnit? cu)
         => (cu?.unit?.filename else "") == "package.ceylon";
 
 String getTextForDocLink(Unit? unit, Declaration decl) {
-    Package? pkg = decl.unit.\ipackage;
     String qname = decl.qualifiedNameString;
     
-    if (exists pkg, (Module.languageModuleName.equals(pkg.nameAsString) || (if (exists unit) then pkg.equals(unit.\ipackage) else false))) {
+    if (exists pkg = decl.unit.\ipackage, 
+        Module.languageModuleName.equals(pkg.nameAsString) 
+            || (if (exists unit) then pkg.equals(unit.\ipackage) else false)) {
         if (decl.toplevel) {
             return decl.nameAsString;
         } else {
