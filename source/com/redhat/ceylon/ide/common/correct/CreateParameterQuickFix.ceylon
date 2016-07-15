@@ -3,8 +3,7 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    Node,
-    Visitor
+    Node
 }
 import com.redhat.ceylon.ide.common.doc {
     Icons
