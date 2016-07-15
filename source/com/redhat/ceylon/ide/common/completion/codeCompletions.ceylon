@@ -75,8 +75,7 @@ String getPositionalInvocationTextFor(Declaration dec, OccurrenceLocation? ol,
 }
 
 String getNamedInvocationTextFor(Declaration dec, Reference pr, Unit unit, 
-    Boolean includeDefaulted, String? typeArgs,
-    Boolean addParameterTypesInCompletions) {
+    Boolean includeDefaulted, String? typeArgs) {
     
     value result = StringBuilder();
     result.append(escaping.escapeName(dec, unit));
@@ -93,8 +92,7 @@ String getNamedInvocationTextFor(Declaration dec, Reference pr, Unit unit,
         result = result;
         includeDefaulted = includeDefaulted;
         descriptionOnly = false;
-        addParameterTypesInCompletions 
-                = addParameterTypesInCompletions;
+        addParameterTypesInCompletions = false;
     };
     appendSemiToVoidInvocation(result, dec);
     return result.string;

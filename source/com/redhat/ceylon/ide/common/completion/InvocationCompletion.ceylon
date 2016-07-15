@@ -439,8 +439,6 @@ shared interface InvocationCompletion {
                                 unit = unit;
                                 includeDefaulted = false;
                                 typeArgs = typeArgs;
-                                addParameterTypesInCompletions 
-                                        = addParameterTypesInCompletions;
                             };
                             dec = dec;
                             pr = pr;
@@ -473,8 +471,6 @@ shared interface InvocationCompletion {
                                 unit = unit;
                                 includeDefaulted = true;
                                 typeArgs = typeArgs;
-                                addParameterTypesInCompletions 
-                                        = addParameterTypesInCompletions;
                             };
                             dec = dec;
                             pr = pr;
