@@ -556,7 +556,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     void initializeTheCeylonModel(BaseProgressMonitor monitor) => 
             withCeylonModelCaching {
         void do() {
-            ceylonProject.withSourceModel(false, void () {
+            ceylonProject.withSourceModel(false, () {
                 try(progress = monitor.Progress(1000, "Initializing the Ceylon model for project `` ceylonProject.name ``")) {
                     typecheckDependencies(progress.newChild(300));
                     initializeLanguageModule(progress.newChild(50));
@@ -745,10 +745,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     .sequence();
             
             value dependencyTypecheckingPhases = {
-                ["scanning declarations", 1, void (PhasedUnit pu) => pu.scanDeclarations()],
-                ["scanning types", 2, void (PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
-                ["validating refinement", 1, void (PhasedUnit pu) => pu.validateRefinement()],
-                ["analysing types", 2, void (PhasedUnit pu) => pu.analyseTypes(cancelDidYouMeanSearch)]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
+                ["Scanning declarations", 1, (PhasedUnit pu) => pu.scanDeclarations()],
+                ["Scanning types", 2, (PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
+                ["Validating refinement", 1, (PhasedUnit pu) => pu.validateRefinement()],
+                ["Analysing types", 2, (PhasedUnit pu) => pu.analyseTypes(cancelDidYouMeanSearch)]     // The Needed to have the right values in the Value.trans field (set in Expression visitor)
                 // which in turn is important for debugging !
             };
             
@@ -840,11 +840,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             }
             
             value incrementalTypecheckingPreliminaryPhases = {
-                ["validating tree", 1, void(PhasedUnit pu) => pu.validateTree()],
-                ["module descriptor parsing", 1, void(PhasedUnit pu) { pu.visitSrcModulePhase(); }], // The use of the specifier is prohibited here, 
+                ["Validating tree", 1, (PhasedUnit pu) => pu.validateTree()],
+                ["Module descriptor parsing", 1, (PhasedUnit pu) => pu.visitSrcModulePhase()], // The use of the specifier is prohibited here, 
                 // because visitSrcModulePhase() would seen as returning 
                 // Module though in fact can return null (Java method).
-                ["module and package descriptor completion", 1, void(PhasedUnit pu) => pu.visitRemainingModulePhase()]
+                ["Module and package descriptor completion", 1, (PhasedUnit pu) => pu.visitRemainingModulePhase()]
             };
             
             incrementalTypecheckingPreliminaryPhases.each(unflatten(
@@ -909,7 +909,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     shared void updateCeylonModel(BaseProgressMonitor monitor) => 
             synchronize(this, () {
         withCeylonModelCaching(() {
-            ceylonProject.withSourceModel(false, void () {
+            ceylonProject.withSourceModel(false, () {
                 try(progress = monitor.Progress(1000, "Updating the Ceylon model of project `` ceylonProject.name ``")) {
                     value filesRequiringCeylonModelUpdate = state.ceylonModelUpdateRequired.clear();
                     {ProjectPhasedUnitAlias*} phasedUnitsToTypecheck;
