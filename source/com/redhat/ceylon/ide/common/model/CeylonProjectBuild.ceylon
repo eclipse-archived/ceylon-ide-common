@@ -645,17 +645,17 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             value utc = UnknownTypeCollector();
             
             value mainTypecheckingPhases = {
-                ["Scanning declarations", 1, void(PhasedUnit pu) => pu.scanDeclarations()],
-                ["Scanning types", 2, void(PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
-                ["Validating refinement", 1, void(PhasedUnit pu) => pu.validateRefinement()],
-                ["Analysing usages", 3, void(PhasedUnit pu) { 
+                ["Scanning declarations", 1, (PhasedUnit pu) => pu.scanDeclarations()],
+                ["Scanning types", 2, (PhasedUnit pu) => pu.scanTypeDeclarations(cancelDidYouMeanSearch)],
+                ["Validating refinement", 1, (PhasedUnit pu) => pu.validateRefinement()],
+                ["Analysing usages", 3, (PhasedUnit pu) { 
                     pu.analyseTypes(cancelDidYouMeanSearch);
                     if (ceylonProject.showWarnings) {
                         pu.analyseUsage();
                     }
                 }],
-                ["Analyzing flow", 1, void(PhasedUnit pu) => pu.analyseFlow()],
-                ["Collecting unknown types", 1, void(PhasedUnit pu) => pu.compilationUnit.visit(utc)]
+                ["Analyzing flow", 1, (PhasedUnit pu) => pu.analyseFlow()],
+                ["Collecting unknown types", 1, (PhasedUnit pu) => pu.compilationUnit.visit(utc)]
             };
             
             mainTypecheckingPhases.each(unflatten(
