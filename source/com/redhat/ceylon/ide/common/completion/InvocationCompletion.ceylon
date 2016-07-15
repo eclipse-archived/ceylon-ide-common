@@ -267,8 +267,6 @@ shared interface InvocationCompletion {
                             unit = unit;
                             includeDefaulted = false;
                             typeArgs = null;
-                            addParameterTypesInCompletions 
-                                    = addParameterTypesInCompletions;
                         };
                 
                 platformServices.completion.newInvocationCompletion {
@@ -362,8 +360,6 @@ shared interface InvocationCompletion {
                                     unit = unit;
                                     includeDefaulted = false;
                                     typeArgs = typeArgs;
-                                    addParameterTypesInCompletions 
-                                            = addParameterTypesInCompletions;
                                 };
                             dec = dec;
                             pr = pr;
@@ -399,8 +395,6 @@ shared interface InvocationCompletion {
                             unit = unit;
                             includeDefaulted = true;
                             typeArgs = typeArgs;
-                            addParameterTypesInCompletions 
-                                    = addParameterTypesInCompletions;
                         };
                         dec = dec;
                         pr = pr;

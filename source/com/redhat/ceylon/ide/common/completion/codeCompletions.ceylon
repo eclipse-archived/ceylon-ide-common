@@ -50,8 +50,7 @@ shared String getTextFor(Declaration dec, Unit unit) {
 }
 
 String getPositionalInvocationTextFor(Declaration dec, OccurrenceLocation? ol,
-    Reference pr, Unit unit, Boolean includeDefaulted, String? typeArgs,
-    Boolean addParameterTypesInCompletions) {
+    Reference pr, Unit unit, Boolean includeDefaulted, String? typeArgs) {
     
     value result 
             = StringBuilder()
@@ -69,8 +68,7 @@ String getPositionalInvocationTextFor(Declaration dec, OccurrenceLocation? ol,
         result = result;
         includeDefaulted = includeDefaulted;
         descriptionOnly = false;
-        addParameterTypesInCompletions 
-                = addParameterTypesInCompletions;
+        addParameterTypesInCompletions = false;
     };
     appendSemiToVoidInvocation(result, dec);
     return result.string;
