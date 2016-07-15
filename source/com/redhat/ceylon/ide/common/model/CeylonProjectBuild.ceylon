@@ -841,7 +841,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             value incrementalTypecheckingPreliminaryPhases = {
                 ["Validating tree", 1, (PhasedUnit pu) => pu.validateTree()],
-                ["Module descriptor parsing", 1, (PhasedUnit pu) => pu.visitSrcModulePhase()], // The use of the specifier is prohibited here, 
+                ["Module descriptor parsing", 1, (PhasedUnit pu) { pu.visitSrcModulePhase(); }], // The use of the specifier is prohibited here, 
                 // because visitSrcModulePhase() would seen as returning 
                 // Module though in fact can return null (Java method).
                 ["Module and package descriptor completion", 1, (PhasedUnit pu) => pu.visitRemainingModulePhase()]
