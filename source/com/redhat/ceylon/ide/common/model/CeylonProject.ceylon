@@ -852,7 +852,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                             Integer oneModuleWork = maxModuleValidatorWork / totalNumberOfModules;
                             Integer workRemaining = numberOfModulesNotAlreadySearched * oneModuleWork;
                             if(validatorProgress.cancelled) {
-                                throw platformUtils.newOperationCanceledException("Interrupted the retrieving of module : " + _module.signature);
+                                throw platformUtils.newOperationCanceledException("Interrupted the retrieval of module : " + _module.signature);
                             }
                             validatorProgress.updateRemainingWork(workRemaining);
                             artifactContext.callback = object satisfies ArtifactCallback {
@@ -895,20 +895,19 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                                         throw t;
                                     }
                                 }
-                                shared actual void done(File file) =>
-                                        artifactProgress.destroy(null);
+                                done(File file) => artifactProgress.destroy(null);
                             };
                         }
                         
                         shared actual void resolvingModuleArtifact(Module _module,
                             ArtifactResult artifactResult) {
                             if (validatorProgress.cancelled) {
-                                throw platformUtils.newOperationCanceledException("Interrupted the resolving of module : " + _module.signature);
+                                throw platformUtils.newOperationCanceledException("Interrupted the resolution of module : " + _module.signature);
                             }
                             Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
                             validatorProgress.updateRemainingWork(numberOfModulesNotAlreadySearched * 100
                                 / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
-                            validatorProgress.subTask("resolving module ``_module.signature``");
+                            validatorProgress.subTask("Resolving module ``_module.signature``");
                         }
                         
                         retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
