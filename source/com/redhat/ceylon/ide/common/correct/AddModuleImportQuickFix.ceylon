@@ -60,6 +60,7 @@ shared object addModuleImportQuickFix {
                     kind = QuickFixKind.addModuleImport;
                     asynchronous = true;
                     hint = description;
+                    qualifiedNameIsPath = true;
                 };
             } else {
                 findCandidateModules(data, typeChecker, name, false);
