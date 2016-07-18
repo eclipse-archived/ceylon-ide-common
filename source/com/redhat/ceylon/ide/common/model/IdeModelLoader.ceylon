@@ -16,9 +16,6 @@ import ceylon.interop.java {
 import com.redhat.ceylon.common {
     JVMModuleUtil
 }
-import com.redhat.ceylon.compiler.java.codegen {
-    Naming
-}
 import com.redhat.ceylon.compiler.java.loader {
     TypeFactory,
     AnnotationLoader,
@@ -53,7 +50,8 @@ import com.redhat.ceylon.model.cmr {
 }
 import com.redhat.ceylon.model.loader {
     TypeParser,
-    Timer
+    Timer,
+    NamingBase
 }
 import com.redhat.ceylon.model.loader.mirror {
     ClassMirror,
@@ -96,7 +94,7 @@ import java.util {
     Collections
 }
 import java.util.concurrent {
-    JCallable = Callable
+    JCallable=Callable
 }
 
 shared abstract class BaseIdeModelLoader(
@@ -633,31 +631,28 @@ shared abstract class BaseIdeModelLoader(
    
    shared void setModuleAndPackageUnits() {
        for (ideModule in moduleManager.modules.listOfModules) {
-           if (is BaseIdeModule ideModule) {
-               if (ideModule.isCeylonBinaryArchive) {
-                   for (p in ideModule.packages) {
-                       if (! p.unit exists) {
-                           variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.packageDescriptorClassName);
-                           if (! packageClassMirror exists) {
-                               packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.packageDescriptorClassName.rest);
-                           }
-                           // some modules do not declare their main package, because they don't have any declaration to share
-                           // there, for example, so this can be null
-                           if(is IdeClassMirror pcm=packageClassMirror) {
-                               assert(is LazyPackage p);
-                               p.unit = newCompiledUnit(p, pcm);
-                           }
+           if (is BaseIdeModule ideModule, 
+               ideModule.isCeylonBinaryArchive) {
+               for (p in ideModule.packages) {
+                   if (! p.unit exists) {
+                       ClassMirror? packageClassMirror 
+                               = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName)
+                            else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName.rest);
+                       // some modules do not declare their main package, because they don't have any declaration to share
+                       // there, for example, so this can be null
+                       if (is IdeClassMirror pcm = packageClassMirror) {
+                           assert (is LazyPackage p);
+                           p.unit = newCompiledUnit(p, pcm);
                        }
-                       if (p.nameAsString == ideModule.nameAsString) {
-                           if (! ideModule.unit exists) {
-                               variable ClassMirror? moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.moduleDescriptorClassName);
-                               if (! moduleClassMirror exists) {
-                                   moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.oldModuleDescriptorClassName);
-                               }
-                               if (is IdeClassMirror mcm=moduleClassMirror) {
-                                   assert(is LazyPackage p);
-                                   ideModule.unit = newCompiledUnit(p, mcm);
-                               }
+                   }
+                   if (p.nameAsString == ideModule.nameAsString) {
+                       if (! ideModule.unit exists) {
+                           ClassMirror? moduleClassMirror 
+                                   = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.moduleDescriptorClassName)
+                                else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.oldModuleDescriptorClassName);
+                           if (is IdeClassMirror mcm = moduleClassMirror) {
+                               assert (is LazyPackage p);
+                               ideModule.unit = newCompiledUnit(p, mcm);
                            }
                        }
                    }

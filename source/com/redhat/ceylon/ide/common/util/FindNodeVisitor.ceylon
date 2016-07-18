@@ -9,7 +9,8 @@ import java.util {
     List
 }
 import org.antlr.runtime {
-    CommonToken
+    CommonToken,
+    Token
 }
 
 "Finds the smallest (most specific) node where a given selection
@@ -73,7 +74,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                         // if the tokens between startOffset and startToken were only hidden ones
                         for (index in (startToken.tokenIndex-1)..0) {
                             value token = tokens.get(index);
-                            if (token.channel != CommonToken.hiddenChannel) {
+                            if (token.channel != Token.hiddenChannel) {
                                 return false;
                             }
                             if (token.startIndex <= startOffset) {
@@ -91,7 +92,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                         // if the tokens between endToken and endOffset were only hidden ones
                         for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
                             value token = tokens.get(index);
-                            if (token.channel != CommonToken.hiddenChannel) {
+                            if (token.channel != Token.hiddenChannel) {
                                 return false;
                             }
                             if (token.stopIndex+1 >= endOffset) {

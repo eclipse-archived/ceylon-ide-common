@@ -1,6 +1,5 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    CustomTree,
     TreeUtil
 }
 import com.redhat.ceylon.ide.common.platform {
@@ -51,7 +50,7 @@ shared object convertSwitchExpressionToStatementQuickFix {
             action = doc.getNodeText(statement.baseMemberExpression) + " = ";
             operation = statement.specifierExpression.expression;
         }
-        case (is CustomTree.AttributeDeclaration) {
+        case (is Tree.AttributeDeclaration) {
             if (!statement.identifier exists) {
                 return;
             }

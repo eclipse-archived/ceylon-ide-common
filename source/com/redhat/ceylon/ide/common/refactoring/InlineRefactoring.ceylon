@@ -483,12 +483,12 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                                 imt.startIndex.intValue());
                             
                             variable CommonToken prev = tokens.get(ti - 1);
-                            if (prev.channel == CommonToken.hiddenChannel) {
+                            if (prev.channel == Token.hiddenChannel) {
                                 prev = tokens.get(ti - 2);
                             }
                             
                             variable CommonToken next = tokens.get(ti + 1);
-                            if (next.channel == CommonToken.hiddenChannel) {
+                            if (next.channel == Token.hiddenChannel) {
                                 next = tokens.get(ti + 2);
                             }
                             

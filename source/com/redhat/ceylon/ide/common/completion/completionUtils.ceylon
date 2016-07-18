@@ -50,7 +50,8 @@ import java.util {
 }
 
 import org.antlr.runtime {
-    CommonToken
+    CommonToken,
+    Token
 }
 
 shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
@@ -207,7 +208,7 @@ Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     value tokens = cpc.tokens;
     while (i < tokens.size()) {
         CommonToken tok = tokens.get(i);
-        if (tok.channel != CommonToken.hiddenChannel) {
+        if (tok.channel != Token.hiddenChannel) {
             return tok.type;
         }
         i++;
