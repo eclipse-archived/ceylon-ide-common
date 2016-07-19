@@ -158,9 +158,6 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                     // but not sure it is also used not in the case of jar-located classes
                     declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
             }
-            else {
-                assert(false);
-            }
         }
     }
     
