@@ -182,8 +182,8 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
     shared actual JIterable<JString> searchedArtifactExtensions =>
             let(extensions = 
         if (loadDependenciesFromModelLoaderFirst)
-    then {"car", "jar", "src"}
-    else {"jar", "src", "car"})
+    then {"car", "jar", "src", "js"}
+    else {"jar", "src", "car", "js"})
     toJavaStringList(extensions);
     
     shared Boolean isLoadDependenciesFromModelLoaderFirst() {

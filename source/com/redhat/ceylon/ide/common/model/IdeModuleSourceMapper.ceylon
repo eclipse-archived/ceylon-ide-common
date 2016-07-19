@@ -38,7 +38,8 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+    unsafeCast,
+    equalsWithNulls
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
@@ -131,6 +132,11 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
         if (is BaseIdeModule theModule) {
             (theModule).setArtifactResult(artifact);
         }
+        if (equalsWithNulls(artifact.namespace(), "npm")) {
+            moduleManager.sourceModules.add(theModule.nameAsString);
+            return;
+        }
+        
         if (!moduleManager.isModuleLoadedFromCompiledSource(theModule.nameAsString)) {
             variable File file = artifact.artifact();
             if (artifact.artifact().name.endsWith(".src")) {

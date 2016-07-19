@@ -8,14 +8,16 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     javaString,
-    CeylonIterable
+    CeylonIterable,
+    javaClass
 }
 
 import com.redhat.ceylon.cmr.api {
     ArtifactContext
 }
 import com.redhat.ceylon.common {
-    Constants
+    Constants,
+    Versions
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnitMap,
@@ -102,12 +104,24 @@ import org.antlr.runtime {
     CommonToken,
     CommonTokenStream
 }
+import com.redhat.ceylon.cmr.spi {
+    ContentStore
+}
+import com.redhat.ceylon.cmr.impl {
+    AbstractRepository,
+    NpmContentStore
+}
+import com.redhat.ceylon.compiler.js.loader {
+    NpmAware,
+    NpmPackage
+}
 
 shared class ModuleType of 
         _PROJECT_MODULE | 
         _CEYLON_SOURCE_ARCHIVE |
         _CEYLON_BINARY_ARCHIVE |
         _JAVA_BINARY_ARCHIVE|
+        _NPM_MODULE |
         _SDK_MODULE |
         _UNKNOWN {
     shared actual String string;
@@ -116,11 +130,16 @@ shared class ModuleType of
     shared new _CEYLON_BINARY_ARCHIVE { string = "CEYLON_BINARY_ARCHIVE"; }
     shared new _JAVA_BINARY_ARCHIVE { string = "JAVA_BINARY_ARCHIVE"; }
     shared new _SDK_MODULE { string = "SDK_MODULE"; }
+    shared new _NPM_MODULE { string = "NPM_MODULE"; }
     shared new _UNKNOWN { string = "UNKNOWN"; }
 }
 
 shared abstract class BaseIdeModule()
-        extends LazyModule() {
+        extends LazyModule()
+        satisfies NpmAware {
+    
+    shared actual variable String? npmPath = null;
+    
     shared formal BaseCeylonProject? ceylonProject;
     
     shared formal BaseIdeModuleManager moduleManager;
@@ -211,7 +230,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     variable ArtifactResultType _artifactType = ArtifactResultType.other;
     variable Exception? resolutionException = null;
     variable ModuleDependencies? _projectModuleDependencies = null;
-    
+
     shared actual CeylonProjectAlias? ceylonProject => moduleManager.ceylonProject;
     
     shared formal actual IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager;
@@ -362,6 +381,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     artifact => _artifact;
     
+    value this_ => this;
     setArtifactResult(ArtifactResult artifactResult) =>
         synchronize {
             on = this;
@@ -380,6 +400,36 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 }
                 else if (existingArtifact.name.endsWith(ArtifactContext.jar)) {
                     _moduleType = ModuleType._JAVA_BINARY_ARCHIVE;
+                }
+                else if (equalsWithNulls("npm", artifactResult.namespace())) {
+                    _moduleType = ModuleType._NPM_MODULE;
+                    assert(is AbstractRepository repository = artifactResult.repository());
+                    if (is NpmContentStore contentStore = repository.root.getService(javaClass<ContentStore>())) {
+                        value absoluteNpmPath = artifactResult.artifact().absolutePath;
+                        for (baseDir in contentStore.baseDirectories) {
+                            if (Path(baseDir.absolutePath).isPrefixOf(Path(absoluteNpmPath))) {
+                                value relativeNpmPath = absoluteNpmPath.substring(baseDir.absolutePath.size+1);
+                                npmPath = relativeNpmPath;
+                                variable String pkgName = nameAsString;
+                                if ('-' in pkgName.rest) {
+                                    pkgName = pkgName.replace("-", ".");
+                                }
+                                value pkg = NpmPackage(this_, pkgName);
+                                object pkgUnit extends IdeUnit.init(artifactResult.artifact().name, relativeNpmPath, absoluteNpmPath, pkg) {
+                                    sourceFileName = null;
+                                    sourceFullPath = null;
+                                    sourceRelativePath = null;
+                                }
+                                pkg.unit = pkgUnit;
+                                packages.add(pkg);
+                                
+                                jsMajor = Versions.jsBinaryMajorVersion;
+                                jsMinor = Versions.jsBinaryMinorVersion;
+                                available = true;
+                                break;
+                            }
+                        }
+                    }
                 }
                 _artifactType = artifactResult.type();
                 if (isCeylonBinaryArchive) {
@@ -475,6 +525,14 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 "No source file found for archive :`` 
                 returnCarFile()?.absolutePath else "unknown" ``");
             javaImplFilesToCeylonDeclFiles = emptyMap;
+        }
+    }
+    
+    shared actual Package? getPackage(variable String name) {
+        if (! equalsWithNulls(_moduleType, ModuleType._NPM_MODULE)) {
+            return super.getPackage(name);
+        } else {
+            return getDirectPackage(name);
         }
     }
     
