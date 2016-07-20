@@ -49,6 +49,23 @@ shared object escaping {
         }
     }
     
+    "Escapes inital uppercase identifier.
+     
+     Provided argument must be legal unescaped identifier. 
+     Otherwise result of this method is unspecified."
+    shared String escapeInitialUppercase(String name) {
+        value first = name.first;
+        if (exists first) {
+            if (!first.uppercase) {
+                return "\\I``name``";
+            } else {
+                return name;
+            }
+        } else {
+            return "\\I";
+        }
+    }
+    
     shared String escapePackageName(Package p) {
         value path = p.name;
         value sb = StringBuilder();
