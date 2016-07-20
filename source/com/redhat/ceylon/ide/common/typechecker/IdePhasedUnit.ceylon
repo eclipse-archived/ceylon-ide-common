@@ -11,6 +11,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     BaseIdeModuleSourceMapper
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils
+}
 import com.redhat.ceylon.ide.common.vfs {
     BaseFileVirtualFile,
     BaseFolderVirtualFile
@@ -31,9 +34,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils
 }
 
 shared abstract class IdePhasedUnit
@@ -80,7 +80,8 @@ shared abstract class IdePhasedUnit
     shared actual default BaseFolderVirtualFile srcDir => _srcDir;
     
     shared actual Boolean handleException(Exception e, Node that) {
-        if (platformUtils.isOperationCanceledException(e)) {
+        if (platformUtils.isOperationCanceledException(e) ||
+        platformUtils.isExceptionToPropagateInVisitors(e)) {
             throw e;
         }
         return false;

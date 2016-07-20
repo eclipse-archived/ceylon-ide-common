@@ -1,12 +1,14 @@
-import java.lang {
-    RuntimeException,
-    ClassLoader
+import ceylon.interop.java {
+    javaClassFromInstance
 }
+
 import com.redhat.ceylon.common.log {
     Logger
 }
-import ceylon.interop.java {
-    javaClassFromInstance
+
+import java.lang {
+    RuntimeException,
+    ClassLoader
 }
 shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
     String _string;
@@ -29,6 +31,12 @@ shared interface IdeUtils {
     "returns [[true]] if [[exception]] is of the exception type typically used
      in an IDE platform in case of operation cancellation."
     shared formal Boolean isOperationCanceledException(Exception exception);
+
+    "returns [[true]] if [[exception]] should be thrown again (ie propagated)
+     when occuring inside the typechecking phases visitors.
+     If this method returns [[false]] the exception will be caught and
+     attached to the AST node, as it is the default behavior"
+    shared formal Boolean isExceptionToPropagateInVisitors(Exception exception);
 
     shared default Logger cmrLogger => object satisfies Logger {
         error(String str) => process.writeErrorLine("Error: ``str``");
@@ -60,6 +68,9 @@ shared class DefaultIdeUtils() satisfies IdeUtils {
     
     isOperationCanceledException(Exception exception) 
             => exception is OperationCancelledException;
-    
+
+    isExceptionToPropagateInVisitors(Exception exception)
+            => false;
+
     pluginClassLoader => javaClassFromInstance(this).classLoader;
 }
