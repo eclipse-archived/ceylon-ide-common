@@ -25,13 +25,14 @@ shared interface RequiredType {
 shared object types {
     
     shared Type? getResultType(Declaration? d) {
-        if (is TypeDeclaration d) {
+        switch (d)
+        case (is TypeDeclaration) {
             if (is Class d, !d.abstract) {
-                return (d).type;
+                return d.type;
             }
             return null;
-        } else if (is TypedDeclaration d) {
-            return (d).type;
+        } case (is TypedDeclaration) {
+            return d.type;
         } else {
             return null;
         }
