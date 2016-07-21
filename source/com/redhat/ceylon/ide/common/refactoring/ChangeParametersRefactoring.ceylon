@@ -98,25 +98,19 @@ shared String|Type parseTypeExpression(String typeText, Unit unit, Scope scope) 
         value lexer = CeylonLexer(ANTLRStringStream(typeText));
         value ts = CommonTokenStream(lexer);
         ts.fill();
-        
-        value lexErrors = lexer.errors;
-        if (!lexErrors.empty) {
-            return lexErrors.get(0).message;
+        if (exists err = lexer.errors[0]) {
+            return err.message;
         }
         
         value parser = CeylonParser(ts);
         Tree.StaticType? staticType = parser.type();
-        
         if (ts.index() < ts.size() - 1) {
             return "extra tokens in type expression";
         }
-        
-        value parseErrors = parser.errors;
-        if (!parseErrors.empty) {
-            return parseErrors.get(0).message;
+        if (exists err = parser.errors[0]) {
+            return err.message;
         }
-        
-        assert(exists staticType);
+        assert (exists staticType);
     
         staticType.visit(object extends Visitor() {
             shared actual void visitAny(Node that) {
@@ -139,7 +133,8 @@ shared String|Type parseTypeExpression(String typeText, Unit unit, Scope scope) 
         }.visit(staticType);
         
         return err else staticType.typeModel;
-    } catch (e) {
+    }
+    catch (e) {
         return "Could not parse type expression";
     }
 }
@@ -196,10 +191,16 @@ shared abstract class ChangeParametersRefactoring(
     shared formal Boolean searchInEditor();
     shared formal Boolean inSameProject(Functional&Declaration declaration);
     
-    value node = nodes.findNode(rootNode, tokens, selectionStart, selectionEnd);
-    value declaration = if (exists node)
-                        then getDeclarationForChangeParameters(node, rootNode)
-                        else null;
+    value node = nodes.findNode { 
+        node = rootNode; 
+        tokens = tokens; 
+        startOffset = selectionStart; 
+        endOffset = selectionEnd;
+    };
+    value declaration 
+            = if (exists node)
+            then getDeclarationForChangeParameters(node, rootNode)
+            else null;
     
     enabled => if (is Functional declaration)
                then inSameProject(declaration)
@@ -213,7 +214,9 @@ shared abstract class ChangeParametersRefactoring(
     "Applies the changes made in the `ParameterList`."
     shared CompositeChange build(ParameterList params) {
         
-        value change = platformServices.document.createCompositeChange(name);
+        value change 
+                = platformServices.document
+                    .createCompositeChange(name);
         
         // TODO progress reporting!
         if (affectsOtherFiles) {
@@ -222,7 +225,8 @@ shared abstract class ChangeParametersRefactoring(
                     assert (is AnyProjectPhasedUnit phasedUnit);
                     refactorInFile {
                         params = params;
-                        tfc = platformServices.document.createTextChange(name, phasedUnit);
+                        tfc = platformServices.document
+                                .createTextChange(name, phasedUnit);
                         cc = change;
                         root = phasedUnit.compilationUnit;
                         tokens = phasedUnit.tokens;
@@ -235,7 +239,8 @@ shared abstract class ChangeParametersRefactoring(
                 assert (is AnyEditedPhasedUnit phasedUnit);
                 refactorInFile {
                     params = params;
-                    tfc = platformServices.document.createTextChange(name, phasedUnit);
+                    tfc = platformServices.document
+                            .createTextChange(name, phasedUnit);
                     cc = change;
                     root = phasedUnit.compilationUnit;
                     tokens = phasedUnit.tokens;
@@ -246,7 +251,8 @@ shared abstract class ChangeParametersRefactoring(
         if (searchInEditor()) {
             refactorInFile {
                 params = params;
-                tfc = platformServices.document.createTextChange(name, doc);
+                tfc = platformServices.document
+                        .createTextChange(name, doc);
                 cc = change;
                 root = rootNode;
                 tokens = tokens;
@@ -356,16 +362,19 @@ shared abstract class ChangeParametersRefactoring(
             case (is Tree.AnyMethod) {
                 pl = decNode.parameterLists.get(0);
                 startIndex = decNode.type.startIndex.intValue();
-            } case (is Tree.AnyClass) {
+            }
+            case (is Tree.AnyClass) {
                 pl = decNode.parameterList;
                 assert(is CommonToken tok = decNode.mainToken);
                 startIndex = tok.startIndex;
-            } case (is Tree.Constructor) {
+            }
+            case (is Tree.Constructor) {
                 value c = decNode;
                 pl = c.parameterList;
                 assert(is CommonToken tok = c.mainToken);
                 startIndex = tok.startIndex;
-            } else {
+            }
+            else {
                 return "<unknown>";
             }
             
@@ -425,50 +434,37 @@ shared abstract class ChangeParametersRefactoring(
     "Creates a new [[ParameterList]] that can be modified in the UI.
      Call [[ChangeParametersRefactoring.build]] to apply changes."
     shared ParameterList? computeParameters() {
-        assert(exists node);
         if (exists declaration,
             is Functional refDec = declaration.refinedDeclaration,
-            exists pls = refDec.parameterLists) {
-            
-            value pl 
+            exists pl = refDec.firstParameterList,
+            exists plNode
                     = switch (decNode = nodes.getReferencedNode(refDec, rootNode))
+                    case (is Tree.AnyMethod) decNode.parameterLists[0]
                     case (is Tree.AnyClass) decNode.parameterList
                     case (is Tree.Constructor) decNode.parameterList
-                    case (is Tree.AnyMethod) decNode.parameterLists.get(0)
-                    else null;
+                    else null) {
             
             value info = ParameterList(declaration);
-            
-            assert(exists pl);
-            
-            value params = zipPairs(
-                CeylonIterable(pls.get(0).parameters), 
-                CeylonIterable(pl.parameters)
-            );
-            
-            for ([pModel, pTree] in params) {
-                value _defaultArgs 
-                        = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
-                        then nodes.text(tokens, sie.expression)
-                        else null;
-                value _paramList 
-                        = if (is Tree.FunctionalParameterDeclaration pTree,
-                              is Tree.MethodDeclaration pd = pTree.typedDeclaration)
-                        then nodes.text(tokens, pd.parameterLists.get(0))
-                        else null;
-                
-                value p = Param( 
-                    info.size,
-                    pModel,
-                    pModel.name,
-                    pModel.defaulted,
-                    _defaultArgs,
-                    _defaultArgs,
-                    _paramList
-                );
-                info.add(p);
+            variable value i = 0;
+            while (exists pModel = pl.parameters[i],
+                   exists pTree = plNode.parameters[i]) {
+                info.add(Param { 
+                    position = i++; 
+                    model = pModel; 
+                    name = pModel.name; 
+                    initDefaulted = pModel.defaulted; 
+                    initDefaultArgs 
+                            = if (exists sie = nodes.getDefaultArgSpecifier(pTree))
+                            then nodes.text(tokens, sie.expression)
+                            else null; 
+                    paramList
+                            = if (is Tree.FunctionalParameterDeclaration pTree,
+                                  is Tree.MethodDeclaration pd = pTree.typedDeclaration,
+                                  exists ppl = pd.parameterLists[0])
+                            then nodes.text(tokens, ppl)
+                            else null;
+                });
             }
-            
             return info;
         }
 
@@ -497,10 +493,8 @@ shared abstract class ChangeParametersRefactoring(
         
         for (p in list.parameters) {
             value param = p.model;
-            value model = param.model;
-            value newName = p.name;
             
-            value fprv = object extends FindReferencesVisitor(model) {
+            object fprv extends FindReferencesVisitor(param.model) {
                 shared actual void visit(Tree.InitializerParameter that) {
                     //initializer parameters will be handled when
                     //we refactor the parameter list
@@ -543,9 +537,10 @@ shared abstract class ChangeParametersRefactoring(
                         return false;
                     }
                 }
-            };
+            }
             root.visit(fprv);
             
+            value newName = p.name;
             for (ref in fprv.referenceNodes) {
                 if (is Tree.Identifier id 
                         = nodes.getIdentifyingNode(ref), 
@@ -569,26 +564,34 @@ shared abstract class ChangeParametersRefactoring(
         root.visit(frv);
         for (decNode in frv.declarationNodes) {
             Boolean actual;
-            Tree.ParameterList pl;
+            Tree.ParameterList? pl;
             switch (decNode)
             case (is Tree.AnyMethod) {
-                pl = decNode.parameterLists.get(0);
+                pl = decNode.parameterLists[0];
                 actual = decNode.declarationModel.actual;
-            } case (is Tree.AnyClass) {
+            }
+            case (is Tree.AnyClass) {
                 pl = decNode.parameterList;
                 actual = decNode.declarationModel.actual;
-            } case (is Tree.Constructor) {
+            }
+            case (is Tree.Constructor) {
                 pl = decNode.parameterList;
                 actual = decNode.declarationModel.actual;
-            } case (is Tree.SpecifierStatement) {
+            }
+            case (is Tree.SpecifierStatement) {
                 if (is Tree.ParameterizedExpression bme
                         = decNode.baseMemberExpression) {
-                    pl = bme.parameterLists.get(0);
+                    pl = bme.parameterLists[0];
                     actual = true;
-                } else {
+                }
+                else {
                     continue;
                 }
-            } else {
+            }
+            else {
+                continue;
+            }
+            if (!exists pl) {
                 continue;
             }
             
@@ -611,35 +614,33 @@ shared abstract class ChangeParametersRefactoring(
         value params = CeylonIterable(pl.parameters);
         
         for (p in list.parameters) {
-            variable String paramString = "";
             
             if (exists oldParam 
                     = params.find((op)
                         => isSameParameter(op.parameterModel, 
                                            p.model))) {
-                paramString 
-                        = paramStringWithoutDefaultArg {
+                sb.append(paramStringWithoutDefaultArg {
                     parameter = oldParam;
                     newName = p.name;
                     tokens = tokens;
-                };
+                });
                 
                 if (p.defaulted, !actual) {
                     // now add the new default arg
                     // TODO: this results in incorrectly-typed
                     // code for void functional parameters
-                    paramString = paramString 
-                            + getSpecifier(oldParam)
-                            + getNewDefaultArg(p);
+                    sb.append(getSpecifier(oldParam))
+                      .append(getNewDefaultArg(p));
                 }
-            } else {
-                paramString = p.model.type.asString(pl.unit) + " " + p.name;
+            }
+            else {
+                sb.append(p.model.type.asString(pl.unit)).append(" ").append(p.name);
                 if (p.defaulted, !actual) {
-                    paramString += " = " + (p.defaultArgs else "nothing");
+                    sb.append(" = ").append(p.defaultArgs else "nothing");
                 }
             }
             
-            sb.append(paramString).append(", ");
+            sb.append(", ");
         }
         
         if (sb.endsWith(", ")) {
@@ -648,8 +649,11 @@ shared abstract class ChangeParametersRefactoring(
         
         sb.append(")");
         
-        return ReplaceEdit(pl.startIndex.intValue(), 
-            pl.distance.intValue(), sb.string);
+        return ReplaceEdit { 
+            start = pl.startIndex.intValue(); 
+            length = pl.distance.intValue(); 
+            text = sb.string;
+        };
 
     }
 
@@ -697,11 +701,15 @@ shared abstract class ChangeParametersRefactoring(
                         => isSameParameter(p.model, nap))
                             exists) {
                     
-                    value start = if (exists _last = last)
-                                  then _last.endIndex.intValue()
-                                  else nal.startIndex.intValue() + 1;
+                    value start 
+                            = if (exists _last = last)
+                            then _last.endIndex.intValue()
+                            else nal.startIndex.intValue() + 1;
                     tfc.addEdit(
-                        DeleteEdit(start, na.endIndex.intValue() - start)
+                        DeleteEdit { 
+                            start = start;
+                            length = na.endIndex.intValue() - start;
+                        }
                     );
                 }
                 last = na;
@@ -716,25 +724,29 @@ shared abstract class ChangeParametersRefactoring(
                         => isSameParameter(na.parameter, p.model)) 
                             exists) {
                     
-                    variable value argString 
-                            = getInlinedNamedArg(p, p.defaultArgs);
                     value startOffset = nal.startIndex.intValue();
                     value stopOffset = nal.stopIndex.intValue();
                     
+                    value inarg = getInlinedNamedArg(p, p.defaultArgs);
+                    String argString;
                     if (doc.getLineOfOffset(stopOffset) 
                             > doc.getLineOfOffset(startOffset)) {
                         argString = 
-                                platformServices.document.defaultIndent + argString + ";"
+                                platformServices.document.defaultIndent 
+                                + inarg + ";"
                                 + doc.defaultLineDelimiter
                                 + doc.getIndent(nal);
                     } else if (startOffset == stopOffset-1) {
-                        argString = " " + argString + "; ";
+                        argString = " " + inarg + "; ";
                     } else {
-                        argString = argString + "; ";
+                        argString = inarg + "; ";
                     }
                     
                     tfc.addEdit( 
-                        InsertEdit(stopOffset, argString)
+                        InsertEdit { 
+                            start = stopOffset;
+                            text = argString;
+                        }
                     );
                 }
             }
@@ -778,11 +790,11 @@ shared abstract class ChangeParametersRefactoring(
         }
         builder.append(")");
         
-        return ReplaceEdit(
-            pal.startIndex.intValue(), 
-            pal.distance.intValue(),
-            builder.string
-        );
+        return ReplaceEdit { 
+            start = pal.startIndex.intValue(); 
+            length = pal.distance.intValue(); 
+            text = builder.string;
+        };
     }
 
     TextEdit reorderParameters(ParameterList list, 
@@ -802,11 +814,24 @@ shared abstract class ChangeParametersRefactoring(
         }
         builder.append(")");
         
-        return ReplaceEdit(
-            pal.startIndex.intValue(), 
-            pal.distance.intValue(),
-            builder.string
-        );
+        return ReplaceEdit { 
+            start = pal.startIndex.intValue(); 
+            length = pal.distance.intValue(); 
+            text = builder.string;
+        };
+    }
+    
+    function getIdentifier(Tree.Parameter parameter) {
+        switch (parameter)
+        case (is Tree.InitializerParameter) {
+            return parameter.identifier;
+        }
+        case (is Tree.ParameterDeclaration) {
+            return parameter.typedDeclaration.identifier;
+        }
+        else {
+            throw Exception();
+        }
     }
     
     String paramString(Tree.Parameter parameter, String newName, 
@@ -844,17 +869,6 @@ shared abstract class ChangeParametersRefactoring(
                 + paramString.substring(end);
     }
     
-    Tree.Identifier getIdentifier(Tree.Parameter parameter) {
-        switch (parameter)
-        case (is Tree.InitializerParameter) {
-            return parameter.identifier;
-        } case (is Tree.ParameterDeclaration) {
-            return parameter.typedDeclaration.identifier;
-        } else {
-            throw Exception();
-        }
-    }
-    
     String getSpecifier(Tree.Parameter parameter) 
             => if (is Tree.FunctionalParameterDeclaration parameter) 
             then " => " else " = ";
@@ -864,10 +878,12 @@ shared abstract class ChangeParametersRefactoring(
         if (exists argString = p.defaultArgs, 
             !argString.empty) {
             val = argString;
-        } else if (exists defaultArg = p.originalDefaultArgs, 
+        }
+        else if (exists defaultArg = p.originalDefaultArgs, 
             !defaultArg.empty) {
             val = defaultArg;
-        } else {
+        }
+        else {
             val = "nothing";
         }
         
