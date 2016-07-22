@@ -992,8 +992,9 @@ shared abstract class InvocationCompletionProposal
                     = pname == Module.languageModuleName;
             
             if (is TypeDeclaration dec, 
-                !dwp.unimported, 
-                !dec.type.nothing && dec.typeParameters.empty && 
+                !dwp.unimported,
+                exists type = dec.type,
+                !type.nothing && dec.typeParameters.empty &&
                 !dec.annotation && !dec.inherits(ed), 
                 !(isInLanguageModule 
                     && isIgnoredLanguageModuleType(dec)), 
