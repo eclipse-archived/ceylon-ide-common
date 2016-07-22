@@ -73,9 +73,8 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitExistsCondition(Tree.ExistsCondition that) {
-        value st = that.variable;
-        if (is Tree.Variable st) {
-            value varType = (st).type.typeModel;
+        if (is Tree.Variable st = that.variable) {
+            value varType = st.type.typeModel;
             currentType = that.unit.getOptionalType(varType);
         }
         super.visitExistsCondition(that);
@@ -83,9 +82,8 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitNonemptyCondition(Tree.NonemptyCondition that) {
-        value st = that.variable;
-        if (is Tree.Variable st) {
-            value varType = (st).type.typeModel;
+        if (is Tree.Variable st = that.variable) {
+            value varType = st.type.typeModel;
             currentType = that.unit.getEmptyType(varType);
         }
         super.visitNonemptyCondition(that);
