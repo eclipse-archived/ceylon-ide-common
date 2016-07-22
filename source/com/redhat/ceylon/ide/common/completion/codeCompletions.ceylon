@@ -736,7 +736,7 @@ void appendHashImpl(Unit unit, String indent, StringBuilder result,
     
     if (exists v = getUniqueMemberForHash(unit, ci)) {
         result.append(" => ").append(v.name);
-        if (!v.type.integer) {
+        if (!(v.type?.integer else false)) {
             result.append(".hash");
         }
         result.append(";");

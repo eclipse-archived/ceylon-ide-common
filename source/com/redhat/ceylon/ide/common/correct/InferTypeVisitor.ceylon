@@ -1,3 +1,7 @@
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Visitor,
+    Tree
+}
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
@@ -11,10 +15,6 @@ import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration,
     TypeDeclaration,
     Interface
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Visitor,
-    Tree
 }
 
 class InferredType(Unit unit) {
@@ -245,8 +245,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
     shared actual void visit(Tree.ValueIterator that) {
         super.visit(that);
-        value primary = that.specifierExpression.expression.term;
-        if (is Tree.BaseMemberExpression primary, 
+        if (is Tree.BaseMemberExpression primary =
+                that.specifierExpression?.expression?.term,
             exists bmed = primary.declaration, 
             exists dec = declaration,
             bmed == dec, 
@@ -259,8 +259,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
     shared actual void visit(Tree.BooleanCondition that) {
         super.visit(that);
-        value primary = that.expression.term;
-        if (is Tree.BaseMemberExpression primary, 
+        if (is Tree.BaseMemberExpression primary =
+                that.expression?.term,
             exists bmed = primary.declaration, 
             exists dec = declaration,
             bmed == dec) {
@@ -367,7 +367,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
     
-    shared void operatorTerm(TypeDeclaration sd, Tree.Term lhs) {
+    shared void operatorTerm(TypeDeclaration sd, Tree.Term? lhs) {
         if (is Tree.BaseMemberExpression lhs, 
             exists bmed = lhs.declaration, 
             exists dec = declaration,
@@ -377,7 +377,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
     
-    shared void genericOperatorTerm(TypeDeclaration sd, Tree.Term lhs) {
+    shared void genericOperatorTerm(TypeDeclaration sd, Tree.Term? lhs) {
         if (is Tree.BaseMemberExpression lhs, 
             exists bmed = lhs.declaration, 
             exists dec = declaration,
