@@ -31,7 +31,7 @@ shared object addParameterListQuickFix {
                     if (params.size > 1) {
                         params.append(", ");
                     }                        
-                    params.append(ud.name);
+                    params.append(ud.name else "unknwon");
                 }
                 
                 params.append(")");
