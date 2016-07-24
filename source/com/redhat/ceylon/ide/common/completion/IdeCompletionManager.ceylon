@@ -1,5 +1,4 @@
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -267,12 +266,11 @@ shared object completionManager
                 offset = offset;
                 prefix = inDoc then qualified else fullPrefix;
                 sortedProposals
-                        = proposals.values();
-                        /*= sortProposals {
+                        = sortProposals {
                             prefix = prefix;
                             required = required;
                             proposals = proposals;
-                        };*/
+                        };
                 sortedFunctionProposals
                         = Collections.emptyList<DeclarationWithProximity>();
                         /*= sortProposals {
