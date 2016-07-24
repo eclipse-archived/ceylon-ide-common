@@ -719,8 +719,8 @@ shared object completionManager
             
             //member names we can refine
             if (exists t 
-                    = switch (node)
-                    case (is Tree.Type) node.typeModel
+                    = if (is Tree.Type node)
+                    then node.typeModel
                     else node.target?.type) {
                 addRefinementProposals(offset,
                         sortedProposals, ctx, scope, node, doc,
@@ -744,9 +744,10 @@ shared object completionManager
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
         } else {
-            value isMember = if (is Tree.MemberLiteral node)
-                then node.type exists
-                else node is Tree.QualifiedMemberOrTypeExpression|Tree.QualifiedType;
+            value isMember
+                    = if (is Tree.MemberLiteral node)
+                    then node.type exists
+                    else node is Tree.QualifiedMemberOrTypeExpression|Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
                 addKeywordProposals {
@@ -881,9 +882,10 @@ shared object completionManager
                     }
                     else {
                         if (secondLevel,
-                            exists pr = if (isMember)
-                                then getQualifiedProducedReference(node, dec)
-                                else getRefinedProducedReference(scope, dec)) {
+                            exists pr =
+                                    if (isMember)
+                                    then getQualifiedProducedReference(node, dec)
+                                    else getRefinedProducedReference(scope, dec)) {
                             addSecondLevelProposal {
                                 offset = offset;
                                 prefix = prefix;
@@ -907,11 +909,11 @@ shared object completionManager
                                 ctx = ctx;
                                 dwp = dwp;
                                 pr = if (isMember)
-                            then getQualifiedProducedReference(node, dec)
-                            else getRefinedProducedReference(scope, dec);
-                                scope = scope;
-                                ol = ol;
-                                isMember = isMember;
+                                    then getQualifiedProducedReference(node, dec)
+                                    else getRefinedProducedReference(scope, dec);
+                                        scope = scope;
+                                        ol = ol;
+                                        isMember = isMember;
                             };
                         }
                     }
@@ -965,7 +967,7 @@ shared object completionManager
         if (node is Tree.QualifiedMemberExpression 
             || memberOp && node is Tree.QualifiedTypeExpression) {
             
-            assert(is Tree.QualifiedMemberOrTypeExpression node);
+            assert (is Tree.QualifiedMemberOrTypeExpression node);
             
             for (dwp in sortedFunctionProposals) {
                 value primary = node.primary;
@@ -984,12 +986,13 @@ shared object completionManager
                 // we don't care what the text is, we just need the correct length
                 value textToReplace = "-".repeat(offset - node.startIndex.intValue());
                 // the expression to wrap, may need to be assigned
-                value expr = (if (is Tree.BaseMemberExpression bme)
-                             then "" else "val = ")
-                            + doc.getText {
-                                offset = bme.startIndex.intValue();
-                                length = bme.distance.intValue();
-                            };
+                value expr
+                        = (if (is Tree.BaseMemberExpression bme)
+                            then "" else "val = ")
+                        + doc.getText {
+                            offset = bme.startIndex.intValue();
+                            length = bme.distance.intValue();
+                        };
                 
                 addIfExistsProposal(offset, textToReplace, ctx,
                     dwp, declaration, bme, expr);
