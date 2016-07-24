@@ -1005,22 +1005,16 @@ shared object completionManager
     }
 
     Boolean isDirectlyInsideBlock(Node node, CompletionContext ctx,
-        Scope scope, CommonToken token) {
-        
-        if (scope is Interface|Package) {
-            return false;
-        } else {
-            return !node is Tree.SequenceEnumeration 
-                    && occursAfterBraceOrSemicolon(token, ctx.tokens);
-        }
-    }
+        Scope scope, CommonToken token)
+            => !scope is Interface|Package &&
+               !node is Tree.SequenceEnumeration
+            && occursAfterBraceOrSemicolon(token, ctx.tokens);
 
     // see CeylonParseController.isMemberNameProposable(int offset, Node node, boolean memberOp)
     Boolean isMemberNameProposable(Integer offset,
         Node node, Boolean memberOp) {
         Token? token = node.endToken;
-        return if(is CommonToken token, !memberOp,
-            token.stopIndex >= offset-2) 
+        return if (is CommonToken token, !memberOp, token.stopIndex >= offset-2)
                 then true else false;
     }
 
@@ -1043,8 +1037,7 @@ shared object completionManager
             pt = p.getSupertype(container);
         }
 
-        return d.appliedReference(pt, 
-                Collections.emptyList<Type>());
+        return d.appliedReference(pt, Collections.emptyList<Type>());
     }
 
     Reference? getRefinedProducedReference(Type|Scope typeOrScope, Declaration d) {
