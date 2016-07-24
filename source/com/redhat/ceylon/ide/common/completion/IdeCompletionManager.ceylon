@@ -88,8 +88,10 @@ shared object completionManager
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
         RequiredType required, Proposals proposals) {
+        value before = system.milliseconds;
         value set = TreeSet(ProposalComparator(prefix, required));
         set.addAll(proposals.values());
+        print("sorted proposals in ``system.milliseconds - before``ms => ``set.size()`` results");
         return set;
     }
     
@@ -240,7 +242,7 @@ shared object completionManager
             tokenType = tokenType;
             monitor = monitor;
         };
-        
+
         if (ctx.proposals.empty) {
             value proposals = getProposals {
                 node = node;
@@ -261,7 +263,6 @@ shared object completionManager
             filterProposals(ctx, proposals);
 //            filterProposals(ctx, functionProposals);
 
-            value before = system.milliseconds;
             constructCompletions {
                 offset = offset;
                 prefix = inDoc then qualified else fullPrefix;
@@ -291,7 +292,6 @@ shared object completionManager
                 tokenType = tokenType;
                 cancellable = monitor;
             };
-            print("constructed completions in ``system.milliseconds - before``ms => ``ctx.proposals.size`` results");
         }
     }
     
@@ -675,6 +675,8 @@ shared object completionManager
         Integer tokenType,
         Cancellable cancellable) {
 
+        value before = system.milliseconds;
+
         value cu = ctx.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
         value unit = node.unit;
@@ -1019,6 +1021,8 @@ shared object completionManager
             addKeywordProposals(ctx, cu, offset, prefix, 
                 node, ol, false, tokenType);
         }
+
+        print("constructed completions in ``system.milliseconds - before``ms => ``ctx.proposals.size`` results");
     }
 
     Boolean isDirectlyInsideBlock(Node node, CompletionContext ctx,
