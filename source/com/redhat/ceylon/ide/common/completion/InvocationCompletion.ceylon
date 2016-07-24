@@ -79,7 +79,7 @@ shared interface InvocationCompletion {
     shared void addReferenceProposal(Tree.CompilationUnit cu,
         Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp,
-        Reference? pr, Scope scope, OL? ol,
+        Reference? reference, Scope scope, OL? ol,
         Boolean isMember) {
         
         value unit = cu.unit;
@@ -93,14 +93,14 @@ shared interface InvocationCompletion {
                 desc = getDescriptionFor2(dwp, unit, true);
                 text = getTextFor(dec, unit);
                 dec = dec;
-                pr = pr;
+                pr = reference;
                 scope = scope;
                 ctx = ctx;
                 includeDefaulted = true;
                 positionalInvocation = false;
                 namedInvocation = false;
                 inheritance 
-                        = isLocation(ol, OL.upperBound)
+                        =  isLocation(ol, OL.upperBound)
                         || isLocation(ol, OL.\iextends)
                         || isLocation(ol, OL.\isatisfies);
                 qualified = isMember;
@@ -131,7 +131,7 @@ shared interface InvocationCompletion {
                 desc = getDescriptionFor2(dwp, unit, false);
                 text = escaping.escapeName(dec, unit);
                 dec = dec;
-                pr = pr;
+                pr = reference;
                 scope = scope;
                 ctx = ctx;
                 includeDefaulted = true;
@@ -146,11 +146,11 @@ shared interface InvocationCompletion {
 
     shared void addSecondLevelProposal(Integer offset, String prefix, 
         CompletionContext ctx, Declaration dec, Scope scope, Boolean isMember,
-        Reference pr, Type? requiredType, OL? ol, Cancellable cancellable) {
+        Reference reference, Type? requiredType, OL? ol, Cancellable cancellable) {
         
         value unit = ctx.lastCompilationUnit.unit;
         
-        if (exists type = pr.type) {
+        if (exists type = reference.type) {
             if (!dec is Functional, 
                 !dec is TypeDeclaration) {
                 //add qualified member proposals
@@ -297,39 +297,41 @@ shared interface InvocationCompletion {
         Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity? dwp,
         // sometimes we have no dwp, just a dec, so we have to handle that too
-        Declaration dec, Reference? pr, 
+        Declaration dec, Reference? reference,
         Scope scope, OL? ol,
         String? typeArgs, Boolean isMember) {
-        
-        if (is Functional fd = dec) {
+
+        if (is Functional dec) {
+
             value unit = ctx.lastCompilationUnit.unit;
-            value isAbstract 
-                    = if (is TypeDeclaration dec, dec.abstract)
-                    then true else false;
-            value pls = fd.parameterLists;
-            
-            if (!pls.empty) {
-                value parameterList = pls.get(0);
+            value exact =
+                    prefixWithoutTypeArgs(prefix, typeArgs)
+                        == dec.getName(unit);
+            value inexactMatches = ctx.options.inexactMatches;
+            value positional = exact
+                    || "both"==inexactMatches
+                    || "positional"==inexactMatches;
+            value named = exact
+                    || "both"==inexactMatches;
+
+            if (positional || named,
+                exists parameterList = dec.parameterLists[0]) {
                 value ps = parameterList.parameters;
-                value exact = 
-                        prefixWithoutTypeArgs(prefix, typeArgs) 
-                            == dec.getName(unit);
-                value inexactMatches = ctx.options.inexactMatches;
-                value positional = exact
-                        || "both"==inexactMatches
-                        || "positional"==inexactMatches;
-                value named = exact 
-                        || "both"==inexactMatches;
-                value addParameterTypesInCompletions 
+                value addParameterTypesInCompletions
                         = ctx.options
                             .parameterTypesInCompletion;
-                
-                Boolean inheritance 
+
+                value isAbstract
+                        = if (is TypeDeclaration dec)
+                        then dec.abstract
+                        else false;
+
+                Boolean inheritance
                         = isLocation(ol, OL.upperBound) 
                         || isLocation(ol, OL.\iextends)
                         || isLocation(ol, OL.\isatisfies);
 
-                if (positional, exists pr, 
+                if (positional, exists reference,
                     parameterList.positionalParametersSupported,
                     !isAbstract 
                         || isLocation(ol, OL.\iextends)
@@ -346,7 +348,7 @@ shared interface InvocationCompletion {
                                 dwp = dwp;
                                 dec = dec;
                                 ol = ol;
-                                pr = pr;
+                                pr = reference;
                                 unit = unit;
                                 includeDefaulted = false;
                                 typeArgs = typeArgs;
@@ -356,13 +358,13 @@ shared interface InvocationCompletion {
                             text = getPositionalInvocationTextFor {
                                     dec = dec;
                                     ol = ol;
-                                    pr = pr;
+                                    pr = reference;
                                     unit = unit;
                                     includeDefaulted = false;
                                     typeArgs = typeArgs;
                                 };
                             dec = dec;
-                            pr = pr;
+                            pr = reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = false;
@@ -381,7 +383,7 @@ shared interface InvocationCompletion {
                             dwp = dwp;
                             dec = dec;
                             ol = ol;
-                            pr = pr;
+                            pr = reference;
                             unit = unit;
                             includeDefaulted = true;
                             typeArgs = typeArgs;
@@ -391,13 +393,13 @@ shared interface InvocationCompletion {
                         text = getPositionalInvocationTextFor {
                             dec = dec;
                             ol = ol;
-                            pr = pr;
+                            pr = reference;
                             unit = unit;
                             includeDefaulted = true;
                             typeArgs = typeArgs;
                         };
                         dec = dec;
-                        pr = pr;
+                        pr = reference;
                         scope = scope;
                         ctx = ctx;
                         includeDefaulted = true;
@@ -410,7 +412,7 @@ shared interface InvocationCompletion {
                 }
                 if (named, 
                     parameterList.namedParametersSupported, 
-                    exists pr,
+                    exists reference,
                     !isAbstract 
                             && !isLocation(ol, OL.\iextends) 
                             && !isLocation(ol, OL.classAlias)
@@ -426,7 +428,7 @@ shared interface InvocationCompletion {
                             prefix = prefix;
                             desc = getNamedInvocationDescriptionFor {
                                 dec = dec;
-                                pr = pr;
+                                pr = reference;
                                 unit = unit;
                                 includeDefaulted = false;
                                 typeArgs = typeArgs;
@@ -435,13 +437,13 @@ shared interface InvocationCompletion {
                             };
                             text = getNamedInvocationTextFor {
                                 dec = dec;
-                                pr = pr;
+                                pr = reference;
                                 unit = unit;
                                 includeDefaulted = false;
                                 typeArgs = typeArgs;
                             };
                             dec = dec;
-                            pr = pr;
+                            pr = reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = false;
@@ -458,7 +460,7 @@ shared interface InvocationCompletion {
                             prefix = prefix;
                             desc = getNamedInvocationDescriptionFor {
                                 dec = dec;
-                                pr = pr;
+                                pr = reference;
                                 unit = unit;
                                 includeDefaulted = true;
                                 typeArgs = typeArgs;
@@ -467,13 +469,13 @@ shared interface InvocationCompletion {
                             };
                             text = getNamedInvocationTextFor {
                                 dec = dec;
-                                pr = pr;
+                                pr = reference;
                                 unit = unit;
                                 includeDefaulted = true;
                                 typeArgs = typeArgs;
                             };
                             dec = dec;
-                            pr = pr;
+                            pr = reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = true;
@@ -520,8 +522,8 @@ shared interface InvocationCompletion {
 
     // see InvocationCompletionProposal.prefixWithoutTypeArgs
     String prefixWithoutTypeArgs(String prefix, String? typeArgs) 
-            => if (exists typeArgs) 
-            then prefix.spanTo(prefix.size - typeArgs.size - 1) 
+            => if (exists typeArgs)
+            then prefix.removeTerminal(typeArgs)
             else prefix;
 }
 

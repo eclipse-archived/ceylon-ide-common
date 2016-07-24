@@ -359,7 +359,9 @@ shared object completionManager
                 prefix = prefix;
                 path = null;
                 node = node;
-                withBody = nextTokenType(ctx, token) != Lexer.stringLiteral;
+                withBody
+                        = nextTokenType(ctx, token)
+                            != Lexer.stringLiteral;
                 monitor = monitor;
             };
         }
@@ -575,15 +577,15 @@ shared object completionManager
     Boolean isCommentOrCodeStringLiteral(CommonToken adjustedToken) {
         Integer tt = adjustedToken.type;
         return tt == Lexer.multiComment
-                || tt == Lexer.lineComment 
-                || tt == Lexer.stringLiteral 
-                || tt == Lexer.stringEnd
-                || tt == Lexer.stringMid
-                || tt == Lexer.stringStart
-                || tt == Lexer.verbatimString
-                || tt == Lexer.charLiteral 
-                || tt == Lexer.floatLiteral
-                || tt == Lexer.naturalLiteral;
+            || tt == Lexer.lineComment
+            || tt == Lexer.stringLiteral
+            || tt == Lexer.stringEnd
+            || tt == Lexer.stringMid
+            || tt == Lexer.stringStart
+            || tt == Lexer.verbatimString
+            || tt == Lexer.charLiteral
+            || tt == Lexer.floatLiteral
+            || tt == Lexer.naturalLiteral;
     }
     
     // see CeylonCompletionProcessor.isLineComment()
@@ -623,8 +625,7 @@ shared object completionManager
         value matches
                 = HashMap<JString,DeclarationWithProximity>();
 
-        CeylonIterable(candidates.entrySet())
-                .each((candidate) {
+        for (candidate in candidates.entrySet()) {
             if (is Function declaration
                     = candidate.\ivalue.declaration,
                 !declaration.annotation,
@@ -643,8 +644,8 @@ shared object completionManager
                         }
                     }
 
-                    Type? t = params.get(0).type;
                     if (unary,
+                            exists t = params[0]?.type,
                             !isTypeUnknown(t),
                             type.isSubtypeOf(t)) {
                         matches.put(candidate.key,
@@ -652,7 +653,7 @@ shared object completionManager
                     }
                 }
             }
-        });
+        }
 
         return matches;
     }
@@ -681,6 +682,9 @@ shared object completionManager
         value unit = node.unit;
         value addParameterTypesInCompletions 
                 = ctx.options.parameterTypesInCompletion;
+        value inexactMatches
+                = let (pref = ctx.options.inexactMatches)
+                pref in ["both", "positional"];
 
         if (is Tree.Term node) {
             addParametersProposal {
@@ -715,7 +719,9 @@ shared object completionManager
         else if (prefix.empty, 
             !isLocation(ol, OL.\iis),
             isMemberNameProposable(offset, node, memberOp),
-            is Tree.Type|Tree.BaseTypeExpression|Tree.QualifiedTypeExpression node) {
+            is Tree.Type
+             | Tree.BaseTypeExpression
+             | Tree.QualifiedTypeExpression node) {
             
             //member names we can refine
             if (exists t 
@@ -743,11 +749,13 @@ shared object completionManager
             }
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
-        } else {
+        }
+        else {
             value isMember
                     = if (is Tree.MemberLiteral node)
                     then node.type exists
-                    else node is Tree.QualifiedMemberOrTypeExpression|Tree.QualifiedType;
+                    else node is Tree.QualifiedMemberOrTypeExpression
+                               | Tree.QualifiedType;
 
             if (!secondLevel, !inDoc, !memberOp) {
                 addKeywordProposals {
@@ -773,14 +781,14 @@ shared object completionManager
                 };
             }
 
-            value isPackageOrModuleDescriptor 
+            value isPackageOrModuleDescriptor
                     = isModuleDescriptor(cu) 
                     || isPackageDescriptor(cu);
 
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
 
-                if (!dec.toplevel, 
+                if (!dec.toplevel,
                     !dec.classOrInterfaceMember, 
                     dec.unit == unit,
                     exists decNode = nodes.getReferencedNode(dec, cu),
@@ -819,9 +827,16 @@ shared object completionManager
 
                 value nextToken = getNextToken(ctx, token);
                 value noParamsFollow = noParametersFollow(nextToken);
-                
-                if (!secondLevel, !inDoc, noParamsFollow, 
-                    isInvocationProposable(dwp, ol, previousTokenType),
+
+                if (!secondLevel, !inDoc, noParamsFollow,
+                    isInvocationProposable {
+                        dwp = dwp;
+                        ol = ol;
+                        previousTokenType = previousTokenType;
+                        unit = unit;
+                        prefix = prefix;
+                        inexactMatches = inexactMatches;
+                    },
                     !isQualifiedType(node) 
                             || ModelUtil.isConstructor(dec) 
                             || dec.staticallyImportable,
@@ -836,9 +851,10 @@ shared object completionManager
                             ctx = ctx;
                             dwp = dwp;
                             dec = d;
-                            pr = if (isMember)
-                                then getQualifiedProducedReference(node, d)
-                                else getRefinedProducedReference(scope, d);
+                            reference
+                                    = if (isMember)
+                                    then getQualifiedProducedReference(node, d)
+                                    else getRefinedProducedReference(scope, d);
                             scope = scope;
                             ol = ol;
                             typeArgs = null;
@@ -846,6 +862,7 @@ shared object completionManager
                         };
                     }
                 }
+
                 if (isProposable {
                         dwp = dwp;
                         ol = ol;
@@ -882,7 +899,7 @@ shared object completionManager
                     }
                     else {
                         if (secondLevel,
-                            exists pr =
+                            exists reference =
                                     if (isMember)
                                     then getQualifiedProducedReference(node, dec)
                                     else getRefinedProducedReference(scope, dec)) {
@@ -893,7 +910,7 @@ shared object completionManager
                                 dec = dec;
                                 scope = scope;
                                 isMember = false;
-                                pr = pr;
+                                reference = reference;
                                 requiredType = requiredType;
                                 ol = ol;
                                 cancellable = cancellable;
@@ -908,18 +925,20 @@ shared object completionManager
                                 prefix = prefix;
                                 ctx = ctx;
                                 dwp = dwp;
-                                pr = if (isMember)
-                                    then getQualifiedProducedReference(node, dec)
-                                    else getRefinedProducedReference(scope, dec);
-                                        scope = scope;
-                                        ol = ol;
-                                        isMember = isMember;
+                                reference =
+                                        if (dwp.unimported) then null
+                                        else if (isMember)
+                                        then getQualifiedProducedReference(node, dec)
+                                        else getRefinedProducedReference(scope, dec);
+                                scope = scope;
+                                ol = ol;
+                                isMember = isMember;
                             };
                         }
                     }
                 }
 
-                if (!memberOp, !secondLevel, 
+                if (!memberOp, !secondLevel,
                     isProposable {
                         dwp = dwp;
                         ol = ol;
@@ -964,7 +983,7 @@ shared object completionManager
             }
         }
 
-        if (node is Tree.QualifiedMemberExpression 
+        if (node is Tree.QualifiedMemberExpression
             || memberOp && node is Tree.QualifiedTypeExpression) {
             
             assert (is Tree.QualifiedMemberOrTypeExpression node);
@@ -1011,76 +1030,82 @@ shared object completionManager
             && occursAfterBraceOrSemicolon(token, ctx.tokens);
 
     // see CeylonParseController.isMemberNameProposable(int offset, Node node, boolean memberOp)
-    Boolean isMemberNameProposable(Integer offset,
-        Node node, Boolean memberOp) {
-        Token? token = node.endToken;
-        return if (is CommonToken token, !memberOp, token.stopIndex >= offset-2)
+    Boolean isMemberNameProposable(Integer offset, Node node, Boolean memberOp)
+            => if (!memberOp,
+                   is CommonToken token = node.endToken,
+                   token.stopIndex >= offset-2)
                 then true else false;
-    }
 
     Reference? getQualifiedProducedReference(Node node, Declaration d) {
-        variable Type? pt;
-        switch (node)
-        case (is Tree.QualifiedMemberOrTypeExpression) {
-            pt = node.primary.typeModel;
-        }
-        case (is Tree.QualifiedType) {
-            pt = node.outerType.typeModel;
-        }
-        else {
-            return null;
-        }
-
-        if (exists p = pt, 
-            d.classOrInterfaceMember, 
-            is TypeDeclaration container = d.container) {
-            pt = p.getSupertype(container);
-        }
-
-        return d.appliedReference(pt, Collections.emptyList<Type>());
-    }
-
-    Reference? getRefinedProducedReference(Type|Scope typeOrScope, Declaration d) {
-        if (is Type typeOrScope) {
-            value superType = typeOrScope;
-            if (superType.intersection) {
-                for (pt in superType.satisfiedTypes) {
-                    if (exists result 
-                            = getRefinedProducedReference(pt, d)) {
-                        return result;
-                    }
-                }
-                return null; //never happens?
+        if (is TypeDeclaration container = d.container) {
+            Type? type;
+            switch (node)
+            case (is Tree.QualifiedMemberOrTypeExpression) {
+                type = node.primary.typeModel;
+            }
+            case (is Tree.QualifiedType) {
+                type = node.outerType.typeModel;
             }
             else {
-                if (exists declaringType 
-                        = superType.declaration.getDeclaringType(d)) {
-                    Type outerType 
-                            = superType.getSupertype(declaringType.declaration);
-                    return refinedProducedReference(outerType, d);
-                }
                 return null;
             }
-        } else {
-            Type? outerType = typeOrScope.getDeclaringType(d);
-            value params = JArrayList<Type>();
-            if (is Generic d) {
-                CeylonIterable(d.typeParameters)
-                        .each((tp) => params.add(tp.type));
+
+            if (exists type) {
+                value supertype = type.getSupertype(container);
+                return d.appliedReference(supertype, Collections.emptyList<Type>());
             }
-            return d.appliedReference(outerType, params);
         }
+        return d.appliedReference(null, Collections.emptyList<Type>());
     }
 
-    Reference refinedProducedReference(Type outerType, Declaration d) {
-        value params = JArrayList<Type>();
+    /*Reference? getRefinedProducedReferenceForSupertype(Type typeOrScope, Declaration d) {
+        if (typeOrScope.intersection) {
+            for (pt in typeOrScope.satisfiedTypes) {
+                if (exists result
+                        = getRefinedProducedReferenceForSupertype(pt, d)) {
+                    return result;
+                }
+            }
+            return null; //never happens?
+        } else {
+            if (exists declaringType
+                    = typeOrScope.declaration.getDeclaringType(d)) {
+                Type outerType
+                        = typeOrScope.getSupertype(declaringType.declaration);
+                return refinedProducedReference(outerType, d);
+            }
+            return null;
+        }
+    }*/
+
+    Reference? getRefinedProducedReference(Scope scope, Declaration d) {
+        JList<Type> params;
         if (is Generic d) {
+            params = JArrayList<Type>();
             for (tp in d.typeParameters) {
                 params.add(tp.type);
             }
         }
+        else {
+            params = Collections.emptyList<Type>();
+        }
+        value outerType = !d.toplevel then scope.getDeclaringType(d);
         return d.appliedReference(outerType, params);
     }
+
+    /*Reference refinedProducedReference(Type outerType, Declaration d) {
+        JList<Type> params;
+        if (is Generic d) {
+            params = JArrayList<Type>();
+            for (tp in d.typeParameters) {
+                params.add(tp.type);
+            }
+        }
+        else {
+            params = Collections.emptyList<Type>();
+        }
+        return d.appliedReference(outerType, params);
+    }*/
 
     Boolean isTypeParameterOfCurrentDeclaration(Node node, Declaration d) {
         //TODO: this is a total mess and totally error-prone
@@ -1177,9 +1202,9 @@ shared object completionManager
                         tokens = tokens;
                     }.type;
 
-            return previousTokenType==Lexer.lbrace ||
-                   previousTokenType==Lexer.rbrace ||
-                   previousTokenType==Lexer.semicolon;
+            return previousTokenType==Lexer.lbrace
+                || previousTokenType==Lexer.rbrace
+                || previousTokenType==Lexer.semicolon;
         }
     }
 
@@ -1235,8 +1260,11 @@ shared object completionManager
         /*&& nextToken.getType()!=CeylonLexer.LBRACE*/
     }
 
-    Boolean isInvocationProposable(DeclarationWithProximity dwp, OL? ol, Integer previousTokenType) {
-        if (is Functional dec = dwp.declaration, previousTokenType != Lexer.isOp) {
+    Boolean isInvocationProposable(DeclarationWithProximity dwp, OL? ol,
+            Integer previousTokenType, Unit unit, String prefix, Boolean inexactMatches) {
+        if (is Functional dec = dwp.declaration,
+            previousTokenType != Lexer.isOp,
+            inexactMatches || dec.getName(unit)==prefix) {
             variable Boolean isProposable = true;
 
             isProposable &&= previousTokenType != Lexer.caseTypes || isLocation(ol, OL.\iof);
