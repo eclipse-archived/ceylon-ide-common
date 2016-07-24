@@ -61,9 +61,6 @@ import java.util {
     JArrayList=ArrayList,
     TreeSet
 }
-import java.util.regex {
-    Pattern
-}
 
 import org.antlr.runtime {
     CommonToken,
@@ -224,7 +221,7 @@ shared object completionManager
         
         value fsv = FindScopeVisitor(node);
         fsv.visit(typecheckedRootNode);
-        Scope? scope = fsv.scope;
+        value scope = fsv.scope;
 
         // I think the rest of this function assumes the scope always exists
         if (!exists scope) {
@@ -254,32 +251,35 @@ shared object completionManager
                 rootNode = typecheckedRootNode;
                 cancellable = monitor;
             };
-            value functionProposals = getFunctionProposals {
+            /*value functionProposals = getFunctionProposals {
                 node = node;
                 scope = scope;
                 prefix = prefix;
                 memberOp = isMemberOp;
                 cancellable = monitor;
-            };
+            };*/
             
             filterProposals(ctx, proposals);
-            filterProposals(ctx, functionProposals);
-            
+//            filterProposals(ctx, functionProposals);
+
+            value before = system.milliseconds;
             constructCompletions {
                 offset = offset;
-                prefix = if (inDoc) then qualified else fullPrefix;
-                sortedProposals 
-                        = sortProposals {
+                prefix = inDoc then qualified else fullPrefix;
+                sortedProposals
+                        = proposals.values();
+                        /*= sortProposals {
                             prefix = prefix;
                             required = required;
                             proposals = proposals;
-                        };
-                sortedFunctionProposals 
-                        = sortProposals {
+                        };*/
+                sortedFunctionProposals
+                        = Collections.emptyList<DeclarationWithProximity>();
+                        /*= sortProposals {
                             prefix = prefix;
                             required = required;
                             proposals = functionProposals;
-                        };
+                        };*/
                 ctx = ctx;
                 scope = scope;
                 node = node;
@@ -293,6 +293,7 @@ shared object completionManager
                 tokenType = tokenType;
                 cancellable = monitor;
             };
+            print("constructed completions in ``system.milliseconds - before``ms => ``ctx.proposals.size`` results");
         }
     }
     
@@ -450,13 +451,13 @@ shared object completionManager
 
     // see CeylonCompletionProcessor.
     void filterProposals(CompletionContext ctx, Proposals proposals) {
-        List<Pattern> filters = ctx.proposalFilters;
+        value filters = ctx.proposalFilters;
         if (!filters.empty) {
             value iterator = proposals.values().iterator();
             while (iterator.hasNext()) {
-                DeclarationWithProximity dwp = iterator.next();
+                value dwp = iterator.next();
                 String name = dwp.declaration.qualifiedNameString;
-                for (Pattern filter in filters) {
+                for (filter in filters) {
                     if (filter.matcher(javaString(name)).matches()) {
                         iterator.remove();
                     }
@@ -506,7 +507,7 @@ shared object completionManager
     Node getTokenNode(Integer adjustedStart, 
         Integer adjustedEnd, Integer tokenType, 
         Tree.CompilationUnit rootNode, Integer offset) {
-        variable Node? node 
+        variable value node
                 = nodes.findNode {
                     node = rootNode;
                     tokens = null;
@@ -1142,29 +1143,25 @@ shared object completionManager
         }
     }
 
-    Boolean isRefinementProposable(Declaration dec, OL? ol, Scope scope) {
-        return (ol is Null || isAnonymousClass(scope)) &&
+    Boolean isRefinementProposable(Declaration dec, OL? ol, Scope scope)
+            => (ol is Null || isAnonymousClass(scope)) &&
                 (dec.default || dec.formal) &&
                 (dec is FunctionOrValue || dec is Class) &&
-                (if (is ClassOrInterface scope) 
-                 then scope.isInheritedFromSupertype(dec) 
+                (if (is ClassOrInterface scope)
+                 then scope.isInheritedFromSupertype(dec)
                  else false);
-    }
     
     Boolean isAnonymousClass(Scope scope)
             => if (is Class scope) then scope.anonymous else false;
 
-    Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d) {
-        return if (exists nal = d.namedArgumentList, scope == nal) then true else false;
-    }
+    Boolean isParameterOfNamedArgInvocation(Scope scope, DeclarationWithProximity d)
+            => if (exists nal = d.namedArgumentList, scope == nal) then true else false;
 
     Boolean isDirectlyInsideNamedArgumentList(CompletionContext ctx,
-        Node node, CommonToken token) {
-        
-        return node is Tree.NamedArgumentList ||
-                (!(node is Tree.SequenceEnumeration) &&
-            occursAfterBraceOrSemicolon(token, ctx.tokens));
-    }
+        Node node, CommonToken token)
+            => node is Tree.NamedArgumentList ||
+              !node is Tree.SequenceEnumeration
+                && occursAfterBraceOrSemicolon(token, ctx.tokens));
 
     // see CeylonCompletionProcessor.occursAfterBraceOrSemicolon(...)
     Boolean occursAfterBraceOrSemicolon(CommonToken token, JList<CommonToken> tokens) {
