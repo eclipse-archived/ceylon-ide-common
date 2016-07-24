@@ -1,15 +1,12 @@
 import com.redhat.ceylon.ide.common.util {
-    types,
-    RequiredType
+    RequiredType,
+    types
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
     ModelUtil
 }
 
-import java.lang {
-    JInteger=Integer
-}
 import java.util {
     Comparator
 }
@@ -52,16 +49,16 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 value ytype = types.getResultType(yd);
                 Boolean xassigns = xtype?.isSubtypeOf(requiredType) else false;
                 Boolean yassigns = ytype?.isSubtypeOf(requiredType) else false;
-                if (xassigns, !yassigns) {
+                if (xassigns && !yassigns) {
                     return -1;
                 }
-                else if (yassigns, !xassigns) {
+                else if (yassigns && !xassigns) {
                     return 1;
                 }
                 if (xassigns, yassigns) {
                     //both are assignable - prefer the
                     //one which isn't assignable to
-                    //*everything*
+                    //everything
                     Boolean xbottom = xtype?.nothing else false;
                     Boolean ybottom = ytype?.nothing else false;
                     if (xbottom, !ybottom) {
@@ -82,9 +79,13 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
                 return -1;
             }
 
-            Integer pc = JInteger.compare(x.proximity, y.proximity);
-            if (pc!=0) {
-                return pc;
+            switch(x.proximity<=>y.proximity)
+            case (equal) {}
+            case (larger) {
+                return 1;
+            }
+            case (smaller) {
+                return -1;
             }
             
             if (exists requiredName = required.parameterName) {
@@ -107,15 +108,15 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             }
             
             //sort by unqualified name
-            Integer nc 
-                    = switch (xName<=>yName) 
-                    case (larger) 1
-                    case (smaller) -1
-                    case (equal) 0;
-            if (nc != 0) {
-                return nc;
+            switch (xName<=>yName)
+            case (equal) {}
+            case (larger) {
+                return 1;
             }
-            
+            case (smaller) {
+                return -1;
+            }
+
             //if all else fails sort by qualified name
             String xqn = xd.qualifiedNameString;
             String yqn = yd.qualifiedNameString;
