@@ -1115,11 +1115,10 @@ shared object completionManager
                 = ctx.options.parameterTypesInCompletion;
         
         for (dwp in set) {
-            value dec = dwp.declaration;
-            if (!filter, is FunctionOrValue m = dec) {
+            if (!filter, is FunctionOrValue dec = dwp.declaration) {
                 for (d in overloads(dec)) {
                     if (isRefinementProposable(d, ol, scope),
-                        isReturnType(t, m, node), 
+                        isReturnType(t, dec, node),
                         is ClassOrInterface scope) {
                         value start = node.startIndex.intValue();
                         addRefinementProposal {
@@ -1161,7 +1160,7 @@ shared object completionManager
         Node node, CommonToken token)
             => node is Tree.NamedArgumentList ||
               !node is Tree.SequenceEnumeration
-                && occursAfterBraceOrSemicolon(token, ctx.tokens));
+                && occursAfterBraceOrSemicolon(token, ctx.tokens);
 
     // see CeylonCompletionProcessor.occursAfterBraceOrSemicolon(...)
     Boolean occursAfterBraceOrSemicolon(CommonToken token, JList<CommonToken> tokens) {
