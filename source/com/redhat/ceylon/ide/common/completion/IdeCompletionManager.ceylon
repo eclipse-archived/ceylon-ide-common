@@ -183,19 +183,17 @@ shared object completionManager
         }
         variable Boolean isMemberOp = isMemberOperator(adjustedToken);
         variable String qualified = "";
-        
+
         // special handling for doc links
-        Boolean inDoc 
+        Boolean inDoc
                 = isAnnotationStringLiteral(adjustedToken)
                 && offset>adjustedToken.startIndex
                 && offset<=adjustedToken.stopIndex;
-
         if (inDoc) {
             if (is Tree.DocLink node) {
-                Tree.DocLink docLink = node;
                 Integer offsetInLink 
-                        = offset - docLink.startIndex.intValue();
-                String text = docLink.token.text;
+                        = offset - node.startIndex.intValue();
+                String text = node.token.text;
                 Integer bar = (text.firstOccurrence('|') else -1) + 1;
                 if (offsetInLink < bar) { 
                     return;
@@ -211,7 +209,7 @@ shared object completionManager
                 isMemberOp = dot > 0;
                 prefix = qualified.spanFrom(dot);
                 if (dcolon >= 0) {
-                    assert(exists p = pkg); 
+                    assert(exists p = pkg);
                     qualified = p + qualified;
                 }
                 fullPrefix = prefix;
