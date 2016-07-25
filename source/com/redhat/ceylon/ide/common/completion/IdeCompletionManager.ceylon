@@ -1051,8 +1051,8 @@ shared object completionManager
 
     Reference getQualifiedProducedReference(Node node, Declaration d) {
         if (is TypeDeclaration container = d.container,
-            exists type = receivingType(node)) {
-            value supertype = type.getSupertype(container);
+            exists type = receivingType(node),
+            exists supertype = type.getSupertype(container)) {
             return d.appliedReference(supertype, Collections.emptyList<Type>());
         }
         return d.appliedReference(null, Collections.emptyList<Type>());
