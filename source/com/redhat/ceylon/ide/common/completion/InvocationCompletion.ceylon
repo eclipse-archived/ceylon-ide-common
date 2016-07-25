@@ -297,7 +297,7 @@ shared interface InvocationCompletion {
         Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity? dwp,
         // sometimes we have no dwp, just a dec, so we have to handle that too
-        Declaration dec, Reference? reference,
+        Declaration dec, Reference reference,
         Scope scope, OL? ol,
         String? typeArgs, Boolean isMember) {
 
@@ -326,12 +326,12 @@ shared interface InvocationCompletion {
                         then dec.abstract
                         else false;
 
-                Boolean inheritance
+                value inheritance
                         = isLocation(ol, OL.upperBound) 
                         || isLocation(ol, OL.\iextends)
                         || isLocation(ol, OL.\isatisfies);
 
-                if (positional, exists reference,
+                if (positional,
                     parameterList.positionalParametersSupported,
                     !isAbstract 
                         || isLocation(ol, OL.\iextends)
@@ -345,16 +345,16 @@ shared interface InvocationCompletion {
                             offset = offset;
                             prefix = prefix;
                             desc = getPositionalInvocationDescriptionFor {
-                                dwp = dwp;
-                                dec = dec;
-                                ol = ol;
-                                pr = reference;
-                                unit = unit;
-                                includeDefaulted = false;
-                                typeArgs = typeArgs;
-                                addParameterTypesInCompletions 
-                                        = addParameterTypesInCompletions;
-                            };
+                                    dwp = dwp;
+                                    dec = dec;
+                                    ol = ol;
+                                    pr = reference;
+                                    unit = unit;
+                                    includeDefaulted = false;
+                                    typeArgs = typeArgs;
+                                    addParameterTypesInCompletions
+                                            = addParameterTypesInCompletions;
+                                };
                             text = getPositionalInvocationTextFor {
                                     dec = dec;
                                     ol = ol;
@@ -380,24 +380,24 @@ shared interface InvocationCompletion {
                         offset = offset;
                         prefix = prefix;
                         desc = getPositionalInvocationDescriptionFor {
-                            dwp = dwp;
-                            dec = dec;
-                            ol = ol;
-                            pr = reference;
-                            unit = unit;
-                            includeDefaulted = true;
-                            typeArgs = typeArgs;
-                            addParameterTypesInCompletions 
-                                    = addParameterTypesInCompletions;
-                        };
+                                dwp = dwp;
+                                dec = dec;
+                                ol = ol;
+                                pr = reference;
+                                unit = unit;
+                                includeDefaulted = true;
+                                typeArgs = typeArgs;
+                                addParameterTypesInCompletions
+                                        = addParameterTypesInCompletions;
+                            };
                         text = getPositionalInvocationTextFor {
-                            dec = dec;
-                            ol = ol;
-                            pr = reference;
-                            unit = unit;
-                            includeDefaulted = true;
-                            typeArgs = typeArgs;
-                        };
+                                dec = dec;
+                                ol = ol;
+                                pr = reference;
+                                unit = unit;
+                                includeDefaulted = true;
+                                typeArgs = typeArgs;
+                            };
                         dec = dec;
                         pr = reference;
                         scope = scope;
@@ -411,8 +411,7 @@ shared interface InvocationCompletion {
                     };
                 }
                 if (named, 
-                    parameterList.namedParametersSupported, 
-                    exists reference,
+                    parameterList.namedParametersSupported,
                     !isAbstract 
                             && !isLocation(ol, OL.\iextends) 
                             && !isLocation(ol, OL.classAlias)
@@ -427,21 +426,21 @@ shared interface InvocationCompletion {
                             offset = offset;
                             prefix = prefix;
                             desc = getNamedInvocationDescriptionFor {
-                                dec = dec;
-                                pr = reference;
-                                unit = unit;
-                                includeDefaulted = false;
-                                typeArgs = typeArgs;
-                                addParameterTypesInCompletions 
-                                        = addParameterTypesInCompletions;
-                            };
+                                    dec = dec;
+                                    pr = reference;
+                                    unit = unit;
+                                    includeDefaulted = false;
+                                    typeArgs = typeArgs;
+                                    addParameterTypesInCompletions
+                                            = addParameterTypesInCompletions;
+                                };
                             text = getNamedInvocationTextFor {
-                                dec = dec;
-                                pr = reference;
-                                unit = unit;
-                                includeDefaulted = false;
-                                typeArgs = typeArgs;
-                            };
+                                    dec = dec;
+                                    pr = reference;
+                                    unit = unit;
+                                    includeDefaulted = false;
+                                    typeArgs = typeArgs;
+                                };
                             dec = dec;
                             pr = reference;
                             scope = scope;
@@ -459,21 +458,21 @@ shared interface InvocationCompletion {
                             offset = offset;
                             prefix = prefix;
                             desc = getNamedInvocationDescriptionFor {
-                                dec = dec;
-                                pr = reference;
-                                unit = unit;
-                                includeDefaulted = true;
-                                typeArgs = typeArgs;
-                                addParameterTypesInCompletions 
-                                        = addParameterTypesInCompletions;
-                            };
+                                    dec = dec;
+                                    pr = reference;
+                                    unit = unit;
+                                    includeDefaulted = true;
+                                    typeArgs = typeArgs;
+                                    addParameterTypesInCompletions
+                                            = addParameterTypesInCompletions;
+                                };
                             text = getNamedInvocationTextFor {
-                                dec = dec;
-                                pr = reference;
-                                unit = unit;
-                                includeDefaulted = true;
-                                typeArgs = typeArgs;
-                            };
+                                    dec = dec;
+                                    pr = reference;
+                                    unit = unit;
+                                    includeDefaulted = true;
+                                    typeArgs = typeArgs;
+                                };
                             dec = dec;
                             pr = reference;
                             scope = scope;

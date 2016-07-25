@@ -843,16 +843,17 @@ shared object completionManager
                             || isDelegatableConstructor(scope, dec)
                         else true) {
                     for (d in overloads(dec)) {
+                        value reference
+                                = if (isMember)
+                                then getQualifiedProducedReference(node, d)
+                                else getRefinedProducedReference(scope, d);
                         addInvocationProposals {
                             offset = offset;
                             prefix = prefix;
                             ctx = ctx;
                             dwp = dwp;
                             dec = d;
-                            reference
-                                    = if (isMember)
-                                    then getQualifiedProducedReference(node, d)
-                                    else getRefinedProducedReference(scope, d);
+                            reference = reference;
                             scope = scope;
                             ol = ol;
                             typeArgs = null;
@@ -895,44 +896,43 @@ shared object completionManager
                             };
                         }
                     }
-                    else {
-                        if (secondLevel,
-                            exists reference =
-                                    if (isMember)
-                                    then getQualifiedProducedReference(node, dec)
-                                    else getRefinedProducedReference(scope, dec)) {
-                            addSecondLevelProposal {
-                                offset = offset;
-                                prefix = prefix;
-                                ctx = ctx;
-                                dec = dec;
-                                scope = scope;
-                                isMember = false;
-                                reference = reference;
-                                requiredType = requiredType;
-                                ol = ol;
-                                cancellable = cancellable;
-                            };
-                        }
-                        else if (!dec is Function 
-                                || !ModelUtil.isAbstraction(dec) 
-                                || !noParamsFollow) {
-                            addReferenceProposal {
-                                cu = cu;
-                                offset = offset;
-                                prefix = prefix;
-                                ctx = ctx;
-                                dwp = dwp;
-                                reference =
-                                        if (dwp.unimported) then null
-                                        else if (isMember)
-                                        then getQualifiedProducedReference(node, dec)
-                                        else getRefinedProducedReference(scope, dec);
-                                scope = scope;
-                                ol = ol;
-                                isMember = isMember;
-                            };
-                        }
+                    else if (secondLevel) {
+                        value reference
+                                = if (isMember)
+                                then getQualifiedProducedReference(node, dec)
+                                else getRefinedProducedReference(scope, dec);
+                        addSecondLevelProposal {
+                            offset = offset;
+                            prefix = prefix;
+                            ctx = ctx;
+                            dec = dec;
+                            scope = scope;
+                            isMember = false;
+                            reference = reference;
+                            requiredType = requiredType;
+                            ol = ol;
+                            cancellable = cancellable;
+                        };
+                    }
+                    else if (!dec is Function
+                            || !ModelUtil.isAbstraction(dec)
+                            || !noParamsFollow) {
+                        value reference
+                                = if (dwp.unimported) then null
+                                else if (isMember)
+                                then getQualifiedProducedReference(node, dec)
+                                else getRefinedProducedReference(scope, dec);
+                        addReferenceProposal {
+                            cu = cu;
+                            offset = offset;
+                            prefix = prefix;
+                            ctx = ctx;
+                            dwp = dwp;
+                            reference = reference;
+                            scope = scope;
+                            ol = ol;
+                            isMember = isMember;
+                        };
                     }
                 }
 
@@ -1036,24 +1036,24 @@ shared object completionManager
                    token.stopIndex >= offset-2)
                 then true else false;
 
-    Reference? getQualifiedProducedReference(Node node, Declaration d) {
-        if (is TypeDeclaration container = d.container) {
-            Type? type;
-            switch (node)
-            case (is Tree.QualifiedMemberOrTypeExpression) {
-                type = node.primary.typeModel;
-            }
-            case (is Tree.QualifiedType) {
-                type = node.outerType.typeModel;
-            }
-            else {
-                return null;
-            }
+    function receivingType(Node node) {
+        switch (node)
+        case (is Tree.QualifiedMemberOrTypeExpression) {
+            return node.primary.typeModel;
+        }
+        case (is Tree.QualifiedType) {
+            return node.outerType.typeModel;
+        }
+        else {
+            return null;
+        }
+    }
 
-            if (exists type) {
-                value supertype = type.getSupertype(container);
-                return d.appliedReference(supertype, Collections.emptyList<Type>());
-            }
+    Reference getQualifiedProducedReference(Node node, Declaration d) {
+        if (is TypeDeclaration container = d.container,
+            exists type = receivingType(node)) {
+            value supertype = type.getSupertype(container);
+            return d.appliedReference(supertype, Collections.emptyList<Type>());
         }
         return d.appliedReference(null, Collections.emptyList<Type>());
     }
@@ -1078,7 +1078,7 @@ shared object completionManager
         }
     }*/
 
-    Reference? getRefinedProducedReference(Scope scope, Declaration d) {
+    Reference getRefinedProducedReference(Scope scope, Declaration d) {
         JList<Type> params;
         if (is Generic d) {
             params = JArrayList<Type>();
