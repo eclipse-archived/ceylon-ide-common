@@ -622,31 +622,19 @@ shared object completionManager
                 = HashMap<JString,DeclarationWithProximity>();
 
         for (candidate in candidates.entrySet()) {
-            if (is Function declaration
-                    = candidate.\ivalue.declaration,
+            value dwp = candidate.\ivalue;
+            if (is Function declaration = dwp.declaration,
                 !declaration.annotation,
                 !declaration.parameterLists.empty) {
 
                 value params =
                         declaration.firstParameterList
                             .parameters;
-                if (!params.empty) {
-                    variable Boolean unary = true;
-                    if (params.size() > 1) {
-                        for (i in 1..params.size()-1) {
-                            if (!params.get(i).defaulted) {
-                                unary = false;
-                            }
-                        }
-                    }
-
-                    if (unary,
-                            exists t = params[0]?.type,
-                            !isTypeUnknown(t),
-                            type.isSubtypeOf(t)) {
-                        matches.put(candidate.key,
-                            candidate.\ivalue);
-                    }
+                if (exists first = params[0],
+                    params[1]?.defaulted else true,
+                    exists t = first.type,
+                    !isTypeUnknown(t) && type.isSubtypeOf(t)) {
+                    matches.put(candidate.key, dwp);
                 }
             }
         }
