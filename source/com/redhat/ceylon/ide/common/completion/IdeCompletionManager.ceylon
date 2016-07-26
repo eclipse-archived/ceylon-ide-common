@@ -563,10 +563,10 @@ shared object completionManager
     Boolean isIdentifierOrKeyword(Token token) {
         value type = token.type;
         return type == Lexer.lidentifier
-                || type == Lexer.uidentifier 
-                || type == Lexer.aidentifier 
-                || type == Lexer.pidentifier 
-                || escaping.isKeyword(token.text);
+            || type == Lexer.uidentifier
+            || type == Lexer.aidentifier
+            || type == Lexer.pidentifier
+            || escaping.isKeyword(token.text);
     }
 
     // see CeylonCompletionProcessor.isCommentOrCodeStringLiteral()
