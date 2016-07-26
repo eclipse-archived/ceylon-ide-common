@@ -12,7 +12,8 @@ import com.redhat.ceylon.ide.common.util {
     nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Type
+    Type,
+    Function
 }
 
 import java.util {
@@ -104,14 +105,14 @@ shared object addConstructorQuickFix {
                 value firstParen 
                         = text.firstOccurrence('(') else 0; 
                 value loc = start + firstParen + 1;
-                value name = cd.declarationModel.name;
-                
-                data.addQuickFix { 
-                    description = "Add constructor 'new (``params``)' of '``name``'"; 
-                    change = change; 
-                    selection = DefaultRegion(loc, 0);
-                    kind = QuickFixKind.addConstructor;
-                };
+                if (exists name = cd?.declarationModel?.name) {
+                    data.addQuickFix { 
+                        description = "Add constructor 'new (``params``)' of '``name``'"; 
+                        change = change; 
+                        selection = DefaultRegion(loc, 0);
+                        kind = QuickFixKind.addConstructor;
+                    };
+                }
             }
         }
     }
@@ -130,14 +131,15 @@ shared object addConstructorQuickFix {
     }
 
     Boolean isExecutableStatement(Tree.Statement s) {
-        value unit = s.unit;
+        assert(exists unit = s.unit);
         switch (s)
         case (is Tree.ExecutableStatement) {
             if (is Tree.SpecifierStatement s) {
                 // shortcut refinement statements with => 
                 // aren't really "executable"
-                return !(s.specifierExpression 
-                            is Tree.LazySpecifierExpression 
+                
+                Tree.SpecifierExpression? se = s.specifierExpression;
+                return !(se is Tree.LazySpecifierExpression 
                         && !s.refinement);
             }
             else {
@@ -145,20 +147,25 @@ shared object addConstructorQuickFix {
             }
         }
         case (is Tree.AttributeDeclaration) {
-            value sie = s.specifierOrInitializerExpression;
+            Tree.SpecifierOrInitializerExpression? sie = s.specifierOrInitializerExpression;
             return !sie is Tree.LazySpecifierExpression 
                     && !s.declarationModel.formal;
         }
         case (is Tree.MethodDeclaration) {
-            value sie = s.specifierExpression;
-            return !sie is Tree.LazySpecifierExpression 
-                    && !s.declarationModel.formal;
+            Tree.SpecifierExpression? sie = s.specifierExpression;
+            Function? declarationModel = s.declarationModel;
+            if (exists declarationModel) {
+                return !sie is Tree.LazySpecifierExpression 
+                        && !declarationModel.formal;
+            }
+            return false;
         }
         case (is Tree.ObjectDefinition) {
             if (s.extendedType exists) {
-                if (exists et = s.extendedType.type.typeModel,
-                    !et.declaration==unit.objectDeclaration 
-                 && !et.declaration==unit.basicDeclaration) {
+                if (exists et = s.extendedType.type?.typeModel,
+                    exists declaration = et.declaration,
+                    !declaration==unit.objectDeclaration 
+                 && !declaration==unit.basicDeclaration) {
                     return true;
                 }
             }
@@ -183,5 +190,4 @@ shared object addConstructorQuickFix {
             return false;
         }
     }
-
 }
