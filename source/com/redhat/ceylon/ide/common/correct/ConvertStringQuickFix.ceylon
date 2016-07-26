@@ -1,4 +1,22 @@
-
+import ceylon.collection {
+    MutableList,
+    ArrayList
+}
+            
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    Visitor
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    CommonDocument,
+    InsertEdit,
+    DeleteEdit
+}
 
 shared object convertStringQuickFix {
     
