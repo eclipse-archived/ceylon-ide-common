@@ -721,7 +721,7 @@ shared object completionManager
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
         }
-        else if (is Tree.TypedDeclaration node, 
+        else if (is Tree.TypedDeclaration node,
             !(node is Tree.Variable 
                 && node.type is Tree.SyntheticVariable),
             //!(node is Tree.InitializerParameter),
@@ -735,6 +735,10 @@ shared object completionManager
             }
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
+        }
+        else if (is Tree.TypeDeclaration node,
+            isMemberNameProposable(offset, node, memberOp)) {
+            //don't propose anything
         }
         else {
             value isMember
