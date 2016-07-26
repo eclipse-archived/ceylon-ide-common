@@ -6,16 +6,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     Functional,
     Parameter,
-    ParameterList,
     Reference,
     Type,
     Unit,
     ModelUtil,
     Declaration
-}
-
-import java.util {
-    List
 }
 
 import org.antlr.runtime {
@@ -35,7 +30,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     shared actual Type? type => finalResult;
     shared actual String? parameterName => paramName;
     
-    shared actual void visitAny(variable Node that) {
+    shared actual void visitAny(Node that) {
         if (node == that) {
             finalResult = requiredType;
             
@@ -51,28 +46,58 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         }
         super.visitAny(that);
     }
-    
+
+    shared actual void visit(Tree.Body that) {
+        value ort = requiredType;
+        requiredType = null;
+        super.visit(that);
+        requiredType = ort;
+    }
+
+    shared actual void visit(Tree.Declaration that) {
+        value ort = requiredType;
+        requiredType = null;
+        super.visit(that);
+        requiredType = ort;
+    }
+
+    function getTarget(Tree.InvocationExpression that) {
+        if (is Tree.MemberOrTypeExpression p = that.primary) {
+            return p.target;
+        } else {
+            return null;
+        }
+    }
+
+    function getParameters(Reference pr) {
+        if (is Functional declaration = pr.declaration) {
+            return declaration.parameterLists[0]?.parameters;
+        } else {
+            return null;
+        }
+    }
+
     shared actual void visit(Tree.InvocationExpression that) {
         if (exists p = that.primary) {
             p.visit(this);
         }
-        Type? ort = requiredType;
-        Reference? onat = namedArgTarget;
-        Tree.PositionalArgumentList? pal = that.positionalArgumentList;
+        value ort = requiredType;
+        value onat = namedArgTarget;
+
         Unit? unit = that.unit;
-        
         if (!exists unit) {
             return;
         }
-        if (exists pal) {
+
+        if (exists pal = that.positionalArgumentList) {
             variable Integer pos;
-            List<Tree.PositionalArgument> pas = pal.positionalArguments;
+            value pas = pal.positionalArguments;
             if (pas.empty) {
                 pos = 0;
             } else {
                 pos = pas.size(); //default to the last argument if incomplete
-                for (i in 0 .. pas.size() - 1) {
-                    Tree.PositionalArgument pa = pas.get(i);
+                for (i in 0:pas.size()) {
+                    value pa = pas.get(i);
                     if (exists t = token) {
                         assert (is CommonToken t);
                         value tokenEnd = t.stopIndex + 1;
@@ -126,9 +151,8 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 }
             }
         }
-        
-        Tree.NamedArgumentList? nal = that.namedArgumentList;
-        if (exists nal) {
+
+        if (exists nal = that.namedArgumentList) {
             namedArgTarget = getTarget(that);
             if (exists nat = namedArgTarget,
                 exists params = getParameters(nat),
@@ -141,40 +165,21 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 }
             }
         }
-        if (node===that.positionalArgumentList || node===that.namedArgumentList) {
+        if (node===that.positionalArgumentList
+         || node===that.namedArgumentList) {
             finalResult = requiredType;
         }
-        if (exists nal) {
-            nal.visit(this);
-        }
-        if (exists pal) {
-            pal.visit(this);
-        }
+
+        that.namedArgumentList?.visit(this);
+        that.positionalArgumentList?.visit(this);
+
         requiredType = ort;
         namedArgTarget = onat;
     }
     
-    Reference? getTarget(Tree.InvocationExpression that) {
-        if (is Tree.MemberOrTypeExpression p = that.primary) {
-            return p.target;
-        } else {
-            return null;
-        }
-    }
-    
-    List<Parameter>? getParameters(Reference pr) {
-        if (is Functional declaration = pr.declaration) {
-            List<ParameterList> pls = declaration.parameterLists;
-            return if (pls.empty) then null else pls.get(0).parameters;
-        } else {
-            return null;
-        }
-    }
-    
     shared actual void visit(Tree.SpecifiedArgument that) {
-        Type? ort = requiredType;
-        Parameter? p = that.parameter;
-        if (exists p) {
+        value ort = requiredType;
+        if (exists p = that.parameter) {
             if (exists nat = namedArgTarget) {
                 requiredType = nat.getTypedParameter(p).type;
             } else {
@@ -186,7 +191,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     }
     
     shared actual void visit(Tree.ForIterator that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         value unit = that.unit;
         requiredType = unit.getIterableType(unit.anythingType);
         super.visit(that);
@@ -194,14 +199,14 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     }
     
     shared actual void visit(Tree.SpecifierStatement that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.baseMemberExpression.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.SwitchStatement that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         variable Type? srt = that.unit.anythingType;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
@@ -233,7 +238,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     }
     
     shared actual void visit(Tree.SwitchExpression that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         Type? srt;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
@@ -268,77 +273,80 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     }
     
     shared actual void visit(Tree.AnnotationList that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = null;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.AttributeDeclaration that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.MethodDeclaration that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.type.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.FunctionArgument that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.type.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     shared actual void visit(Tree.AssignmentOp that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.leftTerm.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.Return that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = types.getResultType(that.declaration);
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.Throw that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.unit.exceptionType;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.ConditionList that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         requiredType = that.unit.booleanType;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.ResourceList that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         Unit unit = that.unit;
-        requiredType = ModelUtil.unionType(unit.destroyableType,
-            unit.obtainableType, unit);
+        requiredType
+                = ModelUtil.unionType(
+                    unit.destroyableType,
+                    unit.obtainableType,
+                    unit);
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.StringLiteral that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         super.visit(that); // pass on
         requiredType = ort;
     }
     
     shared actual void visit(Tree.DocLink that) {
-        Type? ort = requiredType;
+        value ort = requiredType;
         Declaration? base = that.base;
         requiredType = types.getResultType(base);
         if (!exists rt = requiredType, exists base) {
