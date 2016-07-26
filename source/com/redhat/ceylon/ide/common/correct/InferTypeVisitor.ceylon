@@ -130,16 +130,20 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         Tree.Term? lt = that.leftTerm;
         
         if (is Tree.BaseMemberExpression lt, 
-            exists dec = declaration, 
-            lt.declaration == dec, 
-            exists rt, exists rtt = rt.typeModel) {
+            exists dec = declaration,
+            exists ltDec = lt.declaration,
+            ltDec == dec,
+            exists rt,
+            exists rtt = rt.typeModel) {
             result.union(rtt);
         }
         
         if (is Tree.BaseMemberExpression rt, 
-            exists dec = declaration, 
-            rt.declaration == dec, 
-            exists lt, exists ltt = lt.typeModel) {
+            exists dec = declaration,
+            exists rtDec = rt.declaration,
+            rtDec == dec,
+            exists lt,
+            exists ltt = lt.typeModel) {
             result.intersect(ltt);
         }
     }
@@ -168,12 +172,14 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
             d == dec, 
             exists p = that.parameter, 
             exists pr = this.pr) {
-            value ft = pr.getTypedParameter(p).fullType;
+            Type? ft = pr.getTypedParameter(p).fullType;
             if (p.sequenced) {
                 result.intersect(unit.getIteratedType(ft));
             }
             else {
-                result.intersect(ft);
+                if (exists ft) {
+                    result.intersect(ft);
+                }
             }
         }
     }

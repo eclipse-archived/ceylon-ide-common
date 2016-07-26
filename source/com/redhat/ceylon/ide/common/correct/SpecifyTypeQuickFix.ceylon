@@ -183,8 +183,8 @@ shared object specifyTypeQuickFix {
     shared void addTypingProposals(QuickFixData data, Tree.Declaration? decNode) {
         if (is Tree.TypedDeclaration decNode, 
             !(decNode is Tree.ObjectDefinition|Tree.Variable)) {
-            value type = decNode.type;
-            if (type is Tree.LocalModifier|Tree.StaticType) {
+            Tree.Type? type = decNode.type;
+            if (is Tree.LocalModifier|Tree.StaticType type) {
                 addSpecifyTypeProposal(type, data);
             }
         } else if (is Tree.LocalModifier|Tree.StaticType node = data.node) {

@@ -1,22 +1,4 @@
-import ceylon.collection {
-    MutableList,
-    ArrayList
-}
 
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Visitor
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    ReplaceEdit,
-    CommonDocument,
-    InsertEdit,
-    DeleteEdit
-}
 
 shared object convertStringQuickFix {
     
@@ -120,8 +102,8 @@ shared object convertStringQuickFix {
                         });
                     }
                 } else {
-                    value stt = s.token.type;
-                    if (stt in [CeylonLexer.stringEnd, CeylonLexer.stringMid]) {
+                    Integer? stt = s.token.type;
+                    if (exists stt, stt in [CeylonLexer.stringEnd, CeylonLexer.stringMid]) {
                         change.addEdit(ReplaceEdit {
                             start = s.startIndex.intValue();
                             length = 2;
@@ -129,7 +111,7 @@ shared object convertStringQuickFix {
                         });
                     }
                     
-                    if (stt in [CeylonLexer.stringStart, CeylonLexer.stringMid]) {
+                    if (exists stt, stt in [CeylonLexer.stringStart, CeylonLexer.stringMid]) {
                         change.addEdit(ReplaceEdit {
                             start = s.endIndex.intValue() - 2;
                             length = 2;

@@ -202,10 +202,13 @@ shared object convertSwitchToIfQuickFix {
                         value ec = condition;
                         type = if (ec.not) then "null" else "is Object";
                         try {
-                            value v = ec.variable;
-                            value start = v.startIndex.intValue();
-                            value len = v.distance.intValue();
-                            var = doc.getText(start, len);
+                            if (exists v = ec.variable) {
+                                value start = v.startIndex.intValue();
+                                value len = v.distance.intValue();
+                                var = doc.getText(start, len);
+                            } else {
+                                return;
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                             return;
