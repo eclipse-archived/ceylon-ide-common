@@ -4,7 +4,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit,
-    ReplaceEdit
+    ReplaceEdit,
+    platformUtils,
+    Status
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -13,29 +15,35 @@ import com.redhat.ceylon.ide.common.refactoring {
 shared object addPunctuationQuickFix {
     
     shared void addEmptyParameterListProposal(QuickFixData data) {
-        assert (is Tree.Declaration decNode = data.node);
-        
-        value dec = decNode.declarationModel;
-        value change 
-                = platformServices.document.createTextChange {
-            name = "Add Empty Parameter List";
-            input = data.phasedUnit;
-        };
-        value offset 
-                = correctionUtil.getBeforeParenthesisNode(decNode)
-                        .endIndex
-                        .intValue();
-        change.addEdit(InsertEdit {
-            start = offset;
-            text = "()";
-        });
-        
-        data.addQuickFix {
-            description = "Add '()' empty parameter list to " 
+        if (is Tree.Declaration decNode = data.node) {
+
+            value dec = decNode.declarationModel;
+            value change
+                    = platformServices.document.createTextChange {
+                name = "Add Empty Parameter List";
+                input = data.phasedUnit;
+            };
+            value offset
+                    = correctionUtil.getBeforeParenthesisNode(decNode)
+                .endIndex
+                .intValue();
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = "()";
+            });
+
+            data.addQuickFix {
+                description = "Add '()' empty parameter list to "
                 + correctionUtil.getDescription(dec);
-            change = change;
-            selection = DefaultRegion(offset + 1, 0);
-        };
+                change = change;
+                selection = DefaultRegion(offset + 1, 0);
+            };
+        } else {
+            platformUtils.log(Status._WARNING,
+                "data.node (``
+                if (exists n = data.node) then n.nodeType else "<null>"
+                ``) is not a Tree.Declaration");
+        }
     }
 
     shared void addImportWildcardProposal(QuickFixData data) {
