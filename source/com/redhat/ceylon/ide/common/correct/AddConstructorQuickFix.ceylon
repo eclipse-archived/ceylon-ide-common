@@ -105,8 +105,8 @@ shared object addConstructorQuickFix {
                 value firstParen 
                         = text.firstOccurrence('(') else 0; 
                 value loc = start + firstParen + 1;
-                if (exists name = cd?.declarationModel?.name) {
-                    data.addQuickFix { 
+                if (exists name = cd.declarationModel?.name) {
+                    data.addQuickFix {
                         description = "Add constructor 'new (``params``)' of '``name``'"; 
                         change = change; 
                         selection = DefaultRegion(loc, 0);

@@ -41,7 +41,7 @@ shared object addPunctuationQuickFix {
         } else {
             platformUtils.log(Status._WARNING,
                 "data.node (``
-                if (exists n = data.node) then n.nodeType else "<null>"
+                data.node.nodeType else "<null>"
                 ``) is not a Tree.Declaration");
         }
     }
