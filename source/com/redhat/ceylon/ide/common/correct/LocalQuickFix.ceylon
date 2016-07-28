@@ -90,9 +90,11 @@ shared interface LocalQuickFix<in Data>
             }
             else if (is Tree.TypedDeclaration st, 
                     !(st is Tree.ObjectDefinition)) {
-                value type = st.type;
-                if (currentOffset <= type.endIndex.intValue(),
-                    currentOffset >= type.startIndex.intValue(),
+                if (exists type = st.type,
+                    exists startIndex = type.startIndex.intValue(),
+                    currentOffset >= startIndex,
+                    exists endIndex = type.endIndex.intValue(),
+                    currentOffset <= endIndex,
                     type.endToken.line != line) {
                     
                     switch (type)
