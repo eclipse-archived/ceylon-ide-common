@@ -343,13 +343,12 @@ shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit 
     return results;
 }
 
-shared Boolean isIgnoredLanguageModuleClass(Class clazz) {
-    return clazz.isString()
-            || clazz.integer
-            || clazz.float
-            || clazz.character
-            || clazz.annotation;
-}
+shared Boolean isIgnoredLanguageModuleClass(Class clazz)
+        => clazz.isString()
+        || clazz.integer
+        || clazz.float
+        || clazz.character
+        || clazz.annotation;
 
 shared Boolean isIgnoredLanguageModuleValue(Value val) {
     value name = val.name;
@@ -375,15 +374,14 @@ shared Boolean isIgnoredLanguageModuleMethod(Function method) {
             || method.annotation;
 }
 
-Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
-    return !td.\iobject 
-            && !td.anything 
-            && !td.isString() 
-            && !td.integer 
-            && !td.character 
-            && !td.float 
-            && !td.boolean;
-}
+Boolean isIgnoredLanguageModuleType(TypeDeclaration td)
+        => !td.\iobject
+        && !td.anything
+        && !td.isString()
+        && !td.integer
+        && !td.character
+        && !td.float
+        && !td.boolean;
 
 Integer findCharCount(Integer count, CommonDocument document, 
     Integer start, Integer end,
