@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
     ModelUtil
