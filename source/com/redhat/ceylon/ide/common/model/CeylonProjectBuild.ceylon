@@ -1314,7 +1314,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 ! vfsServices.isFolder(depFile)) {
                 return ceylonProject.getOrCreateFileVirtualFile(depFile);
             } else {
-                platformUtils.log(Status._WARNING, "could not resolve dependent unit: `` dependingFilePath ``");
+                platformUtils.log(Status._DEBUG, "could not resolve dependent unit: `` dependingFilePath ``");
                 return null;
             }
         }
