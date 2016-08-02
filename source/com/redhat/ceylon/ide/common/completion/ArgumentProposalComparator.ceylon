@@ -1,6 +1,8 @@
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
-    ModelUtil
+    ModelUtil {
+        isNameMatching
+    }
 }
 
 import java.util {
@@ -26,8 +28,8 @@ class ArgumentProposalComparator(String? exactName)
             if (xExactHit, !xExactHit) {
                 return 1;
             }
-            value xhit = ModelUtil.isNameMatching(xname, exactName);
-            value yhit = ModelUtil.isNameMatching(yname, exactName);
+            value xhit = isNameMatching(xname, exactName);
+            value yhit = isNameMatching(yname, exactName);
             if (xhit, !yhit) {
                 return -1;
             }
@@ -71,5 +73,6 @@ class ArgumentProposalComparator(String? exactName)
         }
     }
     
-    shared actual Boolean equals(Object that) => false;
+    equals(Object that) => (super of Identifiable).equals(that);
+    hash => (super of Identifiable).hash;
 }
