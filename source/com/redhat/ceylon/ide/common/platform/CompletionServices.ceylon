@@ -20,7 +20,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Unit,
     Type,
-    Package
+    Package,
+    DeclarationWithProximity
 }
 
 import com.redhat.ceylon.ide.common.doc {
@@ -28,6 +29,9 @@ import com.redhat.ceylon.ide.common.doc {
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    OccurrenceLocation
 }
 
 shared interface CompletionServices {
@@ -66,7 +70,7 @@ shared interface CompletionServices {
     );
     
     shared default void newInvocationCompletion(CompletionContext ctx, Integer offset, String prefix,
-        String desc, String text, Declaration dec, Reference? pr, Scope scope,
+        String desc, String text, Declaration dec, Reference()? pr, Scope scope,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
             => addProposal(ctx, offset, prefix, dec, desc, text, generic, null, null);
@@ -114,4 +118,12 @@ shared interface CompletionServices {
         String text, String desc, Tree.CompilationUnit rootNode);
 
     shared formal ProposalsHolder createProposalsHolder();
+
+    shared default Boolean customizeInvocationProposals(Integer offset, String prefix, CompletionContext ctx,
+        DeclarationWithProximity? dwp, Declaration dec, Reference() reference, Scope scope,
+        OccurrenceLocation? ol, String? typeArgs, Boolean isMember) => false;
+
+    shared default Boolean customizeReferenceProposals(Tree.CompilationUnit cu,
+        Integer offset, String prefix, CompletionContext ctx, DeclarationWithProximity dwp,
+        Reference()? reference, Scope scope, OccurrenceLocation? ol, Boolean isMember) => false;
 }

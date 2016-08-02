@@ -63,7 +63,7 @@ shared interface InvocationCompletion {
             desc = dec.getName(unit);
             text = escaping.escapeName(dec, unit);
             dec = dec;
-            pr = dec.reference;
+            pr = () => dec.reference;
             scope = scope;
             ctx = ctx;
             includeDefaulted = true;
@@ -79,12 +79,18 @@ shared interface InvocationCompletion {
     shared void addReferenceProposal(Tree.CompilationUnit cu,
         Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp,
-        Reference? reference, Scope scope, OL? ol,
+        Reference()? reference, Scope scope, OL? ol,
         Boolean isMember) {
         
         value unit = cu.unit;
         value dec = dwp.declaration;
-        
+
+        if (platformServices.completion.customizeReferenceProposals(cu, offset, prefix, ctx, dwp,
+            reference, scope, ol, isMember)) {
+
+            return;
+        }
+
         //proposal with type args
         if (is Generic dec) {
             platformServices.completion.newInvocationCompletion {
@@ -275,7 +281,7 @@ shared interface InvocationCompletion {
                     desc = desc;
                     text = text;
                     dec = m;
-                    pr = ptr;
+                    pr = () => ptr;
                     scope = scope;
                     ctx = ctx;
                     includeDefaulted = true;
@@ -364,7 +370,7 @@ shared interface InvocationCompletion {
                                     typeArgs = typeArgs;
                                 };
                             dec = dec;
-                            pr = reference;
+                            pr = () => reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = false;
@@ -399,7 +405,7 @@ shared interface InvocationCompletion {
                                 typeArgs = typeArgs;
                             };
                         dec = dec;
-                        pr = reference;
+                        pr = () => reference;
                         scope = scope;
                         ctx = ctx;
                         includeDefaulted = true;
@@ -442,7 +448,7 @@ shared interface InvocationCompletion {
                                     typeArgs = typeArgs;
                                 };
                             dec = dec;
-                            pr = reference;
+                            pr = () => reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = false;
@@ -474,7 +480,7 @@ shared interface InvocationCompletion {
                                     typeArgs = typeArgs;
                                 };
                             dec = dec;
-                            pr = reference;
+                            pr = () => reference;
                             scope = scope;
                             ctx = ctx;
                             includeDefaulted = true;
@@ -528,7 +534,7 @@ shared interface InvocationCompletion {
 
 shared abstract class InvocationCompletionProposal
     (variable Integer _offset, String prefix, String desc, String text,
-    Declaration declaration, Reference? producedReference, Scope scope,
+    Declaration declaration, Reference()? producedReference, Scope scope,
     Tree.CompilationUnit cu, Boolean includeDefaulted, Boolean positionalInvocation,
     Boolean namedInvocation, Boolean inheritance, Boolean qualified,
     Declaration? qualifyingValue)
@@ -760,7 +766,7 @@ shared abstract class InvocationCompletionProposal
         if (!param.model.dynamicallyTyped, 
             exists producedReference, 
             exists type 
-                    = producedReference
+                    = producedReference()
                         .getTypedParameter(param)
                         .type) {
             

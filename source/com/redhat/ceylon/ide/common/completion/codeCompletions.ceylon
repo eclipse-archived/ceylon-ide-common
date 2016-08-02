@@ -478,7 +478,7 @@ void appendTypeParameters(Declaration d, StringBuilder result,
     Boolean variances = false) {
     
     if (is Generic d) {
-        value types = (d).typeParameters;
+        value types = d.typeParameters;
         if (!types.empty) {
             result.append("<");
             for (tp in types) {

@@ -11,7 +11,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.platform {
-    CommonDocument
+    CommonDocument,
+    platformServices
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -818,7 +819,9 @@ shared object completionManager
                 value nextToken = getNextToken(ctx, token);
                 value noParamsFollow = noParametersFollow(nextToken);
 
-                if (!secondLevel, !inDoc, noParamsFollow,
+                if (!secondLevel,
+                    !inDoc,
+                    noParamsFollow,
                     isInvocationProposable {
                         dwp = dwp;
                         ol = ol;
@@ -833,7 +836,20 @@ shared object completionManager
                     if (is Constructor scope)
                         then !isLocation(ol, OL.\iextends) 
                             || isDelegatableConstructor(scope, dec)
-                        else true) {
+                        else true,
+                    !platformServices.completion.customizeInvocationProposals {
+                        offset = offset;
+                        prefix = prefix;
+                        ctx = ctx;
+                        dwp = dwp;
+                        dec = dec;
+                        reference = () => getRefinedProducedReference(scope, dec);
+                        scope = scope;
+                        ol = ol;
+                        typeArgs = null;
+                        isMember = isMember;
+                    }) {
+
                     for (d in overloads(dec)) {
                         value reference
                                 = if (isMember)
@@ -912,8 +928,8 @@ shared object completionManager
                         value reference
                                 = if (dwp.unimported) then null
                                 else if (isMember)
-                                then getQualifiedProducedReference(node, dec)
-                                else getRefinedProducedReference(scope, dec);
+                                then (() => getQualifiedProducedReference(node, dec))
+                                else (() => getRefinedProducedReference(scope, dec));
                         addReferenceProposal {
                             cu = cu;
                             offset = offset;
@@ -951,10 +967,13 @@ shared object completionManager
                     addSwitchProposal(offset, prefix, ctx, dwp, dec, node);
                 }
                 
-                if (!memberOp, !isMember, !secondLevel) {
+                if (!memberOp, !isMember, !secondLevel,
+                    // optimizations to avoid calls to `overloads`
+                    is ClassOrInterface scope,
+                    ol is Null || isAnonymousClass(scope)) {
+
                     for (d in overloads(dec)) {
-                        if (isRefinementProposable(d, ol, scope), 
-                            is ClassOrInterface scope) {
+                        if (isRefinementProposable(d, ol, scope)) {
                             addRefinementProposal {
                                 offset = offset;
                                 dec = d;
