@@ -54,7 +54,11 @@ import org.antlr.runtime {
     Token
 }
 
-shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
+shared Boolean isLocation(loc1, loc2) {
+
+    OccurrenceLocation? loc1;
+    OccurrenceLocation loc2;
+
     if (exists loc1) {
         return loc1 == loc2;
     }
@@ -65,17 +69,20 @@ shared String anonFunctionHeader(Type? requiredType, Unit unit) {
     value text = StringBuilder();
     text.append("(");
     
-    variable Character c = 'a';
-    
-    CeylonIterable(unit.getCallableArgumentTypes(requiredType)).fold(true)((isFirst, paramType) {
-        if (!isFirst) { text.append(", "); }
+    variable value c = 'a';
+    variable value first = true;
+    for (paramType in unit.getCallableArgumentTypes(requiredType)) {
+        if (!first) {
+            text.append(", ");
+        }
+        else {
+            first = false;
+        }
         text.append(paramType.asSourceCodeString(unit))
-                .append(" ")
-                .append(c.string);
+            .append(" ")
+            .append(c.string);
         c++;
-        
-        return false;
-    });
+    }
     text.append(")");
     
     return text.string;
@@ -101,13 +108,14 @@ shared DefaultRegion getCurrentSpecifierRegion(CommonDocument document, Integer 
 shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit) {
     value buf = StringBuilder();
     if (exists qualifier) {
-        buf.append(escaping.escapeName(qualifier, unit)).append(".");
+        buf.append(escaping.escapeName(qualifier, unit))
+            .append(".");
     }
     
     if (is Constructor dec) {
-        value constructor = dec;
-        value clazz = constructor.extendedType.declaration;
-        buf.append(escaping.escapeName(clazz, unit)).append(".");
+        value clazz = dec.extendedType.declaration;
+        buf.append(escaping.escapeName(clazz, unit))
+            .append(".");
     }
     
     buf.append(escaping.escapeName(dec, unit));
@@ -185,29 +193,26 @@ Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu)
             then true else false;
 
 Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) 
-        => if (exists cu, 
-               exists u = cu.unit,
-               u.filename == "package.ceylon",
-               cu.packageDescriptors.empty) 
-            then true else false;
+        => if (exists cu, exists u = cu.unit)
+        then u.filename == "package.ceylon"
+          && cu.packageDescriptors.empty
+        else false;
 
 String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
-    StringBuilder fullPath = StringBuilder();
-    
     if (exists path) {
-        fullPath.append(TreeUtil.formatPath(path.identifiers));
-        fullPath.append(".");
+        value fullPath = TreeUtil.formatPath(path.identifiers) + ".";
         value maxLength = offset - path.startIndex.intValue() - prefix.size;
-        return fullPath.measure(0, maxLength);
+        return fullPath.initial(maxLength);
     }
-    return fullPath.string;
+    else {
+        return "";
+    }
 }
 
 Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
     value tokens = cpc.tokens;
-    while (i < tokens.size()) {
-        CommonToken tok = tokens.get(i);
+    while (exists tok = tokens[i]) {
         if (tok.channel != Token.hiddenChannel) {
             return tok.type;
         }
@@ -218,15 +223,15 @@ Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
 
 String getDefaultValueDescription(Parameter p, LocalAnalysisResult? cpc) 
         => if (p.defaulted) 
-            then if (is Functional m = p.model) 
-                then " => ..." 
-                else getInitialValueDescription(p.model, cpc) 
-            else "";
+        then if (p.model is Functional)
+            then " => ..."
+            else getInitialValueDescription(p.model, cpc)
+        else "";
 
 shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? cpc) {
     if (exists cpc) {
-        variable Tree.SpecifierOrInitializerExpression? sie = null;
-        variable String arrow = "";
+        Tree.SpecifierOrInitializerExpression? sie;
+        String arrow;
         switch (refnode = nodes.getReferencedNode(dec))
         case (is Tree.AttributeDeclaration) {
             sie = refnode.specifierOrInitializerExpression;
@@ -236,8 +241,7 @@ shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? c
             sie = refnode.specifierExpression;
             arrow = " => ";
         }
-        else {}
-        if (!exists s = sie) {
+        else {
             variable Tree.SpecifierOrInitializerExpression? result = null;
             object extends Visitor() {
                 shared actual void visit(Tree.InitializerParameter that) {
@@ -248,33 +252,38 @@ shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? c
                 }
             }.visit(cpc.lastCompilationUnit);
             sie = result;
+            arrow = "";
         }
-        if (exists term = sie?.expression?.term) {
-            switch (term)
-            case (is Tree.Literal) {
-                value text = term.token.text;
-                if (text.size < 20) {
-                    return arrow + text;
-                }
-            } 
-            case (is Tree.BaseMemberOrTypeExpression) {
-                if (exists id = term.identifier, 
-                    !exists b = term.typeArguments) {
-                    return arrow + id.text;
-                }
-            }
-            else if (exists unit = cpc.lastCompilationUnit?.unit,
-                        term.unit == unit) {
-                value tokens = cpc.tokens;
-                value impl = nodes.text(tokens, term);
-                if (impl.size < 10) {
-                    return arrow + impl;
-                }
-            }
-            return arrow + "...";
+
+        switch (term = sie?.expression?.term)
+        case (null) {
+            return "";
         }
+        case (is Tree.Literal) {
+            value text = term.token.text;
+            if (text.size < 20) {
+                return arrow + text;
+            }
+        }
+        case (is Tree.BaseMemberOrTypeExpression) {
+            if (exists id = term.identifier,
+                !exists b = term.typeArguments) {
+                return arrow + id.text;
+            }
+        }
+        else if (exists unit = cpc.lastCompilationUnit?.unit,
+                    term.unit == unit) {
+            value tokens = cpc.tokens;
+            value impl = nodes.text(tokens, term);
+            if (impl.size < 10) {
+                return arrow + impl;
+            }
+        }
+        return arrow + "...";
     }
-    return "";
+    else {
+        return "";
+    }
 }
 
 String? getPackageName(Tree.CompilationUnit cu) 
@@ -334,7 +343,8 @@ shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit 
             if (!dwp.unimported, !dwp.\ialias,
                 ModelUtil.isNameMatching(dwp.name, exactName)) {
                 
-                map.put(javaString(dwp.name), DeclarationWithProximity(dwp.declaration, -5));
+                map.put(javaString(dwp.name),
+                    DeclarationWithProximity(dwp.declaration, -5));
             }
         }
     }
@@ -353,25 +363,25 @@ shared Boolean isIgnoredLanguageModuleClass(Class clazz)
 shared Boolean isIgnoredLanguageModuleValue(Value val) {
     value name = val.name;
     return name.equals("process")
-            || name.equals("runtime") 
-            || name.equals("system") 
-            || name.equals("operatingSystem") 
-            || name.equals("language") 
-            || name.equals("emptyIterator") 
-            || name.equals("infinity") 
-            || name.endsWith("IntegerValue") 
-            || name.equals("finished");
+        || name.equals("runtime")
+        || name.equals("system")
+        || name.equals("operatingSystem")
+        || name.equals("language")
+        || name.equals("emptyIterator")
+        || name.equals("infinity")
+        || name.endsWith("IntegerValue")
+        || name.equals("finished");
 }
 
 shared Boolean isIgnoredLanguageModuleMethod(Function method) {
     value name = method.name;
     return name.equals("className") 
-            || name.equals("flatten") 
-            || name.equals("unflatten") 
-            || name.equals("curry") 
-            || name.equals("uncurry") 
-            || name.equals("compose") 
-            || method.annotation;
+        || name.equals("flatten")
+        || name.equals("unflatten")
+        || name.equals("curry")
+        || name.equals("uncurry")
+        || name.equals("compose")
+        || method.annotation;
 }
 
 Boolean isIgnoredLanguageModuleType(TypeDeclaration td)
@@ -387,7 +397,7 @@ Integer findCharCount(Integer count, CommonDocument document,
     Integer start, Integer end,
     String increments, String decrements, Boolean considerNesting) {
 
-    assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
+    assert (!(increments.empty && decrements.empty) && increments!=decrements);
 
     value none = 0;
     value bracket = 1;
