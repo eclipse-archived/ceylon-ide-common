@@ -913,8 +913,10 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                         retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
                         retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
                     });
-                    
+
+                    buildHooks.each((hook) => hook.beforeDependencyTreeValidation(this));
                     moduleValidator.verifyModuleDependencyTree();
+                    buildHooks.each((hook) => hook.afterDependencyTreeValidation(this));
                 }
                 
                 newTypechecker.phasedUnitsOfDependencies = moduleValidator.phasedUnitsOfDependencies;

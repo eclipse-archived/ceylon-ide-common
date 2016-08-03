@@ -18,4 +18,7 @@ shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFi
     
     shared default void beforeClasspathResolution(CeylonProjectBuildAlias build, CeylonProjectBuildAlias.State state) {}
     shared default void afterClasspathResolution(CeylonProjectBuildAlias build, CeylonProjectBuildAlias.State state) {}
+
+    shared default void beforeDependencyTreeValidation(CeylonProjectAlias ceylonProject) {}
+    shared default void afterDependencyTreeValidation(CeylonProjectAlias ceylonProject) {}
 }
