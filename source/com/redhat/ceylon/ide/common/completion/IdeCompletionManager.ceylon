@@ -715,9 +715,16 @@ shared object completionManager
                     = if (is Tree.Type node)
                     then node.typeModel
                     else node.target?.type) {
-                addRefinementProposals(offset,
-                        sortedProposals, ctx, scope, node, doc,
-                        secondLevel, ol, t, false);
+                addRefinementProposals {
+                    offset = offset;
+                    proposals = sortedProposals;
+                    ctx = ctx; scope = scope;
+                    node = node; doc = doc;
+                    filter = secondLevel;
+                    ol = ol;
+                    type = t;
+                    preamble = false;
+                };
             }
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
@@ -729,10 +736,20 @@ shared object completionManager
             isMemberNameProposable(offset, node, memberOp)) {
             
             //member names we can refine
-            if (exists dnt = node.type, exists t = dnt.typeModel) {
-                addRefinementProposals(offset, sortedProposals, 
-                        ctx, scope, node, doc, secondLevel, 
-                        ol, t, true);
+            if (exists dnt = node.type,
+                exists t = dnt.typeModel) {
+                addRefinementProposals {
+                    offset = offset;
+                    proposals = sortedProposals;
+                    ctx = ctx;
+                    scope = scope;
+                    node = node;
+                    doc = doc;
+                    filter = secondLevel;
+                    ol = ol;
+                    type = t;
+                    preamble = true;
+                };
             }
             //otherwise guess something from the type
             addMemberNameProposal(ctx, offset, prefix, node, cu);
@@ -1137,20 +1154,20 @@ shared object completionManager
     }
 
     void addRefinementProposals(Integer offset,
-        Collection<DeclarationWithProximity> set,
+        Collection<DeclarationWithProximity> proposals,
         CompletionContext ctx, Scope scope,
         Node node, CommonDocument doc, Boolean filter,
-        OL? ol, Type t,
+        OL? ol, Type type,
         Boolean preamble) {
 
         value addParameterTypesInCompletions 
                 = ctx.options.parameterTypesInCompletion;
         
-        for (dwp in set) {
+        for (dwp in proposals) {
             if (!filter, is FunctionOrValue dec = dwp.declaration) {
                 for (d in overloads(dec)) {
                     if (isRefinementProposable(d, ol, scope),
-                        isReturnType(t, dec, node),
+                        isReturnType(type, dec, node),
                         is ClassOrInterface scope) {
                         value start = node.startIndex.intValue();
                         addRefinementProposal {
