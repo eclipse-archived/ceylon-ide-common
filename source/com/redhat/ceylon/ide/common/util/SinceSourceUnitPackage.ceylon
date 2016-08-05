@@ -46,13 +46,10 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
         return false;
     }
     
-    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration) {
-        if (!exists modelDeclaration) {
-            return true;
-        }
-        Unit? unit = modelDeclaration.unit;
-        return mustSearchUnitInSourceFile(unit);
-    }
+    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration)
+            => if (exists modelDeclaration)
+            then mustSearchUnitInSourceFile(modelDeclaration.unit)
+            else true;
     
     shared actual Declaration? getDirectMember(String name,
         JList<Type> signature, Boolean ellipsis) =>
@@ -63,7 +60,7 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     
     shared actual Declaration? getMember(String name,
         JList<Type> signature, Boolean ellipsis) =>
-            let(Declaration? modelMember = modelPackage.getMember(name, signature, ellipsis)) 
+            let (Declaration? modelMember = modelPackage.getMember(name, signature, ellipsis))
             if (mustSearchDeclarationInSourceFile(modelMember)) 
             then super.getMember(name, signature, ellipsis) 
             else modelMember;
