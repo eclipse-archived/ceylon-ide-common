@@ -46,14 +46,14 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
         return false;
     }
     
-    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration)
-            => if (exists modelDeclaration)
+    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration) =>
+            if (exists modelDeclaration)
             then mustSearchUnitInSourceFile(modelDeclaration.unit)
             else true;
     
     shared actual Declaration? getDirectMember(String name,
         JList<Type> signature, Boolean ellipsis) =>
-            let(Declaration? modelMember = modelPackage.getDirectMember(name, signature, ellipsis)) 
+            let (Declaration? modelMember = modelPackage.getDirectMember(name, signature, ellipsis))
             if (mustSearchDeclarationInSourceFile(modelMember)) 
             then super.getDirectMember(name, signature, ellipsis) 
             else modelMember;
