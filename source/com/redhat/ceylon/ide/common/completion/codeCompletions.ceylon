@@ -849,7 +849,11 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
             !isObjectField(m), !isConstructor(m),
             !m.transient, !nt.isSubtypeOf(m.type)) {
             result.append("hash = 31*hash + ").append(name);
-            if (!m.type.integer) {
+            if (exists type = m.type) {
+                if (! type.integer) {
+                    result.append(".hash");
+                }
+            } else {
                 result.append(".hash");
             }
             result.append(";").append(indent);
