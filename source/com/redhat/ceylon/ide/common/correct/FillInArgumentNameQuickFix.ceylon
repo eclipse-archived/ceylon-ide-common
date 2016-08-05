@@ -10,8 +10,8 @@ import com.redhat.ceylon.ide.common.platform {
 shared object fillInArgumentNameQuickFix {
 
     shared void addFillInArgumentNameProposal(QuickFixData data, Tree.SpecifiedArgument sa) {
-        value id = sa.identifier;
-        if (!id.token exists) {
+        if (exists id = sa.identifier,
+            !id.token exists) {
             value change 
                     = platformServices.document.createTextChange {
                 name = "Fill in argument name";
