@@ -49,9 +49,19 @@ shared object invertIfElseQuickFix {
                 return;
             }
             
-            value ifClause = ifExpr.ifClause;
-            value ifBlock = ifClause.expression;
-            value elseBlock = ifExpr.elseClause.expression;
+            value ifClause = ifExpr.ifClause else null;
+            if (!exists ifClause) {
+                return;
+            }
+
+            value ifBlock = ifClause.expression else null;
+            if (!exists ifBlock) {
+                return;
+            }
+            value elseBlock = ifExpr.elseClause?.expression else null;
+            if (!exists elseBlock) {
+                return;
+            }
             value conditions = ifClause.conditionList.conditions;
             if (conditions.size() != 1) {
                 return;
