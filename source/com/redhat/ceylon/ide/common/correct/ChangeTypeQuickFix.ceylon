@@ -10,6 +10,9 @@ import com.redhat.ceylon.ide.common.platform {
     platformServices,
     ReplaceEdit
 }
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.ide.common.util {
     FindDeclarationNodeVisitor
 }
@@ -23,9 +26,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Function,
     ModelUtil,
     ClassOrInterface
-}
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
 }
 
 shared object changeTypeQuickFix {
@@ -213,9 +213,9 @@ shared object changeTypeQuickFix {
         change.addEdit(ReplaceEdit(offset, length, newTypeName));
         
         String name;
-        if (dec.parameter) {
-            assert (is Declaration container = dec.container);
-            name = "parameter '``dec.name``' of '``container.name``'";
+        if (dec.parameter,
+            is Declaration container = dec.container) {
+            name = "parameter '``dec.name``' of '`` container.name ``'";
         } else if (dec.classOrInterfaceMember) {
             assert (is ClassOrInterface container = dec.container);
             name = "member '``dec.name``' of '``container.name``'";
