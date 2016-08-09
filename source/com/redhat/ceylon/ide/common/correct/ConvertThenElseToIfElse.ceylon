@@ -37,9 +37,11 @@ shared object convertThenElseToIfElseQuickFix {
         case (is Tree.ExpressionStatement) {
             declaration = null;
             if (exists e = statement.expression,
-                is Tree.AssignOp t = e.term) {
-                action = doc.getNodeText(t.leftTerm) + " = ";
-                operation = t.rightTerm;
+                is Tree.AssignOp t = e.term,
+                exists leftTerm = t.leftTerm,
+                exists rightTerm = t.rightTerm) {
+                action = doc.getNodeText(leftTerm) + " = ";
+                operation = rightTerm;
             }
             else {
                 return;
@@ -81,9 +83,9 @@ shared object convertThenElseToIfElseQuickFix {
                     = annotations + type + " " + identifier + ";";
             if (exists sie = 
                     statement.specifierOrInitializerExpression,
-                exists ex = sie.expression) {
+                exists term = sie.expression?.term) {
                 action = identifier + " = ";
-                operation = sie.expression.term;
+                operation = term;
             }
             else {
                 return;
