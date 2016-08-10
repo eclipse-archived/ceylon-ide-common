@@ -111,11 +111,8 @@ shared object completionManager
         //adjust the token to account for unclosed blocks
         //we search for the first non-whitespace/non-comment
         //token to the left of the caret
-        variable Integer tokenIndex 
-                = nodes.getTokenIndexAtCharacter(tokens, offset);
-        if (tokenIndex < 0) {
-            tokenIndex = -tokenIndex;
-        }
+        value tindex = nodes.getTokenIndexAtCharacter(tokens, offset);
+        Integer tokenIndex = tindex < 0 then -tindex else tindex;
         value adjustedToken = adjust(tokenIndex, offset, tokens);
         value tt = adjustedToken.type;
         
@@ -165,26 +162,11 @@ shared object completionManager
             node = node;
             token = adjustedToken;
         };
-        variable String prefix = "";
-        variable String fullPrefix = "";
-        
-        if (isIdentifierOrKeyword(adjustedToken)) {
-            String text = adjustedToken.text;
-            //work from the end of the token to
-            //compute the offset, in order to
-            //account for quoted identifiers, where
-            //the \i or \I is not in the token text 
-            value offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
-            value realOffsetInToken = offset - adjustedToken.startIndex;
-            if (offsetInToken <= text.size) {
-                prefix = text.spanTo(offsetInToken - 1);
-                fullPrefix = getRealText(adjustedToken)
-                            .spanTo(realOffsetInToken - 1);
-            }
-        }
-        variable Boolean isMemberOp = isMemberOperator(adjustedToken);
-        variable String qualified = "";
 
+        String prefix;
+        String fullPrefix;
+        Boolean isMemberOp;
+        String qualified;
         // special handling for doc links
         Boolean inDoc
                 = isAnnotationStringLiteral(adjustedToken)
@@ -199,24 +181,54 @@ shared object completionManager
                 if (offsetInLink < bar) { 
                     return;
                 }
-                qualified = text.span(bar, offsetInLink - 1);
-                Integer dcolon = qualified.firstInclusion("::") else -1;
-                variable String? pkg = null;
+                variable String qual = text.span(bar, offsetInLink - 1);
+                Integer dcolon = qual.firstInclusion("::") else -1;
+                String? pkg;
                 if (dcolon >= 0) {
-                    pkg = qualified.spanTo(dcolon + 1);
-                    qualified = qualified.spanFrom(dcolon + 2);
+                    pkg = qual.spanTo(dcolon + 1);
+                    qual = qual.spanFrom(dcolon + 2);
                 }
-                Integer dot = (qualified.firstOccurrence('.') else -1) + 1;
+                else {
+                    pkg = null;
+                }
+                Integer dot = (qual.firstOccurrence('.') else -1) + 1;
+                prefix = qual.spanFrom(dot);
+                if (dcolon >= 0) {
+                    assert (exists pkg);
+                    qual = pkg + qual;
+                }
                 isMemberOp = dot > 0;
-                prefix = qualified.spanFrom(dot);
-                if (dcolon >= 0) {
-                    assert(exists p = pkg);
-                    qualified = p + qualified;
-                }
+                qualified = qual;
                 fullPrefix = prefix;
             } else { 
                 return;
             }
+        }
+        else {
+            if (isIdentifierOrKeyword(adjustedToken)) {
+                String text = adjustedToken.text;
+                //work from the end of the token to
+                //compute the offset, in order to
+                //account for quoted identifiers, where
+                //the \i or \I is not in the token text
+                value offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
+                value realOffsetInToken = offset - adjustedToken.startIndex;
+                if (offsetInToken <= text.size) {
+                    prefix = text.spanTo(offsetInToken - 1);
+                    fullPrefix = getRealText(adjustedToken)
+                        .spanTo(realOffsetInToken - 1);
+                }
+                else {
+                    prefix = "";
+                    fullPrefix = "";
+                }
+            }
+            else {
+                prefix = "";
+                fullPrefix = "";
+            }
+            isMemberOp = isMemberOperator(adjustedToken);
+            qualified = "";
         }
         
         value fsv = FindScopeVisitor(node);
@@ -427,7 +439,8 @@ shared object completionManager
         }
         case (is Tree.PackageDescriptor) {
             path = node.importPath;
-        } else {
+        }
+        else {
             return false;
         }
         return path?.identifiers?.empty else true;
@@ -435,15 +448,18 @@ shared object completionManager
 
 
     Boolean atStartOfPositionalArgument(Node node, CommonToken token) {
-        if (is Tree.PositionalArgumentList node) {
+        switch (node)
+        case (is Tree.PositionalArgumentList) {
             value type = token.type;
             return type == Lexer.lparen
                 || type == Lexer.comma;
-        } else if (is Tree.NamedArgumentList node) {
+        }
+        case (is Tree.NamedArgumentList) {
             value type = token.type;
             return type == Lexer.lbrace
                 || type == Lexer.semicolon;
-        } else {
+        }
+        else {
             return false;
         }
     }
