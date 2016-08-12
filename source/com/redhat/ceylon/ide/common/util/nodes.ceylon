@@ -573,17 +573,30 @@ shared object nodes {
         Tree.CompilationUnit? rootNode;
         
         value names = HashSet<String>();
-        addNameProposals(names, false, node.declarationModel.name,
-            node is Tree.TypedDeclaration|Tree.ObjectDefinition);
-        value ex = switch (node)
-            case (is Tree.AttributeDeclaration)
-                node.specifierOrInitializerExpression?.expression
-            case (is Tree.MethodDeclaration) 
-                node.specifierExpression?.expression
-            case (is Tree.Variable) 
-                node.specifierExpression?.expression
-            else null;
-        nameProposals(ex, rootNode, false, true).filter(not("it".equals)).each(names.add);
+
+        addNameProposals {
+            names = names;
+            plural = false;
+            name = node.declarationModel.name;
+            lowercase = node is Tree.TypedDeclaration|Tree.ObjectDefinition;
+        };
+
+        nameProposals {
+            node = switch (node)
+                case (is Tree.AttributeDeclaration)
+                    node.specifierOrInitializerExpression?.expression
+                case (is Tree.MethodDeclaration)
+                    node.specifierExpression?.expression
+                case (is Tree.Variable)
+                    node.specifierExpression?.expression
+                else null;
+            rootNode = rootNode;
+            unplural = false;
+            avoidClash = true;
+        }
+        .filter(not("it".equals))
+        .each(names.add);
+
         return names;
     }
     
