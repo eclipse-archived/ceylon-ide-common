@@ -529,13 +529,10 @@ shared object nodes {
         }
     }
     
-    shared String? getImportedPackageName(Tree.Import im) {
-        if (exists ip = im.importPath) {
-            return TreeUtil.formatPath(ip.identifiers);
-        } else {
-            return null;
-        }
-    }
+    shared String? getImportedPackageName(Tree.Import im)
+            => if (exists ip = im.importPath)
+            then TreeUtil.formatPath(ip.identifiers)
+            else null;
     
     shared String text(JList<CommonToken> tokens, Node from, Node to = from) {
         value start = from.startIndex.intValue();
@@ -567,18 +564,24 @@ shared object nodes {
     shared Set<String> renameProposals(node, rootNode = null) {
         "If given a [[Tree.Declaration]], suggest names based on the
          type of the term."
-        Tree.Declaration node;
+        Tree.Declaration? node;
         "If specified, and the given [[node]] occurs in an 
          argument list, suggest the name of the parameter."
         Tree.CompilationUnit? rootNode;
         
         value names = HashSet<String>();
 
+        value dec = node?.declarationModel;
+        if (!exists dec) {
+            return names;
+        }
+
         addNameProposals {
             names = names;
             plural = false;
-            name = node.declarationModel.name;
-            lowercase = node is Tree.TypedDeclaration|Tree.ObjectDefinition;
+            name = dec.name;
+            lowercase = node is Tree.TypedDeclaration
+                              | Tree.ObjectDefinition;
         };
 
         nameProposals {
@@ -628,8 +631,8 @@ shared object nodes {
             }
         }
         case (is Tree.Term) {
-            Tree.Term term = TreeUtil.unwrapExpressionUntilTerm(node);
-            Tree.Term typedTerm =
+            value term = TreeUtil.unwrapExpressionUntilTerm(node);
+            value typedTerm =
                 //TODO: is this really a good idea?!
                 if (is Tree.FunctionArgument term)
                 then (TreeUtil.unwrapExpressionUntilTerm(term.expression) else term)
