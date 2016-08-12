@@ -276,7 +276,7 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 
 // see CodeCompletions.getDocDescriptionFor
 shared String getDocDescriptionFor(Declaration decl,
-    Reference? pr, Unit unit, LocalAnalysisResult cmp) {
+    Reference? pr, Unit unit, LocalAnalysisResult? cmp) {
     StringBuilder result = StringBuilder();
     appendDeclarationHeader(decl, pr, unit, result, true);
     appendTypeParametersWithArguments(decl, pr, unit, result, true);
@@ -910,7 +910,7 @@ shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
 // see CodeCompletions.appendParametersDescription
 void appendParametersDescription(Declaration d,
     Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
-    LocalAnalysisResult cmp) {
+    LocalAnalysisResult? cmp) {
     
     appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
 }

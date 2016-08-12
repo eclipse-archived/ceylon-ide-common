@@ -203,7 +203,7 @@ shared interface DocGenerator {
             return null;
         }
         case (is Tree.LocalModifier) {
-            return getInferredTypeText(node, cmp);
+            return getInferredTypeText(node);
         }
         case (is Tree.Literal) {
             return getTermTypeText(node, selection);
@@ -221,7 +221,7 @@ shared interface DocGenerator {
             => nodes.findNode(rootNode, null, offset);
     
     // see getInferredTypeHoverText(Node node, IProject project)
-    String? getInferredTypeText(Tree.LocalModifier node, IdeComponent cmp) {
+    String? getInferredTypeText(Tree.LocalModifier node) {
         if (exists type = node.typeModel) {
             value builder = StringBuilder();
             appendPageProlog(builder);
@@ -434,7 +434,7 @@ shared interface DocGenerator {
         Tree.CompilationUnit rootNode, IdeComponent cmp) {
         
         if (is Declaration model) {
-            return getDeclarationDoc(model, node, rootNode, cmp, null);
+            return getDeclarationDoc(model, node, rootNode.unit, cmp, null);
         } else if (is Package model) {
             return getPackageDoc(model, cmp);
         } else if (is Module model) {
@@ -445,8 +445,8 @@ shared interface DocGenerator {
     }
 
     // see getDocumentationFor(CeylonParseController, Declaration, Node, Reference)
-    String getDeclarationDoc(Declaration model, Node? node, 
-        Tree.CompilationUnit rootNode, IdeComponent cmp, Reference? pr) {
+    shared String getDeclarationDoc(Declaration model, Node? node,
+        Unit unit, IdeComponent cmp, Reference? pr) {
         
         variable value decl = model;
         if (is FunctionOrValue model,
@@ -457,8 +457,7 @@ shared interface DocGenerator {
         
         value builder = StringBuilder();
         appendPageProlog(builder);
-        value unit = rootNode.unit;
-        
+
         addMainDescription(builder, decl, node, pr, cmp, unit);
         value isObj = addInheritanceInfo(decl, node, pr, builder, unit);
         if (!is NothingType d = decl) {
