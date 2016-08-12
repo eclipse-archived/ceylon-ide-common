@@ -86,6 +86,8 @@ shared object completionManager
 
     Proposals noProposals = HashMap<JString,DeclarationWithProximity>();
 
+    value noTypes = Collections.emptyList<Type>();
+
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
         RequiredType required, Proposals proposals) {
@@ -1003,7 +1005,7 @@ shared object completionManager
                 if (!memberOp, !isMember, !secondLevel,
                     // optimizations to avoid calls to `overloads`
                     is ClassOrInterface scope,
-                    ol is Null || isAnonymousClass(scope)) {
+                    !ol exists || isAnonymousClass(scope)) {
 
                     for (d in overloads(dec)) {
                         if (isRefinementProposable(d, ol, scope)) {
@@ -1097,9 +1099,9 @@ shared object completionManager
         if (is TypeDeclaration container = d.container,
             exists type = receivingType(node),
             exists supertype = type.getSupertype(container)) {
-            return d.appliedReference(supertype, Collections.emptyList<Type>());
+            return d.appliedReference(supertype, noTypes);
         }
-        return d.appliedReference(null, Collections.emptyList<Type>());
+        return d.appliedReference(null, noTypes);
     }
 
     /*Reference? getRefinedProducedReferenceForSupertype(Type typeOrScope, Declaration d) {
@@ -1124,14 +1126,14 @@ shared object completionManager
 
     Reference getRefinedProducedReference(Scope scope, Declaration d) {
         JList<Type> params;
-        if (is Generic d) {
+        if (is Generic d, !d.typeParameters.empty) {
             params = JArrayList<Type>();
             for (tp in d.typeParameters) {
                 params.add(tp.type);
             }
         }
         else {
-            params = Collections.emptyList<Type>();
+            params = noTypes;
         }
         value outerType = !d.toplevel then scope.getDeclaringType(d);
         return d.appliedReference(outerType, params);
@@ -1146,7 +1148,7 @@ shared object completionManager
             }
         }
         else {
-            params = Collections.emptyList<Type>();
+            params = noTypes;
         }
         return d.appliedReference(outerType, params);
     }*/
@@ -1159,11 +1161,10 @@ shared object completionManager
             if (tpc == node.scope) {
                 return true;
             }
-            else if (is Tree.TypeConstraint constraint = node){
-                return if (exists tcp = constraint.declarationModel,
-                           tpc==tcp.container)
-                       then true
-                       else false;
+            else if (is Tree.TypeConstraint node){
+                return if (exists tcp = node.declarationModel)
+                   then tpc == tcp.container
+                   else false;
             }
         }
         return false;
@@ -1271,8 +1272,6 @@ shared object completionManager
         return adjustedToken;
     }
 
-    value noTypes => Collections.emptyList<Type>();
-    
     Boolean isReturnType(Type t, FunctionOrValue m, Node node) {
         if (t.isSubtypeOf(m.type)) {
             return true;
