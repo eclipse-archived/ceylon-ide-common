@@ -571,18 +571,15 @@ shared object nodes {
         
         value names = HashSet<String>();
 
-        value dec = node?.declarationModel;
-        if (!exists dec) {
-            return names;
+        if (exists dec = node?.declarationModel) {
+            addNameProposals {
+                names = names;
+                plural = false;
+                name = dec.name;
+                lowercase = node is Tree.TypedDeclaration
+                                  | Tree.ObjectDefinition;
+            };
         }
-
-        addNameProposals {
-            names = names;
-            plural = false;
-            name = dec.name;
-            lowercase = node is Tree.TypedDeclaration
-                              | Tree.ObjectDefinition;
-        };
 
         nameProposals {
             node = switch (node)
