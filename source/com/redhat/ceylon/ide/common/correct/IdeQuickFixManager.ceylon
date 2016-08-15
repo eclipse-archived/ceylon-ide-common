@@ -109,7 +109,7 @@ shared object ideQuickFixManager {
             addAnnotations.addMakeContainerAbstractProposal(node, data);
             removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
-        case (1101) {
+        case (1101|1102) {
             removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
             //TODO: replace body with ;
         }
@@ -132,7 +132,7 @@ shared object ideQuickFixManager {
             addAnnotations.addMakeRefinedSharedProposal(node, data);
             removeAnnotations.addRemoveAnnotationDecProposal("actual", node, data);
         }
-        case (1302|1312|1317) {
+        case (1302|1312) {
             removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
         case (1303|1313|1320) {
