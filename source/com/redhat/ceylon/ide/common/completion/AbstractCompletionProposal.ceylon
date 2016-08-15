@@ -14,7 +14,7 @@ import java.lang {
 shared abstract class AbstractCompletionProposal
         (offset, prefix, /*Image image,*/ description, text)
         satisfies CommonCompletionProposal {
-    
+
     shared actual variable Integer offset;
     shared actual String prefix;
     shared actual String description;
@@ -22,26 +22,24 @@ shared abstract class AbstractCompletionProposal
     
     shared actual variable Integer length = prefix.size;
     shared formal Boolean toggleOverwrite;
-    
-    start() => offset - prefix.size;
-    
+
     shared actual default DefaultRegion getSelectionInternal(CommonDocument document) 
             => DefaultRegion {
-                start = start() + text.size;
+                start = start + text.size;
                 length = 0;
             };
     
     shared default void applyInternal(CommonDocument document) 
             => replaceInDoc {
                 doc = document;
-                start = start();
+                start = start;
                 length = lengthOf(document);
                 newText = withoutDupeSemi(document);
             };
     
     shared TextEdit createEdit(CommonDocument document) 
             => ReplaceEdit {
-                start = start();
+                start = start;
                 length = lengthOf(document);
                 text = withoutDupeSemi(document);
             };
