@@ -5,14 +5,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
-import com.redhat.ceylon.ide.common.util {
-    nodes,
-    FindDeclarationNodeVisitor
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Declaration,
-    ModelUtil,
-    ClassOrInterface
+import com.redhat.ceylon.ide.common.model {
+    AnyModifiableSourceFile
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
@@ -21,8 +15,14 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.ide.common.model {
-    AnyProjectSourceFile
+import com.redhat.ceylon.ide.common.util {
+    nodes,
+    FindDeclarationNodeVisitor
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Declaration,
+    ModelUtil,
+    ClassOrInterface
 }
 
 shared object removeAnnotationQuickFix {
@@ -53,7 +53,7 @@ shared object removeAnnotationQuickFix {
         
         if (exists dec,
             exists d = dec.name,
-            is AnyProjectSourceFile unit = dec.unit,
+            is AnyModifiableSourceFile unit = dec.unit,
             exists phasedUnit = unit.phasedUnit) {
 
             //TODO: "object" declarations?
