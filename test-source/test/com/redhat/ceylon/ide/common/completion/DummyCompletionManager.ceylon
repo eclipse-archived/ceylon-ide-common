@@ -145,7 +145,7 @@ class MyCompletionService() satisfies CompletionServices {
             => Result("newModuleProposal", versioned, name);
     
     shared actual void newInvocationCompletion(CompletionContext ctx, Integer offset, String prefix,
-        String desc, String text, Declaration dec, Reference? pr, Scope scope,
+        String desc, String text, Declaration dec, Reference()? pr, Scope scope,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
     //        => let (name = if (namedInvocation) then "newNamedInvocationCompletion"
