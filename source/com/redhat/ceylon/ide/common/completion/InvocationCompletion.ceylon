@@ -52,7 +52,7 @@ import java.util {
 }
 
 shared interface InvocationCompletion {
-    
+
     shared void addProgramElementReferenceProposal(Integer offset, String prefix,
         CompletionContext ctx, Declaration dec, Scope scope, Boolean isMember) {
         
@@ -85,9 +85,17 @@ shared interface InvocationCompletion {
         value unit = cu.unit;
         value dec = dwp.declaration;
 
-        if (platformServices.completion.customizeReferenceProposals(cu, offset, prefix, ctx, dwp,
-            reference, scope, ol, isMember)) {
-
+        if (platformServices.completion.customizeReferenceProposals {
+            cu = cu;
+            offset = offset;
+            prefix = prefix;
+            ctx = ctx;
+            dwp = dwp;
+            reference = reference;
+            scope = scope;
+            ol = ol;
+            isMember = isMember;
+        }) {
             return;
         }
 
@@ -181,7 +189,7 @@ shared interface InvocationCompletion {
                                     unit = unit;
                                     type = type;
                                     mwp = ndwp;
-                                    m = o;
+                                    member = o;
                                 };
                             }
                         } else {
@@ -196,18 +204,18 @@ shared interface InvocationCompletion {
                                 unit = unit;
                                 type = type;
                                 mwp = ndwp;
-                                m = m;
+                                member = m;
                             };
                         }
                     }
                 }
             }
-            if (is Class dec) {
+            if (is Class dec, exists td = type.declaration) {
                 //add constructor proposals                
-                for (m in type.declaration.members) {
-                    if (m is FunctionOrValue 
-                        && ModelUtil.isConstructor(m) 
-                        && m.shared && m.name exists) {
+                for (member in td.members) {
+                    if (member is FunctionOrValue
+                        && ModelUtil.isConstructor(member)
+                        && member.shared && member.name exists) {
                         addSecondLevelProposalInternal {
                             offset = offset;
                             prefix = prefix;
@@ -219,7 +227,7 @@ shared interface InvocationCompletion {
                             unit = unit;
                             type = type;
                             mwp = null;
-                            m = m;
+                            member = member;
                         };
                     }
                 }
@@ -235,10 +243,11 @@ shared interface InvocationCompletion {
         Unit unit, Type type,
         DeclarationWithProximity? mwp,
         // sometimes we have no mwp so we also need the m
-        Declaration m) {
-        
-        value ptr = type.getTypedReference(m, 
-                        Collections.emptyList<Type>());
+        Declaration member) {
+
+        value noTypes = Collections.emptyList<Type>();
+
+        value ptr = type.getTypedReference(member, noTypes);
         
         if (exists mt = ptr.type) {
             value cond 
@@ -256,7 +265,7 @@ shared interface InvocationCompletion {
                 value desc = qualifier 
                         + getPositionalInvocationDescriptionFor {
                             dwp = mwp;
-                            dec = m;
+                            dec = member;
                             ol = ol;
                             pr = ptr;
                             unit = unit;
@@ -267,7 +276,7 @@ shared interface InvocationCompletion {
                         };
                 value text = qualifier 
                         + getPositionalInvocationTextFor {
-                            dec = m;
+                            dec = member;
                             ol = ol;
                             pr = ptr;
                             unit = unit;
@@ -280,7 +289,7 @@ shared interface InvocationCompletion {
                     prefix = prefix;
                     desc = desc;
                     text = text;
-                    dec = m;
+                    dec = member;
                     pr = () => ptr;
                     scope = scope;
                     ctx = ctx;
