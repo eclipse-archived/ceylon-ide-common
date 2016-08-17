@@ -187,8 +187,7 @@ shared final class Path satisfies List<String> {
         }
         variable value count = 1;
         variable value prev = -1;
-        while (exists sepItem = path.indexed.skip(prev + 1).find((elt)=>elt.item == _SEPARATOR)) {
-            value i = sepItem.key;
+        while (exists i = path.firstOccurrence(_SEPARATOR, prev + 1)) {
             if (i != prev + 1 && i != len) {
                 ++count;
             }
@@ -226,20 +225,20 @@ shared final class Path satisfies List<String> {
         // the number of slashes plus 1, ignoring any leading
         // and trailing slashes
         variable value next = firstPosition;
-        return Array(
-            { *(0:segmentCount) }.map {
-                String collecting(Integer i) {
-                    value start = next;
-                    value end = path.indexed.skip(next).find((i)=> i.item == _SEPARATOR)?.key;
-                    if (! exists end) {
-                        return path.span(start, lastPosition);
-                    } else {
-                        next=end+1;
-                        return path.span(start, end-1);
-                    }
-                }
-            }
-        );
+
+        return Array { for (i in 0:segmentCount)
+                    let (buildPart = (Integer i) {
+                        value start = next;
+                        value end = path.firstOccurrence(_SEPARATOR, next);
+                        if (! exists end) {
+                            return path.span(start, lastPosition);
+                        } else {
+                            next=end+1;
+                            return path.span(start, end-1);
+                        }
+                    })
+                    buildPart(i)
+        };
     }
 
     """
