@@ -1,6 +1,5 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Node,
-    Tree
+    Node
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -13,7 +12,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    nodes,
     singularize
 }
 import com.redhat.ceylon.model.typechecker.model {
