@@ -1,5 +1,4 @@
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -125,9 +124,31 @@ shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit
 
 // see CompletionUtil.overloads(Declaration dec)
 shared {Declaration*} overloads(Declaration dec) {
-    return if (dec.abstraction)
-    then CeylonIterable(dec.overloads)
-    else {dec};
+    if (dec.abstraction) {
+        //TODO: walk up the chain of refinedDeclarations
+        if (exists refined = dec.overloads[0]?.refinedDeclaration, refined.overloaded,
+            exists abstraction = refined.scope.getDirectMember(dec.name, null, false),
+            abstraction.abstraction) {
+            return { for (d in dec.overloads) d }
+                .chain { for (r in abstraction.overloads)
+                         if (!any { for (d in dec.overloads) r==d.refinedDeclaration })
+                         r };
+        }
+        else {
+            return { for (d in dec.overloads) d };
+        }
+    }
+    else {
+        //TODO: walk up the chain of refinedDeclarations
+        if (exists refined = dec.refinedDeclaration, refined.overloaded,
+            exists abstraction = refined.scope.getDirectMember(dec.name, null, false),
+            abstraction.abstraction) {
+            return { dec, for (r in abstraction.overloads) if (r!=refined) r };
+        }
+        else {
+            return { dec };
+        }
+    }
 }
 
 // see CompletionUtil.getParameters
