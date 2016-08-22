@@ -55,12 +55,18 @@ shared object convertIfElseToThenElseQuickFix {
             return null;
         }
         
-        value ifBlock = ifStmt.ifClause.block;
+        Tree.Block? ifBlock = ifStmt.ifClause.block;
+        if (!exists ifBlock) {
+            return null;
+        }
         if (ifBlock.statements.size() != 1) {
             return null;
         }
         
-        value elseBlock = ifStmt.elseClause.block;
+        Tree.Block? elseBlock = ifStmt.elseClause.block;
+        if (!exists elseBlock) {
+            return null;
+        }
         if (elseBlock.statements.size() != 1) {
             return null;
         }

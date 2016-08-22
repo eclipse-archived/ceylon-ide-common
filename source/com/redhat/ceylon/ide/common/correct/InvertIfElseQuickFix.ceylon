@@ -157,10 +157,24 @@ shared object invertIfElseQuickFix {
             }
         }
         
-        value ifClause = ifStmt.ifClause;
-        value ifBlock = ifClause.block;
-        value elseBlock = ifStmt.elseClause.block;
-        value conditions = ifClause.conditionList.conditions;
+        Tree.IfClause ifClause = ifStmt.ifClause;
+        Tree.ElseClause? elseClause = ifStmt.elseClause;
+        if (!exists elseClause) {
+            return;
+        }
+        Tree.Block? ifBlock = ifClause.block;
+        Tree.Block? elseBlock = elseClause.block;
+        if (!exists ifBlock) {
+            return;
+        }
+        if (!exists elseBlock) {
+            return;
+        }
+        Tree.ConditionList? conditionList = ifClause.conditionList;
+        if (!exists conditionList) {
+            return;
+        }
+        value conditions = conditionList.conditions;
         if (conditions.size() != 1) {
             return;
         }

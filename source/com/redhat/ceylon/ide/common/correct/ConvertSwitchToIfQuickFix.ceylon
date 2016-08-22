@@ -157,7 +157,7 @@ shared object convertSwitchToIfQuickFix {
         Tree.Statement? statement) {
         if (is Tree.IfStatement statement) {
             value ifSt = statement;
-            value change 
+            value change
                     = platformServices.document.createTextChange {
                 name = "Convert If To Switch";
                 input = data.phasedUnit;
@@ -165,7 +165,12 @@ shared object convertSwitchToIfQuickFix {
             change.initMultiEdit();
             value doc = change.document;
             
-            if (exists cl = ifSt.ifClause.conditionList) {
+            value ifClause = ifSt.ifClause;
+            Tree.Block? ib = ifClause.block;
+            if (!exists ib) {
+                return;
+            }
+            if (exists cl = ifClause.conditionList) {
                 value conditions = cl.conditions;
                 if (conditions.size() == 1) {
                     value condition = conditions.get(0);
@@ -173,13 +178,12 @@ shared object convertSwitchToIfQuickFix {
                     String type;
                     switch (condition)
                     case (is Tree.IsCondition) {
-                        value ic = condition;
-                        if (ic.not) {
+                        if (condition.not) {
                             return;
                         }
                         
                         try {
-                            value v = ic.variable;
+                            value v = condition.variable;
                             value start = v.startIndex.intValue();
                             value len = v.distance.intValue();
                             var = doc.getText(start, len);
@@ -189,7 +193,7 @@ shared object convertSwitchToIfQuickFix {
                         }
                         
                         try {
-                            value t = ic.type;
+                            value t = condition.type;
                             value start = t.startIndex.intValue();
                             value len = t.distance.intValue();
                             type = "is " + doc.getText(start, len);
@@ -199,10 +203,9 @@ shared object convertSwitchToIfQuickFix {
                         }
                     }
                     case (is Tree.ExistsCondition) {
-                        value ec = condition;
-                        type = if (ec.not) then "null" else "is Object";
+                        type = if (condition.not) then "null" else "is Object";
                         try {
-                            if (exists v = ec.variable) {
+                            if (exists v = condition.variable) {
                                 value start = v.startIndex.intValue();
                                 value len = v.distance.intValue();
                                 var = doc.getText(start, len);
@@ -215,10 +218,9 @@ shared object convertSwitchToIfQuickFix {
                         }
                     }
                     case (is Tree.BooleanCondition) {
-                        value ec = condition;
                         type = "true";
                         try {
-                            value e = ec.expression;
+                            value e = condition.expression;
                             value start = e.startIndex.intValue();
                             value len = e.distance.intValue();
                             var = doc.getText(start, len);
@@ -242,11 +244,14 @@ shared object convertSwitchToIfQuickFix {
                         text = "switch (``var``)``newline``case (``type``)";
                     });
 
-                    if (exists ec = ifSt.elseClause) {
-                        value b = ec.block;
-                        if (!b.mainToken exists) {
-                            value start = b.startIndex.intValue();
-                            value end = b.endIndex.intValue();
+                    if (exists elseClause = ifSt.elseClause) {
+                        Tree.Block? eb = elseClause.block;
+                        if (!exists eb) {
+                            return;
+                        }
+                        if (!eb.mainToken exists) {
+                            value start = eb.startIndex.intValue();
+                            value end = eb.endIndex.intValue();
                             change.addEdit(InsertEdit {
                                 start = start;
                                 text = "{" + newline + platformServices.document.defaultIndent;
