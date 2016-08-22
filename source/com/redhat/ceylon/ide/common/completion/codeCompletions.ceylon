@@ -417,9 +417,10 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
                     addParameterTypesInCompletions;
             result.append(" { ");
             for (p in params) {
-                value name = if (descriptionOnly)
-                    then p.name
-                    else escaping.escapeName(p.model);
+                value name
+                        = descriptionOnly
+                        then p.name
+                        else escaping.escapeName(p.model);
                 if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
                         result.append("void ");
@@ -449,7 +450,8 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
                         result.append(" {} ");
                     }
                     else {
-                        result.append(" => ").append("nothing; ");
+                        result.append(" => ")
+                            .append("nothing; ");
                     }
                 }
                 else {
@@ -463,8 +465,11 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
                             value ptn = p.type.asString(unit);
                             result.append(ptn).append(" ");
                         }
-                        result.append(name).append(" = ")
-                                .append("nothing").append("; ");
+                        result.append(name);
+                        if (!descriptionOnly) {
+                            result.append(" = ").append("nothing");
+                        }
+                        result.append("; ");
                     }
                 }
             }
