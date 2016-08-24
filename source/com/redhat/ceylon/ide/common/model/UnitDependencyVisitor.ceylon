@@ -220,7 +220,7 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
         if (exists decl = that.declarationModel,
             decl.native) {
             if (exists headerDeclaration = ModelUtil.getNativeHeader(decl)) {
-                MutableList<Declaration> declarationsDependingOn = ArrayList<Declaration>();
+                value declarationsDependingOn = ArrayList<Declaration>();
                 if (! (headerDeclaration === decl)) {
                     declarationsDependingOn.add(headerDeclaration);
                 }

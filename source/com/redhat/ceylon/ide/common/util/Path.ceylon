@@ -246,7 +246,7 @@ shared final class Path satisfies List<String> {
        """
     void collapseParentReferences() {
         value segmentCount = _segments.size;
-        ArrayList<String> stack = ArrayList<String>(segmentCount);
+        value stack = ArrayList<String>(segmentCount);
         for (segment in _segments) {
             if (segment == "..") {
                 if (stack.empty) {

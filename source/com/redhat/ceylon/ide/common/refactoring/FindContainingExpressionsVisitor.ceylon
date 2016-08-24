@@ -16,7 +16,7 @@ import java.lang {
 
 shared class FindContainingExpressionsVisitor(Integer offset) extends Visitor() {
 
-    ArrayList<Tree.Term> myElements = ArrayList<Tree.Term>();
+    value myElements = ArrayList<Tree.Term>();
     
     shared ObjectArray<Tree.Term> elements => createJavaObjectArray(myElements);
     
