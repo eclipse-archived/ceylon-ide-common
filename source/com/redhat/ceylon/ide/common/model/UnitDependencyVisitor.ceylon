@@ -1,7 +1,6 @@
 import ceylon.collection {
     HashSet,
-    ArrayList,
-    MutableList
+    ArrayList
 }
 
 import com.redhat.ceylon.compiler.java.loader {
