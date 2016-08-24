@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.cmr.api {
     ModuleSearchResult,
     ModuleVersionDetails
@@ -12,6 +8,9 @@ import com.redhat.ceylon.common {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -37,9 +36,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.lang {
     JInteger=Integer
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared interface PackageCompletion {
