@@ -78,7 +78,7 @@ shared interface MemberNameCompletion {
     shared void addMemberNameProposal(CompletionContext ctx, Integer offset,
         String prefix, Node previousNode, Tree.CompilationUnit rootNode) {
         
-        MutableSet<String> proposals = HashSet<String>();
+        value proposals = HashSet<String>();
         class FindCompoundTypeVisitor() extends Visitor() {
             shared variable Node result = previousNode;
 

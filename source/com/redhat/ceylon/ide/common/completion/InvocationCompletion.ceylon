@@ -569,7 +569,7 @@ shared abstract class InvocationCompletionProposal
     shared Integer adjustedOffset => offset;
     
     shared TextChange createChange(CommonDocument document) {
-        HashSet<Declaration> decs = HashSet<Declaration>();
+        value decs = HashSet<Declaration>();
         value change = platformServices.document.createTextChange("Complete Invocation", document);
         change.initMultiEdit();
         

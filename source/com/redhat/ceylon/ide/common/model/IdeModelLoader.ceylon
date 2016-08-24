@@ -218,8 +218,8 @@ shared abstract class BaseIdeModelLoader(
    
    shared actual void removeDeclarations(JList<Declaration> declarations) {
        void do() {
-           JList<Declaration> allDeclarations = JArrayList<Declaration>(declarations.size());
-           MutableSet<Package> changedPackages = HashSet<Package>();
+           value allDeclarations = JArrayList<Declaration>(declarations.size());
+           value changedPackages = HashSet<Package>();
            
            allDeclarations.addAll(declarations);
            
