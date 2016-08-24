@@ -47,11 +47,16 @@ shared interface PackageCompletion {
     // see PackageCompletions.addPackageCompletions()
     shared void addPackageCompletions(CompletionContext ctx, Integer offset, String prefix,
         Tree.ImportPath? path, Node node, Boolean withBody,
-        BaseProgressMonitor monitor) {
-        
-        String fp = fullPath(offset, prefix, path);
-        addPackageCompletionsFullPath(offset, prefix, fp, withBody, node.unit, ctx, monitor);
-    }
+        BaseProgressMonitor monitor)
+            => addPackageCompletionsFullPath {
+                offset = offset;
+                prefix = prefix;
+                fullPath = fullPath(offset, prefix, path);
+                withBody = withBody;
+                unit = node.unit;
+                ctx = ctx;
+                monitor = monitor;
+            };
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
     void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
@@ -131,10 +136,8 @@ shared interface PackageCompletion {
         }
     }
     
-    Boolean alreadyImported(ModuleVersionDetails version, Modules modules) 
-            => CeylonIterable(modules.listOfModules).find(
-                (m) => m.nameAsString == version.\imodule
-            ) exists;
+    Boolean alreadyImported(ModuleVersionDetails version, Modules modules)
+            => any { for (m in modules.listOfModules) m.nameAsString == version.\imodule };
 
     shared void addPackageDescriptorCompletion(CompletionContext ctx, Integer offset, String prefix) {
         if ("package".startsWith(prefix),
