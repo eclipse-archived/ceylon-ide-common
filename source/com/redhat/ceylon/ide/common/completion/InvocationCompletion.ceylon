@@ -158,64 +158,39 @@ shared interface InvocationCompletion {
         }
     }
 
-    shared void addSecondLevelProposal(Integer offset, String prefix, 
+    shared void addSecondLevelProposal(Integer offset, String prefix,
         CompletionContext ctx, Declaration dec, Scope scope, Boolean isMember,
         Reference reference, Type? requiredType, OL? ol, Cancellable cancellable) {
         
         value unit = ctx.lastCompilationUnit.unit;
         
-        if (exists type = reference.type) {
-            if (!dec is Functional, 
-                !dec is TypeDeclaration) {
-                //add qualified member proposals
-                value members 
-                        = type.declaration
-                            .getMatchingMemberDeclarations(unit, scope, "", 0, cancellable)
-                            .values();
-                for (ndwp in members) {
-                    value m = ndwp.declaration;
-                    if (m is FunctionOrValue || m is Class,
-                        !ModelUtil.isConstructor(m)) {
-                        if (m.abstraction) {
-                            for (o in m.overloads) {
-                                addSecondLevelProposalInternal {
-                                    offset = offset;
-                                    prefix = prefix;
-                                    ctx = ctx;
-                                    dec = dec;
-                                    scope = scope;
-                                    requiredType = requiredType;
-                                    ol = ol;
-                                    unit = unit;
-                                    type = type;
-                                    mwp = ndwp;
-                                    member = o;
-                                };
-                            }
-                        } else {
-                            addSecondLevelProposalInternal {
-                                offset = offset;
-                                prefix = prefix;
-                                ctx = ctx;
-                                dec = dec;
-                                scope = scope;
-                                requiredType = requiredType;
-                                ol = ol;
-                                unit = unit;
-                                type = type;
-                                mwp = ndwp;
-                                member = m;
-                            };
-                        }
-                    }
-                }
-            }
-            if (is Class dec, exists td = type.declaration) {
-                //add constructor proposals                
-                for (member in td.members) {
-                    if (member is FunctionOrValue
-                        && ModelUtil.isConstructor(member)
-                        && member.shared && member.name exists) {
+        if (exists type = reference.type,
+            exists td = type.declaration,
+            is Value|Class dec) {
+
+            value members
+                    = switch (dec)
+                    case (is Value)
+                        //include inherited members
+                        { for (dwp in td.getMatchingMemberDeclarations(
+                                            unit, scope, "", 0, cancellable)
+                                        .values())
+                          if (!dwp.\ialias,
+                              dwp.declaration is FunctionOrValue|Class)
+                          dwp.declaration }
+                    case (is Class)
+                        //only include direct members
+                        { for (member in td.members)
+                          if (member.shared && member.name exists,
+                              member is FunctionOrValue
+                              && ModelUtil.isConstructor(member)
+                           || member is FunctionOrValue|Class
+                              && member.staticallyImportable)
+                          member };
+
+            for (member in members.sort(byIncreasing(Declaration.name))) {
+                if (member.abstraction) {
+                    for (o in member.overloads) {
                         addSecondLevelProposalInternal {
                             offset = offset;
                             prefix = prefix;
@@ -227,9 +202,23 @@ shared interface InvocationCompletion {
                             unit = unit;
                             type = type;
                             mwp = null;
-                            member = member;
+                            member = o;
                         };
                     }
+                } else {
+                    addSecondLevelProposalInternal {
+                        offset = offset;
+                        prefix = prefix;
+                        ctx = ctx;
+                        dec = dec;
+                        scope = scope;
+                        requiredType = requiredType;
+                        ol = ol;
+                        unit = unit;
+                        type = type;
+                        mwp = null;
+                        member = member;
+                    };
                 }
             }
         }
