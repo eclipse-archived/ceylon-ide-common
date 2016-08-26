@@ -166,7 +166,7 @@ shared interface InvocationCompletion {
         
         if (exists type = reference.type,
             exists td = type.declaration,
-            is Value|Class dec) {
+            is Value|Class|Interface dec) {
 
             value members
                     = switch (dec)
@@ -178,12 +178,14 @@ shared interface InvocationCompletion {
                           if (!dwp.\ialias,
                               dwp.declaration is FunctionOrValue|Class)
                           dwp.declaration }
-                    case (is Class)
+                    case (is Class|Interface)
                         //only include direct members
                         { for (member in td.members)
                           if (member.shared && member.name exists,
+                              //constructors
                               member is FunctionOrValue
                               && ModelUtil.isConstructor(member)
+                              //Java static members
                            || member is FunctionOrValue|Class
                               && member.staticallyImportable)
                           member };
