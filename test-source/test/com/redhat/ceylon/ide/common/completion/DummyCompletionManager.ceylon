@@ -57,6 +57,9 @@ import com.redhat.ceylon.ide.common.doc {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+import java.util.concurrent {
+    Future
+}
 
 class Result(shared String kind, shared String insertedText, shared String description = insertedText) {
     shared actual String string => "``kind``[``insertedText``"
@@ -82,7 +85,7 @@ class CompletionData(String code, PhasedUnit pu) satisfies CompletionContext {
     
     shared actual Tree.CompilationUnit lastCompilationUnit => pu.compilationUnit;
     shared actual Tree.CompilationUnit parsedRootNode => lastCompilationUnit;
-    shared actual Tree.CompilationUnit? typecheckedRootNode => lastCompilationUnit;
+    shared actual PhasedUnit? typecheckedPhasedUnit => pu;
     
     shared actual JList<CommonToken> tokens => pu.tokens;
     
@@ -96,6 +99,10 @@ class CompletionData(String code, PhasedUnit pu) satisfies CompletionContext {
     shared actual MyProposalsHolder proposals = MyProposalsHolder();
     
     shared actual List<Pattern> proposalFilters => empty;
+    
+    suppressWarnings("expressionTypeNothing")
+    shared actual Future<out PhasedUnit> phasedUnitWhenTypechecked => nothing;
+    
     
 }
 
