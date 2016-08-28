@@ -99,8 +99,12 @@ shared object addModuleImportQuickFix {
             }
         }
         
-        value mod = unit.\ipackage.\imodule;
-        value query = moduleQueries.getModuleQuery("", mod, data.ceylonProject);
+        value containingModule = unit.\ipackage.\imodule;
+        value query = moduleQueries.getModuleQuery {
+            prefix = "";
+            mod = containingModule;
+            project = data.ceylonProject;
+        };
         query.memberName = packageName;
         query.memberSearchPackageOnly = true;
         query.memberSearchExact = true;
@@ -125,7 +129,7 @@ shared object addModuleImportQuickFix {
                     kind = QuickFixKind.addModuleImport;
                     void change()
                             => moduleImportUtil.addModuleImport {
-                                target = unit.\ipackage.\imodule;
+                                target = containingModule;
                                 moduleName = moduleName;
                                 moduleVersion = moduleVersion;
                             };
