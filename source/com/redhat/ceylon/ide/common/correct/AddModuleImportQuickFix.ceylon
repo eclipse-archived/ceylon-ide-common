@@ -112,21 +112,22 @@ shared object addModuleImportQuickFix {
         value msr = typeChecker.context.repositoryManager.searchModules(query);
         
         for (md in msr.results) {
-            value name = md.name;
-            value versions = allVersions 
-                then md.versions 
+            value moduleName = md.name;
+            value versions = allVersions
+                then md.versions
                 else Collections.singleton(md.lastVersion);
             for (version in versions) {
+                value moduleVersion = version.version;
                 data.addQuickFix {
-                    description = "Add 'import ``name`` \"``version``\"' to module descriptor";
+                    description = "Add 'import ``moduleName`` \"``moduleVersion``\"' to module descriptor";
                     image = Icons.imports;
                     qualifiedNameIsPath = true;
                     kind = QuickFixKind.addModuleImport;
                     void change()
                             => moduleImportUtil.addModuleImport {
                                 target = unit.\ipackage.\imodule;
-                                moduleName = name;
-                                moduleVersion = version.version;
+                                moduleName = moduleName;
+                                moduleVersion = moduleVersion;
                             };
                      declaration = version;
                 };
