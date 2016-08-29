@@ -67,8 +67,8 @@ class ArgumentProposalComparator(String? exactName)
             value xqn = xd.qualifiedNameString;
             value yqn = yd.qualifiedNameString;
             return switch (xqn <=> yqn)
+                case (smaller) -1
                 case (larger) 1
-                case (smaller) - 1
                 case (equal) 0;
         }
     }
