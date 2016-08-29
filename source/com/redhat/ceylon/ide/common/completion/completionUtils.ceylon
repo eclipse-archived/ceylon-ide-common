@@ -358,27 +358,27 @@ Boolean withinBounds(Type requiredType, Type type, Scope scope) {
     }
 }
 
-shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit,
-        String? exactName = null, Cancellable? cancellable = null) {
-    value map = scope.getMatchingDeclarations(unit, "", 0, cancellable);
+void hackSortedResults(String? exactName, ArrayList<DeclarationWithProximity> results) {
     if (exists exactName) {
         //hack to take advantage of code in InvocationCompletion.addValueArgumentProposals
-        for (dwp in ArrayList(map.values())) {
-            if (!dwp.unimported, !dwp.\ialias,
-                ModelUtil.isNameMatching(dwp.name, exactName)) {
-                
-                map.put(javaString(dwp.name),
-                    DeclarationWithProximity(dwp.declaration, -5));
+        for (i in 0:results.size()) {
+            assert (exists dwp = results[i]);
+            if (!dwp.unimported && !dwp.\ialias
+                //if it matches the parameter name
+                && ModelUtil.isNameMatching(dwp.name, exactName)) {
+                //mess with its proximity
+                results[i] = DeclarationWithProximity(dwp.declaration, -5);
             }
         }
     }
+}
+
+shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit,
+        String? exactName = null, Cancellable? cancellable = null) {
+    value map = scope.getMatchingDeclarations(unit, "", 0, cancellable);
     value results = ArrayList(map.values());
-    try {
-        Collections.sort(results, ArgumentProposalComparator(exactName));
-    }
-    catch (IllegalArgumentException e) {
-        e.printStackTrace();
-    }
+    Collections.sort(results, ArgumentProposalComparator(exactName));
+    hackSortedResults(exactName, results);
     return results;
 }
 
