@@ -586,9 +586,9 @@ shared abstract class InvocationCompletionProposal
                 positionalInvocation || namedInvocation) {
                 
                 value pls = fd.parameterLists;
-                if (!pls.empty, 
-                    !pls.get(0).parameters.empty) {
-                    paramList = pls.get(0);
+                if (exists pl = pls[0],
+                    !pl.parameters.empty) {
+                    paramList = pl;
                 }
             }
             if (exists pl = paramList) {
