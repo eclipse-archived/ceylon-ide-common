@@ -653,7 +653,7 @@ shared object completionManager
                     params[1]?.defaulted else true,
                     exists t = first.type,
                     !isTypeUnknown(t) && type.isSubtypeOf(t)) {
-                    matches.put(candidate.key, dwp);
+                    matches[candidate.key] = dwp;
                 }
             }
         }

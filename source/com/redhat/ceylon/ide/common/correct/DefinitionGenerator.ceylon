@@ -194,7 +194,7 @@ LinkedHashMap<String,Type> getParametersFromPositionalArgs(
                 i++;
                 name = name + i.string;
             }
-            types.put(name, t);
+            types[name] = t;
         }
     }
     return types;
@@ -217,7 +217,7 @@ LinkedHashMap<String,Type> getParametersFromNamedArgs(
                 i++;
                 name = name + i.string;
             }
-            types.put(name, type);
+            types[name] = type;
         }
     }
     return types;

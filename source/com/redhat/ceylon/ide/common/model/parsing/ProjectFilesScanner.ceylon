@@ -100,7 +100,7 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
                 if (ceylonProject.isCompilable(file) || 
                     ! rootDirIsForSource) {
                     FileVirtualFileAlias virtualFile = vfsServices.createVirtualFile(file, ceylonProject.ideArtifact);
-                    scannedFiles.put(file, virtualFile);
+                    scannedFiles[file] = virtualFile;
                     
                     if (rootDirIsForSource && 
                         ceylonProject.isCeylon(file)) {

@@ -702,13 +702,13 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                 case (is Tree.InitializerParameter) {
                     if (exists e = p.specifierExpression?.expression,
                         exists d = p.parameterModel?.declaration) {
-                        defaultArgs.put(d, e);
+                        defaultArgs[d] = e;
                     }
                 }
                 case (is Tree.ValueParameterDeclaration) {
                     if (is Tree.AttributeDeclaration ad = p.typedDeclaration,
                         exists e = ad.specifierOrInitializerExpression?.expression) {
-                        defaultArgs.put(ad.declarationModel, e);
+                        defaultArgs[ad.declarationModel] = e;
                     }
                 }
                 //TODO: default args for function parameters

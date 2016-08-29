@@ -287,7 +287,7 @@ shared object addSatisfiesQuickFix {
                 value typeParamType = typeDec.type;
                 value substitutions = HashMap<TypeParameter,Type>();
                 for (stTypeParam in stTypeParams) {
-                    substitutions.put(stTypeParam, typeParamType);
+                    substitutions[stTypeParam] = typeParamType;
                 }
                 
                 for (stTypeParam in stTypeParams) {

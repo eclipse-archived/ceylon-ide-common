@@ -116,7 +116,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
                              itr.remove();
                          }
                      }
-                     theWorkingCopies.put(workingCopy, fullPath);
+                     theWorkingCopies[workingCopy] = fullPath;
                  }
              }
         };

@@ -147,7 +147,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
                      return null;
                  } else {
                      value newProject = newNativeProject(nativeProject);
-                     projectMap.put(nativeProject, newProject);
+                     projectMap[nativeProject] = newProject;
                      return newProject;
                  }
             }

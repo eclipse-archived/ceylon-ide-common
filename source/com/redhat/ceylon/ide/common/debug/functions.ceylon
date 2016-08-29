@@ -24,11 +24,11 @@ shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
                 Integer nodeStartLine = document.getLineOfOffset(startIndex);
 
                 if (nodeStartLine >= requestedLine) {
-                    nodes.put(nodeStartLine, node);
+                    nodes[nodeStartLine] = node;
                 } else {
                     value nodeEndLine = document.getLineOfOffset(stopIndex);
                     if (nodeEndLine >= requestedLine) {
-                        nodes.put(requestedLine, node);
+                        nodes[requestedLine] = node;
                     }
                 }
             }

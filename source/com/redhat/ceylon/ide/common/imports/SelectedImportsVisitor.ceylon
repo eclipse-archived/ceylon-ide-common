@@ -55,7 +55,7 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
             !dec is NothingType, !dec in copied) {
             value pname = dec.unit.\ipackage.nameAsString;
             if (!pname.empty, !pname==Module.languageModuleName) {
-                results.put(dec, id.text);
+                results[dec] = id.text;
             }
         }
     }

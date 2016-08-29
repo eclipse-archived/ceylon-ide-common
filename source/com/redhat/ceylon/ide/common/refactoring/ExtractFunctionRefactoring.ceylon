@@ -1159,7 +1159,7 @@ shared class FindResultVisitor(Tree.Body scope,
             resultsList.add(that->dec);
             all.add(dec);
         }
-        possibles.put(dec, that);
+        possibles[dec] = that;
     }
     
     //TODO: Tree.AnyMethod!!!!

@@ -92,7 +92,7 @@ shared interface AbstractImportsCleaner {
                     value imps = packages.get(pn)
                         else ArrayList<Tree.Import>();
                     
-                    packages.put(pn, imps);
+                    packages[pn] = imps;
                     imps.add(i);
                 }
             }
@@ -102,7 +102,7 @@ shared interface AbstractImportsCleaner {
             value p = d.unit.\ipackage;
             value pn = p.nameAsString;
             if (!packages.defines(pn)) {
-                packages.put(pn, ArrayList<Tree.Import>(0));
+                packages[pn] = ArrayList<Tree.Import>(0);
             }
         }
         

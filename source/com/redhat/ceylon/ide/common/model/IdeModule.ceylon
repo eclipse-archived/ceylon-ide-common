@@ -311,8 +311,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         
         shared void putRelativePath(String sourceRelativePath) {
             String path = fullPathPrefix + sourceRelativePath;
-            phasedUnitPerPath.put(javaString(path), SoftReference<ExternalPhasedUnit>(null));
-            relativePathToPath.put(javaString(sourceRelativePath), javaString(path));
+            phasedUnitPerPath[javaString(path)] = SoftReference<ExternalPhasedUnit>(null);
+            relativePathToPath[javaString(sourceRelativePath)] = javaString(path);
         }
         
         shared actual ExternalPhasedUnit? getPhasedUnit(String path) {
@@ -351,7 +351,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 if (!path in sourceCannotBeResolved) {
                     result = buildPhasedUnitForBinaryUnit(path);
                     if (exists existingResult=result) {
-                        phasedUnitPerPath.put(javaString(path), toStoredType(existingResult));
+                        phasedUnitPerPath[javaString(path)] = toStoredType(existingResult);
                     }
                     else {
                         sourceCannotBeResolved.add(path);

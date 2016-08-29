@@ -203,7 +203,7 @@ shared class DeltaBuilderFactory(
                             }
 
                             allChildrenSet.add(childKey);
-                            childrenSet.put(childKey, child);
+                            childrenSet[childKey] = child;
                         }
                     } else {
                         childrenSet = null;

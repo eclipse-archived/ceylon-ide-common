@@ -307,7 +307,8 @@ shared abstract class BaseIdeModelLoader(
                            if (exists id=decl.identifier) {
                                String fqn = getToplevelQualifiedName(pkgName, id.text);
                                if (! _sourceDeclarations.defines(fqn)) {
-                                   _sourceDeclarations.put(fqn, SourceDeclarationHolder(treeHolder, decl, isSourceToCompile));
+                                   _sourceDeclarations[fqn]
+                                        = SourceDeclarationHolder(treeHolder, decl, isSourceToCompile);
                                }
                            }
                        }
@@ -611,7 +612,7 @@ shared abstract class BaseIdeModelLoader(
            } else {
                value newUnit = newPackageTypeFactory(pkg);
                newUnit.\ipackage = pkg;
-               unitsByPackage.put(key, newUnit);
+               unitsByPackage[key] = newUnit;
                return newUnit;
            }
        }
@@ -784,7 +785,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             packageLoader.preLoadPackage(packageName);
             if (!loadDeclarations) {
                 value itExists = packageLoader.packageExists(packageName);
-                packageExistence.put(cacheKey, itExists);
+                packageExistence[cacheKey] = itExists;
                 return itExists;
             }
             

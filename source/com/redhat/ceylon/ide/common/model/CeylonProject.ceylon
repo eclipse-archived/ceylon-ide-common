@@ -602,7 +602,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         
         projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
         value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
-        projectFilesMap.put(file, virtualFile);
+        projectFilesMap[file] = virtualFile;
         
         return virtualFile;
     }
@@ -979,7 +979,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 return virtualFile;
             }
             value virtualFile = vfsServices.createVirtualFile(nativeFile, ideArtifact);
-            virtualFileCache.put(virtualFile.nativeResource, SoftReference(virtualFile));
+            virtualFileCache[virtualFile.nativeResource] = SoftReference(virtualFile);
             return virtualFile;
         }
     }
@@ -991,7 +991,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
             return virtualFile;
         }
         value virtualFile = vfsServices.createVirtualFolder(nativeFolder, ideArtifact);
-        virtualFolderCache.put(virtualFile.nativeResource, SoftReference(virtualFile));
+        virtualFolderCache[virtualFile.nativeResource] = SoftReference(virtualFile);
         return virtualFile;
     }
     
