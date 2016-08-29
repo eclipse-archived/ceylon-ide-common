@@ -29,7 +29,7 @@ class ArgumentProposalComparator(String? exactName)
             if (xExactHit, !yExactHit) {
                 return -1;
             }
-            if (xExactHit, !xExactHit) {
+            if (yExactHit, !xExactHit) {
                 return 1;
             }
             value xhit = isNameMatching(xname, exactName);
