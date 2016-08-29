@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     TreeUtil,
@@ -37,14 +33,14 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     Interface,
-    ModelUtil,
     Constructor,
     TypeParameter
 }
 
 import java.util {
-    List,
+    JList=List,
     ArrayList,
+    Arrays,
     Collections
 }
 
@@ -152,27 +148,25 @@ shared {Declaration*} overloads(Declaration dec) {
 }
 
 // see CompletionUtil.getParameters
-List<Parameter> getParameters(ParameterList pl,
+JList<Parameter> getParameters(ParameterList pl,
     Boolean includeDefaults, Boolean namedInvocation) {
     value ps = pl.parameters;
     if (includeDefaults) {
         return ps;
     }
     else {
-        value list = ArrayList<Parameter>();
-        for (p in ps) {
-            if (!p.defaulted || 
-                (namedInvocation && spreadable(p, ps))) {
-                list.add(p);
-            }
-        }
-        return list;
+        return Arrays.asList(
+            for (p in ps)
+            if (!p.defaulted
+                || (namedInvocation && spreadable(p, ps)))
+            p);
     }
 }
 
-Boolean spreadable(Parameter param, List<Parameter> list) {
-    value lastParam = list.get(list.size() - 1);
-    if (param == lastParam, param.model is Value) {
+Boolean spreadable(Parameter param, JList<Parameter> list) {
+    if (exists lastParam = list[list.size()-1],
+        param == lastParam,
+        param.model is Value) {
         return if (exists type = param.type) 
             then param.declaration.unit
                 .isIterableParameterType(type)
@@ -312,7 +306,7 @@ String? getPackageName(Tree.CompilationUnit cu)
             then pack.qualifiedNameString 
             else null;
 
-shared Boolean isInBounds(List<Type> upperBounds, Type type) {
+shared Boolean isInBounds(JList<Type> upperBounds, Type type) {
     for (ub in upperBounds) {
         if (!type.isSubtypeOf(ub) &&
             !(ub.involvesTypeParameters() && 
@@ -356,18 +350,18 @@ Boolean withinBounds(Type requiredType, Type type, Scope scope) {
     }
 }
 
-
-shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
+shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit,
+        String? exactName = null) {
     value map = scope.getMatchingDeclarations(unit, "", 0, null);
     if (exists exactName) {
-        for (dwp in ArrayList(map.values())) {
+        /*for (dwp in ArrayList(map.values())) {
             if (!dwp.unimported, !dwp.\ialias,
                 ModelUtil.isNameMatching(dwp.name, exactName)) {
                 
                 map.put(javaString(dwp.name),
                     DeclarationWithProximity(dwp.declaration, -5));
             }
-        }
+        }*/
     }
     value results = ArrayList(map.values());
     Collections.sort(results, ArgumentProposalComparator(exactName));

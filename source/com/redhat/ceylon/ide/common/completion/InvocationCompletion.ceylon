@@ -665,7 +665,7 @@ shared abstract class InvocationCompletionProposal
     }
     
     shared void enterLinkedMode(CommonDocument document, 
-        JList<Parameter>? params, 
+        JList<Parameter>? params,
         JList<TypeParameter>? typeParams, 
         CompletionContext cpc,
         Cancellable? cancellable) {
@@ -715,10 +715,10 @@ shared abstract class InvocationCompletionProposal
                             index = seq;
                         };
                     } else if (!voidParam) {
-                        assert (exists params);
+                        assert (exists params, exists p = params[param]);
                         addValueArgumentProposals {
                             props = props;
-                            param = params.get(param);
+                            param = p;
                             loc = loc;
                             first = first;
                             index = seq;
