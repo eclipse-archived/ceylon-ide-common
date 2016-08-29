@@ -34,7 +34,8 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     Interface,
     Constructor,
-    TypeParameter
+    TypeParameter,
+    ModelUtil
 }
 
 import java.util {
@@ -47,6 +48,12 @@ import java.util {
 import org.antlr.runtime {
     CommonToken,
     Token
+}
+import ceylon.interop.java {
+    javaString
+}
+import java.lang {
+    IllegalArgumentException
 }
 
 shared Boolean isLocation(loc1, loc2) {
@@ -354,17 +361,23 @@ shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit
         String? exactName = null) {
     value map = scope.getMatchingDeclarations(unit, "", 0, null);
     if (exists exactName) {
-        /*for (dwp in ArrayList(map.values())) {
+        //hack to take advantage of code in InvocationCompletion.addValueArgumentProposals
+        for (dwp in ArrayList(map.values())) {
             if (!dwp.unimported, !dwp.\ialias,
                 ModelUtil.isNameMatching(dwp.name, exactName)) {
                 
                 map.put(javaString(dwp.name),
                     DeclarationWithProximity(dwp.declaration, -5));
             }
-        }*/
+        }
     }
     value results = ArrayList(map.values());
-    Collections.sort(results, ArgumentProposalComparator(exactName));
+    try {
+        Collections.sort(results, ArgumentProposalComparator(exactName));
+    }
+    catch (IllegalArgumentException e) {
+        e.printStackTrace();
+    }
     return results;
 }
 
