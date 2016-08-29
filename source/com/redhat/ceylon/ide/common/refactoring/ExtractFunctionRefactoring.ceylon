@@ -446,8 +446,8 @@ shared class ExtractFunctionRefactoring(
         
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisRefs) {
-            fixedTokens.set(tokens.indexOf(tr.token),
-                fakeToken(tr));
+            fixedTokens[tokens.indexOf(tr.token)]
+                = fakeToken(tr);
         }
         String body;
         if (is Tree.FunctionArgument core) {
@@ -863,8 +863,8 @@ shared class ExtractFunctionRefactoring(
         
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisReferences) {
-            fixedTokens.set(tokens.indexOf(tr.token),
-                fakeToken(tr));
+            fixedTokens[tokens.indexOf(tr.token)]
+                = fakeToken(tr);
         }
         value start = ss.first.startIndex.intValue();
         value end = appendComments {

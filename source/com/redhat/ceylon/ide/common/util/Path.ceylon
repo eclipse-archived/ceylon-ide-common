@@ -1,12 +1,12 @@
-import java.io {
-    JFile = File
-}
-
 import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
     javaString
+}
+
+import java.io {
+    JFile=File
 }
 
 
@@ -506,7 +506,7 @@ shared final class Path satisfies List<String> {
             value myLen = _segments.size;
             value newSegments = Array.ofSize(myLen+1, "");
             _segments.copyTo(newSegments, 0, 0, myLen);
-            newSegments.set(myLen, tail);
+            newSegments[myLen] = tail;
             return internalConstructor(_device, newSegments, separators.and(_HAS_TRAILING.not));
         }
         //go with easy implementation
@@ -523,7 +523,6 @@ shared final class Path satisfies List<String> {
        are removed from the path except at the beginning
        where the path is considered to be UNC.
        """
-    suppressWarnings("expressionTypeNothing")
     shared Path appendPath(
         "the path to concatenate"
         Path? tail) {
@@ -546,10 +545,11 @@ shared final class Path satisfies List<String> {
 
         value myLen = segments.size;
         value tailLen = tail.segmentCount;
-        Array<String> newSegments = Array.ofSize(myLen + tailLen, "");
+        value newSegments = Array.ofSize(myLen + tailLen, "");
         _segments.copyTo(newSegments, 0, 0, myLen);
         for (i in 0:tailLen) {
-            newSegments.set(myLen + i, tail.segment(i) else nothing);
+            assert (exists seg = tail.segment(i));
+            newSegments[myLen + i] = seg;
         }
 
         //use my leading separators and the tail's trailing separator

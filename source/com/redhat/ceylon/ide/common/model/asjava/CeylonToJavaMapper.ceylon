@@ -85,12 +85,12 @@ shared object ceylonToJavaMapper {
         value mirrors = Array<JGetterMirror|JSetterMirror|JObjectMirror|Null>.ofSize(2, null);
         
         if (decl.toplevel) {
-            mirrors.set(0, JObjectMirror(decl));
+            mirrors[0] = JObjectMirror(decl);
         } else if (decl.shared) {
-            mirrors.set(0, JGetterMirror(decl));
+            mirrors[0] = JGetterMirror(decl);
             
             if (decl.variable) {
-                mirrors.set(1, JSetterMirror(decl));
+                mirrors[1] = JSetterMirror(decl);
             }
         }
         

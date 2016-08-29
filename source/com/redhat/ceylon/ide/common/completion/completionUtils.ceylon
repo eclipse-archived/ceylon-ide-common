@@ -50,12 +50,6 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
-import ceylon.interop.java {
-    javaString
-}
-import java.lang {
-    IllegalArgumentException
-}
 
 shared Boolean isLocation(loc1, loc2) {
 

@@ -39,17 +39,17 @@ object correctionUtil {
         variable Integer cost; // cost
         
         for  (i in 0..n) {
-            p.set(i, i);
+            p[i] = i;
         }
 
         for (j in 1..m) {
             t_j = y.get(j - 1) else ' ';
-            d.set(0, j);
+            d[0] = j;
             
             for (i in 1..n) {
                 cost = if ((x.get(i - 1) else ' ') == t_j) then 0 else 1;
                 // minimum of cell to the left+1, to the top+1, diagonally left and up +cost
-                d.set(i, min({(d.get(i - 1) else 0) + 1, (p.get(i) else 0) + 1, (p.get(i - 1) else 0) + cost}));
+                d[i] = min({(d.get(i - 1) else 0) + 1, (p.get(i) else 0) + 1, (p.get(i - 1) else 0) + cost});
             }
 
             // copy current distance counts to 'previous row' distance counts

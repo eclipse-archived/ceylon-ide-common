@@ -53,7 +53,7 @@ shared interface ParametersCompletion {
                             text.append(anon).append(" => ");
                             desc.append(anon).append(" => ");
                             returnType = unit.getCallableReturnType(argType);
-                            argTypes.set(i, returnType);
+                            argTypes[i] = returnType;
                         }
                         else if (paramTypes) {
                             returnType = argType;

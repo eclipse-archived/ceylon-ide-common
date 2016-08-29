@@ -36,7 +36,7 @@ object dummyConfigurator extends CeylonRepositoryConfigurator() {
     }
     
     shared actual void addRepositoryToList(Integer index, String repo) {
-        selection.set(0, index);
+        selection[0] = index;
         myRepos.insert(index, repo);
     }
     
@@ -62,7 +62,7 @@ test shared void testRepositoryConfiguration() {
     assertFalse(dummyConfigurator.isRemoveEnabled);
 
     // Selecting a pre-configured repo does not enable buttons
-    dummyConfigurator.selection.set(0, 0);
+    dummyConfigurator.selection[0] = 0;
     dummyConfigurator.updateButtonState();
     assertFalse(dummyConfigurator.isDownEnabled);
     assertFalse(dummyConfigurator.isUpEnabled);
@@ -93,7 +93,7 @@ test shared void testRepositoryConfiguration() {
     assertTrue(dummyConfigurator.isRemoveEnabled);
     
     // The last repo can't be moved/removed
-    dummyConfigurator.selection.set(0, dummyConfigurator.myRepos.size - 1);
+    dummyConfigurator.selection[0] = dummyConfigurator.myRepos.size - 1;
     dummyConfigurator.updateButtonState();
     assertFalse(dummyConfigurator.isDownEnabled);
     assertFalse(dummyConfigurator.isUpEnabled);
