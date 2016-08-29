@@ -21,6 +21,10 @@ class ProposalComparator(String prefix, RequiredType required)
         DeclarationWithProximity x;
         DeclarationWithProximity y;
 
+        if (x===y) {
+            return 0;
+        }
+
         try {
 
             //variable Boolean xbt = x.declaration is NothingType;

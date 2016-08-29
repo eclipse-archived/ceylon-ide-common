@@ -17,6 +17,10 @@ class ArgumentProposalComparator(String? exactName)
         DeclarationWithProximity y;
         DeclarationWithProximity x;
 
+        if (x===y) {
+            return 0;
+        }
+
         value xname = x.name;
         value yname = y.name;
         if (exists exactName) {
