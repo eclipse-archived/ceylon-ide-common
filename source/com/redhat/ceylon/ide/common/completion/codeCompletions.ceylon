@@ -383,17 +383,16 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit,
 
 List<Parameter> getParametersFunctional(Functional fd, 
     Boolean includeDefaults, Boolean namedInvocation) {
-    
-    List<ParameterList>? plists = fd.parameterLists;
-    if (plists?.empty else true) {
-        return Collections.emptyList<Parameter>();
-    } else {
-        assert (exists plists);
+
+    if (exists plists = fd.parameterLists,
+        exists plist = plists[0]) {
         return getParameters {
-            pl = plists.get(0);
+            pl = plist;
             includeDefaults = includeDefaults;
             namedInvocation = namedInvocation;
         };
+    } else {
+        return Collections.emptyList<Parameter>();
     }
 }
 
