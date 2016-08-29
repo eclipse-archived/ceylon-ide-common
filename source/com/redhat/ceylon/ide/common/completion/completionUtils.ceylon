@@ -383,25 +383,25 @@ shared Boolean isIgnoredLanguageModuleClass(Class clazz)
 
 shared Boolean isIgnoredLanguageModuleValue(Value val) {
     value name = val.name;
-    return name.equals("process")
-        || name.equals("runtime")
-        || name.equals("system")
-        || name.equals("operatingSystem")
-        || name.equals("language")
-        || name.equals("emptyIterator")
-        || name.equals("infinity")
-        || name.endsWith("IntegerValue")
-        || name.equals("finished");
+    return name == "process"
+        || name == "runtime"
+        || name == "system"
+        || name == "operatingSystem"
+        || name == "language"
+        || name == "emptyIterator"
+        || name == "infinity"
+        || name == "IntegerValue"
+        || name == "finished";
 }
 
 shared Boolean isIgnoredLanguageModuleMethod(Function method) {
     value name = method.name;
-    return name.equals("className") 
-        || name.equals("flatten")
-        || name.equals("unflatten")
-        || name.equals("curry")
-        || name.equals("uncurry")
-        || name.equals("compose")
+    return name == "className"
+        || name == "flatten"
+        || name == "unflatten"
+        || name == "curry"
+        || name == "uncurry"
+        || name == "compose"
         || method.annotation;
 }
 
