@@ -35,7 +35,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Interface,
     Constructor,
     TypeParameter,
-    ModelUtil
+    ModelUtil,
+    Cancellable
 }
 
 import java.util {
@@ -358,8 +359,8 @@ Boolean withinBounds(Type requiredType, Type type, Scope scope) {
 }
 
 shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit,
-        String? exactName = null) {
-    value map = scope.getMatchingDeclarations(unit, "", 0, null);
+        String? exactName = null, Cancellable? cancellable = null) {
+    value map = scope.getMatchingDeclarations(unit, "", 0, cancellable);
     if (exists exactName) {
         //hack to take advantage of code in InvocationCompletion.addValueArgumentProposals
         for (dwp in ArrayList(map.values())) {

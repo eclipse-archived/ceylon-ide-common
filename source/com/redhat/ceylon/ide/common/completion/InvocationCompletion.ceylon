@@ -713,6 +713,7 @@ shared abstract class InvocationCompletionProposal
                             loc = loc;
                             first = first;
                             index = seq;
+                            cancellable = cancellable;
                         };
                     } else if (!voidParam) {
                         assert (exists params, exists p = params[param]);
@@ -776,6 +777,7 @@ shared abstract class InvocationCompletionProposal
                         scope = scope;
                         unit = unit;
                         exactName = param.name;
+                        cancellable = cancellable;
                     };
             
             //very special case for print()
@@ -988,11 +990,16 @@ shared abstract class InvocationCompletionProposal
     }
     
     void addTypeArgumentProposals(ProposalsHolder props, 
-        TypeParameter tp, Integer loc, Integer first, Integer index) {
+        TypeParameter tp, Integer loc, Integer first, Integer index,
+        Cancellable? cancellable) {
         
         value ed = cu.unit.exceptionDeclaration;
         
-        for (dwp in getSortedProposedValues(scope, cu.unit)) {
+        for (dwp in getSortedProposedValues {
+                scope = scope;
+                unit = cu.unit;
+                cancellable = cancellable;
+        }) {
             value dec = dwp.declaration;
             value pname = dec.unit.\ipackage.nameAsString;
             value isInLanguageModule 
