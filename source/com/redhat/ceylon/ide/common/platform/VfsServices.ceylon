@@ -52,6 +52,7 @@ shared interface VfsServices<NativeProject, NativeResource, NativeFolder, Native
     shared formal String? getProjectRelativePathString(NativeResource resource, CeylonProjectAlias|NativeProject project);
     shared formal File? getJavaFile(NativeResource resource);
     shared formal NativeResource? fromJavaFile(File javaFile, NativeProject project);
+    shared formal Boolean flushIfNecessary(NativeResource resource);
 
     shared Boolean isDescendantOfAny(NativeResource resource, {NativeFolder*} possibleAncestors) =>
             let(descendantPath = getVirtualFilePath(resource))
