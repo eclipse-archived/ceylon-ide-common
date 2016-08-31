@@ -40,6 +40,8 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     variable Boolean isCompileToJsChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
 
+    shared String projectRelativePath = ".ceylon/ide-config";
+
     shared File ideConfigFile => File(File(project.rootDirectory, ".ceylon"), "ide-config");
 
     void initMergedConfig() {
@@ -129,16 +131,17 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     shared void save() {
         initIdeConfig();
 
-        Boolean someSettingsChanged = isCompileToJsChanged || isCompileToJsChanged || isSystemRepositoryChanged;
+        Boolean someSettingsChanged = isCompileToJvmChanged || isCompileToJsChanged || isSystemRepositoryChanged;
 
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
-                ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false);
-                ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false);
-                ideConfig.setOption("project.system-repository", transientSystemRepository else "");
+                if (isCompileToJvmChanged) { ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false); }
+                if (isCompileToJsChanged) { ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false); }
+                if (isCompileToJvmChanged) { ideConfig.setOption("project.system-repository", transientSystemRepository else ""); }
 
                 ConfigWriter.instance().write(ideConfig, ideConfigFile);
                 refresh();
+                project.refreshConfigFile(projectRelativePath);
             } catch (IOException e) {
                 throw Exception("", e);
             }

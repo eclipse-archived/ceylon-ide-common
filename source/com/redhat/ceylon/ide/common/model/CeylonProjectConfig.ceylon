@@ -1,3 +1,14 @@
+import ceylon.interop.java {
+    javaStringArray,
+    javaObjectArray,
+    toStringArray,
+    javaClass,
+    CeylonIterable
+}
+
+import com.redhat.ceylon.common {
+    Constants
+}
 import com.redhat.ceylon.common.config {
     CeylonConfig,
     Repositories {
@@ -6,33 +17,23 @@ import com.redhat.ceylon.common.config {
     CeylonConfigFinder,
     DefaultToolOptions,
     ConfigWriter
- }
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    Warning
+}
+
 import java.io {
     File,
     IOException
 }
-
-import ceylon.interop.java {
-    javaStringArray,
-    javaObjectArray,
-    toStringArray,
-    javaClass,
-    CeylonIterable
-}
 import java.lang {
     ObjectArray,
-    JBoolean = Boolean,
-    JString = String,
+    JBoolean=Boolean,
+    JString=String,
     IllegalArgumentException
-}
-import com.redhat.ceylon.common {
-    Constants
 }
 import java.util {
     EnumSet
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    Warning
 }
 
 /*
@@ -100,7 +101,8 @@ shared class CeylonProjectConfig(project) {
     variable {String*}? transientSuppressWarnings = null;
     variable Boolean isSuppressWarningsChanged = false;
     
-
+    shared String projectRelativePath = ".ceylon/config";
+    
     shared File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
 
     void initMergedConfig() {
@@ -396,7 +398,7 @@ shared class CeylonProjectConfig(project) {
 
                 ConfigWriter.instance().write(projectConfig, projectConfigFile);
                 refresh();
-                project.refreshConfigFile();
+                project.refreshConfigFile(projectRelativePath);
             } catch (IOException e) {
                 throw Exception("", e);
             }

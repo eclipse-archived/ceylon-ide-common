@@ -347,7 +347,7 @@ shared abstract class BaseCeylonProject() {
     shared default void fixHiddenOutputFolder(String folderProjectRelativePath) => noop();
     shared formal void deleteOldOutputFolder(String folderProjectRelativePath);
     shared formal void createNewOutputFolder(String folderProjectRelativePath);
-    shared formal void refreshConfigFile();
+    shared formal void refreshConfigFile(String projectRelativePath);
     
     shared formal Boolean synchronizedWithConfiguration;
     shared formal Boolean nativeProjectIsAccessible;
@@ -489,7 +489,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     // value virtualFolderCacheLock = ReentrantReadWriteLock();
 
     variable CeylonProjectBuildAlias? build_ = null;
-    
+
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
 
@@ -1043,7 +1043,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
     
     shared Boolean isResourceFile(NativeFile file) =>
             isFileInResourceFolder(file); // TODO: add the constraint that it should be in the right packages ?
-    
+
     shared void projectFileTreeChanged({NativeResourceChange*} projectFileChanges) {
         
         ChangeToConvert updateModelAndConvertToProjectFileChange(NativeResourceChange nativeChange) {
@@ -1084,12 +1084,14 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 return [nativeChange, convertToVirtualFile];
             }
         }
-        
-        build.fileTreeChanged(projectFileChanges.map((nativeChange) => 
-            if (isResourceForModel(nativeChange.resource),
-                    exists projectFileChange=model.toProjectChange(updateModelAndConvertToProjectFileChange(nativeChange)))
-            then projectFileChange
-            else [nativeChange, ideArtifact]));
+
+        build.fileTreeChanged(
+            projectFileChanges
+                .map((nativeChange) =>
+                    if (isResourceForModel(nativeChange.resource),
+                        exists projectFileChange=model.toProjectChange(updateModelAndConvertToProjectFileChange(nativeChange)))
+                    then projectFileChange
+                    else [nativeChange, ideArtifact]));
         
 
         for (referencingProject in referencingCeylonProjects) {
