@@ -913,9 +913,9 @@ given NativeFile satisfies NativeResource {
                         retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
                     });
 
-                    buildHooks.each((hook) => hook.beforeDependencyTreeValidation(this));
+                    buildHooks.each((hook) => hook.beforeDependencyTreeValidation(this, progress));
                     moduleValidator.verifyModuleDependencyTree();
-                    buildHooks.each((hook) => hook.afterDependencyTreeValidation(this));
+                    buildHooks.each((hook) => hook.afterDependencyTreeValidation(this, progress));
                 }
 
                 newTypechecker.phasedUnitsOfDependencies = moduleValidator.phasedUnitsOfDependencies;

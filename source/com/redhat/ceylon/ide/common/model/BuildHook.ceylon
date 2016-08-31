@@ -1,3 +1,6 @@
+import com.redhat.ceylon.ide.common.util {
+    BaseProgressMonitor
+}
 shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFile>
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -19,6 +22,8 @@ shared interface BuildHook<NativeProject, NativeResource, NativeFolder, NativeFi
     shared default void beforeClasspathResolution(CeylonProjectBuildAlias build, CeylonProjectBuildAlias.State state) {}
     shared default void afterClasspathResolution(CeylonProjectBuildAlias build, CeylonProjectBuildAlias.State state) {}
 
-    shared default void beforeDependencyTreeValidation(CeylonProjectAlias ceylonProject) {}
-    shared default void afterDependencyTreeValidation(CeylonProjectAlias ceylonProject) {}
+    shared default void beforeDependencyTreeValidation(CeylonProjectAlias ceylonProject,
+        BaseProgressMonitor.Progress progress) {}
+    shared default void afterDependencyTreeValidation(CeylonProjectAlias ceylonProject,
+        BaseProgressMonitor.Progress progress) {}
 }
