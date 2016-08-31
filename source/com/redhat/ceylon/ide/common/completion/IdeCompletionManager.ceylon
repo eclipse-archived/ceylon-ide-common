@@ -604,9 +604,8 @@ shared object completionManager
     }
     
     // see CeylonCompletionProcessor.isLineComment()
-    Boolean isLineComment(variable CommonToken adjustedToken) {
-        return adjustedToken.type == Lexer.lineComment;
-    }
+    Boolean isLineComment(variable CommonToken adjustedToken)
+            => adjustedToken.type == Lexer.lineComment;
 
     Type? getFunctionProposalType(Node node, Boolean memberOp) {
         if (is Tree.QualifiedMemberOrTypeExpression node,
@@ -631,7 +630,7 @@ shared object completionManager
                     = getFunctionProposalType(node, memberOp),
                     !isTypeUnknown(type))
             then collectUnaryFunctions(type,
-                scope.getMatchingDeclarations(node.unit,
+                    scope.getMatchingDeclarations(node.unit,
                     prefix, 0, cancellable))
             else noProposals;
 
