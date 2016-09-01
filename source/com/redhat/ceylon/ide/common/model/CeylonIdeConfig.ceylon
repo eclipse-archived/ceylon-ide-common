@@ -34,10 +34,12 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
     variable Boolean? transientCompileToJvm = null;
     variable Boolean? transientCompileToJs = null;
+    variable Boolean? transientCompileToDart = null;
     variable String? transientSystemRepository = null;
 
     variable Boolean isCompileToJvmChanged = false;
     variable Boolean isCompileToJsChanged = false;
+    variable Boolean isCompileToDartChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
 
     shared String projectRelativePath = ".ceylon/ide-config";
@@ -78,6 +80,12 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     assign compileToJs {
         this.isCompileToJsChanged = true;
         this.transientCompileToJs = compileToJs;
+    }
+
+    shared Boolean? compileToDart => let (JBoolean? option = ideConfig.getBoolOption("project.compile-dart")) option?.booleanValue();
+    assign compileToDart {
+        this.isCompileToDartChanged = true;
+        this.transientCompileToDart = compileToDart;
     }
 
     shared String? systemRepository => ideConfig.get("project.system-repository");
@@ -121,22 +129,25 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
         isCompileToJvmChanged = false;
         isCompileToJsChanged = false;
+        isCompileToDartChanged = false;
         isSystemRepositoryChanged = false;
 
         transientCompileToJvm = null;
         transientCompileToJs = null;
+        transientCompileToDart = null;
         transientSystemRepository = null;
     }
 
     shared void save() {
         initIdeConfig();
 
-        Boolean someSettingsChanged = isCompileToJvmChanged || isCompileToJsChanged || isSystemRepositoryChanged;
+        Boolean someSettingsChanged = isCompileToJvmChanged || isCompileToJsChanged || isCompileToDartChanged || isSystemRepositoryChanged;
 
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
                 if (isCompileToJvmChanged) { ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false); }
                 if (isCompileToJsChanged) { ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false); }
+                if (isCompileToDartChanged) { ideConfig.setBoolOption("project.compile-dart", transientCompileToDart else false); }
                 if (isCompileToJvmChanged) { ideConfig.setOption("project.system-repository", transientSystemRepository else ""); }
 
                 ConfigWriter.instance().write(ideConfig, ideConfigFile);

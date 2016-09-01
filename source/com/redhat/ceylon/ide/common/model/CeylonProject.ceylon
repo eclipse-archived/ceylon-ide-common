@@ -352,6 +352,7 @@ shared abstract class BaseCeylonProject() {
     shared formal Boolean synchronizedWithConfiguration;
     shared formal Boolean nativeProjectIsAccessible;
     shared formal Boolean compileToJs;
+    shared default Boolean compileToDart => false;
     shared formal Boolean compileToJava;
 
     shared default Boolean loadBinariesFirst =>
@@ -704,6 +705,9 @@ given NativeFile satisfies NativeResource {
         if (isJavascript(file) && compileToJs) {
             return true;
         }
+        if (isDart(file) && compileToDart) {
+            return true;
+        }
         return false;
     }
 
@@ -715,6 +719,9 @@ given NativeFile satisfies NativeResource {
 
     shared default Boolean isJavascript(NativeFile file) =>
             vfsServices.getShortName(file).endsWith(".js");
+
+    shared default Boolean isDart(NativeFile file) =>
+            vfsServices.getShortName(file).endsWith(".dart");
 
     "TODO: make it unshared as soon as the calling method is also in CeylonProject"
     shared void scanFiles(BaseProgressMonitor monitor) {
