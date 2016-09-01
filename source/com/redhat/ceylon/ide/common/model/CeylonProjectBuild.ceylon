@@ -1148,10 +1148,16 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     throw platformUtils.newOperationCanceledException();
                 }
                 
+                variable Boolean removedFrontEndMessages = false;
                 for(removedFile in filesRemovedFromCurrentProject) {
-                    state.frontendMessages.removeEvery((message) => message.file == removedFile);
-                    state.backendMessages.removeEvery((message) => message.file == removedFile);
+                    if (state.frontendMessages.removeEvery((message) => message.file == removedFile.nativeResource)) {
+                        removedFrontEndMessages = true;
+                    }
+                    state.backendMessages.removeEvery((message) => message.file == removedFile.nativeResource);
                     state.missingClasses.remove(removedFile.nativeResource);
+                }
+                if (removedFrontEndMessages) {
+                    ceylonProject.model.buildMessagesChanged(ceylonProject, frontendMessages, null, null);
                 }
                 
                 // Remember also cleaning the tasks on the remove files
