@@ -974,7 +974,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         JList<CommonToken> declarationTokens, TextChange textChange) {
         
         value defaultTypeArgs = map {
-            for (tp in declarationNode.typeParameterList.typeParameterDeclarations)
+            if (exists typeParameterList = declarationNode.typeParameterList)
+            for (tp in typeParameterList.typeParameterDeclarations)
             if (exists t = tp.typeSpecifier?.type)
             tp.declarationModel -> t
         };
