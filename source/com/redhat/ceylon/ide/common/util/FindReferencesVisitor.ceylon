@@ -88,9 +88,12 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         if (is Parameter param) {
             return isReference(param.model);
         } else if (is Declaration ref = param) {
-            return isRefinedDeclarationReference(ref) || isSetterParameterReference(ref);
+            return isRefinedDeclarationReference(ref)
+                || isSetterParameterReference(ref);
         }
-        return false;
+        else {
+            return false;
+        }
     }
     
     shared default Boolean isRefinedDeclarationReference(Declaration ref) 
@@ -101,8 +104,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         if (is Value ref, 
             exists param = ref.initializerParameter,
             is Setter setter = param.declaration) {
-            return isReference(setter) || 
-                    isReference(setter.getter);
+            return isReference(setter)
+                || isReference(setter.getter);
         } else {
             return false;
         }
