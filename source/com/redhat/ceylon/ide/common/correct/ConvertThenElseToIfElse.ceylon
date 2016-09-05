@@ -103,7 +103,8 @@ shared object convertThenElseToIfElseQuickFix {
 
         function getNodeText(Node? node)
                 => if (exists node)
-        then doc.getNodeText(node) else "";
+                then doc.getNodeText(node)
+                else "";
         
         switch (op = TreeUtil.unwrapExpressionUntilTerm(operation))
         case (is Tree.DefaultOp) {
@@ -137,7 +138,7 @@ shared object convertThenElseToIfElseQuickFix {
         }
         case (is Tree.IfExpression) {
             thenTerm = getNodeText(op.ifClause.expression);
-            elseTerm = getNodeText(op.elseClause ?. expression);
+            elseTerm = getNodeText(op.elseClause?.expression);
             value cl = op.ifClause.conditionList;
             test = getNodeText(cl);
         }
