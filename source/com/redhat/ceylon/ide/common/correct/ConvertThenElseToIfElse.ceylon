@@ -1,6 +1,7 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    TreeUtil
+    TreeUtil,
+    Node
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
@@ -99,16 +100,20 @@ shared object convertThenElseToIfElseQuickFix {
         String test;
         String elseTerm;
         String thenTerm;
+
+        function getNodeText(Node? node)
+                => if (exists node)
+        then doc.getNodeText(node) else "";
         
         switch (op = TreeUtil.unwrapExpressionUntilTerm(operation))
         case (is Tree.DefaultOp) {
             if (is Tree.ThenOp thenOp = op.leftTerm) {
-                thenTerm = doc.getNodeText(thenOp.rightTerm);
-                test = doc.getNodeText(thenOp.leftTerm);
+                thenTerm = getNodeText(thenOp.rightTerm);
+                test = getNodeText(thenOp.leftTerm);
             }
             else {
                 value leftTerm = op.leftTerm;
-                value leftTermStr = doc.getNodeText(leftTerm);
+                value leftTermStr = getNodeText(leftTerm);
                 if (is Tree.BaseMemberExpression leftTerm) {
                     thenTerm = leftTermStr;
                     test = "exists " + leftTermStr;
@@ -118,31 +123,30 @@ shared object convertThenElseToIfElseQuickFix {
                         node = leftTerm;
                         rootNode = data.rootNode;
                     }[0];
-                    test = "exists " + id.string + " = " + leftTermStr;
+                    test = "exists ``id`` = " + leftTermStr;
                     thenTerm = id.string;
                 }
             }
-            
-            elseTerm = doc.getNodeText(op.rightTerm);
+
+            elseTerm = getNodeText(op.rightTerm);
         }
         case (is Tree.ThenOp) {
-            thenTerm = doc.getNodeText(op.rightTerm);
-            test = doc.getNodeText(op.leftTerm);
+            thenTerm = getNodeText(op.rightTerm);
+            test = getNodeText(op.leftTerm);
             elseTerm = "null";
         }
         case (is Tree.IfExpression) {
-            thenTerm = doc.getNodeText(op.ifClause.expression);
-            elseTerm = if (exists el = op.elseClause)
-                       then doc.getNodeText(el.expression)
-                       else "";
+            thenTerm = getNodeText(op.ifClause.expression);
+            elseTerm = getNodeText(op.elseClause ?. expression);
             value cl = op.ifClause.conditionList;
-            test = doc.getNodeText(cl);
+            test = getNodeText(cl);
         }
         else {
             return;
         }
-        
+
         value baseIndent = doc.getIndent(statement);
+        x
         value indent = platformServices.document.defaultIndent;
         value replace = StringBuilder();
         value delim = doc.defaultLineDelimiter;
@@ -190,7 +194,7 @@ shared object convertThenElseToIfElseQuickFix {
         data.addQuickFix {
             description = "Convert to 'if' 'else' statement";
             change = change;
-            selection = DefaultRegion(statement.startIndex.intValue(), 0);
+            selection = DefaultRegion(statement.startIndex.intValue());
         };
     }
     
