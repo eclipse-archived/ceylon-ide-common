@@ -132,12 +132,12 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
                 
                 value d = declaration;
                 declaration = vd;
-                if (that.block exists) {
-                    that.block.visit(this);
+                if (exists b = that.block) {
+                    b.visit(this);
                 }
                 
-                if (that.expression exists) {
-                    that.expression.visit(this);
+                if (exists e = that.expression) {
+                    e.visit(this);
                 }
                 
                 declaration = d;
@@ -215,12 +215,12 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
                         
                         value d = declaration;
                         declaration = vd;
-                        if (that.block exists) {
-                            that.block.visit(this);
+                        if (exists b = that.block) {
+                            b.visit(this);
                         }
                         
-                        if (that.expression exists) {
-                            that.expression.visit(this);
+                        if (exists e = that.expression) {
+                            e.visit(this);
                         }
                         
                         j = i + 1;
@@ -249,12 +249,12 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
                 od==declaration) {
                 value d = declaration;
                 declaration = vd;
-                if (that.block exists) {
-                    that.block.visit(this);
+                if (exists b = that.block) {
+                    b.visit(this);
                 }
                 
-                if (that.expression exists) {
-                    that.expression.visit(this);
+                if (exists e = that.expression) {
+                    e.visit(this);
                 }
                 
                 declaration = d;
