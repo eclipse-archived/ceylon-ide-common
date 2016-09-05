@@ -146,7 +146,6 @@ shared object convertThenElseToIfElseQuickFix {
         }
 
         value baseIndent = doc.getIndent(statement);
-        x
         value indent = platformServices.document.defaultIndent;
         value replace = StringBuilder();
         value delim = doc.defaultLineDelimiter;
