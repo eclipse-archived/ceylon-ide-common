@@ -8,6 +8,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.platform {
     platformServices
 }
@@ -25,9 +28,6 @@ import java.lang {
 }
 import java.util {
     JList=List
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
 }
 
 shared interface MemberNameCompletion {
@@ -104,9 +104,7 @@ shared interface MemberNameCompletion {
             Tree.Identifier? id = td.identifier;
             
             if (exists id) {
-                node = if (offset >= id.startIndex.intValue(), offset <= id.endIndex.intValue())
-                       then type
-                       else null;
+                node = id.startIndex.intValue() <= offset <= id.endIndex.intValue() then type;
             } else {
                 node = type;
             }
