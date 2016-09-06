@@ -3,6 +3,7 @@
 encoding=UTF-8
 flatclasspath=false
 autoexportmavendependencies=false
+offline=false
 
 [compiler]
 source=source
