@@ -91,31 +91,27 @@ shared class LocalFolderVirtualFile(file)
     parent => (super of FileSystemVirtualFile).parent;
     
     
-    children 
-        => if (exists folderChildren = file.listFiles())
-        then Arrays.asList(
+    children => Arrays.asList(
+            if (exists folderChildren = file.listFiles())
             for (f in folderChildren)
             if (f.directory)
             then LocalFolderVirtualFile(f)
-            else LocalFileVirtualFile(f))
-        else Collections.emptyList<ResourceVirtualFile<Nothing,File, File, File>>();
+            else LocalFileVirtualFile(f));
 
     equals(Object that) => (super of FolderVirtualFile<Nothing,File,File,File>).equals(that);
     
     hash => (super of FolderVirtualFile<Nothing,File,File,File>).hash;
     
-    findFile(String fileName)
-        => file.listFiles(
-                object satisfies FilenameFilter {
-                    accept(File dir, String name)
-                        => name == fileName;
-                }
-            ).iterable.coalesced.map {
-                    collecting(File? file) 
-                        => if (exists file, file.directory)
-                            then LocalFileVirtualFile(file) 
-                            else null;
-                    }.first;
+    shared actual LocalFileVirtualFile? findFile(String fileName) {
+        value result
+                = file.listFiles(object satisfies FilenameFilter {
+                    accept(File dir, String name) => name == fileName;
+                })[0];
+        return
+            if (exists result, !result.directory)
+            then LocalFileVirtualFile(result)
+            else null;
+    }
     
     nativeResource => file;
     
