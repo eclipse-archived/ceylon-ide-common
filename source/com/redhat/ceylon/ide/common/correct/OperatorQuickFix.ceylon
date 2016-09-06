@@ -6,10 +6,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node
 }
-
-import org.antlr.runtime {
-    CommonToken
-}
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     DeleteEdit,
@@ -17,10 +13,14 @@ import com.redhat.ceylon.ide.common.platform {
     ReplaceEdit
 }
 
+import org.antlr.runtime {
+    CommonToken
+}
+
 shared object operatorQuickFix {
  
     shared void addSwapBinaryOperandsProposal(QuickFixData data, 
-     Tree.BinaryOperatorExpression? boe) {
+            Tree.BinaryOperatorExpression? boe) {
         if (exists boe,
             exists lt = boe.leftTerm,
             exists rt = boe.rightTerm) {
@@ -54,7 +54,7 @@ shared object operatorQuickFix {
     }
     
     shared void addReverseOperatorProposal(QuickFixData data, 
-        Tree.BinaryOperatorExpression? boe) {
+            Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp boe) {
             value change = platformServices.document.createTextChange {
                 name = "Reverse Operator";
@@ -99,7 +99,7 @@ shared object operatorQuickFix {
     }
     
     shared void addInvertOperatorProposal(QuickFixData data, 
-        Tree.BinaryOperatorExpression? boe) {
+            Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp|Tree.LogicalOp boe) {
             value change = platformServices.document.createTextChange {
                 name = "Invert Operator";
@@ -186,7 +186,7 @@ shared object operatorQuickFix {
     }
     
     shared void addParenthesesProposals(QuickFixData data, 
-        Tree.OperatorExpression? oe) {
+            Tree.OperatorExpression? oe) {
         Node? node;
         if (is Tree.ArgumentList argList = data.node) {
             object findInvocationVisitor extends Visitor() {
@@ -244,26 +244,29 @@ shared object operatorQuickFix {
         }
     }
     
-    void addAddParenthesesProposal(QuickFixData data, Node node) {
-        variable String desc;
+    function termDescription(Node node) {
         switch (node)
         case (is Tree.OperatorExpression) {
-            desc = node.mainToken.text + " expression";
+            return node.mainToken.text + " expression";
         }
         case (is Tree.QualifiedMemberOrTypeExpression) {
-            desc = "member reference";
+            return "member reference";
         }
         case (is Tree.BaseMemberOrTypeExpression) {
-            desc = "base reference";
+            return "base reference";
         }
         case (is Tree.Literal) {
-            desc = "literal";
+            return "literal";
         }
         case (is Tree.InvocationExpression) {
-            desc = "invocation";
-        } else {
-            desc = "expression";
+            return "invocation";
         }
+        else {
+            return "expression";
+        }
+    }
+
+    void addAddParenthesesProposal(QuickFixData data, Node node) {
         
         value change = platformServices.document.createTextChange {
             name = "Add Parentheses";
@@ -280,7 +283,7 @@ shared object operatorQuickFix {
         });
         
         data.addQuickFix {
-            description = "Parenthesize " + desc;
+            description = "Parenthesize " + termDescription(node);
             change = change;
         };
     }
