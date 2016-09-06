@@ -72,7 +72,13 @@ shared object initializerQuickFix {
             selection.length > 0) {
             
             value lm = platformServices.createLinkedMode(lmDocument);
-            value proposals = getProposals(lmDocument, selection.start, type, unit, scope);
+            value proposals = getProposals {
+                document = lmDocument;
+                loc = selection.start;
+                type = type;
+                unit = unit;
+                scope = scope;
+            };
             if (!proposals.empty) {
                 lm.addEditableRegion {
                     start = selection.start;
@@ -137,7 +143,14 @@ shared object initializerQuickFix {
 //            proposals.add(new NestedLiteralCompletionProposal(
 //                    document.get(point.x, point.y), point.x));
 
-        addValueArgumentProposals(document, loc, type, unit, scope, proposals);
+        addValueArgumentProposals {
+            document = document;
+            loc = loc;
+            type = type;
+            unit = unit;
+            scope = scope;
+            props = proposals;
+        };
         
         return proposals;
     }
@@ -227,7 +240,7 @@ shared object initializerQuickFix {
         }
     }
     
-    Boolean isTypeParamInBounds(TypeDeclaration td, Type t) {
-        return (td is TypeParameter) && isInBounds((td).satisfiedTypes, t);
-    }
+    Boolean isTypeParamInBounds(TypeDeclaration td, Type t)
+            => td is TypeParameter
+            && isInBounds(td.satisfiedTypes, t);
 }
