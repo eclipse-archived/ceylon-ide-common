@@ -18,23 +18,23 @@ shared class CrossProjectSourceFile<NativeProject, NativeResource, NativeFolder,
         given NativeFile satisfies NativeResource {
     
     resourceProject 
-            => if (exists ppu = phasedUnit.originalProjectPhasedUnit) 
+            => if (exists ppu = phasedUnit?.originalProjectPhasedUnit)
             then ppu.resourceProject else null;
     
     resourceRootFolder 
-            => if (exists ppu = phasedUnit.originalProjectPhasedUnit) 
+            => if (exists ppu = phasedUnit?.originalProjectPhasedUnit)
             then ppu.resourceRootFolder else null;
     
     resourceFile 
-            => if (exists ppu = phasedUnit.originalProjectPhasedUnit) 
+            => if (exists ppu = phasedUnit?.originalProjectPhasedUnit)
             then ppu.resourceFile else null;
     
     //TODO: get rid of unsafeCast()
-    shared actual CrossProjectPhasedUnitAlias phasedUnit 
-            => unsafeCast<CrossProjectPhasedUnitAlias>(super.phasedUnit);
+    shared actual CrossProjectPhasedUnitAlias? phasedUnit
+            => unsafeCast<CrossProjectPhasedUnitAlias?>(super.phasedUnit);
     
     originalSourceFile => originalPhasedUnit?.unit;
     
-    originalPhasedUnit => phasedUnit.originalProjectPhasedUnit;
+    originalPhasedUnit => phasedUnit?.originalProjectPhasedUnit;
     
 }
