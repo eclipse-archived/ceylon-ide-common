@@ -16,9 +16,6 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.typechecker {
     ProjectPhasedUnit
 }
-import com.redhat.ceylon.ide.common.util {
-    toJavaString
-}
 import com.redhat.ceylon.model.cmr {
     JDKUtils
 }
@@ -31,6 +28,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Parameter,
     ModelUtil
+}
+import ceylon.interop.java {
+    javaString
 }
 
 class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> thePhasedUnit) extends Visitor()
@@ -131,13 +131,13 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
             
             if (is ProjectSourceFileAlias declarationUnit) {
                 declarationUnit.dependentsOf
-                        .add(toJavaString(currentUnitPath));
+                        .add(javaString(currentUnitPath));
             }
             else if (is ICrossProjectReferenceAlias crossProjectReference=declarationUnit) {
                 if (exists originalUnit = 
                         crossProjectReference.originalSourceFile) {
                     originalUnit.dependentsOf
-                            .add(toJavaString(currentUnitPath));
+                            .add(javaString(currentUnitPath));
                 }
             }
             else if (is ExternalSourceFile declarationUnit) {
@@ -146,18 +146,18 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                 // Might change in the future 
             }
             else if (is CeylonBinaryUnitAlias declarationUnit) {
-                declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
+                declarationUnit.dependentsOf.add(javaString(currentUnitPath));
             } 
             else if (is JavaCompilationUnitAlias declarationUnit) {
                     // The cross-project case for Java files has already been managed
                     // as an ICrossProjectReferenceAlias
-                    declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
+                    declarationUnit.dependentsOf.add(javaString(currentUnitPath));
             }
             else  if (is JavaClassFileAlias declarationUnit) {
                     //TODO: All the dependencies to class files are also added... It is really useful ?
                     // I assume in the case of the classes in the classes or exploded dirs, it might be,
                     // but not sure it is also used not in the case of jar-located classes
-                    declarationUnit.dependentsOf.add(toJavaString(currentUnitPath));
+                    declarationUnit.dependentsOf.add(javaString(currentUnitPath));
             }
         }
     }

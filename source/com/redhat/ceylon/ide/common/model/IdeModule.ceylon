@@ -65,7 +65,6 @@ import com.redhat.ceylon.ide.common.util {
     CarUtils,
     toJavaStringList,
     SingleSourceUnitPackage,
-    toJavaList,
     unsafeCast
 }
 import com.redhat.ceylon.ide.common.vfs {
@@ -103,7 +102,8 @@ import java.lang.ref {
     SoftReference
 }
 import java.util {
-    JList=List
+    JList=List,
+    Arrays
 }
 import java.util.zip {
     ZipFile,
@@ -175,8 +175,7 @@ shared abstract class BaseIdeModule()
     shared formal {String*} toBinaryUnitRelativePaths(String? sourceUnitRelativePath);
     
     shared formal {PhasedUnit*} phasedUnits;
-    shared JList<PhasedUnit> phasedUnitsAsJavaList
-            => toJavaList(phasedUnits);
+    shared JList<PhasedUnit> phasedUnitsAsJavaList => Arrays.asList(*phasedUnits);
 
     shared formal ExternalPhasedUnit? getPhasedUnit(
         "Either the **absolute path** or a [[virtual file|VirtualFile]]
@@ -198,10 +197,18 @@ shared abstract class BaseIdeModule()
     shared formal {Module*} referencingModules;
     shared formal {Module*} transitiveDependencies;
     
+    shared JList<Module> referencingModulesAsJavaList
+            => Arrays.asList(*referencingModules);
+    shared JList<Module> transitiveDependenciesAsJavaList
+            => Arrays.asList(*transitiveDependencies);
+    
     shared formal Boolean resolutionFailed;
     shared formal void setResolutionException(Exception resolutionException);
     
     shared formal {BaseIdeModule*} moduleInReferencingProjects;
+    
+    shared JList<BaseIdeModule> moduleInReferencingProjectsAsJavaList
+            => Arrays.asList(*moduleInReferencingProjects);
     
     shared formal void refresh();
 }

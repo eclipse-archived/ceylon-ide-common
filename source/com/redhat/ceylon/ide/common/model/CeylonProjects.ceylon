@@ -3,6 +3,9 @@ import ceylon.collection {
     HashSet,
     unlinked
 }
+import ceylon.interop.java {
+    CeylonIterator
+}
 
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
@@ -23,18 +26,20 @@ import java.lang {
     InterruptedException,
     JBoolean=Boolean
 }
+import java.util {
+    JList=List,
+    Arrays
+}
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
 }
-import org.jgrapht.experimental.dag {
-    DirectedAcyclicGraph
-}
+
 import org.jgrapht {
     EdgeFactory
 }
-import ceylon.interop.java {
-    CeylonIterator
+import org.jgrapht.experimental.dag {
+    DirectedAcyclicGraph
 }
 
 shared abstract class BaseCeylonProjects() {
@@ -107,13 +112,19 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             do() => projectMap.items.sequence();
             interrupted() => {};
         };
-
+    
+    shared JList<CeylonProjectAlias> ceylonProjectsAsJavaList
+        => Arrays.asList(*ceylonProjects);
+    
     shared {NativeProject*} nativeProjects
             => withLocking {
         write=false;
         do() => projectMap.keys.sequence();
         interrupted() => {};
     };
+    
+    shared JList<NativeProject> nativeProjectsAsJavaList
+            => Arrays.asList(*nativeProjects);
     
     shared CeylonProjectAlias? getProject(NativeProject? nativeProject)
         => withLocking {

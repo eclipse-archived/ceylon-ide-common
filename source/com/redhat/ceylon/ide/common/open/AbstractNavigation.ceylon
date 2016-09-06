@@ -16,7 +16,6 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    toJavaString,
     Path
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -172,9 +171,8 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             switch (Unit? unit = model.unit)
             case (is AnyCeylonBinaryUnit) {
                 //special case for Java source in ceylon.language!
-                if (exists path 
-                        = toJavaString(unit.sourceRelativePath), 
-                    path.endsWith(".java"), 
+                if (exists path = unit.sourceRelativePath,
+                    path.endsWith(".java"),
                     is Declaration model) {
                     return gotoJavaNode(model);
                 }

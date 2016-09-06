@@ -2,66 +2,35 @@ import ceylon.collection {
     HashMap
 }
 import ceylon.interop.java {
-    JavaList,
     javaString,
-    CeylonIterable,
-    JavaMap,
-    JavaIterable
+    JavaMap
 }
 
 import java.lang {
-    JString=String,
-    JIterable=Iterable,
-    JBoolean=Boolean
+    JString=String
 }
-
-import java.util.concurrent {
-    JCallable=Callable
-}
-
 import java.util {
     JList=List,
-    JMap=Map
+    JMap=Map,
+    Arrays
 }
 
 shared JList<JString> toJavaStringList({String*} ceylonStringIterable)
-        => JavaList(ceylonStringIterable.map((s) => javaString(s)).sequence());
+        => Arrays.asList(*ceylonStringIterable.map(javaString));
 
-shared JBoolean? toJavaBoolean(Boolean? boolean)
-        => if (exists boolean) then JBoolean(boolean) else null;
+shared Map<String, String> toCeylonStringMap(javaObjectMap, toString = Object.string) {
+    String(Object) toString;
+    JMap<out Object, out Object> javaObjectMap;
+    return HashMap {
+        for (entry in javaObjectMap.entrySet())
+        toString(entry.key) -> toString(entry.\ivalue)
+    };
+}
 
-shared Boolean? toCeylonBoolean(JBoolean? boolean)
-        => boolean?.booleanValue();
-
-shared String? toCeylonString(JString? string)
-        => string?.string;
-
-shared JString? toJavaString(String? string)
-        => if (exists string) then javaString(string) else null;
-
-shared Map<String, String> toCeylonStringMap(JMap<out Object, out Object> javaObjectMap, String(Object) toString = Object.string) => 
-        HashMap { 
-            *CeylonIterable(javaObjectMap
-                    .entrySet())
-                    .map((entry)=>toString(entry.key)->toString(entry.\ivalue))
-        };
-        
-shared JMap<JString, JString> toJavaStringMap(Map<String, String> ceylonStringMap) =>
-        JavaMap(
-            HashMap { 
-                *ceylonStringMap.map(
-                    (entry) => javaString(entry.key)->javaString(entry.item))
-            }
-        );
-
-shared JList<Type> toJavaList<Type>({Type*} ceylonIterable) =>
-            JavaList(ceylonIterable.sequence());
-
-shared JIterable<Type> toJavaIterable<Type>({Type*} ceylonIterable) =>
-        JavaIterable(ceylonIterable);
-
-shared JCallable<T> toCallable<T>(T() fun) =>
-        object satisfies JCallable<T> {
-            call = fun; 
-        };
-        
+shared JMap<JString, JString> toJavaStringMap(ceylonStringMap) {
+    Map<String, String> ceylonStringMap;
+    return JavaMap(HashMap {
+        for (entry in ceylonStringMap)
+        javaString(entry.key)->javaString(entry.item)
+    });
+}

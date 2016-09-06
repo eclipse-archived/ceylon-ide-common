@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    JavaList
-}
-
 import java.io {
     File,
     InputStream,
@@ -10,11 +6,11 @@ import java.io {
     FilenameFilter
 }
 import java.lang {
-    RuntimeException,
-    ObjectArray
+    RuntimeException
 }
 import java.util {
-    Collections
+    Collections,
+    Arrays
 }
 
 alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
@@ -96,16 +92,13 @@ shared class LocalFolderVirtualFile(file)
     
     
     children 
-        => let(ObjectArray<File>? theChildren = file.listFiles())
-                if (exists folderChildren = theChildren)
-                    then JavaList(folderChildren.iterable.coalesced
-                                .map {
-                                    LocalResourceVirtualFileAlias collecting(File f) 
-                                            => if (f.directory)
-                                                then LocalFolderVirtualFile(f)
-                                                else LocalFileVirtualFile(f);
-                                }.sequence())
-                    else Collections.emptyList<ResourceVirtualFile<Nothing,File, File, File>>();
+        => if (exists folderChildren = file.listFiles())
+        then Arrays.asList(
+            for (f in folderChildren)
+            if (f.directory)
+            then LocalFolderVirtualFile(f)
+            else LocalFileVirtualFile(f))
+        else Collections.emptyList<ResourceVirtualFile<Nothing,File, File, File>>();
 
     equals(Object that) => (super of FolderVirtualFile<Nothing,File,File,File>).equals(that);
     
