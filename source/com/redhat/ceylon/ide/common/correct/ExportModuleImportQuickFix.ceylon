@@ -19,8 +19,8 @@ import com.redhat.ceylon.model.typechecker.model {
 shared object exportModuleImportQuickFix {
 
     shared void addExportModuleImportProposal(QuickFixData data) {
-        if (is Tree.SimpleType node = data.node) {
-            value dec = (node).declarationModel;
+        if (is Tree.SimpleType node = data.node,
+            exists dec = node.declarationModel) {
             addExportModuleImportProposalInternal(data, node.unit, dec);
         }
     }
