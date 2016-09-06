@@ -518,13 +518,12 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             }
         }
         if (!sourcePathsFilled) {
-            _classesToSources.items.each((s) { 
-                sourceRelativePaths.add(s); 
-            });
+            _classesToSources.items.each(sourceRelativePaths.add);
         }
         if (sourceArchiveFile.\iexists()) {
             javaImplFilesToCeylonDeclFiles = toCeylonStringMap(
-                CarUtils.searchCeylonFilesForJavaImplementations(toJavaStringMap(_classesToSources), 
+                CarUtils.searchCeylonFilesForJavaImplementations(
+                    toJavaStringMap(_classesToSources),
                     File(existingSourceArchivePath)));
         } else {
             platformUtils.log(Status._WARNING,
