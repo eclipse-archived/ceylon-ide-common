@@ -440,14 +440,19 @@ shared object addAnnotationQuickFix {
     }
     
     TextEdit? createReplaceAnnotationEdit(String annotation, Node? node, TextChange change) {
+
         String toRemove;
-        if ("formal".equals(annotation)) {
+        switch (annotation)
+        case ("formal") {
             toRemove = "default";
-        } else if ("abstract".equals(annotation)) {
+        }
+        case ("abstract") {
             toRemove = "final";
-        } else {
+        }
+        else {
             return null;
         }
+
         if (exists annotationList = getAnnotationList(node)) {
             for (ann in annotationList.annotations) {
                 if (exists id = getAnnotationIdentifier(ann), 
