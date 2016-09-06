@@ -538,9 +538,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     setSourcePhasedUnits(ExternalModulePhasedUnits modulePhasedUnits) =>
             synchronize { 
                 on = this; 
-                void do() {
-                    sourceModulePhasedUnits = WeakReference<ExternalModulePhasedUnits>(modulePhasedUnits);
-                }
+                do() => sourceModulePhasedUnits = WeakReference(modulePhasedUnits);
             };
     
     artifactType => _artifactType;
