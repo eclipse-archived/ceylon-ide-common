@@ -547,12 +547,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     shared actual Map<String, String> classesToSources {
         if (_classesToSources.empty && nameAsString == "java.base") {
-            assert(is AnyIdeModule languageIdeModule=languageModule);
+            assert (is AnyIdeModule languageIdeModule = languageModule);
             _classesToSources = HashMap {
-                *languageIdeModule
-                    .classesToSources
-                    .filter((key->_) => key.startsWith("com/redhat/ceylon/compiler/java/language/"))
-                    .map ((key->item) => key.replace("com/redhat/ceylon/compiler/java/language/", "java/lang/") -> item)
+                for (key->item in languageIdeModule.classesToSources)
+                if (key.startsWith("com/redhat/ceylon/compiler/java/language/"))
+                key.replace("com/redhat/ceylon/compiler/java/language/", "java/lang/") -> item
             };
         }
         return _classesToSources;
