@@ -3,7 +3,8 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     CeylonIterable,
-    javaClass
+    javaClass,
+    javaString
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -58,7 +59,6 @@ import com.redhat.ceylon.ide.common.typechecker {
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
-    toJavaStringList,
     BaseProgressMonitor,
     ImmutableMapWrapper,
     BaseProgressMonitorChild
@@ -106,7 +106,8 @@ import java.net {
 }
 import java.util {
     WeakHashMap,
-    EnumSet
+    EnumSet,
+    Arrays
 }
 import java.util.concurrent {
     TimeUnit
@@ -233,10 +234,9 @@ shared abstract class BaseCeylonProject() {
         }.offline(configuration.offline)
             .cwd(rootDirectory)
             .systemRepo(systemRepository)
-            .extraUserRepos(
-            toJavaStringList(
-                referencedCeylonProjects.map((p)
-                => p.ceylonModulesOutputDirectory.absolutePath)))
+            .extraUserRepos(Arrays.asList(
+                for (p in referencedCeylonProjects)
+                javaString(p.ceylonModulesOutputDirectory.absolutePath)))
             .logger(platformUtils.cmrLogger)
             .isJDKIncluded(true)
             .buildManager();
@@ -268,11 +268,10 @@ shared abstract class BaseCeylonProject() {
 
     }
 
-    shared default {PhasedUnit*} parsedUnits =>
-            if (parsed,
-                exists units=typechecker?.phasedUnits?.phasedUnits)
-            then CeylonIterable(units)
-            else {};
+    shared default {PhasedUnit*} parsedUnits => {
+            if (parsed, exists units = typechecker?.phasedUnits?.phasedUnits)
+            for (unit in units) unit
+        };
 
     shared default PhasedUnit? getParsedUnit(BaseFileVirtualFile virtualFile) =>
             if (parsed,
@@ -355,7 +354,7 @@ shared abstract class BaseCeylonProject() {
     shared formal Boolean compileToJava;
 
     shared default Boolean loadBinariesFirst =>
-            "true".equals(process.propertyValue("ceylon.loadBinariesFirst") else "true");
+            true.string == (process.propertyValue("ceylon.loadBinariesFirst") else true.string);
 
     shared Boolean loadDependenciesFromModelLoaderFirst =>
             compileToJava && loadBinariesFirst;

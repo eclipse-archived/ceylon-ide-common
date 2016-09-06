@@ -59,13 +59,11 @@ import com.redhat.ceylon.ide.common.typechecker {
 import com.redhat.ceylon.ide.common.util {
     synchronize,
     equalsWithNulls,
-    toCeylonStringMap,
-    toJavaStringMap,
     Path,
-    CarUtils,
-    toJavaStringList,
     SingleSourceUnitPackage,
-    unsafeCast
+    unsafeCast,
+    retrieveMappingFile,
+    searchCeylonFilesForJavaImplementations
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipFileVirtualFile,
@@ -489,8 +487,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         };
     
     void fillSourceRelativePaths() {
-        _classesToSources = toCeylonStringMap(
-            CarUtils.retrieveMappingFile(returnCarFile()));
+        _classesToSources = retrieveMappingFile(returnCarFile());
         sourceRelativePaths.clear();
         
         assert(exists existingSourceArchivePath=_sourceArchivePath);
@@ -521,10 +518,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             _classesToSources.items.each(sourceRelativePaths.add);
         }
         if (sourceArchiveFile.\iexists()) {
-            javaImplFilesToCeylonDeclFiles = toCeylonStringMap(
-                CarUtils.searchCeylonFilesForJavaImplementations(
-                    toJavaStringMap(_classesToSources),
-                    File(existingSourceArchivePath)));
+            javaImplFilesToCeylonDeclFiles =
+                searchCeylonFilesForJavaImplementations {
+                    sources = _classesToSources.items;
+                    sourceArchive = File(existingSourceArchivePath);
+                };
         } else {
             platformUtils.log(Status._WARNING,
                 "No source file found for archive :`` 
@@ -769,10 +767,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     Package? getPackageFromRelativePath(String relativePathOfClassToRemove) {
         String packageName = 
-                ModelUtil.formatPath(
-            toJavaStringList(
-                relativePathOfClassToRemove
-                        .split('/'.equals).exceptLast));
+                ModelUtil.formatPath(Arrays.asList(
+                    for (seg in relativePathOfClassToRemove.split('/'.equals).exceptLast)
+                    javaString(seg)));
         return findPackageNoLazyLoading(packageName);
     }
     

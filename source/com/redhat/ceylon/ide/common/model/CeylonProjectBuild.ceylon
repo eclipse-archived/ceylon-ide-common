@@ -68,7 +68,7 @@ import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     ErrorVisitor,
     equalsWithNulls,
-    CarUtils
+    retrieveZipMappingFile
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases
@@ -89,8 +89,7 @@ import java.io {
     IOException
 }
 import java.util {
-    JSet=Set,
-    Properties
+    JSet=Set
 }
 
 import net.lingala.zip4j.core {
@@ -1050,15 +1049,12 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         value entriesToDelete = ArrayList<String>();
                         value zipFile = ZipFile(moduleJar);
                         
-                        Properties mapping = CarUtils.retrieveMappingFile(zipFile);
-                        
                         if (fileIsResource) {
                             entriesToDelete.add(relativeFilePath);
                         } else {
-                            for (className in mapping.stringPropertyNames()) {
-                                String? sourceFile = mapping.getProperty(className.string);
+                            for (className -> sourceFile in retrieveZipMappingFile(zipFile)) {
                                 if (equalsWithNulls(relativeFilePath, sourceFile)) {
-                                    entriesToDelete.add(className.string);
+                                    entriesToDelete.add(className);
                                 }
                             }
                         }

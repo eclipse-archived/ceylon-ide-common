@@ -1,6 +1,11 @@
+import ceylon.collection {
+    HashSet,
+    MutableSet
+}
 import ceylon.interop.java {
     javaString,
-    CeylonIterable
+    CeylonIterable,
+    JavaIterable
 }
 
 import com.redhat.ceylon.common {
@@ -17,7 +22,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    toJavaStringList,
     Path,
     unsafeCast
 }
@@ -37,25 +41,25 @@ import com.redhat.ceylon.model.typechecker.model {
     ModuleImport
 }
 
+import java.io {
+    JFile=File
+}
 import java.lang {
     JString=String,
     JIterable=Iterable
 }
-import java.io {
-    JFile=File
-}
 import java.util {
     Collections,
-    JList=List
-}
-import ceylon.collection {
-    HashSet,
-    MutableSet
+    JList=List,
+    Arrays
 }
 
 shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects model, BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() 
         satisfies LazyModuleManagerEx {
+
+    value languageModuleName = Arrays.asList(*Module.languageModuleName.split('.'.equals).map(javaString));
+    value defaultModuleName = Collections.singletonList(javaString(Module.defaultModuleName));
 
     shared default BaseCeylonProject? ceylonProject = theCeylonProject;
 
@@ -104,15 +108,13 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
     shared actual void initCoreModules(variable Modules modules) {
         setModules(modules);
         if (!exists m = modules.languageModule) {
-            value defaultModuleName = Collections.singletonList(javaString(Module.defaultModuleName));
             BaseIdeModule defaultModule = createModule(defaultModuleName, "unversioned");
             //defaultModule.default = true;
             defaultModule.available = true;
             defaultModule.isProjectModule=true;
             modules.listOfModules.add(defaultModule);
             modules.defaultModule = defaultModule;
-            JList<JString> languageName = toJavaStringList {"ceylon", "language"};
-            variable Module languageModule = createModule(languageName, TypeChecker.languageModuleVersion);
+            variable Module languageModule = createModule(languageModuleName, TypeChecker.languageModuleVersion);
             languageModule.languageModule = languageModule;
             languageModule.available = false;
             modules.languageModule = languageModule;
@@ -180,15 +182,13 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
             modelLoader.loadStandardModules();
     
     shared actual JIterable<JString> searchedArtifactExtensions =>
-            let(extensions = 
-        if (loadDependenciesFromModelLoaderFirst)
-    then {"car", "jar", "src", "js"}
-    else {"jar", "src", "car", "js"})
-    toJavaStringList(extensions);
+            let (extensions = loadDependenciesFromModelLoaderFirst
+                    then {"car", "jar", "src", "js"}
+                    else {"jar", "src", "car", "js"})
+            JavaIterable(extensions.map(javaString));
     
-    shared Boolean isLoadDependenciesFromModelLoaderFirst() {
-        return loadDependenciesFromModelLoaderFirst;
-    }
+    shared Boolean isLoadDependenciesFromModelLoaderFirst() =>
+            loadDependenciesFromModelLoaderFirst;
 
     shared default BaseIdeModule? getArchiveModuleFromSourcePath(String|Path sourceUnitPath) {
         String sourceUnitPathString = switch(sourceUnitPath)
