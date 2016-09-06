@@ -13,6 +13,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     AnyModifiableSourceFile
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
@@ -33,10 +37,6 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     HashMap
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices,
-    InsertEdit
 }
 
 "Add generic type constraints proposal for following code:
@@ -175,11 +175,13 @@ shared object addSatisfiesQuickFix {
             value tfc = platformServices.document.createTextChange("Add Type Constraint", data.phasedUnit);
             assert(exists ci = changeIndex);
             tfc.addEdit(InsertEdit(ci, ct));
-            value desc = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
-            
-            value region = if (sameFile) then DefaultRegion(ci, ct.size) else null;
 
-            data.addQuickFix(desc, tfc, region);
+            data.addQuickFix {
+                description
+                        = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
+                change = tfc;
+                selection = sameFile then DefaultRegion(ci, ct.size) else null;
+            };
         }
     }
     
@@ -199,10 +201,13 @@ shared object addSatisfiesQuickFix {
         
         value tfc = platformServices.document.createTextChange("Add Inherited Interface", data.phasedUnit);
         tfc.addEdit(InsertEdit(changeIndex, changeText));
-        value desc = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
-        value region = if (sameFile) then DefaultRegion(changeIndex, changeText.size) else null;
 
-        data.addQuickFix(desc, tfc, region);
+        data.addQuickFix {
+            description
+                    = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
+            change = tfc;
+            selection = sameFile then DefaultRegion(changeIndex, changeText.size) else null;
+        };
     }
     
     Node? determineNode(variable Node node) {

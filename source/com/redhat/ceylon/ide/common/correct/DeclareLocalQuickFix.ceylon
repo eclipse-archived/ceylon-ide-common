@@ -1,7 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit
@@ -40,16 +39,19 @@ shared object declareLocalQuickFix {
                 exists e = se.expression,
                 exists term = e.term) {
                 
-                value change = platformServices.document.createTextChange("Declare Local Value", data.phasedUnit);
+                value change
+                        = platformServices.document
+                            .createTextChange("Declare Local Value", data.phasedUnit);
                 change.initMultiEdit();
                 change.addEdit(InsertEdit(node.startIndex.intValue(), "value "));
-                value desc = "Declare local value '``bme.identifier.text``'";
-                
-                value callback = void() {
-                    change.apply();
-                    enableLinkedMode(data, term);
+
+                data.addQuickFix {
+                    description = "Declare local value '``bme.identifier.text``'";
+                    void change() {
+                        change.apply();
+                        enableLinkedMode(data, term);
+                    }
                 };
-                data.addQuickFix(desc, callback);
             }
         }
     }

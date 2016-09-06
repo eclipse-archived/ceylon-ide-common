@@ -56,7 +56,7 @@ shared object addModuleImportQuickFix {
                 value description = "Import module containing '``name``'...";
                 data.addQuickFix {
                     description = description;
-                    void change() => findCandidateModules(data, typeChecker, name, true);
+                    change() => findCandidateModules(data, typeChecker, name, true);
                     kind = QuickFixKind.addModuleImport;
                     asynchronous = true;
                     hint = description;
@@ -85,12 +85,12 @@ shared object addModuleImportQuickFix {
                         image = Icons.imports;
                         qualifiedNameIsPath = true;
                         kind = QuickFixKind.addModuleImport;
-                        void change() 
-                                => moduleImportUtil.addModuleImport {
-                                    target = unit.\ipackage.\imodule;
-                                    moduleName = mod.string;
-                                    moduleVersion = version;
-                                };
+                        change()
+                            => moduleImportUtil.addModuleImport {
+                                target = unit.\ipackage.\imodule;
+                                moduleName = mod.string;
+                                moduleVersion = version;
+                            };
                         declaration = ModuleVersionDetails(mod.string, version);
                     };
                     
@@ -127,12 +127,12 @@ shared object addModuleImportQuickFix {
                     image = Icons.imports;
                     qualifiedNameIsPath = true;
                     kind = QuickFixKind.addModuleImport;
-                    void change()
-                            => moduleImportUtil.addModuleImport {
-                                target = containingModule;
-                                moduleName = moduleName;
-                                moduleVersion = moduleVersion;
-                            };
+                    change()
+                        => moduleImportUtil.addModuleImport {
+                            target = containingModule;
+                            moduleName = moduleName;
+                            moduleVersion = moduleVersion;
+                        };
                      declaration = version;
                 };
             }

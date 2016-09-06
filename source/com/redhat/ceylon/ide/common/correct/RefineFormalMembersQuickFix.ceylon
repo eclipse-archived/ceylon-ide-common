@@ -58,14 +58,9 @@ shared object refineFormalMembersQuickFix {
             String desc = if (ambiguousError)
                           then "Refine inherited ambiguous and formal members of " + name
                           else "Refine inherited formal members of " + name;
-            
-            value callback = void() {
-                refineFormalMembers(data, data.editorSelection.start)
-                    ?.apply();
-            };
             data.addQuickFix {
                 description = desc;
-                change = callback;
+                change() => refineFormalMembers(data, data.editorSelection.start)?.apply();
                 image = Icons.formalRefinement;
                 kind = QuickFixKind.addRefineFormal;
             };

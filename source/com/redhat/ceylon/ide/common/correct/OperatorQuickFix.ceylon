@@ -279,7 +279,10 @@ shared object operatorQuickFix {
             text = ")";
         });
         
-        data.addQuickFix("Parenthesize " + desc, change);
+        data.addQuickFix {
+            description = "Parenthesize " + desc;
+            change = change;
+        };
     }
     
     void addRemoveParenthesesProposal(QuickFixData data, Node node) {
@@ -302,7 +305,10 @@ shared object operatorQuickFix {
                 length = 1;
             });
             
-            data.addQuickFix("Remove parentheses", change);
+            data.addQuickFix {
+                description = "Remove parentheses";
+                change = change;
+            };
         }
     }
 }

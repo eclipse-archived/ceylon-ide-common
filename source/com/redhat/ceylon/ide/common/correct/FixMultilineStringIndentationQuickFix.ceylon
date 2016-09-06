@@ -39,7 +39,10 @@ shared object fixMultilineStringIndentationQuickFix {
                     length = length;
                     text = text;
                 });
-                data.addQuickFix("Fix multiline string indentation", change);
+                data.addQuickFix {
+                    description = "Fix multiline string indentation";
+                    change = change;
+                };
             }
         }
     }

@@ -33,8 +33,9 @@ shared object addPunctuationQuickFix {
             });
 
             data.addQuickFix {
-                description = "Add '()' empty parameter list to "
-                + correctionUtil.getDescription(dec);
+                description
+                        = "Add '()' empty parameter list to "
+                        + correctionUtil.getDescription(dec);
                 change = change;
                 selection = DefaultRegion(offset + 1, 0);
             };

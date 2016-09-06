@@ -102,7 +102,10 @@ shared object addAnnotationQuickFix {
                         start = that.startIndex.intValue();
                         text = annotation.string + " ";
                     });
-                    data.addQuickFix("Declare module '``annotation``'", change);
+                    data.addQuickFix {
+                        description = "Declare module '``annotation``'";
+                        change = change;
+                    };
                     
                     super.visit(that);
                 }
@@ -121,7 +124,10 @@ shared object addAnnotationQuickFix {
                             start = that.startIndex.intValue();
                             text = annotation.string + " ";
                         });
-                        data.addQuickFix("Declare import '``annotation``'", change);
+                        data.addQuickFix {
+                            description = "Declare import '``annotation``'";
+                            change = change;
+                        };
                     }
                     
                     super.visit(that);

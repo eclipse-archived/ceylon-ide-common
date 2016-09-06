@@ -54,7 +54,10 @@ shared object specifyTypeArgumentsQuickFix {
                     start = identifier.endIndex.intValue();
                     text = builder.string;
                 });
-            data.addQuickFix("Specify explicit type arguments '``builder``'", change);
+            data.addQuickFix {
+                description = "Specify explicit type arguments '``builder``'";
+                change = change;
+            };
         }
     }
 

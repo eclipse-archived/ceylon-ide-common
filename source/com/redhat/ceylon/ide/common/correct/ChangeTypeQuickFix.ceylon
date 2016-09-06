@@ -220,15 +220,13 @@ shared object changeTypeQuickFix {
             assert (is ClassOrInterface container = dec.container);
             name = "member '``dec.name``' of '``container.name``'";
         } else {
-            name = "'" + dec.name + "'";
+            name = "'``dec.name``'";
         }
-        
-        value desc = "Change type of ``name`` to '``newType.asString(unit)``'";
-        value selection = DefaultRegion(offset + il, newTypeName.size);
-        
-        value callback = void() {
-            initializerQuickFix.apply(change, doc, unit);
+
+        data.addQuickFix {
+            description = "Change type of ``name`` to '``newType.asString(unit)``'";
+            change() => initializerQuickFix.apply(change, doc, unit);
+            selection = DefaultRegion(offset + il, newTypeName.size);
         };
-        data.addQuickFix(desc, callback, selection);
     }
 }

@@ -51,7 +51,10 @@ shared object joinIfStatementsQuickFix {
                                 - inner.endIndex.intValue();
                     });
                     
-                    data.addQuickFix("Join 'if' statements at 'else'", change);
+                    data.addQuickFix {
+                        description = "Join 'if' statements at 'else'";
+                        change = change;
+                    };
                 }
             }
             else if (exists block = statement.ifClause.block) {
@@ -90,7 +93,10 @@ shared object joinIfStatementsQuickFix {
                                 - inner.endIndex.intValue();
                     });
                     
-                    data.addQuickFix("Join 'if' statements at condition list", change);
+                    data.addQuickFix {
+                        description = "Join 'if' statements at condition list";
+                        change = change;
+                    };
                 }
             }
         }

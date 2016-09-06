@@ -1,9 +1,8 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Type,
-    TypeDeclaration
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -11,8 +10,9 @@ import com.redhat.ceylon.ide.common.refactoring {
 import com.redhat.ceylon.ide.common.util {
     FindContainerVisitor
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
+import com.redhat.ceylon.model.typechecker.model {
+    Type,
+    TypeDeclaration
 }
 
 shared object addThrowsAnnotationQuickFix {
@@ -47,10 +47,13 @@ shared object addThrowsAnnotationQuickFix {
         value cursorOffset = edit.start
                 + (edit.text.firstOccurrence(')') else -1) - 1;
         
-        value declName = if (throwContainer.identifier exists) then throwContainer.identifier.text else "";
-        value desc = "Add throws annotation to '" + declName + "'";
+        value declName = throwContainer.identifier?.text else "";
 
-        data.addQuickFix(desc, change, DefaultRegion(cursorOffset, 0));
+        data.addQuickFix {
+            description = "Add throws annotation to '``declName``'";
+            change = change;
+            selection = DefaultRegion(cursorOffset, 0);
+        };
     }
     
     Type? determineExceptionType(Tree.Statement statement) {

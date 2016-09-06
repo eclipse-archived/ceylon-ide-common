@@ -194,20 +194,18 @@ shared object specifyTypeQuickFix {
     
     void newProposal(String desc, Tree.Type type, Type infType, QuickFixData data) {
         
-        value callback = void() {
-             specifyType {
-                 rootNode = data.rootNode;
-                 document = data.document;
-                 typeNode = type;
-                 inEditor = true;
-                 type = infType;
-             };
-        };
-        
         data.addQuickFix {
             description = "``desc`` '``infType.asString(data.rootNode.unit)``'";
-            change = callback;
             image = Icons.reveal;
+            void change() {
+                 specifyType {
+                     rootNode = data.rootNode;
+                     document = data.document;
+                     typeNode = type;
+                     inEditor = true;
+                     type = infType;
+                 };
+            }
         };
     }
 }

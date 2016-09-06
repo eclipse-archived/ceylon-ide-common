@@ -66,7 +66,10 @@ shared object splitIfStatementQuickFix {
                             indent = indent;
                         };
                         
-                        data.addQuickFix("Split 'if' statement at condition", change);
+                        data.addQuickFix {
+                            description = "Split 'if' statement at condition";
+                            change = change;
+                        };
                     }
                 }
             } else if (exists block = elseClause.block,
@@ -106,7 +109,10 @@ shared object splitIfStatementQuickFix {
                             indent = indent;
                         };
                         
-                        data.addQuickFix("Split 'if' statement at 'else'", change);
+                        data.addQuickFix {
+                            description = "Split 'if' statement at 'else'";
+                            change = change;
+                        };
                     }
                 }
             }

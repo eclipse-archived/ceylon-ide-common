@@ -177,9 +177,7 @@ shared object refineEqualsHashQuickFix {
                     desc = "Refine 'equals()' and 'hash' of " + name;
                 }
                 
-                value change = refineEqualsHash(data, currentOffset);
-                
-                if (exists change) {
+                if (exists change = refineEqualsHash(data, currentOffset)) {
                     data.addQuickFix {
                         description = desc;
                         change = change;

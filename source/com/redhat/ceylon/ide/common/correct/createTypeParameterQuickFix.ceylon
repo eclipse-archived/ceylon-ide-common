@@ -119,7 +119,7 @@ shared object createTypeParameterQuickFix {
             paramDef = ", " + brokenName;
             offset = paramList.endIndex.intValue() - 1;
         } else {
-            paramDef = "<" + brokenName + ">";
+            paramDef = "<``brokenName``>";
             offset = nodes.getIdentifyingNode(decl)?.endIndex?.intValue() else 0;
         }
         
@@ -173,7 +173,7 @@ shared object createTypeParameterQuickFix {
             if (bounds.empty) {
                 constraints = null;
             } else {
-                constraints = "given " + brokenName + " satisfies " + bounds + " ";
+                constraints = "given ``brokenName`` satisfies ``bounds`` ";
             }
         } else {
             constraints = null;
@@ -202,7 +202,9 @@ shared object createTypeParameterQuickFix {
             return;
         }
         
-        value change = platformServices.document.createTextChange("Add Type Parameter", phasedUnit);
+        value change
+                = platformServices.document
+                    .createTextChange("Add Type Parameter", phasedUnit);
         change.initMultiEdit();
         
         value doc = change.document;
@@ -232,29 +234,32 @@ shared object createTypeParameterQuickFix {
                 change.addEdit(InsertEdit(loc, text));
             }
         }
+        value off = wasNotGeneric then 1 else 2;
         
-        value desc = "Add type parameter '" + name + "'" + " to '" + dec.name + "'";
-        value off = if (wasNotGeneric) then 1 else 2;
-        
-        data.addQuickFix(desc, change, DefaultRegion(offset + il + off, name.size));
+        data.addQuickFix {
+            description = "Add type parameter '``name``' to '``dec.name``'";
+            change = change;
+            selection = DefaultRegion(offset + il + off, name.size);
+        };
     }
     
     Integer getConstraintLoc(Tree.Declaration decNode) {
-        if (is Tree.ClassDefinition decNode) {
+        switch (decNode)
+        case (is Tree.ClassDefinition) {
             return decNode.classBody.startIndex.intValue();
-        } else if (is Tree.InterfaceDefinition decNode) {
+        } case (is Tree.InterfaceDefinition) {
             return decNode.interfaceBody.startIndex.intValue();
-        } else if (is Tree.MethodDefinition decNode) {
+        } case (is Tree.MethodDefinition) {
             return decNode.block.startIndex.intValue();
-        } else if (is Tree.ClassDeclaration decNode) {
+        } case (is Tree.ClassDeclaration) {
             return if (exists s = decNode.classSpecifier)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
-        } else if (is Tree.InterfaceDeclaration decNode) {
+        } case (is Tree.InterfaceDeclaration) {
             return if (exists s = decNode.typeSpecifier)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
-        } else if (is Tree.MethodDeclaration decNode) {
+        } case (is Tree.MethodDeclaration) {
             return if (exists s = decNode.specifierExpression)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
@@ -264,15 +269,17 @@ shared object createTypeParameterQuickFix {
     }
     
     Tree.TypeParameterList? getTypeParameters(Tree.Declaration decl) {
-        if (is Tree.ClassOrInterface decl) {
+        switch (decl)
+        case (is Tree.ClassOrInterface) {
             value ci = decl;
             return ci.typeParameterList;
-        } else if (is Tree.AnyMethod decl) {
+        } case (is Tree.AnyMethod) {
             value am = decl;
             return am.typeParameterList;
         }
-        
-        return null;
+        else {
+            return null;
+        }
     }
 
 }

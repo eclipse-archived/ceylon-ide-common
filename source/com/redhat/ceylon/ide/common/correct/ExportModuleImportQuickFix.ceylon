@@ -80,13 +80,12 @@ shared object exportModuleImportQuickFix {
                     = "Export 'import ``decModule.nameAsString`` \"``decModule.version``\"' to clients of module";
             qualifiedNameIsPath = true;
             image = Icons.imports;
-            change = () {
-                moduleImportUtil.exportModuleImports {
+            change()
+                => moduleImportUtil.exportModuleImports {
                     data = data;
                     target = unit.\ipackage.\imodule;
                     moduleName = decModule.nameAsString;
                 };
-            };
         };
     }
 

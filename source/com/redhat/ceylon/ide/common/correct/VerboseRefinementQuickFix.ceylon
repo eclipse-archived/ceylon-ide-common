@@ -42,7 +42,10 @@ shared object verboseRefinementQuickFix {
                 text = "shared actual ``type.asSourceCodeString(unit)`` ";
             });
             
-            data.addQuickFix("Convert to verbose refinement", change);
+            data.addQuickFix {
+                description = "Convert to verbose refinement";
+                change = change;
+            };
         }
     }
 
@@ -116,7 +119,10 @@ shared object verboseRefinementQuickFix {
                     });
                 }
                 
-                data.addQuickFix("Convert to shortcut refinement", change);
+                data.addQuickFix {
+                    description = "Convert to shortcut refinement";
+                    change = change;
+                };
             }
         }
     }
