@@ -37,14 +37,9 @@ import java.util {
 shared object addModuleImportQuickFix {
     
     function packageName(Tree.ImportPath|Tree.Import node) {
-        Tree.ImportPath ip;
-        switch (node)
-        case (is Tree.ImportPath) {
-            ip = node;
-        }
-        case (is Tree.Import) {
-            ip = node.importPath;
-        }
+        value ip = switch (node)
+                case (is Tree.ImportPath) node
+                case (is Tree.Import) node.importPath;
         return TreeUtil.formatPath(ip.identifiers);
     }
     
@@ -56,14 +51,24 @@ shared object addModuleImportQuickFix {
                 value description = "Import module containing '``name``'...";
                 data.addQuickFix {
                     description = description;
-                    change() => findCandidateModules(data, typeChecker, name, true);
+                    change() => findCandidateModules {
+                        data = data;
+                        typeChecker = typeChecker;
+                        packageName = name;
+                        allVersions = true;
+                    };
                     kind = QuickFixKind.addModuleImport;
                     asynchronous = true;
                     hint = description;
                     qualifiedNameIsPath = true;
                 };
             } else {
-                findCandidateModules(data, typeChecker, name, false);
+                findCandidateModules {
+                    data = data;
+                    typeChecker = typeChecker;
+                    packageName = name;
+                    allVersions = false;
+                };
             }
         }
     }
