@@ -15,9 +15,20 @@ import ceylon.interop.java {
 import com.redhat.ceylon.cmr.api {
     ArtifactContext
 }
+import com.redhat.ceylon.cmr.impl {
+    AbstractRepository,
+    NpmContentStore
+}
+import com.redhat.ceylon.cmr.spi {
+    ContentStore
+}
 import com.redhat.ceylon.common {
     Constants,
     Versions
+}
+import com.redhat.ceylon.compiler.js.loader {
+    NpmAware,
+    NpmPackage
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnitMap,
@@ -52,7 +63,6 @@ import com.redhat.ceylon.ide.common.util {
     toJavaStringMap,
     Path,
     CarUtils,
-    toCeylonStringIterable,
     toJavaStringList,
     SingleSourceUnitPackage,
     toJavaList,
@@ -103,17 +113,6 @@ import java.util.zip {
 import org.antlr.runtime {
     CommonToken,
     CommonTokenStream
-}
-import com.redhat.ceylon.cmr.spi {
-    ContentStore
-}
-import com.redhat.ceylon.cmr.impl {
-    AbstractRepository,
-    NpmContentStore
-}
-import com.redhat.ceylon.compiler.js.loader {
-    NpmAware,
-    NpmPackage
 }
 
 shared class ModuleType of 
@@ -693,13 +692,15 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         }
 
         void do() {
-            value name = nameAsString;
-            for (pkg in toCeylonStringIterable(jarPackages)) {
-                if (name == "ceylon.language" &&
-                    !pkg.startsWith("ceylon.language")) {
+            value isLanguageModule
+                    = nameAsString
+                    == Module.languageModuleName;
+            for (pkg in jarPackages) {
+                if (isLanguageModule &&
+                    !pkg.startsWith(Module.languageModuleName)) {
                     continue;
                 }
-                modelLoader.findOrCreatePackage(this, pkg);
+                modelLoader.findOrCreatePackage(this, pkg.string);
             }
         }
         

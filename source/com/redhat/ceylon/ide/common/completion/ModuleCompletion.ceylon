@@ -34,7 +34,6 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor,
-    toCeylonStringIterable,
     moduleQueries,
     nodes
 }
@@ -65,7 +64,12 @@ shared interface ModuleCompletion {
         
         try(progress = monitor.Progress(1, null)) {
             if (pfp.startsWith("java.")) {
-                for (name in naturalOrderTreeSet<String>(toCeylonStringIterable(JDKUtils.jdkModuleNames))) {
+                value allNames
+                        = naturalOrderTreeSet {
+                            for (name in JDKUtils.jdkModuleNames)
+                            name.string
+                        };
+                for (name in allNames) {
                     if (name.startsWith(pfp),
                         !moduleAlreadyImported(ctx, name)) {
                         

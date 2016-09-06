@@ -10,7 +10,8 @@ import ceylon.interop.java {
     JavaList,
     javaClass,
     JavaIterable,
-    JavaCollection
+    JavaCollection,
+    CeylonStringIterable
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -67,7 +68,6 @@ import com.redhat.ceylon.ide.common.util {
     unsafeCast,
     ErrorVisitor,
     equalsWithNulls,
-    toCeylonStringIterable,
     CarUtils
 }
 import com.redhat.ceylon.ide.common.vfs {
@@ -1055,10 +1055,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         if (fileIsResource) {
                             entriesToDelete.add(relativeFilePath);
                         } else {
-                            for (className in toCeylonStringIterable(mapping.stringPropertyNames())) {
-                                String? sourceFile = mapping.getProperty(className);
+                            for (className in mapping.stringPropertyNames()) {
+                                String? sourceFile = mapping.getProperty(className.string);
                                 if (equalsWithNulls(relativeFilePath, sourceFile)) {
-                                    entriesToDelete.add(className);
+                                    entriesToDelete.add(className.string);
                                 }
                             }
                         }
@@ -1272,11 +1272,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     .getPhasedUnit(srcFile),
             exists unit = phasedUnit.unit) {
             
-            return toCeylonStringIterable(unit.dependentsOf);
+            return CeylonStringIterable(unit.dependentsOf);
         } 
         else {
             if (is JavaCompilationUnitAlias unit = srcFile.unit) {
-                return toCeylonStringIterable(unit.dependentsOf);
+                return CeylonStringIterable(unit.dependentsOf);
             }
         }
         

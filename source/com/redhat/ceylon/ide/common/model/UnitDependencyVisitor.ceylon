@@ -65,12 +65,14 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
     }
     
     void storeDeclarationDependency(Declaration? dec) {
-        if (is TypeDeclaration dec) {
+        switch (dec)
+        case (is TypeDeclaration) {
             storeTypeDeclarationDependency(dec); 
         }
-        else if (is TypedDeclaration dec) {
+        case (is TypedDeclaration) {
             storeTypedDeclarationDependency(dec); 
         }
+        else {}
     }
     
     void storeTypedDeclarationDependency(TypedDeclaration dec) {

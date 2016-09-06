@@ -27,9 +27,6 @@ import java.util {
 shared JList<JString> toJavaStringList({String*} ceylonStringIterable)
         => JavaList(ceylonStringIterable.map((s) => javaString(s)).sequence());
 
-shared {String*} toCeylonStringIterable(JIterable<JString> javaStringIterable)
-    => CeylonIterable(javaStringIterable).map((s) => s.string);
-
 shared JBoolean? toJavaBoolean(Boolean? boolean)
         => if (exists boolean) then JBoolean(boolean) else null;
 

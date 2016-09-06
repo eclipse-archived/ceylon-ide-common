@@ -69,18 +69,14 @@ shared object escaping {
     shared String escapePackageName(Package p) {
         value path = p.name;
         value sb = StringBuilder();
-        
-        for (pathPart in toCeylonStringIterable(path)) {
+        for (pathPart in path) {
             if (!pathPart.empty) {
-                sb.append(escape(pathPart));
-                sb.append(".");
+                if (!sb.empty) {
+                    sb.append(".");
+                }
+                sb.append(escape(pathPart.string));
             }
         }
-        
-        if (sb.endsWith(".")) {
-            sb.deleteTerminal(1);
-        }
-        
         return sb.string;
     }
     
