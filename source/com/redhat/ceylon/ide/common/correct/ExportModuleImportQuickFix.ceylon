@@ -70,25 +70,24 @@ shared object exportModuleImportQuickFix {
         
         value decModule = dec.unit.\ipackage.\imodule;
         for (mi in unit.\ipackage.\imodule.imports) {
-            if (mi.\imodule.equals(decModule)) {
-                if (mi.export) {
-                    return;
-                }
+            if (mi.\imodule == decModule && mi.export) {
+                return;
             }
         }
         
-        value desc = "Export 'import " + decModule.nameAsString + " \"" 
-                + decModule.version + "\"' to clients of module";
-
-        value callback = void() {
-            moduleImportUtil.exportModuleImports {
-                data = data;
-                target = unit.\ipackage.\imodule;
-                moduleName = decModule.nameAsString;
+        data.addQuickFix {
+            description
+                    = "Export 'import ``decModule.nameAsString`` \"``decModule.version``\"' to clients of module";
+            qualifiedNameIsPath = true;
+            image = Icons.imports;
+            change = () {
+                moduleImportUtil.exportModuleImports {
+                    data = data;
+                    target = unit.\ipackage.\imodule;
+                    moduleName = decModule.nameAsString;
+                };
             };
         };
-        
-        data.addQuickFix(desc, callback, null, true, Icons.imports);
     }
 
 }
