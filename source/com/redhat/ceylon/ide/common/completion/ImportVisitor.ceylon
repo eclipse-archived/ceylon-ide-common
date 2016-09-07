@@ -39,8 +39,15 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(ctx, offset, prefix, node, node,
-                nextTokenType(ctx, token) != CeylonLexer.lbrace, monitor);
+            completionManager.addPackageCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = nextTokenType(ctx, token) != CeylonLexer.lbrace;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.PackageLiteral that) {
@@ -48,7 +55,15 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(ctx, offset, prefix, node, node, false, monitor);
+            completionManager.addPackageCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = false;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.ImportModule that) {
@@ -57,7 +72,15 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             path == node) {
             assert (is Tree.ImportPath node);
             value withBody = nextTokenType(ctx, token) != CeylonLexer.stringLiteral;
-            completionManager.addModuleCompletions(ctx, offset, prefix, node, node, withBody, monitor);
+            completionManager.addModuleCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = withBody;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.ModuleLiteral that) {
@@ -65,7 +88,15 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
         if (exists path = that.importPath,
             path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addModuleCompletions(ctx, offset, prefix, node, node, false, monitor);
+            completionManager.addModuleCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = false;
+                monitor = monitor;
+            };
         }
     }
 }

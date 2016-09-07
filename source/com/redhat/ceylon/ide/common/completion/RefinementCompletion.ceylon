@@ -51,15 +51,25 @@ shared interface RefinementCompletion {
     shared void addRefinementProposal(Integer offset, Declaration dec, 
         ClassOrInterface ci, Node node, Scope scope, String prefix, CompletionContext ctx,
         Boolean preamble, Boolean addParameterTypesInCompletions) {
-        
-        value isInterface = scope is Interface;
+
         value pr = getRefinedProducedReference(scope, dec);
         value unit = node.unit;
         
         value desc = getRefinementDescriptionFor(dec, pr, unit);
-        value text = getRefinementTextFor(dec, pr, unit, isInterface, ci, 
-                        ctx.commonDocument.defaultLineDelimiter + ctx.commonDocument.getIndent(node), 
-                        true, preamble, addParameterTypesInCompletions);
+        value text
+                = getRefinementTextFor {
+                    d = dec;
+                    pr = pr;
+                    unit = unit;
+                    isInterface = scope is Interface;
+                    ci = ci;
+                    indent
+                        = ctx.commonDocument.defaultLineDelimiter
+                        + ctx.commonDocument.getIndent(node);
+                    containsNewline = true;
+                    preamble = preamble;
+                    addParameterTypesInCompletions = addParameterTypesInCompletions;
+                };
         
         platformServices.completion.newRefinementCompletionProposal {
             offset = offset;
@@ -78,17 +88,16 @@ shared interface RefinementCompletion {
     // see getRefinedProducedReference(Scope scope, Declaration d)
     shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
         if (is Type scope) {
-            value superType = scope;
-            if (superType.intersection) {
-                for (pt in superType.satisfiedTypes) {
+            if (scope.intersection) {
+                for (pt in scope.satisfiedTypes) {
                     if (exists result = getRefinedProducedReference(pt, d)) {
                         return result;
                     }
                 }
                 return null;
             } else {
-                if (exists declaringType = superType.declaration.getDeclaringType(d)) {
-                    value outerType = superType.getSupertype(declaringType.declaration);
+                if (exists declaringType = scope.declaration.getDeclaringType(d)) {
+                    value outerType = scope.getSupertype(declaringType.declaration);
                     return refinedProducedReference(outerType, d);
                 } else {
                     return null;
@@ -117,12 +126,19 @@ shared interface RefinementCompletion {
         //TODO: type argument substitution using the
         //     Reference of the primary node
         value unit = ctx.lastCompilationUnit.unit;
-        value desc = getDescriptionFor(dec, unit);
-        value text = getTextFor(dec, unit) + " = nothing;";
         
-        platformServices.completion.newRefinementCompletionProposal(offset, prefix,
-            dec.reference,  //TODO: this needs to do type arg substitution
-            desc, text, ctx, dec, scope, true, false);
+        platformServices.completion.newRefinementCompletionProposal {
+            offset = offset;
+            prefix = prefix;
+            pr = dec.reference;
+            desc = getDescriptionFor(dec, unit);
+            text = getTextFor(dec, unit) + " = nothing;";
+            cmp = ctx;
+            dec = dec;
+            scope = scope;
+            fullType = true;
+            explicitReturnType = false;
+        };
     }
     
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, 
@@ -134,16 +150,19 @@ shared interface RefinementCompletion {
         if (dec.parameter, is FunctionOrValue dec) {
             value p = dec.initializerParameter;
             value unit = node.unit;
-            value desc = getInlineFunctionDescriptionFor(p, null, unit);
-            value text = getInlineFunctionTextFor(p, null, unit, 
-                ctx.commonDocument.defaultLineDelimiter + ctx.commonDocument.getIndent(node));
             
             platformServices.completion.newRefinementCompletionProposal {
                 offset = offset;
                 prefix = prefix;
                 pr = dec.reference; //TODO: this needs to do type arg substitution 
-                desc = desc;
-                text = text;
+                desc = getInlineFunctionDescriptionFor(p, null, unit);
+                text = getInlineFunctionTextFor {
+                    p = p;
+                    pr = null;
+                    unit = unit;
+                    indent = ctx.commonDocument.defaultLineDelimiter
+                           + ctx.commonDocument.getIndent(node);
+                };
                 cmp = ctx;
                 dec = dec;
                 scope = scope;
@@ -170,27 +189,36 @@ shared abstract class RefinementCompletionProposal
         value sb = StringBuilder();
         sb.append(getProposedName(null, dec, unit));
         if (is Functional dec) {
-            appendPositionalArgs(dec, dec.reference, unit, sb, false, description, false);
+            appendPositionalArgs {
+                d = dec;
+                pr = dec.reference;
+                unit = unit;
+                result = sb;
+                includeDefaulted = false;
+                descriptionOnly = description;
+                addParameterTypesInCompletions = false;
+            };
         }
         return sb.string;
     }
 
-    Type? type => if (fullType) then pr.fullType else pr.type;
+    Type? type => fullType then pr.fullType else pr.type;
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
-        value loc = text.firstInclusion("nothing;");
+
         Integer length;
         variable Integer start;
-        if (!exists loc) {
+        if (exists loc = text.firstInclusion("nothing;")) {
+            start = offset + loc - prefix.size;
+            length = 7;
+        }
+        else {
             start = offset + text.size - prefix.size;
             if (text.endsWith("{}")) {
                 start--;
             }
-            
+
             length = 0;
-        } else {
-            start = offset + loc - prefix.size;
-            length = 7;
         }
 
         return DefaultRegion(start, length);
@@ -230,31 +258,28 @@ shared abstract class RefinementCompletionProposal
     }
 
     void addProposals(Integer loc, String prefix, ProposalsHolder props) {
-        value t = type;
-        if (!exists t) {
-            return;
-        }
-        
-        value unit = ctx.lastCompilationUnit.unit;
-        
-        // nothing:
-        newNestedCompletionProposal(props,
-            unit.getLanguageModuleDeclaration("nothing"), loc);
-        
-        // this:
-        if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
-            ci.type.isSubtypeOf(type)) {
-            newNestedLiteralCompletionProposal(props, "this", loc);
-        }
-        
-        // literals:
-        for (val in getAssignableLiterals(t, unit)) {
-            newNestedLiteralCompletionProposal(props, val, loc);
-        }
-        
-        // declarations:
-        for (dwp in getSortedProposedValues(scope, unit)) {
-            addValueProposals(props, loc, prefix, t, dwp);
+        if (exists t = type) {
+            value unit = ctx.lastCompilationUnit.unit;
+
+            // nothing:
+            newNestedCompletionProposal(props,
+                unit.getLanguageModuleDeclaration("nothing"), loc);
+
+            // this:
+            if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
+                ci.type.isSubtypeOf(type)) {
+                newNestedLiteralCompletionProposal(props, "this", loc);
+            }
+
+            // literals:
+            for (val in getAssignableLiterals(t, unit)) {
+                newNestedLiteralCompletionProposal(props, val, loc);
+            }
+
+            // declarations:
+            for (dwp in getSortedProposedValues(scope, unit)) {
+                addValueProposals(props, loc, prefix, t, dwp);
+            }
         }
     }
     

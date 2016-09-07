@@ -19,6 +19,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 shared interface FunctionCompletion {
+
     shared void addFunctionProposal(Integer offset, CompletionContext ctx,
         Tree.Primary primary, Declaration dec) {
 
@@ -33,17 +34,20 @@ shared interface FunctionCompletion {
         value doc = ctx.commonDocument;
         value argText = doc.getText(start, stop - start);
         value prefix = doc.getText(origin, offset - origin);
-        variable String text = dec.getName(arg.unit) + "(" + argText + ")";
-        
-        if (is Functional dec, dec.declaredVoid) {
-            text += ";";
-        }
         value unit = ctx.lastCompilationUnit.unit;
-        value desc = getDescriptionFor(dec, unit) + "(...)";
         
-        platformServices.completion.newFunctionCompletionProposal(offset, 
-            prefix, desc, text, dec, unit, ctx);
+        platformServices.completion.newFunctionCompletionProposal {
+            offset = offset;
+            prefix = prefix;
+            desc = getDescriptionFor(dec, unit) + "(...)";
+            text = dec.getName(arg.unit) + "(``argText``)"
+                 + (if (is Functional dec, dec.declaredVoid) then ";" else "");
+            dec = dec;
+            unit = unit;
+            cmp = ctx;
+        };
     }
+
 }
 
 shared abstract class FunctionCompletionProposal  

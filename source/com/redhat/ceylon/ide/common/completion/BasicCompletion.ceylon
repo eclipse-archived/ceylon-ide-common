@@ -30,10 +30,10 @@ shared interface BasicCompletion {
         //for doc links, propose both aliases and unaliased qualified form
         //we don't need to do this in code b/c there is no fully-qualified form
         String name = dec.name;
-        value cu = ctx.lastCompilationUnit;
-        String aliasedName = dec.getName(cu.unit);
+        value unit = ctx.lastCompilationUnit.unit;
+        String aliasedName = dec.getName(unit);
 
-        if (!name.equals(aliasedName)) {
+        if (name!=aliasedName) {
             platformServices.completion.addProposal {
                 ctx = ctx;
                 offset = offset;
@@ -48,7 +48,7 @@ shared interface BasicCompletion {
             offset = offset;
             prefix = prefix;
             description = name;
-            text = getTextForDocLink(cu.unit, dec);
+            text = getTextForDocLink(unit, dec);
             icon = dec;
         };
     }

@@ -41,8 +41,9 @@ import java.lang {
 shared interface PackageCompletion {
     
     // see PackageCompletions.addPackageCompletions()
-    shared void addPackageCompletions(CompletionContext ctx, Integer offset, String prefix,
-        Tree.ImportPath? path, Node node, Boolean withBody,
+    shared void addPackageCompletions
+        (CompletionContext ctx, Integer offset, String prefix,
+         Tree.ImportPath? path, Node node, Boolean withBody,
         BaseProgressMonitor monitor)
             => addPackageCompletionsFullPath {
                 offset = offset;
@@ -55,8 +56,10 @@ shared interface PackageCompletion {
             };
 
     // see PackageCompletions.addPackageCompletions(..., String fullPath, ...)
-    void addPackageCompletionsFullPath(Integer offset, String prefix, String fullPath, Boolean withBody, Unit? unit, 
-        CompletionContext ctx, BaseProgressMonitor monitor) {
+    void addPackageCompletionsFullPath
+        (Integer offset, String prefix, String fullPath,
+         Boolean withBody, Unit? unit,
+         CompletionContext ctx, BaseProgressMonitor monitor) {
         
         try (progress = monitor.Progress(1, null)) {
             if (exists unit) { //a null unit can occur if we have not finished parsing the file
@@ -71,7 +74,7 @@ shared interface PackageCompletion {
                     String packageName = escaping.escapePackageName(candidate);
                     if (!packageName.empty, packageName.startsWith(fullPrefix)) {
                         variable Boolean already = false; 
-                        if (!fullPrefix.equals(packageName)) {
+                        if (fullPrefix!=packageName) {
                             //don't add already imported packages, unless
                             //it is an exact match to the typed path
                             for (il in unit.importLists) {
@@ -106,7 +109,10 @@ shared interface PackageCompletion {
                     query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
                     query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
                     query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
-                    ModuleSearchResult msr = ctx.typeChecker.context.repositoryManager.searchModules(query);
+                    ModuleSearchResult msr
+                            = ctx.typeChecker.context
+                                .repositoryManager
+                                .searchModules(query);
                     for (md in msr.results) {
                         value version = md.lastVersion;
                         if (!alreadyImported(version, ctx.typeChecker.context.modules)) {
@@ -150,10 +156,12 @@ shared interface PackageCompletion {
     }
 
     shared void addCurrentPackageNameCompletion(CompletionContext ctx, Integer offset, String prefix) {
-        if (exists moduleName = getPackageName(ctx.lastCompilationUnit)) {
-            value icon = if (isModuleDescriptor(ctx.lastCompilationUnit))
-            then Icons.modules
-            else Icons.packages;
+        if (exists moduleName
+                = getPackageName(ctx.lastCompilationUnit)) {
+            value icon
+                    = isModuleDescriptor(ctx.lastCompilationUnit)
+                    then Icons.modules
+                    else Icons.packages;
             
             platformServices.completion.addProposal {
                 ctx = ctx;
@@ -168,14 +176,18 @@ shared interface PackageCompletion {
 }
 
 shared abstract class PackageCompletionProposal
-        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName)
+        (Integer offset, String prefix, String memberPackageSubname,
+         Boolean withBody, String fullPackageName)
         extends AbstractCompletionProposal
         (offset, prefix, fullPackageName + (withBody then " { ... }" else ""),
         memberPackageSubname + (withBody then " { ... }" else "")) {
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         if (withBody) {
-            return DefaultRegion(offset + (text.firstInclusion("...") else 0) - prefix.size, 3);
+            return DefaultRegion {
+                start = offset + (text.firstInclusion("...") else 0) - prefix.size;
+                length = 3;
+            };
         } else {
             return super.getSelectionInternal(document);
         }
@@ -183,12 +195,16 @@ shared abstract class PackageCompletionProposal
 }
 
 shared abstract class ImportedModulePackageProposal
-        (Integer offset, String prefix, String memberPackageSubname, Boolean withBody, String fullPackageName, Package candidate, CompletionContext cpc)
+        (Integer offset, String prefix, String memberPackageSubname,
+         Boolean withBody, String fullPackageName, Package candidate,
+         CompletionContext cpc)
         extends PackageCompletionProposal
         (offset, prefix, memberPackageSubname, withBody, fullPackageName) {
     
     // TODO move to CompletionServices
-    shared formal void newPackageMemberCompletionProposal(ProposalsHolder proposals, Declaration d, DefaultRegion selection, LinkedMode lm);
+    shared formal void newPackageMemberCompletionProposal
+        (ProposalsHolder proposals, Declaration d, DefaultRegion selection,
+         LinkedMode lm);
     
     shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
@@ -199,14 +215,24 @@ shared abstract class ImportedModulePackageProposal
             value proposals = platformServices.completion.createProposalsHolder();
             
             for (d in candidate.members) {
-                if (ModelUtil.isResolvable(d), d.shared, !ModelUtil.isOverloadedVersion(d)) {
-                    newPackageMemberCompletionProposal(proposals, d, selection, linkedMode);
+                if (ModelUtil.isResolvable(d) && d.shared
+                    && !ModelUtil.isOverloadedVersion(d)) {
+                    newPackageMemberCompletionProposal {
+                        proposals = proposals;
+                        d = d;
+                        selection = selection;
+                        lm = linkedMode;
+                    };
                 }
             }
             
             if (!proposals.empty) {
-                linkedMode.addEditableRegion(selection.start,
-                    selection.length, 0, proposals);
+                linkedMode.addEditableRegion {
+                    start = selection.start;
+                    length = selection.length;
+                    exitSeqNumber = 0;
+                    proposals = proposals;
+                };
                 
                 linkedMode.install(this, -1, 0);
             }
