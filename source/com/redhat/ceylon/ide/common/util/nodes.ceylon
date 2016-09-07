@@ -803,10 +803,13 @@ shared object nodes {
         function lower(String str) 
                 => lowercase then str.lowercased else str;
         while (matcher.find()) {
-            value subname 
-                    = lower(matcher.group(1)) 
+            value subname
+                    = lower(matcher.group(1))
                     + name[matcher.start(2) ...];
-            value pluralized 
+            if (javaString(subname).matches("get[A-Z].*")) {
+                continue;
+            }
+            value pluralized
                     = plural 
                     then pluralize(subname) 
                     else subname; 
