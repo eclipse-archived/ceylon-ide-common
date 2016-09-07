@@ -153,8 +153,8 @@ shared object changeReferenceQuickFix {
     }
 
     void processProposal(QuickFixData data, String brokenName, Declaration declaration) {
-        value name = declaration.name;
-        if (!brokenName==name) {
+
+        if (exists name = declaration.name, brokenName!=name) {
             value nuc = name.first?.uppercase else false;
             value bnuc = brokenName.first?.uppercase else false;
             if (nuc == bnuc) {
