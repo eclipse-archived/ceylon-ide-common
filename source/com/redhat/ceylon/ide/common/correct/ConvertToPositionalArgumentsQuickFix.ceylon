@@ -53,7 +53,7 @@ shared object convertToPositionalArgumentsQuickFix {
                     return;
                 }
                 
-                if (param.model.equals(p.model)) {
+                if (param.model == p.model) {
                     found = true;
                     result.append("{ ").append(nodes.text(tokens, sa)).append(" }");
                 }
@@ -65,13 +65,21 @@ shared object convertToPositionalArgumentsQuickFix {
                     return;
                 }
                 
-                if (param.model.equals(p.model)) {
+                if (param.model == p.model) {
                     found = true;
                     if (is Tree.SpecifiedArgument sna = na) {
-                        if (exists se = sna.specifierExpression,
-                            se.expression exists) {
-                            
-                            result.append(nodes.text(tokens, se.expression));
+                        if (exists ex = sna.specifierExpression?.expression?.term) {
+                            if (p.sequenced) {
+                                if (is Tree.Tuple ex) {
+                                    result.append(nodes.text(tokens, ex.sequencedArgument));
+                                }
+                                else {
+                                    result.append("*").append(nodes.text(tokens, ex));
+                                }
+                            }
+                            else {
+                                result.append(nodes.text(tokens, ex));
+                            }
                         }
                         
                         break;

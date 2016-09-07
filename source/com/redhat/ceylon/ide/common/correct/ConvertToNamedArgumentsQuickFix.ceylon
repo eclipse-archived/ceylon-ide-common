@@ -17,18 +17,14 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    Character {
-        isWhitespace
-    },
     StringBuilder
 }
 
 shared object convertToNamedArgumentsQuickFix {
     
     shared void addProposal(QuickFixData data, Integer currentOffset) {
-        value pal = findPositionalArgumentList(currentOffset, data.rootNode);
-        
-        if (exists pal,
+
+        if (exists pal = findPositionalArgumentList(currentOffset, data.rootNode),
             canConvert(pal)) {
             
             value tc = platformServices.document.createTextChange {
@@ -38,11 +34,15 @@ shared object convertToNamedArgumentsQuickFix {
             value start = pal.startIndex.intValue();
             value length = pal.distance.intValue();
             value result = StringBuilder();
-            if (!isWhitespace(data.document.getChar(start - 1))) {
+            if (!data.document.getChar(start-1).whitespace) {
                 result.append(" ");
             }
-            
-            result.append("{ ");
+
+            value indent = data.document.getIndent(pal);
+            value extraIndent = indent + platformServices.document.defaultIndent;
+            value delimiter = data.document.defaultLineDelimiter;
+
+            result.append("{").append(delimiter);
             variable Boolean sequencedArgs = false;
             value tokens = data.tokens;
             value args = pal.positionalArguments;
@@ -52,16 +52,26 @@ shared object convertToNamedArgumentsQuickFix {
                 if (!exists param) {
                     return;
                 }
-                
+
+                value paramName = param.name;
                 if (param.sequenced) {
                     if (sequencedArgs) {
                         result.append(", ");
+                    } else if (is Tree.SpreadArgument arg) {
+                        //if we _only_ have a single spread
+                        //argument we don't need to wrap it
+                        //in a sequence, we only need to
+                        //get rid of the * operator
+                        result.append(extraIndent)
+                            .append(paramName)
+                            .append(" = ")
+                            .append(nodes.text(tokens, arg.expression))
+                            .append(";")
+                            .append(delimiter);
+                        continue;
                     } else {
-                        //TODO: if we _only_ have a single spread 
-                        //      argument we don't need to wrap it
-                        //      in a sequence, we only need to
-                        //      get rid of the * operator
-                        result.append(param.name).append(" = [");
+                        result.append(extraIndent)
+                            .append(paramName).append(" = [");
                         sequencedArgs = true;
                     }
                     
@@ -75,25 +85,26 @@ shared object convertToNamedArgumentsQuickFix {
                         exists e = arg.expression) {
                         
                         value term = e.term;
-                        if (is Tree.FunctionArgument term) {
-                            value fa = term;
-                            if (fa.type is Tree.VoidModifier) {
-                                result.append("void ");
-                            } else {
-                                result.append("function ");
-                            }
-                            
-                            result.append(param.name);
+                        if (is Tree.FunctionArgument fa = term) {
+                            String kw
+                                    = fa.type is Tree.VoidModifier
+                                    then "void"
+                                    else "function";
+                            result.append(extraIndent)
+                                .append(kw).append(" ")
+                                .append(paramName);
                             value unit = data.rootNode.unit;
                             nodes.appendParameters(result, fa, unit, tokens);
-                            if (fa.block exists) {
-                                result.append(" ").append(nodes.text(tokens, fa.block)).append(" ");
-                            } else {
-                                result.append(" => ");
+                            if (exists block = fa.block) {
+                                result.append(" ")
+                                    .append(nodes.text(tokens, block))
+                                    .append(delimiter);
                             }
-                            
-                            if (exists expr = fa.expression) {
-                                result.append(nodes.text(tokens, expr)).append("; ");
+                            else if (exists expr = fa.expression) {
+                                result.append(" => ")
+                                    .append(nodes.text(tokens, expr))
+                                    .append(";")
+                                    .append(delimiter);
                             }
                             
                             continue;
@@ -101,31 +112,42 @@ shared object convertToNamedArgumentsQuickFix {
                         
                         if (++i == args.size(),
                             is Tree.SequenceEnumeration se = term) {
+                            //transform iterable instantiation into sequenced args
                             if (exists sa = se.sequencedArgument) {
-                                result.append(nodes.text(tokens, sa)).append(" ");
+                                result.append(extraIndent)
+                                    .append(nodes.text(tokens, sa))
+                                    .append(delimiter);
                             }
                             
                             continue;
                         }
                     }
                     
-                    result.append(param.name).append(" = ")
-                            .append(nodes.text(tokens, arg)).append("; ");
+                    result
+                        .append(extraIndent)
+                        .append(paramName)
+                        .append(" = ")
+                        .append(nodes.text(tokens, arg))
+                        .append(";")
+                        .append(delimiter);
                 }
             }
             
             if (sequencedArgs) {
-                result.append("]; ");
+                result.append("];").append(delimiter);
             }
             
-            result.append("}");
-            tc.addEdit(ReplaceEdit(start, length, result.string));
-            value offset = start + result.string.size;
+            result.append(indent).append("}");
+            tc.addEdit(ReplaceEdit {
+                start = start;
+                length = length;
+                text = result.string;
+            });
             
             data.addQuickFix {
                 description = "Convert to named arguments";
                 change = tc;
-                selection = DefaultRegion(offset, 0);
+                selection = DefaultRegion(start + result.string.size);
             };
         }
     }
