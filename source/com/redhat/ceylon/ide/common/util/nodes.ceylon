@@ -806,7 +806,8 @@ shared object nodes {
             value subname
                     = lower(matcher.group(1))
                     + name[matcher.start(2) ...];
-            if (javaString(subname).matches("get[A-Z].*")) {
+            if (subname.startsWith("get"),
+                exists ch = subname[3], ch.uppercase) {
                 continue;
             }
             value pluralized
