@@ -581,7 +581,7 @@ shared String[] getAssignableLiterals(Type type, Unit unit) {
         } else if (dtd.isString()) {
             return ["\"\"", "\"\"\"\"\"\""];
         } else if (dtd.character) {
-            return ["' '", "'\\n'", "'\\t'", "'.'", "'/'"];
+            return ["''", "' '", "'\\n'", "'\\t'", "'.'", "'/'"];
         } else {
             return [];
         }
