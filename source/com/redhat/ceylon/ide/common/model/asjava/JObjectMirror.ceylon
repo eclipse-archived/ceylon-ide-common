@@ -15,12 +15,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Function
 }
 
+import java.lang {
+    JString=String
+}
 import java.util {
     ArrayList,
     Collections
-}
-import java.lang {
-    JString=String
 }
 
 shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror(decl) {
@@ -87,12 +87,9 @@ shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
 }
 
 shared String getJavaQualifiedName(Declaration decl) {
-    if (is Function decl, decl.toplevel) {
-        return decl.scope.qualifiedNameString + "." + decl.name + "_";
+    if (is Function decl, decl.toplevel, exists name = decl.name) {
+        return decl.scope.qualifiedNameString + "." + name + "_";
     }
     value fqn = CodegenUtil.getJavaNameOfDeclaration(decl);
-    if (is Value decl) {
-        return fqn.initial(fqn.size - ".get_".size);
-    }
-    return fqn;
+    return if (is Value decl) then fqn.removeTerminal(".get_") else fqn;
 }
