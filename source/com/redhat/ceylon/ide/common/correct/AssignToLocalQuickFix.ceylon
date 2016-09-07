@@ -34,10 +34,15 @@ shared interface AssignToLocalProposal
         satisfies AbstractLocalProposal {
 
     shared actual TextChange createChange(QuickFixData data, Node expanse, Integer endIndex) {
-        value change = platformServices.document.createTextChange("Assign to Local", data.phasedUnit);
+        value change =
+                platformServices.document
+                    .createTextChange("Assign to Local", data.phasedUnit);
         change.initMultiEdit();
         value name = names.first else "<unknown>";
-        change.addEdit(InsertEdit(offset, "value " + name + " = "));
+        change.addEdit(InsertEdit {
+            start = offset;
+            text = "value ``name`` = ";
+        });
         value terminal = expanse.endToken.text;
         
         if (!terminal.equals(";")) {
@@ -51,7 +56,7 @@ shared interface AssignToLocalProposal
     }
     
     shared actual void addLinkedPositions(LinkedMode lm, Unit unit) {
-        assert(exists initialName = names.first);
+        assert (exists initialName = names.first);
         
         value namez = platformServices.completion.createProposalsHolder();
         toNameProposals(names.coalesced.sequence(), namez, offset, unit, 1);
@@ -88,19 +93,20 @@ shared interface AssignToLocalProposal
         }
 
         value td = type.declaration;
-        value supertypes = if (ModelUtil.isTypeUnknown(type) || type.typeConstructor)
-                           then empty
-                           else CeylonList(td.supertypeDeclarations)
-                                .sequence()
-                                .sort((x, y) {
-                                    if (x.inherits(y)) {
-                                        return larger;
-                                    }
-                                    if (y.inherits(x)) {
-                                        return smaller;
-                                    }
-                                    return y.name.compare(x.name);
-                                });
+        value supertypes
+                = ModelUtil.isTypeUnknown(type) || type.typeConstructor
+                then []
+                else CeylonList(td.supertypeDeclarations)
+                    .sequence()
+                    .sort((x, y) {
+                        if (x.inherits(y)) {
+                            return larger;
+                        }
+                        if (y.inherits(x)) {
+                            return smaller;
+                        }
+                        return y.name<=>x.name;
+                    });
         
         typeProposals.addAll(supertypes.reversed.map((td) => type.getSupertype(td)));
         
