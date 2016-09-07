@@ -43,11 +43,16 @@ shared interface ControlStructureCompletionProposal {
                         else singular;
 
             value unit = ctx.lastCompilationUnit.unit;
-            value desc = "for (``elemName`` in ``getDescriptionFor(d, unit)``)";
-            value text = "for (``elemName`` in ``getTextFor(d, unit)``) {}";
 
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix, desc, text, d, ctx);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "for (``elemName`` in ``getDescriptionFor(d, unit)``)";
+                    text = "for (``elemName`` in ``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
@@ -61,11 +66,17 @@ shared interface ControlStructureCompletionProposal {
             d.unit.isOptionalType(type),
             !d.variable) {
             value unit = ctx.lastCompilationUnit.unit;
-            value desc = "if (exists ``forcedText else getDescriptionFor(d, unit)``)";
-            value text = "if (exists ``forcedText else getTextFor(d, unit)``) {}";
 
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix, desc, text, d, ctx, node);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "if (exists ``forcedText else getDescriptionFor(d, unit)``)";
+                    text = "if (exists ``forcedText else getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                    node = node;
+                };
         }
     }
     
@@ -78,9 +89,15 @@ shared interface ControlStructureCompletionProposal {
             d.unit.isOptionalType(d.type),
             !d.variable) {
             value unit = ctx.lastCompilationUnit.unit;
-            platformServices.completion.newControlStructureCompletionProposal(offset, prefix,
-                    "assert (exists ``getDescriptionFor(d, unit)``)",
-                    "assert (exists ``getTextFor(d, unit)``);", d, ctx);
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "assert (exists ``getDescriptionFor(d, unit)``)";
+                    text = "assert (exists ``getTextFor(d, unit)``);";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
@@ -93,10 +110,15 @@ shared interface ControlStructureCompletionProposal {
             d.unit.isPossiblyEmptyType(type),
             !d.variable) {
             value unit = ctx.lastCompilationUnit.unit;
-            value desc = "if (nonempty ``getDescriptionFor(d, unit)``)";
-            value text = "if (nonempty ``getTextFor(d, unit)``) {}";
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix, desc, text, d, ctx);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "if (nonempty ``getDescriptionFor(d, unit)``)";
+                    text = "if (nonempty ``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
@@ -110,10 +132,14 @@ shared interface ControlStructureCompletionProposal {
             !d.variable) {
             value unit = ctx.lastCompilationUnit.unit;
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix,
-                    "assert (nonempty ``getDescriptionFor(d, unit)``)",
-                    "assert (nonempty ``getTextFor(d, unit)``);",
-                    d, ctx);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "assert (nonempty ``getDescriptionFor(d, unit)``)";
+                    text = "assert (nonempty ``getTextFor(d, unit)``);";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
@@ -126,11 +152,16 @@ shared interface ControlStructureCompletionProposal {
             d.type.declaration.inherits(d.unit.obtainableDeclaration),
             !d.variable) {
             value unit = ctx.lastCompilationUnit.unit;
-            value desc = "try (``getDescriptionFor(d, unit)``)";
-            value text = "try (``getTextFor(d, unit)``) {}";
 
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix, desc, text, d, ctx);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "try (``getDescriptionFor(d, unit)``)";
+                    text = "try (``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
@@ -160,11 +191,17 @@ shared interface ControlStructureCompletionProposal {
             }
             body.append(indent);
             value u = ctx.lastCompilationUnit.unit;
-            value desc = "switch (``getDescriptionFor(d, u)``)";
-            value text = "switch (``getTextFor(d, u)``)"
-                    + ctx.commonDocument.defaultLineDelimiter + body.string;
+
             platformServices.completion
-                .newControlStructureCompletionProposal(offset, prefix, desc, text, d, ctx);
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "switch (``getDescriptionFor(d, u)``)";
+                    text = "switch (``getTextFor(d, u)``)"
+                    + ctx.commonDocument.defaultLineDelimiter + body.string;
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
 }
@@ -177,6 +214,6 @@ shared abstract class ControlStructureProposal
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value loc = (text.firstOccurrence('{') else text.firstOccurrence(';') else -1) + 1;
-        return DefaultRegion(offset + loc - prefix.size, 0);
+        return DefaultRegion(offset + loc - prefix.size);
     }
 }
