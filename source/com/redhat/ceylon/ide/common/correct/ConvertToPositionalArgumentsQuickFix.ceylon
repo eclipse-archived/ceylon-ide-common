@@ -94,7 +94,13 @@ shared object convertToPositionalArgumentsQuickFix {
                         }
                         
                         if (exists block = ma.block) {
-                            result.append(" ").append(nodes.text(tokens, block));
+                            value indent = data.document.getIndent(block);
+                            value defaultIndent = platformServices.document.defaultIndent;
+                            value lessIndent = indent.removeTerminal(defaultIndent);
+                            value blockText
+                                    = nodes.text(tokens, block)
+                                    .replace(indent, lessIndent);
+                            result.append(" ").append(blockText);
                         }
                         
                         if (exists se = ma.specifierExpression) {

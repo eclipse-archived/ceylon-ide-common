@@ -46,8 +46,9 @@ shared object convertToNamedArgumentsQuickFix {
             variable Boolean sequencedArgs = false;
             value tokens = data.tokens;
             value args = pal.positionalArguments;
-            variable Integer i = 0;
+            variable value i = 0;
             for (arg in args) {
+                i++;
                 Parameter? param = arg.parameter;
                 if (!exists param) {
                     return;
@@ -87,7 +88,7 @@ shared object convertToNamedArgumentsQuickFix {
                         value term = e.term;
                         if (is Tree.FunctionArgument fa = term) {
                             String kw
-                                    = fa.type is Tree.VoidModifier
+                                    = fa.type is Tree.VoidModifier //TODO: search for a return statement
                                     then "void"
                                     else "function";
                             result.append(extraIndent)
@@ -96,8 +97,12 @@ shared object convertToNamedArgumentsQuickFix {
                             value unit = data.rootNode.unit;
                             nodes.appendParameters(result, fa, unit, tokens);
                             if (exists block = fa.block) {
+                                value blockText
+                                        = nodes.text(tokens, block)
+                                        .replace(delimiter+indent,
+                                                 delimiter+extraIndent);
                                 result.append(" ")
-                                    .append(nodes.text(tokens, block))
+                                    .append(blockText)
                                     .append(delimiter);
                             }
                             else if (exists expr = fa.expression) {
@@ -110,7 +115,7 @@ shared object convertToNamedArgumentsQuickFix {
                             continue;
                         }
                         
-                        if (++i == args.size(),
+                        if (i == args.size(),
                             is Tree.SequenceEnumeration se = term) {
                             //transform iterable instantiation into sequenced args
                             if (exists sa = se.sequencedArgument) {
