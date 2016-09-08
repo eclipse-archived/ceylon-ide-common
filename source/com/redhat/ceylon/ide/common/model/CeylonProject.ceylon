@@ -184,8 +184,8 @@ shared abstract class BaseCeylonProject() {
 
     shared formal void removeOverridesProblemMarker();
 
-    function createRepositoryManager() {
-        return object extends CeylonRepoManagerBuilder() {
+    function createRepositoryManager() 
+        => object extends CeylonRepoManagerBuilder() {
             shared actual Overrides? getOverrides(String? path) {
                 if (! path exists) {
                     removeOverridesProblemMarker();
@@ -231,16 +231,16 @@ shared abstract class BaseCeylonProject() {
                 }
                 return result;
             }
-        }.offline(configuration.offline)
-            .cwd(rootDirectory)
-            .systemRepo(systemRepository)
-            .extraUserRepos(Arrays.asList(
-                for (p in referencedCeylonProjects)
-                javaString(p.ceylonModulesOutputDirectory.absolutePath)))
-            .logger(platformUtils.cmrLogger)
-            .isJDKIncluded(true)
-            .buildManager();
-    }
+        }
+        .offline(configuration.offline)
+        .cwd(rootDirectory)
+        .systemRepo(systemRepository)
+        .extraUserRepos(Arrays.asList(
+            for (p in referencedCeylonProjects)
+            javaString(p.ceylonModulesOutputDirectory.absolutePath)))
+        .logger(platformUtils.cmrLogger)
+        .isJDKIncluded(true)
+        .buildManager();
 
     shared RepositoryManager repositoryManager {
         try {
