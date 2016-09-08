@@ -1120,6 +1120,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 value projectNativeFiles = ceylonProject.projectFiles.sequence();
                 state.ceylonModelUpdateRequired.reset(projectNativeFiles);
                 state.jvmBackendGenerationRequired.reset(projectNativeFiles);
+                state.frontendMessages.clear();
             } else {
                 // calculate dependencies
                 calculateDependencies(changedFiles, progress.newChild(900));
