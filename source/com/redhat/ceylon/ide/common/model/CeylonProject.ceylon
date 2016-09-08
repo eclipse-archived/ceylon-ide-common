@@ -317,9 +317,9 @@ shared abstract class BaseCeylonProject() {
             return "The 'bin' folder is not accessible in the embedded Ceylon distribution";
         }
 
+        value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
+        value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
         if (!force) {
-            value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
-            value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
             value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.ceylonConfigDir)), "bootstrap");
             value propsFile = File(bootstrapDir, Bootstrap.fileBootstrapProperties);
             value jarFile = File(bootstrapDir, Bootstrap.fileBootstrapJar);
@@ -332,6 +332,14 @@ shared abstract class BaseCeylonProject() {
         } catch(IOException ioe) {
             return ioe.message;
         }
+        
+        try {
+            scriptFile.setExecutable(true);
+            batFile.setExecutable(true);
+        } catch(IOException ioe) {
+            return ioe.message;
+        }
+        
         return true;
     }
 
