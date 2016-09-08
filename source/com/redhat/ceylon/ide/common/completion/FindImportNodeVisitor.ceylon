@@ -1,17 +1,9 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    Tree
-}
-import com.redhat.ceylon.model.typechecker.model {
-    ModelUtil
-}
-
-import java.util {
-    Arrays
+    Tree,
+    TreeUtil {
+        formatPath
+    }
 }
 
 shared class FindImportNodeVisitor(String packageName) extends Visitor() {
@@ -22,11 +14,8 @@ shared class FindImportNodeVisitor(String packageName) extends Visitor() {
         if (result exists) {
             return;
         }
-        value ids
-                = Arrays.asList(
-                    for (id in that.importPath.identifiers)
-                    javaString(id.text));
-        if (ModelUtil.formatPath(ids) == packageName) {
+        value path = formatPath(that.importPath.identifiers);
+        if (path == packageName) {
             result = that;
         }
     }
