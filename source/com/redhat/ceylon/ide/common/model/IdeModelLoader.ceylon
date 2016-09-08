@@ -507,7 +507,7 @@ shared abstract class BaseIdeModelLoader(
            try {
                result = super.convertToDeclaration(ideModule, typeName, declarationType);
            } catch(RuntimeException e) {
-               // FIXME: pretty sure this is plain wrong as it ignores problems and especially ModelResolutionException and just plain hides them
+               platformUtils.log(Status._ERROR, "Cannot convert type name \"``typeName``\" to a Declaration", e);
            }
            if (exists foundSourceDeclaration, 
                ! (result exists)) {
