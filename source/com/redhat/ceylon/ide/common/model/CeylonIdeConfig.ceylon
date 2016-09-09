@@ -35,10 +35,12 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     variable Boolean? transientCompileToJvm = null;
     variable Boolean? transientCompileToJs = null;
     variable String? transientSystemRepository = null;
+    variable {String*}? transientJavacOptions = null;
 
     variable Boolean isCompileToJvmChanged = false;
     variable Boolean isCompileToJsChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
+    variable Boolean isJavacOptionsChanged = false;
 
     shared String projectRelativePath = ".ceylon/ide-config";
 
@@ -86,6 +88,12 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientSystemRepository = systemRepository;
     }
 
+    shared {String*}? javacOptions => getConfigValuesAsList(ideConfig, "project.javac", null);
+    assign javacOptions {
+        this.isJavacOptionsChanged = true;
+        this.transientJavacOptions = javacOptions;
+    }
+    
     shared JavaToCeylonConverterConfig converterConfig => object satisfies JavaToCeylonConverterConfig {
         shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
         shared actual Boolean useValues => ideConfig.getBoolOption("converter.use-values", false);
@@ -122,22 +130,31 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         isCompileToJvmChanged = false;
         isCompileToJsChanged = false;
         isSystemRepositoryChanged = false;
+        isJavacOptionsChanged = false;
 
         transientCompileToJvm = null;
         transientCompileToJs = null;
         transientSystemRepository = null;
+        transientJavacOptions = null;
     }
 
     shared void save() {
         initIdeConfig();
 
-        Boolean someSettingsChanged = isCompileToJvmChanged || isCompileToJsChanged || isSystemRepositoryChanged;
+        Boolean someSettingsChanged = 
+                isCompileToJvmChanged || 
+                isCompileToJsChanged || 
+                isSystemRepositoryChanged ||
+                isJavacOptionsChanged;
 
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
                 if (isCompileToJvmChanged) { ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false); }
                 if (isCompileToJsChanged) { ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false); }
                 if (isCompileToJvmChanged) { ideConfig.setOption("project.system-repository", transientSystemRepository else ""); }
+                if (isJavacOptionsChanged) { 
+                    setConfigValuesAsList(ideConfig, "project.javac", transientJavacOptions);
+                }
 
                 ConfigWriter.instance().write(ideConfig, ideConfigFile);
                 refresh();
