@@ -183,18 +183,18 @@ shared object completionManager
                 if (offsetInLink < bar) { 
                     return;
                 }
-                variable String qual = text.span(bar, offsetInLink - 1);
+                variable String qual = text[bar..offsetInLink-1];
                 Integer dcolon = qual.firstInclusion("::") else -1;
                 String? pkg;
                 if (dcolon >= 0) {
-                    pkg = qual.spanTo(dcolon + 1);
-                    qual = qual.spanFrom(dcolon + 2);
+                    pkg = qual[...dcolon+1];
+                    qual = qual[dcolon+2...];
                 }
                 else {
                     pkg = null;
                 }
                 Integer dot = (qual.firstOccurrence('.') else -1) + 1;
-                prefix = qual.spanFrom(dot);
+                prefix = qual[dot...];
                 if (dcolon >= 0) {
                     assert (exists pkg);
                     qual = pkg + qual;
@@ -213,12 +213,15 @@ shared object completionManager
                 //compute the offset, in order to
                 //account for quoted identifiers, where
                 //the \i or \I is not in the token text
-                value offsetInToken = offset - adjustedToken.stopIndex - 1 + text.size;
-                value realOffsetInToken = offset - adjustedToken.startIndex;
-                if (offsetInToken <= text.size) {
-                    prefix = text.spanTo(offsetInToken - 1);
-                    fullPrefix = getRealText(adjustedToken)
-                        .spanTo(realOffsetInToken - 1);
+                value offsetInToken
+                        = offset - adjustedToken.stopIndex - 1 + text.size;
+                value realOffsetInToken
+                        = offset - adjustedToken.startIndex;
+                if (!text.shorterThan(offsetInToken)) {
+                    prefix = text[0:offsetInToken];
+                    fullPrefix
+                            = getRealText(adjustedToken)
+                                [0:realOffsetInToken];
                 }
                 else {
                     prefix = "";
@@ -357,7 +360,9 @@ shared object completionManager
                 prefix = prefix;
                 path = null;
                 node = node;
-                withBody = nextTokenType(ctx, token) != Lexer.lbrace;
+                withBody
+                        = nextTokenType(ctx, token)
+                            != Lexer.lbrace;
                 monitor = monitor;
             };
         }
