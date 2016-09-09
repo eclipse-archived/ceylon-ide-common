@@ -6,6 +6,9 @@ import ceylon.interop.java {
 import com.redhat.ceylon.common {
     Backends
 }
+import com.redhat.ceylon.compiler.typechecker {
+    TypeChecker
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
@@ -49,9 +52,6 @@ import com.redhat.ceylon.model.loader.model {
     LazyTypeAlias,
     JavaBeanValue,
     JavaMethod
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
 }
 import com.redhat.ceylon.model.typechecker.model {
     Referenceable,
@@ -149,9 +149,9 @@ shared interface DocGenerator {
             exists loc = moduleNameAndVersion.firstOccurrence('/')) {
             
             String moduleName 
-                    = moduleNameAndVersion.spanTo(loc - 1);
-            String moduleVersion 
-                    = moduleNameAndVersion.spanFrom(loc + 1);
+                    = moduleNameAndVersion[...loc-1];
+            String moduleVersion
+                    = moduleNameAndVersion[loc+1...];
             
             value linkedModule 
                     = let (modules 
@@ -168,7 +168,7 @@ shared interface DocGenerator {
                 variable Referenceable? target 
                         = linkedModule.getPackage(bits[2]);
                 if (bits.size > 3) {
-                    for (i in 3 .. bits.size-1) {
+                    for (i in 3:bits.size) {
                         variable Scope scope;
                         if (is Scope t = target) {
                             scope = t;
@@ -283,7 +283,7 @@ shared interface DocGenerator {
                     appendCharacterInfo(selection, builder);
                 }
             } else if (is Tree.CharLiteral term, term.text.size>2) {
-                appendCharacterInfo(term.text.span(1, 1), builder);
+                appendCharacterInfo(term.text[1..1], builder);
             } else if (is Tree.NaturalLiteral term) {
                 appendIntegerInfo(term, builder);
             } else if (is Tree.FloatLiteral term) {
@@ -309,9 +309,9 @@ shared interface DocGenerator {
 
     void appendStringInfo(Tree.StringLiteral term, StringBuilder builder) {
         value text = 
-                if (term.text.size < 250) 
+                if (term.text.shorterThan(250))
                 then escape(term.text)
-                else escape(term.text.spanTo(250)) + "...";
+                else escape(term.text[...250]) + "...";
         value html = 
                 convertToHTML(text)
                     .replace("\\n", "<br/>");
@@ -323,8 +323,8 @@ shared interface DocGenerator {
         value text = term.text.replace("_", "");
         value int = 
                 switch (text.first)
-                case ('#') parseInteger(text.spanFrom(1), 16)
-                case ('$') parseInteger(text.spanFrom(1), 2)
+                case ('#') parseInteger(text[1...], 16)
+                case ('$') parseInteger(text[1...], 2)
                 else parseInteger(text);
         builder.append("<br/>");
         builder.append(color(int, Colors.numbers));
@@ -518,7 +518,7 @@ shared interface DocGenerator {
         if (is CeylonUnit unit = pack.unit,
             exists pu = unit.phasedUnit,
             !pu.compilationUnit.packageDescriptors.empty,
-            exists refnode = pu.compilationUnit.packageDescriptors.get(0)) {
+            exists refnode = pu.compilationUnit.packageDescriptors[0]) {
             
             appendDocAnnotationContent(pack, refnode.annotationList, builder, pack, cmp);
             appendThrowAnnotationContent(pack, refnode.annotationList, builder, pack, cmp);
@@ -679,7 +679,7 @@ shared interface DocGenerator {
         if (is CeylonUnit unit=mod.unit, 
             exists pu = unit.phasedUnit,
             !pu.compilationUnit.moduleDescriptors.empty,
-            exists refnode = pu.compilationUnit.moduleDescriptors.get(0)) {
+            exists refnode = pu.compilationUnit.moduleDescriptors[0]) {
             
             value linkScope = mod.getPackage(mod.nameAsString);
             appendDocAnnotationContent(mod, refnode.annotationList, buffer, linkScope, cmp);
@@ -730,6 +730,9 @@ shared interface DocGenerator {
         }
         if (is Value decl, decl.late) {
             annotationsBuilder.append("late&nbsp;");
+        }
+        if (is FunctionOrValue decl, decl.small) {
+            annotationsBuilder.append("small&nbsp;");
         }
         if (is TypedDeclaration decl, decl.variable) {
             annotationsBuilder.append("variable&nbsp;");
@@ -861,8 +864,7 @@ shared interface DocGenerator {
         if (exists cases = type.caseTypes) {
             value casesBuilder = StringBuilder();
 
-            value casesString = CeylonIterable(cases)
-                    .map((c) => printer.print(c, unit));
+            value casesString = { for (c in cases) printer.print(c, unit) };
             
             casesBuilder
                 .append(" <tt><span style='font-size:90%'>")
@@ -886,9 +888,7 @@ shared interface DocGenerator {
         if (!type.satisfiedTypes.empty) {
             value satisfiesBuilder = StringBuilder();
             
-            value typesString 
-                    = CeylonIterable(type.satisfiedTypes)
-                        .map((s) => printer.print(s, unit));
+            value typesString = { for (s in type.satisfiedTypes) printer.print(s, unit) };
             
             satisfiesBuilder.append("<tt><span style='font-size:90%'>")
                 .append("satisfies&nbsp;")
@@ -920,8 +920,7 @@ shared interface DocGenerator {
             });
             
             String arg;
-            if (exists liveValue 
-                        = getLiveValue(tp, unit)) {
+            if (exists liveValue = getLiveValue(tp, unit)) {
                 arg = liveValue;
             } else if (exists typeArg 
                         = pr?.typeArguments?.get(tp),
@@ -1153,10 +1152,10 @@ shared interface DocGenerator {
             exists ann = findAnnotation(annotationList, name),
             exists argList = ann.positionalArgumentList,
             !argList.positionalArguments.empty,
-            is Tree.ListedArgument a = argList.positionalArguments.get(0)) {
+            is Tree.ListedArgument a = argList.positionalArguments[0]) {
             text = a.expression.term.text;
         } else if (exists annotation = findAnnotationModel(annotated, name)) {
-            text = CeylonIterable(annotation.positionalArguments).first?.string;
+            text = annotation.positionalArguments[0]?.string;
         } else {
             text = null;
         }
@@ -1183,14 +1182,14 @@ shared interface DocGenerator {
             } else if (exists ann = findAnnotation(annotationList, name),
                 exists argList = ann.positionalArgumentList,
                 !argList.positionalArguments.empty,
-                exists a = argList.positionalArguments.get(0),
+                exists a = argList.positionalArguments[0],
                 is Tree.ListedArgument a) {
                 text = a.expression.term.text;
             } else {
                 text = null;
             }
         } else if (exists annotation = findAnnotationModel(annotated, name)) {
-            text = CeylonIterable(annotation.positionalArguments).first?.string;
+            text = annotation.positionalArguments[0]?.string;
         } else {
             text = null;
         }
@@ -1235,8 +1234,8 @@ shared interface DocGenerator {
             exists argList = annotation.positionalArgumentList,
             !argList.positionalArguments.empty) {
             value args = argList.positionalArguments;
-            value typeArg = args.get(0);
-            value textArg = if (args.size() > 1) then args.get(1) else null;
+            value typeArg = args[0];
+            value textArg = args[1];
             
             if (is Tree.ListedArgument typeArg, 
                 is Tree.ListedArgument? textArg) {
@@ -1359,7 +1358,7 @@ shared interface DocGenerator {
                                 = dec.container)
                     then container.name + "." + dec.name
                     else dec.name;
-            if (buffer.size > 0) {
+            if (!buffer.empty) {
                 buffer.append(", ");
             }
             buffer.append("<tt>")
@@ -1393,7 +1392,7 @@ shared interface DocGenerator {
                 }
             }
         }
-        if (buffer.size > 0) {
+        if (!buffer.empty) {
             buffer.prepend("see ");
             buffer.append(".");
             addIconAndText(documentation, Icons.see, buffer.string);
@@ -1403,7 +1402,7 @@ shared interface DocGenerator {
     Tree.Annotation? findAnnotation(Tree.AnnotationList annotations, String name) {
         return CeylonIterable(annotations.annotations).find((element) {
             if (is Tree.BaseMemberExpression primary = element.primary) {
-                return name.equals(primary.identifier.text); 
+                return name == primary.identifier.text;
             }
             return false;
         });
@@ -1599,9 +1598,11 @@ shared interface DocGenerator {
         // <p> was replaced with <div> because <p> can't contain <div>s
         builder.append("<div class='paragraph'>");
         value unit = decl.unit;
-        value unitName = if (is CeylonUnit unit, exists name = unit.ceylonFileName)
-                         then name
-                         else unit.filename;
+        value unitName
+                = if (is CeylonUnit unit,
+                      exists name = unit.ceylonFileName)
+                then name
+                else unit.filename;
         value text = "<span>Declared in&nbsp;``buildLink(decl, unitName, "dec")``.</span>";
         addIconAndText(builder, Icons.units, text);
         addPackageModuleInfo(decl.unit.\ipackage, builder);
@@ -1616,7 +1617,7 @@ shared interface DocGenerator {
                 || mod.nameAsString == "default")
             then "<span>Belongs to default module.</span>"
             else "<span>Belongs to&nbsp;``buildLink(mod, mod.nameAsString)``"
-                  + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>.</span>";
+                  + "&nbsp;<tt>``color("\"``mod.version``\"", Colors.strings)``</tt>.</span>";
         addIconAndText(buffer, mod, label);
     }
 }
