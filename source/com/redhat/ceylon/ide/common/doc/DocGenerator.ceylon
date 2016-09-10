@@ -142,6 +142,25 @@ shared interface DocGenerator {
         }
     }
     
+    function targetScope(Referenceable current) {
+        Scope scope;
+        if (is Scope current) {
+            scope = current;
+        } else if (is TypedDeclaration current) {
+            scope = current.type.declaration;
+        } else {
+            return null;
+        }
+
+        if (is Value scope,
+            scope.typeDeclaration.anonymous) {
+            return scope.typeDeclaration;
+        }
+        else {
+            return scope;
+        }
+    }
+
     Referenceable? getLinkedModelInternal(String link, TypeChecker typeChecker) {
         value bits = link.split(':'.equals).sequence();
         
@@ -154,39 +173,30 @@ shared interface DocGenerator {
                     = moduleNameAndVersion[loc+1...];
             
             value linkedModule 
-                    = let (modules 
-                        = typeChecker.context.modules)
-                    CeylonIterable(modules.listOfModules)
-                        .find((m) 
-                            => m.nameAsString==moduleName 
-                            && m.version==moduleVersion);
+                    = CeylonIterable(typeChecker.context.modules.listOfModules)
+                        .find((candidate)
+                            => candidate.nameAsString == moduleName
+                            && candidate.version == moduleVersion);
             
-            if (bits.size==2, exists linkedModule) {
-                return linkedModule;
-            }
             if (exists linkedModule) {
-                variable Referenceable? target 
-                        = linkedModule.getPackage(bits[2]);
-                if (bits.size > 3) {
-                    for (i in 3:bits.size) {
-                        variable Scope scope;
-                        if (is Scope t = target) {
-                            scope = t;
-                        } else if (is TypedDeclaration t = target) {
-                            scope = t.type.declaration;
-                        } else {
+                value packageName = bits[2];
+                if (!exists packageName) {
+                    return linkedModule;
+                }
+                if (exists linkedPackage
+                        = linkedModule.getPackage(packageName)) {
+                    variable Referenceable target = linkedPackage;
+                    for (bit in bits.skip(3)) {
+                        if (exists scope = targetScope(target),
+                            exists member = scope.getDirectMember(bit, null, false)) {
+                            target = member;
+                        }
+                        else {
                             return null;
                         }
-                        
-                        if (is Value s = scope, 
-                            s.typeDeclaration.anonymous) {
-                            scope = s.typeDeclaration;
-                        }
-                        
-                        target = scope.getDirectMember(bits[i], null, false);
                     }
+                    return target;
                 }
-                return target;
              }
         }
         
