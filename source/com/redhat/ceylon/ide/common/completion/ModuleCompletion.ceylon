@@ -96,7 +96,8 @@ shared interface ModuleCompletion {
                         };
                     }
                 }
-            } else if (exists typeChecker = ctx.typeChecker) {
+            }
+            else {
                 progress.subTask("querying module repositories...");
                 value query = moduleQueries.getModuleQuery {
                     prefix = pfp;
@@ -108,8 +109,9 @@ shared interface ModuleCompletion {
                 query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
                 query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
                 ModuleSearchResult? results
-                        = typeChecker.context.repositoryManager.completeModules(query);
-                if (!exists results) {
+                        = ctx.typeChecker.context.repositoryManager
+                            .completeModules(query);
+                if (!exists results) { //TODO: can completeModules() truly return null?
                     return;
                 }
 
