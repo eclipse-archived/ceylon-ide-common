@@ -1,5 +1,6 @@
 import ceylon.collection {
-    naturalOrderTreeSet
+    naturalOrderTreeSet,
+    TreeSet
 }
 import ceylon.interop.java {
     javaString
@@ -13,9 +14,6 @@ import com.redhat.ceylon.cmr.api {
 }
 import com.redhat.ceylon.common {
     Versions
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -48,6 +46,12 @@ import java.lang {
     JInteger=Integer
 }
 
+TreeSet<String> sortedJdkModuleNames
+        = naturalOrderTreeSet {
+            for (name in JDKUtils.jdkModuleNames)
+            name.string
+        };
+
 shared interface ModuleCompletion {
     
     shared void addModuleCompletions(CompletionContext ctx, Integer offset,
@@ -56,20 +60,25 @@ shared interface ModuleCompletion {
         
         value fp = fullPath(offset, prefix, path);
         
-        addModuleCompletionsInternal(offset, prefix, node, fp.size, fp + prefix, ctx, withBody, monitor);
+        addModuleCompletionsInternal {
+            offset = offset;
+            prefix = prefix;
+            node = node;
+            len = fp.size;
+            pfp = fp + prefix;
+            ctx = ctx;
+            withBody = withBody;
+            monitor = monitor;
+        };
     }
 
-    void addModuleCompletionsInternal(Integer offset, String prefix, Node node, 
-        Integer len, String pfp, CompletionContext ctx, Boolean withBody, BaseProgressMonitor monitor) {
+    void addModuleCompletionsInternal(Integer offset, String prefix, Node node,
+        Integer len, String pfp, CompletionContext ctx, Boolean withBody,
+        BaseProgressMonitor monitor) {
         
-        try(progress = monitor.Progress(1, null)) {
+        try (progress = monitor.Progress(1, null)) {
             if (pfp.startsWith("java.")) {
-                value allNames
-                        = naturalOrderTreeSet {
-                            for (name in JDKUtils.jdkModuleNames)
-                            name.string
-                        };
-                for (name in allNames) {
+                for (name in sortedJdkModuleNames) {
                     if (name.startsWith(pfp),
                         !moduleAlreadyImported(ctx, name)) {
                         
@@ -78,64 +87,74 @@ shared interface ModuleCompletion {
                             offset = offset;
                             prefix = prefix;
                             len = len;
-                            versioned = getModuleString(withBody, name, JDKUtils.jdk.version);
+                            versioned = getModuleString {
+                                withBody = withBody;
+                                name = name;
+                                version = JDKUtils.jdk.version;
+                            };
                             name = name;
                         };
                     }
                 }
-            } else {
-                TypeChecker? typeChecker = ctx.typeChecker;
-                if (exists typeChecker) {
-                    value project = ctx.ceylonProject;
-                    value modul = ctx.lastPhasedUnit.\ipackage.\imodule;
-                    progress.subTask("querying module repositories...");
-                    value query = moduleQueries.getModuleQuery(pfp, modul, project);
-                    query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
-                    query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
-                    query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
-                    query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
-                    ModuleSearchResult? results = typeChecker.context.repositoryManager.completeModules(query);
-                    //                final ModuleSearchResult results = 
-                    //                        getModuleSearchResults(pfp, typeChecker,project);
-                    if (!exists results) {
-                        return;
-                    }
-                    
-                    value supportsLinkedModeInArguments = ctx.options.linkedModeArguments;
-                    
-                    for (mod in results.results) {
-                        value name = mod.name;
-                        if (name!=Module.defaultModuleName,
-                            !moduleAlreadyImported(ctx, name)) {
-                            
-                            if (supportsLinkedModeInArguments) {
+            } else if (exists typeChecker = ctx.typeChecker) {
+                progress.subTask("querying module repositories...");
+                value query = moduleQueries.getModuleQuery {
+                    prefix = pfp;
+                    mod = ctx.lastPhasedUnit.\ipackage.\imodule;
+                    project = ctx.ceylonProject;
+                };
+                query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
+                query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
+                query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
+                query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
+                ModuleSearchResult? results
+                        = typeChecker.context.repositoryManager.completeModules(query);
+                if (!exists results) {
+                    return;
+                }
+
+                value supportsLinkedModeInArguments = ctx.options.linkedModeArguments;
+
+                for (mod in results.results) {
+                    value name = mod.name;
+                    if (name!=Module.defaultModuleName,
+                        !moduleAlreadyImported(ctx, name)) {
+
+                        if (supportsLinkedModeInArguments) {
+                            platformServices.completion.newModuleProposal {
+                                offset = offset;
+                                prefix = prefix;
+                                len = len;
+                                versioned = getModuleString {
+                                    withBody = withBody;
+                                    name = name;
+                                    version = mod.lastVersion.version;
+                                };
+                                mod = mod;
+                                withBody = withBody;
+                                version = mod.lastVersion;
+                                name = name;
+                                node = node;
+                                cpc = ctx;
+                            };
+                        } else {
+                            for (version in mod.versions.descendingSet()) {
                                 platformServices.completion.newModuleProposal {
                                     offset = offset;
                                     prefix = prefix;
                                     len = len;
-                                    versioned = getModuleString(withBody, name, mod.lastVersion.version);
+                                    versioned = getModuleString {
+                                        withBody = withBody;
+                                        name = name;
+                                        version = version.version;
+                                    };
                                     mod = mod;
                                     withBody = withBody;
-                                    version = mod.lastVersion;
+                                    version = version;
                                     name = name;
                                     node = node;
                                     cpc = ctx;
                                 };
-                            } else {
-                                for (version in mod.versions.descendingSet()) {
-                                    platformServices.completion.newModuleProposal {
-                                        offset = offset;
-                                        prefix = prefix;
-                                        len = len;
-                                        versioned = getModuleString(withBody, name, version.version);
-                                        mod = mod;
-                                        withBody = withBody;
-                                        version = version;
-                                        name = name;
-                                        node = node;
-                                        cpc = ctx;
-                                    };
-                                }
                             }
                         }
                     }
@@ -148,14 +167,12 @@ shared interface ModuleCompletion {
         if (mod == Module.languageModuleName) {
             return true;
         }
-        value md = cpc.parsedRootNode.moduleDescriptors;
-        if (!md.empty) {
-            if (exists iml = md.get(0).importModuleList) {
-                for (im in iml.importModules) {
-                    value path = nodes.getImportedModuleName(im);
-                    if (exists path, path.equals(mod)) {
-                        return true;
-                    }
+        value md = cpc.parsedRootNode.moduleDescriptors[0];
+        if (exists iml = md?.importModuleList) {
+            for (im in iml.importModules) {
+                if (exists path = nodes.getImportedModuleName(im),
+                    path == mod) {
+                    return true;
                 }
             }
         }
@@ -172,23 +189,22 @@ shared interface ModuleCompletion {
         if (!javaString(name).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
             name = "\"``name``\"";
         }
-        return if (withBody) then name + " \"" + version + "\";" else name;
+        return withBody then "``name`` \"``version``\";" else name;
     }
 
     shared void addModuleDescriptorCompletion(CompletionContext ctx, Integer offset, String prefix) {
-        if (!"module".startsWith(prefix)) {
-            return;
-        }
-        value moduleName = getPackageName(ctx.lastCompilationUnit);
-        if (exists moduleName) {
-            value text = "module " + moduleName + " \"1.0.0\" {}";
+        if ("module".startsWith(prefix),
+            exists moduleName = getPackageName(ctx.lastCompilationUnit)) {
+            value text = "module ``moduleName`` \"1.0.0\" {}";
             platformServices.completion.newModuleDescriptorProposal {
                 ctx = ctx;
                 offset = offset;
                 prefix = prefix;
                 desc = "module " + moduleName;
                 text = text;
-                selectionStart = offset - prefix.size + (text.firstOccurrence('"') else 0) + 1;
+                selectionStart
+                        = offset - prefix.size
+                        + (text.firstOccurrence('"') else 0) + 1;
                 selectionEnd = "1.0.0".size;
             };
         }
@@ -200,7 +216,7 @@ shared abstract class ModuleProposal
         (Integer offset, String prefix, Integer len, String versioned, ModuleDetails mod,
          Boolean withBody, ModuleVersionDetails version, String name, Node node, CompletionContext cpc)
         extends AbstractCompletionProposal
-        (offset, prefix, versioned, versioned.spanFrom(len)) {
+        (offset, prefix, versioned, versioned[len...]) {
 
     shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
         value off = offset + versioned.size - prefix.size - len;
@@ -214,7 +230,8 @@ shared abstract class ModuleProposal
     }
     
     // TODO move to CompletionServices
-    shared formal void newModuleProposal(ProposalsHolder proposals, ModuleVersionDetails d, DefaultRegion selection, LinkedMode lm);
+    shared formal void newModuleProposal(ProposalsHolder proposals,
+            ModuleVersionDetails d, DefaultRegion selection, LinkedMode lm);
 
     shared actual void applyInternal(CommonDocument document) {
         super.applyInternal(document);
