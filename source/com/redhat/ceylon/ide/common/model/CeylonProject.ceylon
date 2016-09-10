@@ -114,7 +114,6 @@ import java.util.concurrent {
 }
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
-    ReadWriteLock,
     Lock,
     ReentrantLock
 }
@@ -145,7 +144,7 @@ shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
     variable CeylonProjectConfig? ceylonConfig = null;
     variable CeylonIdeConfig? ideConfig = null;
-    shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
+    shared ReentrantReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     Lock repositoryManagerLock = ReentrantLock();
     variable RepositoryManager? _repositoryManager = null;
 
