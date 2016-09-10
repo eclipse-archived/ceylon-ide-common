@@ -1,6 +1,6 @@
 import ceylon.collection {
     naturalOrderTreeSet,
-    TreeSet
+    SortedSet
 }
 import ceylon.interop.java {
     javaString
@@ -46,7 +46,7 @@ import java.lang {
     JInteger=Integer
 }
 
-TreeSet<String> sortedJdkModuleNames
+SortedSet<String> sortedJdkModuleNames
         = naturalOrderTreeSet {
             for (name in JDKUtils.jdkModuleNames)
             name.string
