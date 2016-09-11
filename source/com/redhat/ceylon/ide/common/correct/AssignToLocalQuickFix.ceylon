@@ -80,7 +80,7 @@ shared interface AssignToLocalProposal
         Boolean includeValue, String kind) {
         
         if (!exists type) {
-            return empty;
+            return [];
         }
         
         value typeProposals = ArrayList<String|Type>();

@@ -240,7 +240,7 @@ shared class DeltaBuilderFactory(
                     if (exists existingChange = change) {
                         return [existingChange];
                     } else {
-                        return empty;
+                        return [];
                     }
                 }
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
@@ -281,8 +281,7 @@ shared class DeltaBuilderFactory(
             }
         }
 
-        shared actual Ast.Declaration[] getChildren(AstNode astNode)
-            => empty;
+        shared actual Ast.Declaration[] getChildren(AstNode astNode) => [];
     }
 
     function sameBackend([Ast.AnnotationList, Unit?] oldNode, 
@@ -388,13 +387,8 @@ shared class DeltaBuilderFactory(
                     assert (exists moduleImport);
                     return moduleImport;
                 }
-                shared actual [ModuleImportDelta.PossibleChange]|[] changes {
-                    if (exists existingChange = change) {
-                        return [existingChange];
-                    } else {
-                        return empty;
-                    }
-                }
+                shared actual [ModuleImportDelta.PossibleChange]|[] changes
+                        => if (exists existingChange = change) then [existingChange] else [];
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
                 shared actual String changedElementString => "ModuleImport[``changedElement.\imodule.nameAsString``, ``changedElement.\imodule.version``]";
             }
@@ -443,8 +437,7 @@ shared class DeltaBuilderFactory(
             change = removed;
         }
 
-        shared actual AstNode[] getChildren(AstNode astNode)
-            => empty;
+        shared actual AstNode[] getChildren(AstNode astNode) => [];
     }
 
     class RegularCompilationUnitDeltaBuilder(Ast.CompilationUnit oldNode, Ast.CompilationUnit newNode, NodeComparisonListener? nodeComparisonListener)

@@ -77,9 +77,8 @@ shared interface AbstractImportsCleaner {
     }
 
     // Formerly CleanImportsHandler.imports(List<Declaration>, IDocument)
-    shared String createImports(List<Declaration> proposed, CommonDocument doc) {
-        return reorganizeImports(null, empty, proposed, doc);
-    }
+    shared String createImports(List<Declaration> proposed, CommonDocument doc)
+            => reorganizeImports(null, [], proposed, doc);
     
     shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused,
         List<Declaration> proposed, CommonDocument doc) {

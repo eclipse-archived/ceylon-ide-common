@@ -38,7 +38,7 @@ shared object typeCompletion {
         
         value td = infType.declaration;
         value supertypes = if (ModelUtil.isTypeUnknown(infType) || infType.typeConstructor)
-                           then empty else CeylonList(td.supertypeDeclarations);
+        then [] else CeylonList(td.supertypeDeclarations);
         variable value size = supertypes.size;
         
         if (exists kind) {

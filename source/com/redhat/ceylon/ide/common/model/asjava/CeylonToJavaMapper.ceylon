@@ -23,23 +23,19 @@ import com.redhat.ceylon.model.loader.model {
 shared alias JavaMirror => ClassMirror|MethodMirror;
 
 shared object ceylonToJavaMapper {
-    
-    function mapClassOrInterface(ClassOrInterface decl) {
-        return [
-            switch(decl)
-            case (is LazyClass) decl.classMirror
-            case (is LazyInterface) decl.classMirror
-            else JClassMirror(decl)
-        ];
-    }
-    
-    shared JavaMirror[] mapDeclaration(Declaration decl) {
-        return switch (decl)
-        case (is ClassOrInterface) mapClassOrInterface(decl)
-        case (is Value) mapValue(decl)
-        case (is Function) [mapFunction(decl)]
-        else empty; 
-    }
+
+    function mapClassOrInterface(ClassOrInterface decl)
+            => [switch (decl)
+    case (is LazyClass) decl.classMirror
+    case (is LazyInterface) decl.classMirror
+    else JClassMirror(decl)];
+
+    shared JavaMirror[] mapDeclaration(Declaration decl)
+            => switch (decl)
+    case (is ClassOrInterface) mapClassOrInterface(decl)
+    case (is Value) mapValue(decl)
+    case (is Function) [mapFunction(decl)]
+    else [];
     
     shared TypeMirror mapType(Type type) {
         if (type.union) {
@@ -72,14 +68,11 @@ shared object ceylonToJavaMapper {
         
         return JTypeMirror(type);
     }
-    
-    JToplevelFunctionMirror|MethodMirror mapFunction(Function func) {
-        return if (is LazyFunction func)
-        then func.methodMirror
-        else if (func.toplevel)
-        then JToplevelFunctionMirror(func)
-        else JMethodMirror(func);
-    }
+
+    JToplevelFunctionMirror|MethodMirror mapFunction(Function func)
+            => if (is LazyFunction func)
+    then func.methodMirror else if (func.toplevel)
+    then JToplevelFunctionMirror(func) else JMethodMirror(func);
     
     <JGetterMirror|JSetterMirror|JObjectMirror>[] mapValue(Value decl) {
         value mirrors = Array<JGetterMirror|JSetterMirror|JObjectMirror|Null>.ofSize(2, null);

@@ -578,8 +578,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             if (exists sourceUnitRelativePath) 
             then _classesToSources
                 .filter((_->source) => source == sourceUnitRelativePath)
-                .map(Entry.key)
-            else empty;
+                .map(Entry.key) else [];
     
     alias AnyPhasedUnitMap => PhasedUnitMap<out PhasedUnit, out PhasedUnit | SoftReference<ExternalPhasedUnit>>;
     
@@ -885,7 +884,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         value project = moduleManager.ceylonProject;
         if (exists project) {
             return project.referencingCeylonProjects
-                    .flatMap((p) => (p.modules?.external else empty))
+                .flatMap((p) => (p.modules ?. external else []))
                     .filter((m) => m.signature == signature);
         } else {
             return [];

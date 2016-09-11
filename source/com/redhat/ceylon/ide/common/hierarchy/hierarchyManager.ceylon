@@ -29,7 +29,7 @@ shared object hierarchyManager {
             };
         }
 
-        return empty;
+        return [];
     }
 
     shared {Declaration*} findSupertypes(Declaration model) {
@@ -48,7 +48,7 @@ shared object hierarchyManager {
             };
         }
 
-        return empty;
+        return [];
     }
 
     Boolean directlyRefines(Declaration subtype, Declaration supertype) {
