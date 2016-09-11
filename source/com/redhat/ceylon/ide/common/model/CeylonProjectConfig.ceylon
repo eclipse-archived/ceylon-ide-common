@@ -409,13 +409,13 @@ shared class CeylonProjectConfig(project) {
 
     {String*} toRepositoriesUrlList(ObjectArray<Repository>? repositories)
         => if (exists repositories)
-    then { for (repository in repositories.iterable.coalesced) repository.url } else [];
+        then { for (repository in repositories.iterable.coalesced) repository.url } else [];
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
         => if (exists repositoriesUrl)
-    then createJavaObjectArray {
+        then createJavaObjectArray {
             for (url in repositoriesUrl)
             Repositories.SimpleRepository("", url, null)
-    }
-            else ObjectArray<Repository>(0);
+        }
+        else ObjectArray<Repository>(0);
 }
