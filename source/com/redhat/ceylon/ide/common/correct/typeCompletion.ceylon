@@ -37,7 +37,8 @@ shared object typeCompletion {
         Integer length, Type infType, String? kind) {
         
         value td = infType.declaration;
-        value supertypes = if (ModelUtil.isTypeUnknown(infType) || infType.typeConstructor)
+        value supertypes
+                = if (ModelUtil.isTypeUnknown(infType) || infType.typeConstructor)
         then [] else CeylonList(td.supertypeDeclarations);
         variable value size = supertypes.size;
         

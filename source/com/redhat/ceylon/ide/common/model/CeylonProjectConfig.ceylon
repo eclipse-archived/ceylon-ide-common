@@ -3,7 +3,8 @@ import ceylon.interop.java {
     javaObjectArray,
     toStringArray,
     javaClass,
-    CeylonIterable
+    CeylonIterable,
+    createJavaObjectArray
 }
 
 import com.redhat.ceylon.common {
@@ -408,12 +409,13 @@ shared class CeylonProjectConfig(project) {
 
     {String*} toRepositoriesUrlList(ObjectArray<Repository>? repositories)
         => if (exists repositories)
-                then { for (repository in repositories.iterable.coalesced) repository.url } else [];
+    then { for (repository in repositories.iterable.coalesced) repository.url } else [];
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
         => if (exists repositoriesUrl)
-            then javaObjectArray(Array<Repository?> {
-                for (url in repositoriesUrl) Repositories.SimpleRepository("", url, null)
-            })
+    then createJavaObjectArray {
+            for (url in repositoriesUrl)
+            Repositories.SimpleRepository("", url, null)
+    }
             else ObjectArray<Repository>(0);
 }
