@@ -253,7 +253,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             on = this;
             void do() {
                 if (! _moduleType exists) {
-                    if (JDKUtils.isJDKModule(nameAsString) || JDKUtils.isOracleJDKModule(nameAsString)) {
+                    if (JDKUtils.isJDKModule(nameAsString)
+                     || JDKUtils.isOracleJDKModule(nameAsString)) {
                         _moduleType = ModuleType._SDK_MODULE;
                     }
                 }
@@ -275,8 +276,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     isSourceArchive => 
             equalsWithNulls(ModuleType._CEYLON_SOURCE_ARCHIVE, _moduleType);
     
-    isUnresolved => 
-            (! artifact exists) && !available;
+    isUnresolved => !artifact exists && !available;
     
     repositoryDisplayString =>
             if (isJDKModule) 
@@ -622,15 +622,15 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 function action(AnyPhasedUnitMap phasedUnitMap) {
                     PhasedUnit? phasedUnit;
                     switch (from)
-                    case(is Path) {
+                    case (is Path) {
                         value searchedPrefix = Path("``_sourceArchivePath else ""``!");
                         value relativePath = from.makeRelativeTo(searchedPrefix);
                         phasedUnit = phasedUnitMap.getPhasedUnitFromRelativePath(relativePath.string);
                     }
-                    case(is String) {
+                    case (is String) {
                         phasedUnit = phasedUnitMap.getPhasedUnit(from);
                     }
-                    case(is VirtualFile) {
+                    case (is VirtualFile) {
                         phasedUnit = phasedUnitMap.getPhasedUnit(from);
                     }
                     assert(is ExternalPhasedUnit? phasedUnit);
@@ -884,16 +884,15 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         value project = moduleManager.ceylonProject;
         if (exists project) {
             return project.referencingCeylonProjects
-                .flatMap((p) => (p.modules ?. external else []))
+                    .flatMap((p) => (p.modules ?. external else []))
                     .filter((m) => m.signature == signature);
         } else {
             return [];
         }
     }
     
-    shared default void encloseOnTheFlyTypechecking(void typechecking()) {
-        typechecking();
-    }
+    shared default void encloseOnTheFlyTypechecking(void typechecking())
+            => typechecking();
 
     ExternalPhasedUnit? buildPhasedUnitForBinaryUnit(String? sourceUnitFullPath) {
         if (!_sourceArchivePath exists || !sourceUnitFullPath exists) {
