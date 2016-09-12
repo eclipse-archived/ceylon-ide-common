@@ -181,6 +181,7 @@ shared object addSatisfiesQuickFix {
                         = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
                 change = tfc;
                 selection = sameFile then DefaultRegion(ci, ct.size) else null;
+                affectsOtherUnits = true;
             };
         }
     }
@@ -207,6 +208,7 @@ shared object addSatisfiesQuickFix {
                     = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
             change = tfc;
             selection = sameFile then DefaultRegion(changeIndex, changeText.size) else null;
+            affectsOtherUnits = true;
         };
     }
     

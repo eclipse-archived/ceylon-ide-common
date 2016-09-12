@@ -28,6 +28,7 @@ shared object renameDescriptorQuickFix {
             description = "Rename to '``pack.qualifiedNameString``'";
             change = change;
             qualifiedNameIsPath = true;
+            affectsOtherUnits = true;
         };
     }
 }

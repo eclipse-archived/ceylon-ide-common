@@ -37,7 +37,11 @@ shared object changeToQuickFix {
                     else rt.asSourceCodeString(unit);
             });
             
-            data.addQuickFix("Make function non-'void'", change);
+            data.addQuickFix {
+                description = "Make function non-'void'";
+                change = change;
+                affectsOtherUnits = true;
+            };
         }
     }
 
@@ -60,7 +64,11 @@ shared object changeToQuickFix {
                     text = "void";
                 });
                 
-                data.addQuickFix("Make function 'void'", change);
+                data.addQuickFix {
+                    description = "Make function 'void'";
+                    change = change;
+                    affectsOtherUnits = true;
+                };
             }
         }
     }

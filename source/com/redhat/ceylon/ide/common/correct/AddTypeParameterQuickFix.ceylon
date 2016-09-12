@@ -59,6 +59,7 @@ shared object addTypeParameterQuickFix {
         data.addQuickFix {
             description = "Add '``tp.name``' to type parameter list of '``decNode.declarationModel.name``'";
             change = change;
+            affectsOtherUnits = true;
         };
     }
 }

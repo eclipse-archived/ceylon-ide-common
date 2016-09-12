@@ -105,6 +105,7 @@ shared object addAnnotationQuickFix {
                     data.addQuickFix {
                         description = "Declare module '``annotation``'";
                         change = change;
+                        affectsOtherUnits = true;
                     };
                     
                     super.visit(that);
@@ -127,6 +128,7 @@ shared object addAnnotationQuickFix {
                         data.addQuickFix {
                             description = "Declare import '``annotation``'";
                             change = change;
+                            affectsOtherUnits = true;
                         };
                     }
                     
@@ -382,6 +384,7 @@ shared object addAnnotationQuickFix {
             description = description(annotation, dec);
             change = change;
             selection = selection;
+            affectsOtherUnits = true;
         };
     }
     

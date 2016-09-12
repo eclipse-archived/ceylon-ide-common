@@ -116,6 +116,7 @@ shared object removeAnnotationQuickFix {
             description = description(annotation, dec);
             change = change;
             selection = DefaultRegion(offset.intValue());
+            affectsOtherUnits = true;
         };
     }
     

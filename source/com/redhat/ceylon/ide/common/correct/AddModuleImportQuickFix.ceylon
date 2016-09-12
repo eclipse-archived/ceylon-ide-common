@@ -97,6 +97,7 @@ shared object addModuleImportQuickFix {
                                 moduleVersion = version;
                             };
                         declaration = ModuleVersionDetails(mod.string, version);
+                        affectsOtherUnits = true;
                     };
                     
                     return;
@@ -139,6 +140,7 @@ shared object addModuleImportQuickFix {
                             moduleVersion = moduleVersion;
                         };
                      declaration = version;
+                    affectsOtherUnits = true;
                 };
             }
         }

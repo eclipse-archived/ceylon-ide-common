@@ -227,6 +227,7 @@ shared object changeTypeQuickFix {
             description = "Change type of ``name`` to '``newType.asString(unit)``'";
             change() => initializerQuickFix.apply(change, doc, unit);
             selection = DefaultRegion(offset + il, newTypeName.size);
+            affectsOtherUnits = true;
         };
     }
 }

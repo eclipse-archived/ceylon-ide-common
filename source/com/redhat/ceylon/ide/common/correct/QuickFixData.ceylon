@@ -55,7 +55,8 @@ shared interface QuickFixData {
         QuickFixKind kind = QuickFixKind.generic,
         String? hint = null,
         Boolean asynchronous = false,
-        Referenceable|ModuleVersionDetails? declaration = null);
+        Referenceable|ModuleVersionDetails? declaration = null,
+        Boolean affectsOtherUnits = false);
     
     shared formal void addConvertToClassProposal(String description,
         Tree.ObjectDefinition declaration);

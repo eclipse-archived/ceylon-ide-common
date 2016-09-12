@@ -250,6 +250,7 @@ shared object addParameterQuickFix {
                         scope = dec.scope;
                         exitPos = data.node.endIndex.intValue();
                     };
+                affectsOtherUnits = true;
             };
         }
     }

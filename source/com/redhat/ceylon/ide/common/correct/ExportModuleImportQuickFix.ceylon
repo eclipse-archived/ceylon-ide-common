@@ -86,6 +86,7 @@ shared object exportModuleImportQuickFix {
                     target = unit.\ipackage.\imodule;
                     moduleName = decModule.nameAsString;
                 };
+            affectsOtherUnits = true;
         };
     }
 
