@@ -218,10 +218,9 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
         }
         if (exists tnal = term.namedArgumentList,
             exists enal = expression.namedArgumentList) {
-            value ts = tnal.sequencedArgument?.positionalArguments 
-                else Collections.emptyList<Tree.PositionalArgument>();
-            value es = enal.sequencedArgument?.positionalArguments 
-                else Collections.emptyList<Tree.PositionalArgument>();
+            value noArgs = Collections.emptyList<Tree.PositionalArgument>();
+            value ts = tnal.sequencedArgument?.positionalArguments else noArgs;
+            value es = enal.sequencedArgument?.positionalArguments else noArgs;
             value tns = tnal.namedArguments;
             value ens = enal.namedArguments;
             return positionalArgsDifferent(ts, es) 
