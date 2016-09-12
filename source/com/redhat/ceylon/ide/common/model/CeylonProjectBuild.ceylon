@@ -452,8 +452,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                         if (exists projectRelativePath,
                             exists [outputRepo, _, __, ___] = projectInfoMap.get(changeProject),
                             outputRepo.isPrefixOf(projectRelativePath)) {
-                            state.buildType.requireFullBuild();
-                            state.buildType.requireClasspathResolution();
+
+                            // TODO this was disabled because of https://github.com/ceylon/ceylon-ide-intellij/issues/411
+                            // it will be fixed properly in https://github.com/ceylon/ceylon-ide-common/issues/78
+//                            state.buildType.requireFullBuild();
+//                            state.buildType.requireClasspathResolution();
                         }
                     }
                     case(is NativeFileChange) {
