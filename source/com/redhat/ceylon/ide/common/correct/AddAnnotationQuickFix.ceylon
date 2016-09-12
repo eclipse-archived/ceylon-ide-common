@@ -89,19 +89,29 @@ shared object addAnnotationQuickFix {
     shared void addMakeNativeProposal(Node node, QuickFixData data) {
         if (is Tree.ImportPath node) {
             object extends Visitor() {
+                function nativeAnnotation(Module mod) {
+                    value annotation = StringBuilder();
+                    moduleImportUtil.appendNative(annotation, mod.nativeBackends);
+                    return annotation.string;
+                }
+                
+                void addEdit(TextChange change, 
+                    Tree.ModuleDescriptor|Tree.ImportModule that, 
+                    String annotation) {
+                    change.addEdit(InsertEdit {
+                        start = that.startIndex.intValue();
+                        text = annotation + " ";
+                    });
+                }
+                
                 shared actual void visit(Tree.ModuleDescriptor that) {
-                    assert(is Module m = node.model);
-                    value backends = m.nativeBackends;
+                    assert (is Module mod = node.model);
                     value change = platformServices.document.createTextChange {
                         name = "Declare Module Native";
                         input = data.phasedUnit;
                     };
-                    value annotation = StringBuilder();
-                    moduleImportUtil.appendNative(annotation, backends);
-                    change.addEdit(InsertEdit {
-                        start = that.startIndex.intValue();
-                        text = annotation.string + " ";
-                    });
+                    value annotation = nativeAnnotation(mod);
+                    addEdit(change, that, annotation);
                     data.addQuickFix {
                         description = "Declare module '``annotation``'";
                         change = change;
@@ -113,18 +123,13 @@ shared object addAnnotationQuickFix {
                 
                 shared actual void visit(Tree.ImportModule that) {
                     if (that.importPath == node) {
-                        assert (is Module m = that.importPath.model);
-                        value backends = m.nativeBackends;
+                        assert (is Module mod = that.importPath.model);
                         value change = platformServices.document.createTextChange {
                             name = "Declare Import Native";
                             input = data.phasedUnit;
                         };
-                        value annotation = StringBuilder();
-                        moduleImportUtil.appendNative(annotation, backends);
-                        change.addEdit(InsertEdit {
-                            start = that.startIndex.intValue();
-                            text = annotation.string + " ";
-                        });
+                        value annotation = nativeAnnotation(mod);
+                        addEdit(change, that, annotation);
                         data.addQuickFix {
                             description = "Declare import '``annotation``'";
                             change = change;
