@@ -21,9 +21,10 @@ shared interface ParametersCompletion {
     shared void addParametersProposal(Integer offset, String prefix, 
         Tree.Term node, CompletionContext ctx) {
         
-        value condition = if (is Tree.StaticMemberOrTypeExpression node)
-                          then !(node.declaration is Functional)
-                          else true;
+        value condition
+                = if (is Tree.StaticMemberOrTypeExpression node)
+                then !node.declaration is Functional
+                else true;
         
         if (condition, 
             exists unit = node.unit, 
