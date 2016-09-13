@@ -51,7 +51,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    JString=String
+    JString=String,
+    ObjectArray
 }
 import java.util {
     Map,
@@ -82,6 +83,9 @@ shared object completionManager
                 & FunctionCompletion
                 & ControlStructureCompletionProposal
                 & AnonFunctionCompletion {
+
+    value emptyTypeArray = ObjectArray<Type>(0);
+    value emptyTypeParameterArray = ObjectArray<TypeParameter>(0);
 
     shared alias Proposals => Map<JString,DeclarationWithProximity>;
 
@@ -1136,7 +1140,8 @@ shared object completionManager
         JList<Type> params;
         if (is Generic d, !d.typeParameters.empty) {
             params = JArrayList<Type>();
-            for (tp in d.typeParameters) {
+            value typeParameters = d.typeParameters.toArray(emptyTypeParameterArray);
+            for (tp in typeParameters) {
                 params.add(tp.type);
             }
         }
@@ -1455,7 +1460,8 @@ shared object completionManager
 
     Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {
         if (exists requiredType, requiredType.union) {
-            for (td in requiredType.caseTypes) {
+            value caseTypes = requiredType.caseTypes.toArray(emptyTypeArray);
+            for (td in caseTypes) {
                 if (isValueCaseOfSwitch(td, dec)) {
                     return true;
                 }
@@ -1487,7 +1493,8 @@ shared object completionManager
 
     Boolean isTypeCaseOfSwitch(Type? requiredType, Declaration dec) {
         if (exists requiredType, requiredType.union) {
-            for (td in requiredType.caseTypes) {
+            value caseTypes = requiredType.caseTypes.toArray(emptyTypeArray);
+            for (td in caseTypes) {
                 if (isTypeCaseOfSwitch(td, dec)) {
                     return true;
                 }
