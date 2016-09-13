@@ -304,7 +304,7 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
             result.append("(");
             for (p in params) {
                 value typedParameter = pr.getTypedParameter(p);
-                if (is Functional mod = p.model) {
+                /*if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
                         result.append("void ");
                     }
@@ -323,16 +323,17 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
                         result.append(" => ").append("nothing");
                     }
                 }
-                else {
+                else {*/
                     if (paramTypes, 
-                        exists pt = typedParameter.type,
+                        exists pt = typedParameter.fullType,
                         !isTypeUnknown(pt)) {
-                        value newPt = if (p.sequenced)
-                                      then unit.getSequentialElementType(pt)
-                                      else pt;
+                        value newPt
+                                = p.sequenced
+                                then unit.getSequentialElementType(pt)
+                                else pt;
                         result.append(newPt.asString(unit));
                         if (p.sequenced) {
-                            result.append(if (p.atLeastOne) then "+" else "*");
+                            result.append(p.atLeastOne then "+" else "*");
                         }
                         result.append(" ");
                     }
@@ -347,7 +348,7 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
                     else if (exists name = p.name) {
                         result.append(name);
                     }
-                }
+//                }
                 result.append(", ");
             }
             result.deleteTerminal(2);

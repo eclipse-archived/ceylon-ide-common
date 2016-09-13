@@ -1,15 +1,15 @@
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.platform {
     platformServices
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Unit,
-    Type
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
-import com.redhat.ceylon.ide.common.doc {
-    Icons
+import com.redhat.ceylon.model.typechecker.model {
+    Unit,
+    Type
 }
 
 shared interface AnonFunctionCompletion {
@@ -18,18 +18,17 @@ shared interface AnonFunctionCompletion {
         Type? requiredType, Unit unit) {
         
         value text = anonFunctionHeader(requiredType, unit);
-        value funtext = text + " => nothing";
         
         platformServices.completion.addProposal {
             ctx = ctx;
             offset = offset;
-            description = funtext;
+            description = text + " => nothing";
             prefix = "";
             icon = Icons.correction;
-            selection = DefaultRegion(
-                offset + (funtext.firstInclusion("nothing") else 0),
-                7
-            );
+            selection = DefaultRegion {
+                start = offset + text.size + 4;
+                length = 7;
+            };
         };
         
         if (unit.getCallableReturnType(requiredType).anything) {
@@ -38,8 +37,11 @@ shared interface AnonFunctionCompletion {
                 offset = offset;
                 description = "void " + text + " {}";
                 prefix = "";
-                selection = DefaultRegion(offset + funtext.size - 1, 0);
                 icon = Icons.correction;
+                selection = DefaultRegion {
+                    start = offset + text.size + 7;
+                    length = 0;
+                };
             };
         }
     }

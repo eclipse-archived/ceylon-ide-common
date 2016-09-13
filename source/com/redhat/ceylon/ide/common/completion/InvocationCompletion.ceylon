@@ -726,6 +726,7 @@ shared abstract class InvocationCompletionProposal
                             last = param == params.size() - 1;
                             cpc = cpc;
                             cancellable = cancellable;
+                            positionalInvocation = positionalInvocation;
                         };
                     }
                     value middle 
@@ -762,17 +763,28 @@ shared abstract class InvocationCompletionProposal
     
     void addValueArgumentProposals(ProposalsHolder props, 
         Parameter param, Integer loc, Integer first, Integer index, 
-        Boolean last, CompletionContext cpc, Cancellable? cancellable) {
+        Boolean last, CompletionContext cpc, Cancellable? cancellable,
+        Boolean positionalInvocation) {
         
         if (!param.model.dynamicallyTyped, 
             exists producedReference, 
-            exists type 
-                    = producedReference()
-                        .getTypedParameter(param)
-                        .type) {
-            
+            exists type =
+                    let (tp = producedReference().getTypedParameter(param))
+                    if (positionalInvocation) then tp.fullType else tp.type) {
             value unit = cu.unit;
-            value proposals 
+
+            if (type.callable) {
+//                completionManager.addAnonFunctionProposal(cpc, loc, type, unit);
+                newNestedLiteralCompletionProposal {
+                    props = props;
+                    //TODO: use param to get the sub-parameter names
+                    val = anonFunctionHeader(type, unit) + " => nothing";
+                    loc = loc;
+                    index = index;
+                };
+            }
+
+            value proposals
                     = getSortedProposedValues {
                         scope = scope;
                         unit = unit;
