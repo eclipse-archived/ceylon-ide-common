@@ -87,19 +87,19 @@ shared object nodes {
         cu.visit(visitor);
         return visitor.context;
     }
-    
+
     shared Tree.OperatorExpression? findOperator(Tree.CompilationUnit cu, Node node) {
         variable Tree.OperatorExpression? result = null;
         cu.visit(object extends Visitor() {
-                shared actual void visit(Tree.OperatorExpression that) {
-                    if (node.startIndex.intValue() >= that.startIndex.intValue(),
-                        node.endIndex.intValue() <= that.endIndex.intValue()) {
-                        
-                        result = that;
-                    }
-                    super.visit(that);
+            shared actual void visit(Tree.OperatorExpression that) {
+                if (node.startIndex.intValue() >= that.startIndex.intValue(),
+                    node.endIndex.intValue() <= that.endIndex.intValue()) {
+
+                    result = that;
                 }
-            });
+                super.visit(that);
+            }
+        });
         return result;
     }
     
