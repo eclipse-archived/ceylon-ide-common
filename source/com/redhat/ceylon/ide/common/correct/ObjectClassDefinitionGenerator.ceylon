@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -44,7 +40,7 @@ shared class ObjectClassDefinitionGenerator(
     shared actual LinkedHashMap<String,Type>? parameters;
     CommonDocument document;
     
-    shared actual Boolean isFormalSupported => classGenerator;
+    isFormalSupported => classGenerator;
     
     Boolean isUpperCase => brokenName.first?.uppercase else false;
     
@@ -53,9 +49,9 @@ shared class ObjectClassDefinitionGenerator(
             value params = StringBuilder();
             appendParameters(parameters, params, defaultedSupertype);
             value supertype = supertypeDeclaration(returnType) else "";
-            return "'class " + brokenName + params.string + supertype + "'";
+            return "'class ``brokenName + params.string + supertype``'";
         } else {
-            return "'object " + brokenName + "'";
+            return "'object ``brokenName``'";
         }
     }
     
@@ -82,7 +78,7 @@ shared class ObjectClassDefinitionGenerator(
             }
             value defIndent = platformServices.document.defaultIndent;
             value supertype 
-                    = if (isVoid) then null 
+                    = if (isVoid) then null
                     else supertypeDeclaration(returnType);
             def.append("class ")
                 .append(brokenName)
@@ -128,20 +124,18 @@ shared class ObjectClassDefinitionGenerator(
         return def.string;
     }
     
-    Boolean classGenerator {
-        return isUpperCase && parameters exists;
-    }
+    Boolean classGenerator => isUpperCase && parameters exists;
     
-    Boolean objectGenerator {
-        return !isUpperCase && !parameters exists;
-    }
+    Boolean objectGenerator => !isUpperCase && !parameters exists;
     
     shared actual void generateImports(CommonImportProposals importProposals) {
         importProposals.importType {
             type = returnType;
         };
         if (exists parameters) {
-            importProposals.importTypes(CeylonIterable(parameters.values()));
+            importProposals.importTypes {
+                for (p in parameters.values()) p
+            };
         }
         if (exists returnType) {
             importMembers(importProposals);
@@ -237,13 +231,10 @@ shared class ObjectClassDefinitionGenerator(
     
     void appendRefinementText(String indent, String delim, StringBuilder def, String defIndent, Declaration d) {
         assert (exists returnType);
-        value pr = completionManager.getRefinedProducedReference(returnType, d);
-        value unit = node.unit;
-        variable value text 
-                = getRefinementTextFor {
+        value text = getRefinementTextFor {
             d = d;
-            pr = pr;
-            unit = unit;
+            pr = completionManager.getRefinedProducedReference(returnType, d);
+            unit = node.unit;
             isInterface = false;
             ci = null;
             indent = "";
@@ -251,12 +242,18 @@ shared class ObjectClassDefinitionGenerator(
             preamble = true;
             addParameterTypesInCompletions = false;
         };
-        if (exists parameters, parameters.containsKey(d.name)) {
-            text = text.spanTo((text.firstInclusion(" =>") else 0) - 1) + ";";
+        String realText;
+        if (exists parameters,
+            parameters.containsKey(d.name),
+            exists loc = text.firstInclusion(" =>")) {
+            realText = text[0:loc] + ";";
+        }
+        else {
+            realText = text;
         }
         def.append(indent)
             .append(defIndent)
-            .append(text)
+            .append(realText)
             .append(delim);
     }
     
@@ -288,18 +285,15 @@ String? supertypeDeclaration(Type? returnType) {
         return null;
     } else if (exists returnType) {
         if (returnType.\iclass) {
-            return " extends " 
-                    + returnType.asString() + "()"; //TODO: supertype arguments!
+            return " extends ``returnType.asString()``()"; //TODO: supertype arguments!
         } else if (returnType.\iinterface) {
-            return " satisfies " 
-                    + returnType.asString();
+            return " satisfies ``returnType.asString()``";
         } else if (returnType.intersection) {
-            variable value extendsClause = "";
+            value extendsClause = StringBuilder();
             value satisfiesClause = StringBuilder();
             for (st in returnType.satisfiedTypes) {
                 if (st.\iclass) {
-                    extendsClause = " extends " 
-                            + st.asString() + "()"; //TODO: supertype arguments!
+                    extendsClause.append(" extends ``st.asString()``()"); //TODO: supertype arguments!
                 } else if (st.\iinterface) {
                     if (satisfiesClause.empty) {
                         satisfiesClause.append(" satisfies ");
@@ -309,7 +303,7 @@ String? supertypeDeclaration(Type? returnType) {
                     satisfiesClause.append(st.asString());
                 }
             }
-            return extendsClause + satisfiesClause.string;
+            return extendsClause.string + satisfiesClause.string;
         }
     }
     return null;
@@ -327,7 +321,7 @@ Boolean isValidSupertype(Type? returnType) {
             return !rtd.final;
         } else if (returnType.\iinterface) {
             value cd = rtd.unit.callableDeclaration;
-            return !rtd.equals(cd);
+            return rtd != cd;
         } else if (returnType.intersection) {
             for (st in returnType.satisfiedTypes) {
                 if (!isValidSupertype(st)) {
@@ -348,8 +342,7 @@ ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
     Tree.CompilationUnit rootNode;
     CommonDocument document;
     
-    value isUpperCase 
-            = brokenName.first?.uppercase else false;
+    value isUpperCase = brokenName.first?.uppercase else false;
     value fav = FindArgumentsVisitor(node);
     rootNode.visit(fav);
     value unit = node.unit;
@@ -374,10 +367,24 @@ ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
     }
     return 
     if (exists paramTypes, isUpperCase)
-        then ObjectClassDefinitionGenerator(brokenName, node, 
-            rootNode, Icons.localClass, returnType, paramTypes, document)
+        then ObjectClassDefinitionGenerator {
+            brokenName = brokenName;
+            node = node;
+            rootNode = rootNode;
+            image = Icons.localClass;
+            returnType = returnType;
+            parameters = paramTypes;
+            document = document;
+        }
     else if (!exists paramTypes, !isUpperCase)
-        then ObjectClassDefinitionGenerator(brokenName, node, 
-            rootNode, Icons.localAttribute, returnType, null, document)
+        then ObjectClassDefinitionGenerator {
+            brokenName = brokenName;
+            node = node;
+            rootNode = rootNode;
+            image = Icons.localAttribute;
+            returnType = returnType;
+            parameters = null;
+            document = document;
+        }
     else null;
 }

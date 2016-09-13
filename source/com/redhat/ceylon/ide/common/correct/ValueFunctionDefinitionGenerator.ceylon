@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -42,20 +38,20 @@ shared class ValueFunctionDefinitionGenerator(
     value isNew 
             = if (is Tree.QualifiedMemberExpression node)
             then node.primary 
-                is Tree.BaseTypeExpression |
-                   Tree.QualifiedTypeExpression
+                is Tree.BaseTypeExpression
+                 | Tree.QualifiedTypeExpression
             else false;
     
-    shared actual Boolean isFormalSupported => true;
+    isFormalSupported => true;
     
     shared actual String description {
         value params = StringBuilder();
         if (exists parameters) {
             appendParameters(parameters, params);
         }
-        return if (isNew) then "constructor 'new " + brokenName + params.string + "'"
-            else if (exists parameters) then "'function " + brokenName + params.string + "'"
-            else "'value " + brokenName + "'";
+        return if (isNew) then "constructor 'new ``brokenName + params.string``'"
+            else if (exists parameters) then "'function ``brokenName + params.string``'"
+            else "'value ``brokenName``'";
     }
     
     shared actual String generateInternal(String indent, 
@@ -86,7 +82,7 @@ shared class ValueFunctionDefinitionGenerator(
                 if (isTypeUnknown(returnType)) {
                     def.append("function");
                 } else {
-                    assert(exists returnType);
+                    assert (exists returnType);
                     def.append(returnType.asSourceCodeString(unit));
                 }
             }
@@ -133,7 +129,9 @@ shared class ValueFunctionDefinitionGenerator(
             type = returnType;
         };
         if (exists parameters) {
-            importProposals.importTypes(CeylonIterable(parameters.values()));
+            importProposals.importTypes {
+                for (p in parameters.values()) p
+            };
         }
     }
 }
@@ -167,8 +165,7 @@ ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
     Tree.CompilationUnit rootNode;
     CommonDocument document;
     
-    value isUpperCase 
-            = brokenName.first?.uppercase else false;
+    value isUpperCase = brokenName.first?.uppercase else false;
     if (isUpperCase) {
         return null;
     }
@@ -182,10 +179,24 @@ ValueFunctionDefinitionGenerator? createValueFunctionDefinitionGenerator(
     value paramTypes = getParameters(fav);
     
     return if (exists paramTypes) 
-    then ValueFunctionDefinitionGenerator(brokenName, node, rootNode,  
-            Icons.localMethod, returnType, paramTypes, false, 
-            document) 
-    else ValueFunctionDefinitionGenerator(brokenName, node, rootNode,
-            Icons.localAttribute, returnType, null, fav.isVariable,
-            document);
+    then ValueFunctionDefinitionGenerator {
+        brokenName = brokenName;
+        node = node;
+        rootNode = rootNode;
+        image = Icons.localMethod;
+        returnType = returnType;
+        parameters = paramTypes;
+        isVariable = false;
+        document = document;
+    }
+    else ValueFunctionDefinitionGenerator {
+        brokenName = brokenName;
+        node = node;
+        rootNode = rootNode;
+        image = Icons.localAttribute;
+        returnType = returnType;
+        parameters = null;
+        isVariable = fav.isVariable;
+        document = document;
+    };
 }
