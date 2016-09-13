@@ -24,11 +24,15 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     variable Type? requiredType = null;
     variable Type? finalResult = null;
+    variable Parameter? parameterResult = null;
+    variable Parameter? finalParameter = null;
     variable Reference? namedArgTarget = null;
     variable String? paramName = null;
     
     shared actual Type? type => finalResult;
     shared actual String? parameterName => paramName;
+
+    shared actual Parameter? parameter => finalParameter;
     
     shared actual void visitAny(Node that) {
         if (node == that) {
@@ -123,6 +127,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 if (exists params = getParameters(pr)) {
                     if (params.size() > pos) {
                         Parameter param = params.get(pos);
+                        this.parameterResult = param;
                         if (pr.declaration.qualifiedNameString=="ceylon.language::print") {
                             requiredType = unit.stringDeclaration.type;
                         } else {
@@ -133,6 +138,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                         }
                     } else if (!params.empty) {
                         Parameter param = params.get(params.size() - 1);
+                        this.parameterResult = param;
                         if (param.sequenced) {
                             requiredType = pr.getTypedParameter(param).fullType;
                             requiredType = unit.getIteratedType(requiredType);
@@ -159,6 +165,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 !params.empty) {
                 
                 Parameter param = params.get(params.size() - 1);
+                this.parameterResult = param;
                 if (unit.isIterableType(param.type)) {
                     requiredType = nat.getTypedParameter(param).fullType;
                     requiredType = unit.getIteratedType(requiredType);
@@ -168,6 +175,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         if (node===that.positionalArgumentList
          || node===that.namedArgumentList) {
             finalResult = requiredType;
+            finalParameter = this.parameterResult;
         }
 
         that.namedArgumentList?.visit(this);

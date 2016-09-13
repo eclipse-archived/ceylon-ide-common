@@ -7,7 +7,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     TypedDeclaration,
-    ModelUtil
+    ModelUtil,
+    Parameter
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
@@ -20,6 +21,7 @@ import java.util {
 shared interface RequiredType {
     shared formal Type? type;
     shared formal String? parameterName;
+    shared formal Parameter? parameter;
 }
 
 shared object types {

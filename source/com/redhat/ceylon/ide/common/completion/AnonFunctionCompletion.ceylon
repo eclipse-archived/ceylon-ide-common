@@ -9,17 +9,20 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
-    Type
+    Type,
+    Parameter
 }
 
 shared interface AnonFunctionCompletion {
-    
+
     shared void addAnonFunctionProposal(CompletionContext ctx, Integer offset,
-        Type? requiredType, Unit unit) {
+        Type? requiredType, Parameter? parameter, Unit unit) {
 
-        //TODO: find a target parameter to get the sub-parameter names
-
-        value text = anonFunctionHeader(requiredType, unit);
+        value text = anonFunctionHeader {
+            requiredType = requiredType;
+            unit = unit;
+            param = parameter;
+        };
         
         platformServices.completion.addProposal {
             ctx = ctx;

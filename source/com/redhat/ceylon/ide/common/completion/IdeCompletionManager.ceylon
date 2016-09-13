@@ -46,7 +46,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Value,
     TypeAlias,
     Package,
-    Cancellable
+    Cancellable,
+    Parameter
 }
 
 import java.lang {
@@ -304,6 +305,7 @@ shared object completionManager
                 secondLevel = secondLevel;
                 inDoc = inDoc;
                 requiredType = required.type;
+                parameter = required.parameter;
                 previousTokenType = previousTokenType;
                 tokenType = tokenType;
                 cancellable = monitor;
@@ -682,6 +684,7 @@ shared object completionManager
         Boolean secondLevel, Boolean inDoc,
         Type? requiredType, Integer previousTokenType,
         Integer tokenType,
+        Parameter? parameter,
         Cancellable cancellable) {
 
         value before = system.milliseconds;
@@ -807,6 +810,7 @@ shared object completionManager
                     ctx = ctx;
                     offset = offset;
                     requiredType = requiredType;
+                    parameter = parameter;
                     unit = unit;
                 };
             }
