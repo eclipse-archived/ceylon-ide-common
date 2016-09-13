@@ -16,7 +16,9 @@ shared interface AnonFunctionCompletion {
     
     shared void addAnonFunctionProposal(CompletionContext ctx, Integer offset,
         Type? requiredType, Unit unit) {
-        
+
+        //TODO: find a target parameter to get the sub-parameter names
+
         value text = anonFunctionHeader(requiredType, unit);
         
         platformServices.completion.addProposal {

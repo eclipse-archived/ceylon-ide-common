@@ -777,8 +777,7 @@ shared abstract class InvocationCompletionProposal
 //                completionManager.addAnonFunctionProposal(cpc, loc, type, unit);
                 newNestedLiteralCompletionProposal {
                     props = props;
-                    //TODO: use param to get the sub-parameter names
-                    val = anonFunctionHeader(type, unit) + " => nothing";
+                    val = anonFunctionHeader(type, unit, param) + " => nothing";
                     loc = loc;
                     index = index;
                 };

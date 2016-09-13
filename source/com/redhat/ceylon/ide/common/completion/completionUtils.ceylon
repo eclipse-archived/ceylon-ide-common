@@ -62,23 +62,30 @@ shared Boolean isLocation(loc1, loc2) {
     return false;
 }
 
-shared String anonFunctionHeader(Type? requiredType, Unit unit) {
+shared String anonFunctionHeader(Type? requiredType, Unit unit, Parameter? param = null) {
     value text = StringBuilder();
     text.append("(");
     
     variable value c = 'a';
-    variable value first = true;
+    value params
+            = if (is Functional fun = param?.model)
+            then fun.firstParameterList?.parameters
+            else null;
+    variable value index = 0;
     for (paramType in unit.getCallableArgumentTypes(requiredType)) {
-        if (!first) {
+        if (index>0) {
             text.append(", ");
         }
-        else {
-            first = false;
-        }
         text.append(paramType.asSourceCodeString(unit))
-            .append(" ")
-            .append(c.string);
+            .append(" ");
+        if (exists params, exists p = params[index]) {
+            text.append(p.name);
+        }
+        else {
+            text.append(c.string);
+        }
         c++;
+        index++;
     }
     text.append(")");
     
