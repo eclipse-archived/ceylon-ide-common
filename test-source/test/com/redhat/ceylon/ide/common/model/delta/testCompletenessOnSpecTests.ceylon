@@ -31,7 +31,7 @@ shared void testCompletenessOnSpecTests() {
     variable File? dir = File("").absoluteFile;
     variable File? specDir = null;
     while (exists existingDir = dir) {
-        value triedDir = File(existingDir, "ceylon-spec");
+        value triedDir = File(File(existingDir,"ceylon"), "typechecker");
         if (triedDir.\iexists()) {
             specDir = triedDir;
             break;
