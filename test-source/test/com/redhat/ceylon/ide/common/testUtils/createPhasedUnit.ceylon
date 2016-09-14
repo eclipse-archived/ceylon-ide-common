@@ -14,7 +14,7 @@ import com.redhat.ceylon.cmr.ceylon {
 }
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker {
-        languageModuleVersion=\iLANGUAGE_MODULE_VERSION
+        languageModuleVersion
     }
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
@@ -29,12 +29,15 @@ import com.redhat.ceylon.compiler.typechecker.io {
     VFS,
     VirtualFile
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Module,
-    Unit
+import com.redhat.ceylon.ide.common.model {
+    cancelDidYouMeanSearch
 }
 import com.redhat.ceylon.ide.common.model.delta {
     ...
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Module,
+    Unit
 }
 
 import java.io {
@@ -46,9 +49,6 @@ import java.util {
     Collections {
         emptyList
     }
-}
-import com.redhat.ceylon.ide.common.model {
-    cancelDidYouMeanSearch
 }
 
 shared class SourceCode(contents, path) {
@@ -74,8 +74,9 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         shared default actual InputStream inputStream => nothing;
         shared actual String name => path.split('/'.equals, true, true).last;
         shared actual String path;
-        suppressWarnings("expressionTypeNothing")
-        shared actual Integer compareTo(VirtualFile? t) => nothing;
+        shared actual Integer compareTo(VirtualFile? t) {
+            assert(false);
+        }
         shared actual String getRelativePath(VirtualFile? virtualFile) => path;
     }
 
