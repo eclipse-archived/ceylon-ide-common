@@ -42,6 +42,42 @@ test void addDeclarationMember() {
     };
 }
 
+test void addShortcutRefinement() {
+    comparePhasedUnits {
+        path = "dir/test.ceylon";
+        oldContents =
+                "
+                 interface Hello {
+                    shared formal Integer foo;
+                 }
+                 
+                 abstract class World() satisfies Hello {
+                 }
+                 ";
+        newContents =
+                "
+                 interface Hello {
+                    shared formal Integer foo;
+                 }
+                 
+                 abstract class World() satisfies Hello {
+                    foo => 2;
+                 }
+                 ";
+        expectedDelta =
+                RegularCompilationUnitDeltaMockup {
+            changedElementString = "Unit[test.ceylon]";
+            changes = {};
+            childrenDeltas = {
+                TopLevelDeclarationDeltaMockup {
+                    changedElementString = "Class[World]";
+                    changes = { DeclarationMemberAdded("foo") };
+                    }
+                };
+            };
+        };
+    }
+
 test void removeDeclarationMember() {
     comparePhasedUnits {
         path = "dir/test.ceylon";
