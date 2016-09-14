@@ -128,8 +128,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                     if (params.size() > pos) {
                         Parameter param = params.get(pos);
                         this.parameterResult = param;
-                        if (pr.declaration.qualifiedNameString=="ceylon.language::print") {
-                            requiredType = unit.stringDeclaration.type;
+                        if (exists qualifiedNameString = pr.declaration?.qualifiedNameString,
+                            qualifiedNameString =="ceylon.language::print") {
+                            requiredType = unit.stringDeclaration?.type;
                         } else {
                             requiredType = pr.getTypedParameter(param).fullType;
                             if (param.sequenced) {
@@ -147,7 +148,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 }
             } else {
                 //indirect invocations
-                if (exists ct = that.primary.typeModel,
+                if (exists ct = that.primary?.typeModel,
                     unit.isCallableType(ct)) {
                     value pts = unit.getCallableArgumentTypes(ct);
                     
@@ -208,7 +209,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.SpecifierStatement that) {
         value ort = requiredType;
-        requiredType = that.baseMemberExpression.typeModel;
+        requiredType = that.baseMemberExpression?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
@@ -218,17 +219,18 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         variable Type? srt = that.unit.anythingType;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
-            if (exists e = switchClause.switched.expression) {
+            if (exists e = switchClause.switched?.expression) {
                 srt = e.typeModel;
-            } else if (exists v = switchClause.switched.variable) {
-                srt = v.type.typeModel;
+            } else if (exists v = switchClause.switched?.variable) {
+                srt = v.type?.typeModel;
             } else {
                 srt = null;
             }
         }
         
-        if (exists switchCaseList = that.switchCaseList) {
-            for (cc in switchCaseList.caseClauses) {
+        if (exists switchCaseList = that.switchCaseList,
+            exists caseClauses = switchCaseList.caseClauses) {
+            for (cc in caseClauses) {
                 if (cc===node || cc.caseItem===node) {
                     finalResult = srt;
                 }
@@ -253,7 +255,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
             if (exists e = switchClause.switched?.expression) {
                 srt = e.typeModel;
             } else if (exists v = switchClause.switched?.variable) {
-                srt = v.type.typeModel;
+                srt = v.type?.typeModel;
             } else {
                 srt = null;
             }
@@ -262,8 +264,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
             srt = null;
         }
         
-        if (exists switchCaseList = that.switchCaseList) {
-            for (cc in switchCaseList.caseClauses) {
+        if (exists switchCaseList = that.switchCaseList,
+            exists caseClauses = switchCaseList.caseClauses) {
+            for (cc in caseClauses) {
                 if (cc===node || cc.caseItem===node) {
                     finalResult = srt;
                 }
@@ -296,20 +299,20 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.MethodDeclaration that) {
         value ort = requiredType;
-        requiredType = that.type.typeModel;
+        requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.FunctionArgument that) {
         value ort = requiredType;
-        requiredType = that.type.typeModel;
+        requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
     shared actual void visit(Tree.AssignmentOp that) {
         value ort = requiredType;
-        requiredType = that.leftTerm.typeModel;
+        requiredType = that.leftTerm?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
@@ -323,26 +326,27 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.Throw that) {
         value ort = requiredType;
-        requiredType = that.unit.exceptionType;
+        requiredType = that.unit?.exceptionType;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.ConditionList that) {
         value ort = requiredType;
-        requiredType = that.unit.booleanType;
+        requiredType = that.unit?.booleanType;
         super.visit(that);
         requiredType = ort;
     }
     
     shared actual void visit(Tree.ResourceList that) {
         value ort = requiredType;
-        Unit unit = that.unit;
-        requiredType
-                = ModelUtil.unionType(
-                    unit.destroyableType,
-                    unit.obtainableType,
-                    unit);
+        if (exists unit = that.unit) {
+            requiredType
+                    = ModelUtil.unionType(
+                unit.destroyableType,
+                unit.obtainableType,
+                unit);
+        }
         super.visit(that);
         requiredType = ort;
     }
@@ -358,7 +362,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         Declaration? base = that.base;
         requiredType = types.getResultType(base);
         if (!exists rt = requiredType, exists base) {
-            requiredType = base.reference.fullType;
+            requiredType = base.reference?.fullType;
         }
         super.visit(that);
         requiredType = ort;
