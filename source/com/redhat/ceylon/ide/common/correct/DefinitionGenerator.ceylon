@@ -64,7 +64,7 @@ shared abstract class DefinitionGenerator() {
                 Declaration? member 
                         = supertype.getMember(e.key, null, false);
                 if (!(member?.formal else false)) {
-                    buffer.append(e.\ivalue.asString()).append(" ");
+                    buffer.append(e.\ivalue.asSourceCodeString(node.unit)).append(" ");
                 }
                 buffer.append(e.key).append(", ");
             }
