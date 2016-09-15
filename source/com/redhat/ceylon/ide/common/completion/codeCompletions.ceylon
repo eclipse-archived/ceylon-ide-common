@@ -646,13 +646,10 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
 void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
     Boolean descriptionOnly) {
     
-    if (is Functional fp = p.model) {
-        result.append(fp.declaredVoid then "void" else "function");
-    } else {
-        result.append("value");
+    if (is Functional fp = p.model, fp.declaredVoid) {
+        result.append("void").append(" ");
     }
-    result.append(" ").append(if (descriptionOnly)
-        then p.name else escaping.escapeName(p.model));
+    result.append(descriptionOnly then p.name else escaping.escapeName(p.model));
 }
 
 void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit,

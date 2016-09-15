@@ -144,7 +144,7 @@ shared interface RefinementCompletion {
         Scope scope, Node node, String prefix, CompletionContext ctx, TypedReference? pr,
         CommonDocument doc) {
         
-        if (dec.parameter, is FunctionOrValue dec) {
+        if (dec.parameter, is Function dec) {
             value p = dec.initializerParameter;
             value unit = node.unit;
             
