@@ -46,7 +46,7 @@ shared interface ParametersCompletion {
                         text.append(", ");
                     }
                     Type returnType;
-                    if (exists argType = argTypes.get(i)) {
+                    if (exists argType = argTypes[i]) {
                         if (argType.classOrInterface,
                             argType.declaration == cd) {
                             String anon = 

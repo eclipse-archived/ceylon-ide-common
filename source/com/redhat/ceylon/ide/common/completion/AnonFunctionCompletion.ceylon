@@ -40,7 +40,7 @@ shared interface AnonFunctionCompletion {
             platformServices.completion.addProposal {
                 ctx = ctx;
                 offset = offset;
-                description = "void " + text + " {}";
+                description = "void ``text`` {}";
                 prefix = "";
                 icon = Icons.correction;
                 selection = DefaultRegion {
