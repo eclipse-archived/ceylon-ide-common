@@ -35,7 +35,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Interface,
     Constructor,
     TypeParameter,
-    ModelUtil,
+    ModelUtil {
+        isTypeUnknown
+    },
     Cancellable
 }
 
@@ -76,15 +78,35 @@ shared String anonFunctionHeader(Type? requiredType, Unit unit, Parameter? param
         if (index>0) {
             text.append(", ");
         }
-        text.append(paramType.asSourceCodeString(unit))
-            .append(" ");
-        if (exists params, exists p = params[index]) {
-            text.append(p.name);
+        if (paramType.entry && !isTypeUnknown(paramType)) {
+            text.append(unit.getKeyType(paramType).asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name).append("Key");
+            } else {
+                text.append(c.string);
+                c++;
+            }
+            text.append(" -> ");
+            text.append(unit.getValueType(paramType).asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name).append("Item");
+            } else {
+                text.append(c.string);
+                c++;
+            }
         }
         else {
-            text.append(c.string);
+            text.append(paramType.asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name);
+            } else {
+                text.append(c.string);
+                c++;
+            }
         }
-        c++;
         index++;
     }
     text.append(")");
