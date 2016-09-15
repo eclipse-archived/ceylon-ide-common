@@ -845,12 +845,23 @@ shared object completionManager
                 if (!secondLevel,
                         isParameterOfNamedArgInvocation(scope, dwp),
                         isDirectlyInsideNamedArgumentList(ctx, node, token)) {
+                    value fiv = FindInvocationVisitor2(scope);
+                    cu.visit(fiv);
+                    value ref 
+                            = if (exists ie = fiv.result, 
+                                  is Tree.MemberOrTypeExpression p = ie.primary,
+                                  exists target = p.target,
+                                  is FunctionOrValue dec,
+                                  exists ip = dec.initializerParameter)
+                            then target.getTypedParameter(ip)
+                            else null;
                     addNamedArgumentProposal {
                         offset = offset;
                         prefix = prefix;
                         ctx = ctx;
                         dec = dec;
                         scope = scope;
+                        pr = ref;
                     };
                     addInlineFunctionProposal {
                         offset = offset;
@@ -860,6 +871,7 @@ shared object completionManager
                         prefix = prefix;
                         ctx = ctx;
                         doc = doc;
+                        pr = ref;
                     };
                 }
 

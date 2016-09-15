@@ -37,7 +37,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     ModelUtil,
     NothingType,
-    DeclarationWithProximity
+    DeclarationWithProximity,
+    TypedReference
 }
 
 import java.util {
@@ -121,16 +122,14 @@ shared interface RefinementCompletion {
     }
 
     shared void addNamedArgumentProposal(Integer offset, String prefix,
-        CompletionContext ctx, Declaration dec, Scope scope) {
+        CompletionContext ctx, Declaration dec, Scope scope, TypedReference? pr) {
         
-        //TODO: type argument substitution using the
-        //     Reference of the primary node
         value unit = ctx.lastCompilationUnit.unit;
         
         platformServices.completion.newRefinementCompletionProposal {
             offset = offset;
             prefix = prefix;
-            pr = dec.reference;
+            pr = pr;
             desc = getDescriptionFor(dec, unit);
             text = getTextFor(dec, unit) + " = nothing;";
             cmp = ctx;
@@ -142,11 +141,9 @@ shared interface RefinementCompletion {
     }
     
     shared void addInlineFunctionProposal(Integer offset, Declaration dec, 
-        Scope scope, Node node, String prefix, CompletionContext ctx, 
+        Scope scope, Node node, String prefix, CompletionContext ctx, TypedReference? pr,
         CommonDocument doc) {
         
-        //TODO: type argument substitution using the
-        //      Reference of the primary node
         if (dec.parameter, is FunctionOrValue dec) {
             value p = dec.initializerParameter;
             value unit = node.unit;
@@ -154,11 +151,11 @@ shared interface RefinementCompletion {
             platformServices.completion.newRefinementCompletionProposal {
                 offset = offset;
                 prefix = prefix;
-                pr = dec.reference; //TODO: this needs to do type arg substitution 
-                desc = getInlineFunctionDescriptionFor(p, null, unit);
+                pr = pr;
+                desc = getInlineFunctionDescriptionFor(p, pr, unit);
                 text = getInlineFunctionTextFor {
                     p = p;
-                    pr = null;
+                    pr = pr;
                     unit = unit;
                     indent = ctx.commonDocument.defaultLineDelimiter
                            + ctx.commonDocument.getIndent(node);
