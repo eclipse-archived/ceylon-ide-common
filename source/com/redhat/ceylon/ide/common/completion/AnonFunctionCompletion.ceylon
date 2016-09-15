@@ -18,7 +18,7 @@ shared interface AnonFunctionCompletion {
     shared void addAnonFunctionProposal(CompletionContext ctx, Integer offset,
         Type? requiredType, Parameter? parameter, Unit unit) {
 
-        value text = anonFunctionHeader {
+        value header = anonFunctionHeader {
             requiredType = requiredType;
             unit = unit;
             param = parameter;
@@ -27,24 +27,24 @@ shared interface AnonFunctionCompletion {
         platformServices.completion.addProposal {
             ctx = ctx;
             offset = offset;
-            description = text + " => nothing";
+            description = header + " => nothing";
             prefix = "";
             icon = Icons.correction;
             selection = DefaultRegion {
-                start = offset + text.size + 4;
+                start = offset + header.size + 4;
                 length = 7;
             };
         };
         
-        if (unit.getCallableReturnType(requiredType).anything) {
+        if (exists parameter, parameter.declaredVoid) {
             platformServices.completion.addProposal {
                 ctx = ctx;
                 offset = offset;
-                description = "void ``text`` {}";
+                description = header + " {}";
                 prefix = "";
                 icon = Icons.correction;
                 selection = DefaultRegion {
-                    start = offset + text.size + 7;
+                    start = offset + header.size + 2;
                     length = 0;
                 };
             };

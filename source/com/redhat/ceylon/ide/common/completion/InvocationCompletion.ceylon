@@ -715,7 +715,7 @@ shared abstract class InvocationCompletionProposal
                             index = seq;
                             cancellable = cancellable;
                         };
-                    } else if (!voidParam) {
+                    } else if (!voidParam || positionalInvocation) {
                         assert (exists params, exists p = params[param]);
                         addValueArgumentProposals {
                             props = props;
@@ -733,7 +733,7 @@ shared abstract class InvocationCompletionProposal
                             = getCompletionPosition(first, next);
                     variable value start = loc + first + middle;
                     variable value len = next - middle;
-                    if (voidParam) {
+                    if (voidParam && !positionalInvocation) {
                         start++;
                         len = 0;
                     }
@@ -775,12 +775,27 @@ shared abstract class InvocationCompletionProposal
 
             if (type.callable) {
 //                completionManager.addAnonFunctionProposal(cpc, loc, type, unit);
+                value header = anonFunctionHeader {
+                    requiredType = type;
+                    unit = unit;
+                    param = param;
+                };
+
                 newNestedLiteralCompletionProposal {
                     props = props;
-                    val = anonFunctionHeader(type, unit, param) + " => nothing";
+                    val = header + " => nothing";
                     loc = loc;
                     index = index;
                 };
+
+                if (param.declaredVoid) {
+                    newNestedLiteralCompletionProposal {
+                        props = props;
+                        val = header + " {}";
+                        loc = loc;
+                        index = index;
+                    };
+                }
             }
 
             value proposals
