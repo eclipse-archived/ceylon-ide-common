@@ -27,7 +27,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Type,
     Generic,
-    FunctionOrValue,
     Module,
     Value,
     Function,
