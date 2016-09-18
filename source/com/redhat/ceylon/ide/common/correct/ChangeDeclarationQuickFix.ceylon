@@ -19,9 +19,8 @@ import org.antlr.runtime {
 shared object changeDeclarationQuickFix {
 
     shared void addChangeDeclarationProposal(QuickFixData data) {
-        assert (is Tree.Declaration decNode = data.node);
-        if (exists token = decNode.mainToken) {
-            assert (is CommonToken token);
+        if (is Tree.Declaration decNode = data.node,
+            is CommonToken token = decNode.mainToken) {
 
             String keyword;
             switch (decNode)
