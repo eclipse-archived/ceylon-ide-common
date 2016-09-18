@@ -10,7 +10,7 @@ import com.redhat.ceylon.ide.common.platform {
     DeleteEdit
 }
 import com.redhat.ceylon.ide.common.doc {
-	Icons
+    Icons
 }
 
 shared object removeUnusedDeclarationQuickFix {
@@ -31,8 +31,8 @@ shared object removeUnusedDeclarationQuickFix {
             value startLine = data.document.getLineOfOffset(declStart);
             value startOfStartLine = data.document.getLineStartOffset(startLine);
             value beforeStart = data.document.getText {
-            	offset = startOfStartLine;
-            	length = declStart - startOfStartLine;
+                offset = startOfStartLine;
+                length = declStart - startOfStartLine;
             };
             if (beforeStart.trimmed.empty) {
                 declStart = startOfStartLine;
@@ -52,9 +52,9 @@ shared object removeUnusedDeclarationQuickFix {
             change.addEdit(DeleteEdit(declStart, declStop - declStart + 1));
 
             data.addQuickFix {
-            	description = "Removed unused declaration '``decl.declarationModel.name``'";
-            	change = change;
-            	image = Icons.remove;
+                description = "Removed unused declaration '``decl.declarationModel.name``'";
+                change = change;
+                image = Icons.remove;
             };
         }
     }

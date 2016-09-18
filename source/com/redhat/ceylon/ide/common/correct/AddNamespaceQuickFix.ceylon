@@ -1,10 +1,10 @@
 import com.redhat.ceylon.compiler.typechecker.analyzer {
-	UsageWarning,
-	Warning
+    UsageWarning,
+    Warning
 }
 import com.redhat.ceylon.ide.common.platform {
-	platformServices,
-	InsertEdit
+    platformServices,
+    InsertEdit
 }
 
 "Adds missing `maven:` namespaces on deprecated Maven module imports:
@@ -16,7 +16,7 @@ import com.redhat.ceylon.ide.common.platform {
      import maven:\"org.hibernate:hibernate-core\" \"5.2.2.Final\";
  "
 shared object addNamespaceQuickFix {
-	
+    
     shared void addProposal(QuickFixData data, UsageWarning warning ) {
         if (warning.warningName == Warning.missingImportPrefix.name()) {
             value change = platformServices.document.createTextChange {

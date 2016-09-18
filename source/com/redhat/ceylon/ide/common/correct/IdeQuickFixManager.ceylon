@@ -295,7 +295,7 @@ shared object ideQuickFixManager {
         }
     }
 
-	"Adds various proposals that fix the given [[warning]]."
+    "Adds various proposals that fix the given [[warning]]."
     shared void addWarningFixes(QuickFixData data, UsageWarning warning) {
         addNamespaceQuickFix.addProposal(data, warning);
         removeUnusedDeclarationQuickFix.addProposal(data, warning);

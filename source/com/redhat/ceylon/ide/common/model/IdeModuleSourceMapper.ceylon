@@ -184,7 +184,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
 shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>(
     Context context, 
     IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> theModuleManager) 
-		extends BaseIdeModuleSourceMapper(context, theModuleManager) 
+        extends BaseIdeModuleSourceMapper(context, theModuleManager) 
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
@@ -194,86 +194,86 @@ shared abstract class IdeModuleSourceMapper<NativeProject, NativeResource, Nativ
 
     shared actual CeylonProjectAlias? ceylonProject => theModuleManager.ceylonProject;
     
-	shared actual default IdeModuleManagerAlias moduleManager =>
+    shared actual default IdeModuleManagerAlias moduleManager =>
             unsafeCast<IdeModuleManagerAlias>(super.moduleManager);
-	
-	value currentSourceMapper => this;
-	
-	shared actual ExternalModulePhasedUnits createPhasedUnits() {
-		ModuleManagerFactory moduleManagerFactory = object satisfies ModuleManagerFactory {
-			
-			shared actual ModuleManager createModuleManager(variable Context context) {
-				return moduleManager;
-			}
-			
-			shared actual ModuleSourceMapper createModuleManagerUtil(variable Context context, variable ModuleManager moduleManager) {
-				return currentSourceMapper;
-			}
-			
-		};
-		return object extends ExternalModulePhasedUnits(context, moduleManagerFactory) {
-			
-			variable CeylonProjectAlias? referencedProject = null;
-			
-			shared actual void parseFile(VirtualFile file, VirtualFile srcDir) {
-				if (file.name.endsWith(".ceylon")) {
-					parseFileInPackage(file, srcDir, currentSourceMapper.currentPackage);
-				}
-			}
-			
-			shared actual void parseFileInPackage(VirtualFile file, VirtualFile srcDir, Package pkg) {
-				assert(is ZipEntryVirtualFile zipEntry=file);
-				assert(is ZipFileVirtualFile zipArchive=srcDir);
-				value sourceParser = object satisfies CeylonSourceParser<ExternalPhasedUnit> {
-					createPhasedUnit(
-						Tree.CompilationUnit cu,
-						Package pkg,
-						List<CommonToken> tokens) => 
-							if (exists rp=referencedProject) 
-					then CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
-							zipEntry, 
-							zipArchive, 
-							cu, 
-							pkg, 
-							moduleManager, 
-							currentSourceMapper, 
-							typeChecker, 
-							tokens, 
-							rp) 
-					else ExternalPhasedUnit(
-								zipEntry, 
-								zipArchive, 
-								cu, 
-								pkg, 
-								moduleManager, 
-								currentSourceMapper, 
-								typeChecker, 
-								tokens);
-					
-					charset(BaseFileVirtualFile file) => 
-							/* TODO: is this correct? does this file actually
-							  live in the project, or is it external?
-							  should VirtualFile have a getCharset()? */
-							ceylonProject?.defaultCharset else defaultCharset;
-				};
-				value phasedUnit = sourceParser.parseFileToPhasedUnit(moduleManager, typeChecker, zipEntry, zipArchive, pkg);
-				addPhasedUnit(file, phasedUnit);
-			}
-			
-			shared actual void parseUnit(variable VirtualFile srcDir) {
-				if (srcDir is ZipFileVirtualFile, exists p=ceylonProject) {
-					assert(is ZipFileVirtualFile zipFileVirtualFile = srcDir);
-					String archiveName = zipFileVirtualFile.path;
-					for (refProject in p.referencedCeylonProjects) {
-						if (refProject.ceylonModulesOutputDirectory.absolutePath in archiveName) {
-							referencedProject = refProject;
-							break;
-						}
-					}
-				}
-				super.parseUnit(srcDir);
-			}
-		};
-	}
+    
+    value currentSourceMapper => this;
+    
+    shared actual ExternalModulePhasedUnits createPhasedUnits() {
+        ModuleManagerFactory moduleManagerFactory = object satisfies ModuleManagerFactory {
+            
+            shared actual ModuleManager createModuleManager(variable Context context) {
+                return moduleManager;
+            }
+            
+            shared actual ModuleSourceMapper createModuleManagerUtil(variable Context context, variable ModuleManager moduleManager) {
+                return currentSourceMapper;
+            }
+            
+        };
+        return object extends ExternalModulePhasedUnits(context, moduleManagerFactory) {
+            
+            variable CeylonProjectAlias? referencedProject = null;
+            
+            shared actual void parseFile(VirtualFile file, VirtualFile srcDir) {
+                if (file.name.endsWith(".ceylon")) {
+                    parseFileInPackage(file, srcDir, currentSourceMapper.currentPackage);
+                }
+            }
+            
+            shared actual void parseFileInPackage(VirtualFile file, VirtualFile srcDir, Package pkg) {
+                assert(is ZipEntryVirtualFile zipEntry=file);
+                assert(is ZipFileVirtualFile zipArchive=srcDir);
+                value sourceParser = object satisfies CeylonSourceParser<ExternalPhasedUnit> {
+                    createPhasedUnit(
+                        Tree.CompilationUnit cu,
+                        Package pkg,
+                        List<CommonToken> tokens) => 
+                            if (exists rp=referencedProject) 
+                    then CrossProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
+                            zipEntry, 
+                            zipArchive, 
+                            cu, 
+                            pkg, 
+                            moduleManager, 
+                            currentSourceMapper, 
+                            typeChecker, 
+                            tokens, 
+                            rp) 
+                    else ExternalPhasedUnit(
+                                zipEntry, 
+                                zipArchive, 
+                                cu, 
+                                pkg, 
+                                moduleManager, 
+                                currentSourceMapper, 
+                                typeChecker, 
+                                tokens);
+                    
+                    charset(BaseFileVirtualFile file) => 
+                            /* TODO: is this correct? does this file actually
+                              live in the project, or is it external?
+                              should VirtualFile have a getCharset()? */
+                            ceylonProject?.defaultCharset else defaultCharset;
+                };
+                value phasedUnit = sourceParser.parseFileToPhasedUnit(moduleManager, typeChecker, zipEntry, zipArchive, pkg);
+                addPhasedUnit(file, phasedUnit);
+            }
+            
+            shared actual void parseUnit(variable VirtualFile srcDir) {
+                if (srcDir is ZipFileVirtualFile, exists p=ceylonProject) {
+                    assert(is ZipFileVirtualFile zipFileVirtualFile = srcDir);
+                    String archiveName = zipFileVirtualFile.path;
+                    for (refProject in p.referencedCeylonProjects) {
+                        if (refProject.ceylonModulesOutputDirectory.absolutePath in archiveName) {
+                            referencedProject = refProject;
+                            break;
+                        }
+                    }
+                }
+                super.parseUnit(srcDir);
+            }
+        };
+    }
 }
 
