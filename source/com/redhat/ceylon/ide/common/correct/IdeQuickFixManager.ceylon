@@ -9,6 +9,9 @@ import com.redhat.ceylon.ide.common.correct {
     addAnnotations=addAnnotationQuickFix,
     removeAnnotations=removeAnnotationQuickFix
 }
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    UsageWarning
+}
 
 shared object ideQuickFixManager {
     
@@ -290,6 +293,12 @@ shared object ideQuickFixManager {
             exists id = node.identifier) {
             createTypeParameterQuickFix.addCreateTypeParameterProposal(data, node, id.text);
         }
+    }
+
+	"Adds various proposals that fix the given [[warning]]."
+    shared void addWarningFixes(QuickFixData data, UsageWarning warning) {
+        addNamespaceQuickFix.addProposal(data, warning);
+        addSuppressWarningsQuickFix.addProposal(data);
     }
 
     shared void addQuickAssists(QuickFixData data, Tree.Statement? statement,
