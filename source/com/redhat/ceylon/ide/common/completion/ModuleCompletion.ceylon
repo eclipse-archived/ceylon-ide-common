@@ -1,6 +1,7 @@
 import ceylon.collection {
     naturalOrderTreeSet,
-    SortedSet
+    SortedSet,
+    HashSet
 }
 import ceylon.interop.java {
     javaString
@@ -45,6 +46,12 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JInteger=Integer
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.cmr.impl {
+    DefaultRepository
+}
 
 SortedSet<String> sortedJdkModuleNames
         = naturalOrderTreeSet {
@@ -59,7 +66,9 @@ shared interface ModuleCompletion {
         Boolean withBody, BaseProgressMonitor monitor) {
         
         value fp = fullPath(offset, prefix, path);
-        
+
+        addNamespaceCompletions(ctx, offset, prefix);
+
         addModuleCompletionsInternal {
             offset = offset;
             prefix = prefix;
@@ -70,6 +79,27 @@ shared interface ModuleCompletion {
             withBody = withBody;
             monitor = monitor;
         };
+    }
+
+    void addNamespaceCompletions(CompletionContext ctx, Integer offset, String prefix) {
+        value namespaces = HashSet<String>();
+
+        for (repo in ctx.typeChecker.context.repositoryManager.repositories) {
+            if (exists ns = repo.namespace,
+                ns != DefaultRepository.\iNAMESPACE) {
+                namespaces.add(ns);
+            }
+        }
+
+        for (ns in namespaces) {
+            platformServices.completion.addProposal {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                icon = Icons.modules;
+                description = ns + ":";
+            };
+        }
     }
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node,
