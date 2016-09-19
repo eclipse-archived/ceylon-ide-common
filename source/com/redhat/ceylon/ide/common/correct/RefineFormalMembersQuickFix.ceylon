@@ -27,6 +27,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit
 }
+import com.redhat.ceylon.model.loader.model {
+    FieldValue
+}
 
 shared object refineFormalMembersQuickFix {
     
@@ -146,7 +149,7 @@ shared object refineFormalMembersQuickFix {
         for (superType in ci.supertypeDeclarations) {
             for (m in superType.members) {
                 try {
-                    if (exists name = m.name, m.shared) {
+                    if (exists name = m.name, m.shared, !m is FieldValue) {
                         value doesntRefine =
                                 if (exists r = ci.getMember(m.name, null, false))
                                 then !r.refines(m) && !r.container.equals(ci)
