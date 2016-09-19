@@ -778,11 +778,12 @@ shared abstract class ChangeParametersRefactoring(
                     = oldArgs.find((oa) 
                         => isSameParameter(oa.parameter, 
                                            p.model))) {
-                builder.append(nodes.text(tokens, oldVal));
-            } else {
-                builder.append(getInlinedArg(p));
+                builder.append(nodes.text(tokens, oldVal))
+                    .append(", ");
+            } else if (!p.defaulted) {
+                builder.append(getInlinedArg(p))
+                    .append(", ");
             }
-            builder.append(", ");
         }
         
         if (builder.endsWith(", ")) {
