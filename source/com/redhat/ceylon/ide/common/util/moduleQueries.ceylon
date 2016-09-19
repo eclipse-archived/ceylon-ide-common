@@ -14,39 +14,41 @@ import com.redhat.ceylon.common {
 
 shared object moduleQueries {
     
-    shared ModuleQuery getModuleQuery(String prefix, Module? mod, BaseCeylonProject? project) {
+    shared ModuleQuery getModuleQuery(String prefix, Module? mod, BaseCeylonProject? project,
+        String? namespace = null) {
         if (exists mod) {
             if (exists backends = mod.nativeBackends) {
                 value compileToJava = backends.supports(Backend.java);
                 value compileToJs = backends.supports(Backend.javaScript);
                 if (compileToJava, !compileToJs) {
-                    return ModuleQuery(prefix, ModuleQuery.Type.jvm);
+                    return ModuleQuery(namespace, prefix, ModuleQuery.Type.jvm);
                 }
                 
                 if (compileToJs, !compileToJava) {
-                    return ModuleQuery(prefix, ModuleQuery.Type.js);
+                    return ModuleQuery(namespace, prefix, ModuleQuery.Type.js);
                 }
             }
         }
         
-        return getModuleQuery2(prefix, project);
+        return getModuleQuery2(prefix, project, namespace);
     }
 
-    shared ModuleQuery getModuleQuery2(String prefix, BaseCeylonProject? project) {
+    shared ModuleQuery getModuleQuery2(String prefix, BaseCeylonProject? project,
+        String? namespace = null) {
         if (exists project) {
             Boolean compileToJava = project.ideConfiguration.compileToJvm else false;
             Boolean compileToJs = project.ideConfiguration.compileToJs else false;
             if (compileToJava, !compileToJs) {
-                return ModuleQuery(prefix, ModuleQuery.Type.jvm);
+                return ModuleQuery(namespace, prefix, ModuleQuery.Type.jvm);
             }
             if (compileToJs, !compileToJava) {
-                return ModuleQuery(prefix, ModuleQuery.Type.js);
+                return ModuleQuery(namespace, prefix, ModuleQuery.Type.js);
             }
             if (compileToJs, compileToJava) {
-                return ModuleQuery(prefix, ModuleQuery.Type.ceylonCode, ModuleQuery.Retrieval.all);
+                return ModuleQuery(namespace, prefix, ModuleQuery.Type.ceylonCode, ModuleQuery.Retrieval.all);
             }
         }
-        return ModuleQuery(prefix, ModuleQuery.Type.code);
+        return ModuleQuery(namespace, prefix, ModuleQuery.Type.code);
     }
     
     shared ModuleVersionQuery getModuleVersionQuery(String name, String version, BaseCeylonProject? project) {
