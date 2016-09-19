@@ -60,14 +60,20 @@ SortedSet<String> sortedJdkModuleNames
         };
 
 shared interface ModuleCompletion {
-    
+
+    function isImplicitNamespace(String ns)
+            => ns == DefaultRepository.\iNAMESPACE;
+
     shared void addModuleCompletions(CompletionContext ctx, Integer offset,
         String prefix, Tree.ImportPath? path, Node node, 
-        Boolean withBody, BaseProgressMonitor monitor) {
+        Boolean withBody, BaseProgressMonitor monitor,
+        Boolean addNamespaceProposals = true) {
         
         value fp = fullPath(offset, prefix, path);
 
-        addNamespaceCompletions(ctx, offset, prefix);
+        if (addNamespaceProposals) {
+            addNamespaceCompletions(ctx, offset, prefix);
+        }
 
         addModuleCompletionsInternal {
             offset = offset;
@@ -87,7 +93,8 @@ shared interface ModuleCompletion {
 
         for (repo in ctx.typeChecker.context.repositoryManager.repositories) {
             if (exists ns = repo.namespace,
-                ns != DefaultRepository.\iNAMESPACE) {
+                !isImplicitNamespace(ns),
+                ns.startsWith(prefix)) {
                 namespaces.add(ns);
             }
         }
@@ -162,6 +169,7 @@ shared interface ModuleCompletion {
                                     withBody = withBody;
                                     name = name;
                                     version = mod.lastVersion.version;
+                                    namespace = mod.lastVersion.namespace;
                                 };
                                 mod = mod;
                                 withBody = withBody;
@@ -180,6 +188,7 @@ shared interface ModuleCompletion {
                                         withBody = withBody;
                                         name = name;
                                         version = version.version;
+                                        namespace = mod.lastVersion.namespace;
                                     };
                                     mod = mod;
                                     withBody = withBody;
@@ -218,11 +227,16 @@ shared interface ModuleCompletion {
         return false;
     }
     
-    String getModuleString(Boolean withBody, variable String name, String version) {
+    String getModuleString(Boolean withBody, variable String name, String version, String? namespace = null) {
         if (!javaString(name).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
             name = "\"``name``\"";
         }
-        return withBody then "``name`` \"``version``\";" else name;
+        
+        value ns = if (exists namespace, !isImplicitNamespace(namespace))
+        then namespace + ":"
+        else "";
+        
+        return withBody then "``ns````name`` \"``version``\";" else name;
     }
 
     shared void addModuleDescriptorCompletion(CompletionContext ctx, Integer offset, String prefix) {
