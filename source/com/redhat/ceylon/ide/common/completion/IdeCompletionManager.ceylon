@@ -8,7 +8,8 @@ import com.redhat.ceylon.compiler.typechecker.parser {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
-    Visitor
+    Visitor,
+    VisitorAdaptor
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -387,6 +388,14 @@ shared object completionManager
                 monitor = monitor;
             };
         }
+        else if (inModuleNamespace(node, ctx.parsedRootNode)) {
+            addNamespaceCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                addColon = nextTokenType(ctx, token) != Lexer.segmentOp;
+            };
+        }
         else if (is Tree.ImportPath node) {
             ImportVisitor {
                 prefix = prefix;
@@ -442,6 +451,25 @@ shared object completionManager
                 };
             }
         }
+    }
+
+    Boolean inModuleNamespace(Node node, Tree.CompilationUnit rootNode) {
+        if (is Tree.Identifier node) {
+            variable Tree.ImportModule? im = null;
+            object moduleImportVisitor extends VisitorAdaptor() {
+                shared actual void visitImportModule(Tree.ImportModule that) {
+                    super.visitImportModule(that);
+                    if (exists ns = that.namespace, ns == node) {
+                        im = that;
+                    }
+                }
+            }
+
+            moduleImportVisitor.visit(rootNode);
+
+            return im exists;
+        }
+        return false;
     }
 
     Boolean isDescriptorPackageNameMissing(Node node) {

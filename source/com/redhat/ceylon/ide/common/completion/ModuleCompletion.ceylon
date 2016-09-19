@@ -81,7 +81,8 @@ shared interface ModuleCompletion {
         };
     }
 
-    void addNamespaceCompletions(CompletionContext ctx, Integer offset, String prefix) {
+    shared void addNamespaceCompletions(CompletionContext ctx, Integer offset, String prefix,
+        Boolean addColon = true) {
         value namespaces = HashSet<String>();
 
         for (repo in ctx.typeChecker.context.repositoryManager.repositories) {
@@ -97,7 +98,7 @@ shared interface ModuleCompletion {
                 offset = offset;
                 prefix = prefix;
                 icon = Icons.modules;
-                description = ns + ":";
+                description = ns + (addColon then ":" else "");
             };
         }
     }
