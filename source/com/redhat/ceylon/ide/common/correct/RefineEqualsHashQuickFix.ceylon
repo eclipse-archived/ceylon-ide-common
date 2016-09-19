@@ -85,7 +85,7 @@ shared object refineEqualsHashQuickFix {
             }
         }
         
-        value result = StringBuilder();
+        value result = StringBuilder().append(document.defaultLineDelimiter);
         value already = HashSet<Declaration>();
         assert (is ClassOrInterface ci = node.scope);
         value unit = node.unit;

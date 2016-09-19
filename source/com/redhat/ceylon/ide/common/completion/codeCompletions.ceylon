@@ -817,12 +817,11 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, Parameter p) {
     
     variable value found = false;
-    value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
             !isObjectField(m), !isConstructor(m), 
-            !m.transient, !nt.isSubtypeOf(m.type)) {
+            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
             if (found) {
                 result.append(" && ").append(indent);
             }
@@ -844,12 +843,11 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
 void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci) {
     
-    value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
             !isObjectField(m), !isConstructor(m),
-            !m.transient, !nt.isSubtypeOf(m.type)) {
+            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
             result.append("hash = 31*hash + ").append(name);
             if (exists type = m.type) {
                 if (! type.integer) {
