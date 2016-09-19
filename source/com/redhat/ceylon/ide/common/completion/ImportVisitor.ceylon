@@ -96,6 +96,7 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
                 node = node;
                 withBody = false;
                 monitor = monitor;
+                addNamespaceProposals = false;
             };
         }
     }

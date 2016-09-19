@@ -349,6 +349,7 @@ shared object completionManager
                 node = node;
                 withBody = false;
                 monitor = monitor;
+                addNamespaceProposals = false;
             };
         }
         else if (isDescriptorPackageNameMissing(node)) {
