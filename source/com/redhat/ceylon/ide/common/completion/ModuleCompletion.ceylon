@@ -18,7 +18,8 @@ import com.redhat.ceylon.common {
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    Node
+    Node,
+    VisitorAdaptor
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -71,7 +72,28 @@ shared interface ModuleCompletion {
         
         value fp = fullPath(offset, prefix, path);
 
-        if (addNamespaceProposals) {
+        variable Tree.ImportModule? im = null;
+        object moduleImportVisitor extends VisitorAdaptor() {
+            shared actual void visitImportModule(Tree.ImportModule that) {
+                super.visitImportModule(that);
+                if (exists path = that.importPath, path == node) {
+                    im = that;
+                }
+            }
+        }
+
+        moduleImportVisitor.visit(ctx.parsedRootNode);
+
+        String? existingNamespace;
+        if (exists imp = im,
+            exists ns = imp.namespace) {
+            existingNamespace = ns.text;
+        }
+        else {
+            existingNamespace = null;
+        }
+
+        if (existingNamespace is Null, addNamespaceProposals) {
             addNamespaceCompletions(ctx, offset, prefix);
         }
 
@@ -84,6 +106,7 @@ shared interface ModuleCompletion {
             ctx = ctx;
             withBody = withBody;
             monitor = monitor;
+            namespace = existingNamespace;
         };
     }
 
@@ -112,7 +135,7 @@ shared interface ModuleCompletion {
 
     void addModuleCompletionsInternal(Integer offset, String prefix, Node node,
         Integer len, String pfp, CompletionContext ctx, Boolean withBody,
-        BaseProgressMonitor monitor) {
+        BaseProgressMonitor monitor, String? namespace) {
         
         try (progress = monitor.Progress(1, null)) {
             if (pfp.startsWith("java.")) {
@@ -141,7 +164,9 @@ shared interface ModuleCompletion {
                     prefix = pfp;
                     mod = ctx.lastPhasedUnit.\ipackage.\imodule;
                     project = ctx.ceylonProject;
+                    namespace = namespace;
                 };
+
                 query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
                 query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
                 query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
@@ -169,7 +194,7 @@ shared interface ModuleCompletion {
                                     withBody = withBody;
                                     name = name;
                                     version = mod.lastVersion.version;
-                                    namespace = mod.lastVersion.namespace;
+                                    namespace = namespace is Null then mod.lastVersion.namespace else null;
                                 };
                                 mod = mod;
                                 withBody = withBody;
@@ -188,7 +213,7 @@ shared interface ModuleCompletion {
                                         withBody = withBody;
                                         name = name;
                                         version = version.version;
-                                        namespace = mod.lastVersion.namespace;
+                                        namespace = namespace is Null then mod.lastVersion.namespace else null;
                                     };
                                     mod = mod;
                                     withBody = withBody;
