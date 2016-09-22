@@ -128,14 +128,20 @@ shared object ideQuickFixManager {
         case (1200|1201) {
             removeAnnotations.addRemoveAnnotationDecProposal("shared", node, data);
         }
-        case (1300|1301) {
+        case (1300) {
             addAnnotations.addMakeRefinedSharedProposal(node, data);
+            removeAnnotations.addRemoveAnnotationDecProposal("actual", node, data);
+        }
+        case (1301|1311) {
             removeAnnotations.addRemoveAnnotationDecProposal("actual", node, data);
         }
         case (1302|1312) {
             removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
         }
-        case (1303|1313|1320) {
+        case (1303|1313) {
+            removeAnnotations.addRemoveAnnotationDecProposal("default", node, data);
+        }
+        case (1320) {
             removeAnnotations.addRemoveAnnotationDecProposal("formal", node, data);
             removeAnnotations.addRemoveAnnotationDecProposal("default", node, data);
         }
