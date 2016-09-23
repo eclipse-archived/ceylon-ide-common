@@ -10,7 +10,8 @@ import java.util {
     Collections
 }
 
-shared class JSetterMirror(Value decl) extends AbstractMethodMirror(decl) {
+shared class JSetterMirror(Value decl)
+        extends AbstractMethodMirror(decl) {
     
     constructor => false;
     

@@ -12,7 +12,8 @@ import com.redhat.ceylon.model.loader.mirror {
 import com.redhat.ceylon.model.typechecker.model {
     Value,
     Declaration,
-    Function
+    Function,
+    Type
 }
 
 import java.lang {
@@ -23,7 +24,11 @@ import java.util {
     Collections
 }
 
-shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror(decl) {
+shared class JObjectMirror(Value decl)
+        extends AbstractClassMirror(decl) {
+
+    shared Type type => decl.type;
+
     abstract => false;
     
     ceylonToplevelAttribute => false;
@@ -32,9 +37,9 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
     
     ceylonToplevelObject => true;
     
-    satisfiedTypes => decl.type.satisfiedTypes;
+    satisfiedTypes => type.satisfiedTypes;
     
-    supertype => decl.type.extendedType;
+    supertype => type.extendedType;
     
     name => super.name + "_";
     
@@ -42,9 +47,9 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
             => methods.add(GetMethod(this));
 }
 
-shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
-    shared Declaration declaration => obj.decl;
-    
+shared class GetMethod(JObjectMirror obj)
+        satisfies MethodMirror {
+
     abstract => false;
     
     constructor => false;
@@ -72,7 +77,7 @@ shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     
     public => true;
     
-    returnType => ceylonToJavaMapper.mapType(obj.decl.type);
+    returnType => ceylonToJavaMapper.mapType(obj.type);
     
     static => true;
     
@@ -91,5 +96,5 @@ shared String getJavaQualifiedName(Declaration decl) {
         return decl.scope.qualifiedNameString + "." + name + "_";
     }
     value fqn = CodegenUtil.getJavaNameOfDeclaration(decl);
-    return if (is Value decl) then fqn.removeTerminal(".get_") else fqn;
+    return decl is Value then fqn.removeTerminal(".get_") else fqn;
 }

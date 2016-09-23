@@ -11,7 +11,9 @@ import java.util {
     Collections
 }
 
-shared class JToplevelFunctionMirror(shared actual Function decl) extends AbstractClassMirror(decl) {
+shared class JToplevelFunctionMirror(Function decl)
+        extends AbstractClassMirror(decl) {
+
     abstract => false;
     
     ceylonToplevelAttribute => false;
@@ -26,7 +28,6 @@ shared class JToplevelFunctionMirror(shared actual Function decl) extends Abstra
     
     name => super.name + "_";
     
-    shared actual void scanExtraMembers(ArrayList<MethodMirror> methods) { 
-        methods.add(JMethodMirror(decl, true));
-    }
+    scanExtraMembers(ArrayList<MethodMirror> methods)
+            => methods.add(JMethodMirror(decl, true));
 }

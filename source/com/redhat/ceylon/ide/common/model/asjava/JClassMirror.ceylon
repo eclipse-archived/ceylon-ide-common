@@ -35,7 +35,7 @@ import java.lang {
     JString=String
 }
 
-shared abstract class AbstractClassMirror(shared default Declaration decl)
+shared abstract class AbstractClassMirror(shared Declaration decl)
         satisfies ClassMirror & DeclarationMirror {
     
     variable Boolean initialized = false;
@@ -155,7 +155,8 @@ shared abstract class AbstractClassMirror(shared default Declaration decl)
     shared formal List<Type> satisfiedTypes;
 }
 
-shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractClassMirror(decl) {
+shared class JClassMirror(ClassOrInterface decl)
+        extends AbstractClassMirror(decl) {
     
     abstract => decl.abstract;
     

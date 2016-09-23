@@ -32,7 +32,7 @@ shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
     
     public => decl.shared;
     
-    shared actual default Boolean static => false;
+    shared actual default Boolean static => decl.staticallyImportable;
     
     staticInit => false;
 }

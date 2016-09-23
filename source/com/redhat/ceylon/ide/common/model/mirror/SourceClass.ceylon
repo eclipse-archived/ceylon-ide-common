@@ -67,7 +67,7 @@ shared class SourceClass satisfies ClassMirror {
     
     shared actual Boolean defaultAccess => false;
     
-    shared actual Boolean static => false;
+    shared actual Boolean static => modelDeclaration.staticallyImportable;
     
     shared actual Boolean enum => false;
     

@@ -7,8 +7,7 @@ import com.redhat.ceylon.model.loader.impl.reflect.mirror {
 }
 import com.redhat.ceylon.model.loader.mirror {
     TypeMirror,
-    TypeKind,
-    ClassMirror
+    TypeKind
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -43,15 +42,10 @@ class JTypeMirror(Type type) satisfies TypeMirror {
     
     componentType => null;
     
-    shared actual ClassMirror? declaredClass {
-        if (type.classOrInterface) {
-            assert(is ClassOrInterface decl = type.declaration);
-            
-            return JClassMirror(decl);
-        }
-        
-        return null;
-    }
+    declaredClass
+            => if (is ClassOrInterface decl = type.declaration)
+            then JClassMirror(decl)
+            else null;
     
     kind => TypeKind.declared;
     
@@ -67,11 +61,9 @@ class JTypeMirror(Type type) satisfies TypeMirror {
     
     shared actual List<TypeMirror> typeArguments {
         value args = ArrayList<TypeMirror>();
-        
         for (arg in type.typeArgumentList) {
             args.add(JTypeMirror(arg));
         }
-        
         return args;
     }
     
@@ -82,7 +74,9 @@ class JTypeMirror(Type type) satisfies TypeMirror {
     string => type.asString();
 }
 
-class PrimitiveMirror(TypeKind _kind, String name) satisfies TypeMirror {
+class PrimitiveMirror(TypeKind _kind, String name)
+        satisfies TypeMirror {
+
     componentType => null;
     
     declaredClass => null;

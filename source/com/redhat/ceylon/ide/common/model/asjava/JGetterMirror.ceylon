@@ -10,7 +10,8 @@ import java.util {
     Collections
 }
 
-shared class JGetterMirror(Value decl) extends AbstractMethodMirror(decl) {
+shared class JGetterMirror(Value decl)
+        extends AbstractMethodMirror(decl) {
     
     constructor => false;
     

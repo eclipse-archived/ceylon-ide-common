@@ -46,11 +46,9 @@ class JConstructorMirror(Class cls, ParameterList pl)
     
     shared actual List<VariableMirror> parameters {
         value vars = ArrayList<VariableMirror>();
-        
         for (p in pl.parameters) {
             vars.add(JVariableMirror(p));
         }
-        
         return vars;
     }
     

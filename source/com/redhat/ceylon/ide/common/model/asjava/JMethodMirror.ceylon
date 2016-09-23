@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.model.loader.mirror {
     TypeParameterMirror,
     VariableMirror
@@ -28,11 +24,10 @@ shared class JMethodMirror(Function decl, Boolean forceStatic = false)
     name => decl.name;
     
     shared actual List<VariableMirror> parameters {
-        List<VariableMirror> vars = ArrayList<VariableMirror>();
-        
-        CeylonIterable(decl.firstParameterList.parameters)
-            .each((p) => vars.add(JVariableMirror(p)));
-        
+        value vars = ArrayList<VariableMirror>();
+        for (p in decl.firstParameterList.parameters) {
+            vars.add(JVariableMirror(p));
+        }
         return vars;
     }
     

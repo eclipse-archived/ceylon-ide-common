@@ -6,8 +6,7 @@ import com.redhat.ceylon.model.loader.mirror {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Parameter,
-    Value,
-    Type
+    Value
 }
 
 import java.lang {
@@ -26,14 +25,13 @@ class JVariableMirror(Parameter|Value p) satisfies VariableMirror {
     name => 
             switch (p)
             case (is Parameter) p.name
-            else p.name;
+            case (is Value) p.name;
 
-    type => 
-            let (Type? t = switch (p)
-                           case (is Parameter) p.type
-                           else p.type
-            )
-            if (exists t)
+    type =>
+            if (exists t
+                    = switch (p)
+                    case (is Parameter) p.type
+                    case (is Value) p.type)
             then ceylonToJavaMapper.mapType(t)
             else unknownTypeMirror;
 }
