@@ -1536,7 +1536,7 @@ shared object completionManager
 
     Boolean isReferenceProposable(OL? ol, Declaration dec) {
         return (isLocation(ol, OL.valueRef)
-                || (if (is Value dec) then dec.typeDeclaration.anonymous else true))
+                || (if (is Value dec, exists td = dec.typeDeclaration) then td.anonymous else true))
              && (isLocation(ol, OL.functionRef) 
                    || !dec is Function)
              && (isLocation(ol, OL.aliasRef) 
