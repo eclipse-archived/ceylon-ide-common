@@ -729,6 +729,9 @@ shared interface DocGenerator {
         if (decl.shared) {
             annotationsBuilder.append("shared&nbsp;");
         }
+        if (decl.staticallyImportable) {
+            annotationsBuilder.append("static&nbsp;");
+        }
         if (decl.actual) {
             annotationsBuilder.append("actual&nbsp;");
         }
