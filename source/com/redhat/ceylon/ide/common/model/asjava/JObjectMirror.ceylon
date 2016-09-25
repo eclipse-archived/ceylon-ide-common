@@ -12,7 +12,8 @@ import com.redhat.ceylon.model.loader.mirror {
 import com.redhat.ceylon.model.typechecker.model {
     Value,
     Declaration,
-    Function
+    Type,
+    FunctionOrValue
 }
 
 import java.lang {
@@ -44,7 +45,7 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
 
 shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     shared Declaration declaration => obj.decl;
-    
+
     abstract => false;
     
     constructor => false;
@@ -86,10 +87,9 @@ shared class GetMethod(JObjectMirror obj) satisfies MethodMirror {
     defaultMethod => false;
 }
 
-shared String getJavaQualifiedName(Declaration decl) {
-    if (is Function decl, decl.toplevel, exists name = decl.name) {
-        return decl.scope.qualifiedNameString + "." + name + "_";
-    }
-    value fqn = CodegenUtil.getJavaNameOfDeclaration(decl);
-    return if (is Value decl) then fqn.removeTerminal(".get_") else fqn;
-}
+shared String getJavaQualifiedName(Declaration decl)
+        => let (fqn = CodegenUtil.getJavaNameOfDeclaration(decl))
+        if (decl is FunctionOrValue && decl.toplevel,
+            exists loc = fqn.lastOccurrence('.'))
+        then fqn.initial(loc) //strip off the static method/getter name
+        else fqn;
