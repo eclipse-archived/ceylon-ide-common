@@ -121,7 +121,6 @@ shared object completionManager
         value tindex = nodes.getTokenIndexAtCharacter(tokens, offset);
         Integer tokenIndex = tindex < 0 then -tindex else tindex;
         value adjustedToken = adjust(tokenIndex, offset, tokens);
-        value tt = adjustedToken.type;
         
         if (offset <= adjustedToken.stopIndex,
             offset > adjustedToken.startIndex,
@@ -138,9 +137,7 @@ shared object completionManager
 
         //find the node at the token
         value node = getTokenNode {
-            adjustedStart = adjustedToken.startIndex;
-            adjustedEnd = adjustedToken.stopIndex + 1;
-            tokenType = tt;
+            token = adjustedToken;
             rootNode = typecheckedRootNode;
             offset = offset;
         };
@@ -532,19 +529,18 @@ shared object completionManager
     }
 
     // see CeylonCompletionProcessor.getTokenNode()
-    Node getTokenNode(Integer adjustedStart, 
-        Integer adjustedEnd, Integer tokenType, 
+    Node getTokenNode(CommonToken token,
         Tree.CompilationUnit rootNode, Integer offset) {
         variable value node
                 = nodes.findNode {
                     node = rootNode;
+                    startOffset = token.startIndex;
                     tokens = null;
-                    startOffset = adjustedStart;
-                    endOffset = adjustedEnd;
                 };
         if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
             node = nodes.findNode(sl, null, offset, offset);
         }
+        value tokenType = token.type;
         if (tokenType == Lexer.rbrace && !node is Tree.IterableType
             || tokenType == Lexer.semicolon) {
 
