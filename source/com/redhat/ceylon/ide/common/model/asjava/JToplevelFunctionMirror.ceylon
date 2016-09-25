@@ -7,7 +7,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    ArrayList,
+    List,
     Collections
 }
 
@@ -28,6 +28,6 @@ shared class JToplevelFunctionMirror(Function decl)
     
     name => super.name + "_";
     
-    scanExtraMembers(ArrayList<MethodMirror> methods)
+    scanExtraMembers(List<MethodMirror> methods)
             => methods.add(JMethodMirror(decl, true));
 }

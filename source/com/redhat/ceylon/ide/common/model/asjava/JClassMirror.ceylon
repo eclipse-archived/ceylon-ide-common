@@ -126,9 +126,8 @@ shared abstract class AbstractClassMirror(shared Declaration decl)
                         for (d in mapDeclaration(m))
                         d };
             
-            value _methods = ArrayList<MethodMirror>();
             innerClasses = ArrayList<ClassMirror>();
-            methods = _methods;
+            methods = ArrayList<MethodMirror>();
 
             members.each((e) {
                 if (is MethodMirror e) {
@@ -138,13 +137,13 @@ shared abstract class AbstractClassMirror(shared Declaration decl)
                 }
             });
             
-            scanExtraMembers(_methods);
+            scanExtraMembers(methods);
             
             initialized = true;            
         });
     }
     
-    shared default void scanExtraMembers(ArrayList<MethodMirror> methods)
+    shared default void scanExtraMembers(List<MethodMirror> methods)
             => noop();
     
     shared formal Type? supertype;
@@ -168,20 +167,18 @@ shared class JClassMirror(ClassOrInterface decl)
     
     shared default actual List<TypeParameterMirror> typeParameters {
         value types = ArrayList<TypeParameterMirror>();
-        
         for (t in decl.typeParameters) {
             types.add(JTypeParameterMirror(t));
         }
-        
         return types;
     }
 
-    shared actual void scanExtraMembers(ArrayList<MethodMirror> methods) {
+    shared actual void scanExtraMembers(List<MethodMirror> methods) {
         super.scanExtraMembers(methods);
 
         if (is Class cl = decl,
             exists pl = cl.parameterList,
-            pl.parameters.size() > 0) {
+            !pl.parameters.empty) {
             
             methods.add(JConstructorMirror(cl, pl));
         }

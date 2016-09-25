@@ -20,7 +20,7 @@ import java.lang {
     JString=String
 }
 import java.util {
-    ArrayList,
+    List,
     Collections
 }
 
@@ -43,7 +43,7 @@ shared class JObjectMirror(Value decl)
     
     name => super.name + "_";
     
-    scanExtraMembers(ArrayList<MethodMirror> methods)
+    scanExtraMembers(List<MethodMirror> methods)
             => methods.add(GetMethod(this));
 }
 
