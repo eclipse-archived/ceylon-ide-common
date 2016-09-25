@@ -91,7 +91,7 @@ shared class GetMethod(JObjectMirror obj)
     defaultMethod => false;
 }
 
-shared String getJavaQualifiedName(Declaration decl)
+shared String javaQualifiedName(Declaration decl)
         => let (fqn = CodegenUtil.getJavaNameOfDeclaration(decl))
         if (decl is FunctionOrValue && decl.toplevel,
             exists loc = fqn.lastOccurrence('.'))

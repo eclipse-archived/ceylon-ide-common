@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.ide.common.model.asjava {
     ceylonToJavaMapper {
         mapDeclaration
@@ -26,13 +22,13 @@ import com.redhat.ceylon.model.typechecker.model {
     Class
 }
 
+import java.lang {
+    JString=String
+}
 import java.util {
     List,
     Collections,
     ArrayList
-}
-import java.lang {
-    JString=String
 }
 
 shared abstract class AbstractClassMirror(shared Declaration decl)
@@ -89,11 +85,9 @@ shared abstract class AbstractClassMirror(shared Declaration decl)
     
     shared actual List<TypeMirror> interfaces {
         value types = ArrayList<TypeMirror>();
-        
-        CeylonIterable(satisfiedTypes).each((s) {
+        for (s in satisfiedTypes) {
             types.add(JTypeMirror(s));
-        });
-        
+        }
         return types;
     }
     
@@ -111,7 +105,7 @@ shared abstract class AbstractClassMirror(shared Declaration decl)
     
     public => decl.shared;
     
-    qualifiedName => getJavaQualifiedName(decl).replace("::", ".");
+    qualifiedName => javaQualifiedName(decl).replace("::", ".");
     
     static => false;
     
@@ -127,8 +121,10 @@ shared abstract class AbstractClassMirror(shared Declaration decl)
                 return;
             }
             
-            value members = CeylonIterable(decl.members)
-                    .flatMap((m) => mapDeclaration(m));
+            value members
+                    = { for (m in decl.members)
+                        for (d in mapDeclaration(m))
+                        d };
             
             value _methods = ArrayList<MethodMirror>();
             innerClasses = ArrayList<ClassMirror>();
