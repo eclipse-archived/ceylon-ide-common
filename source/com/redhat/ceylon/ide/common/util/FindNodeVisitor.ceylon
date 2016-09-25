@@ -45,16 +45,16 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
     
     Boolean inBounds(Node? left, Node? right = left) {
         function shouldReplacePreviousNode(Boolean isInBounds) {
-            if (isInBounds == false) {
+            if (!isInBounds) {
                 return false;
             }
             if (startOffset != endOffset) {
-                return isInBounds;
+                return true;
             }
-            if (exists previousNode=node,
-                exists previousNodeEnd=previousNode.endIndex?.intValue(),
-                exists leftNodeStart=left?.startIndex?.intValue(),
-                previousNodeEnd<=leftNodeStart) {
+            if (exists previousNode = node,
+                exists previousNodeEnd = previousNode.endIndex?.intValue(),
+                exists leftNodeStart = left?.startIndex?.intValue(),
+                previousNodeEnd <= leftNodeStart) {
                 return false;
             }
             return true;
@@ -108,7 +108,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                 if (exists startTokenOffset = left?.startIndex?.intValue(),
                     exists endTokenOffset = right?.endIndex?.intValue()) {
                     return shouldReplacePreviousNode {
-                                isInBounds = startTokenOffset <= startOffset
+                                isInBounds
+                                        = startTokenOffset <= startOffset
                                         && endOffset <= endTokenOffset;
                             };
                 } else {
