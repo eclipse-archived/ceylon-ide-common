@@ -97,10 +97,10 @@ shared object completionManager
     // see CeylonCompletionProcessor.sortProposals()
     function sortProposals(String prefix, 
         RequiredType required, Proposals proposals) {
-        value before = system.milliseconds;
+//        value before = system.milliseconds;
         value set = TreeSet(ProposalComparator(prefix, required));
         set.addAll(proposals.values());
-        print("sorted proposals in ``system.milliseconds - before``ms => ``set.size()`` results");
+//        print("sorted proposals in ``system.milliseconds - before``ms => ``set.size()`` results");
         return set;
     }
     
@@ -720,7 +720,7 @@ shared object completionManager
         Parameter? parameter,
         Cancellable cancellable) {
 
-        value before = system.milliseconds;
+//        value before = system.milliseconds;
 
         value cu = ctx.lastCompilationUnit;
         value ol = nodes.getOccurrenceLocation(cu, node, offset);
@@ -1119,7 +1119,7 @@ shared object completionManager
                 node, ol, false, tokenType);
         }
 
-        print("constructed completions in ``system.milliseconds - before``ms => ``ctx.proposals.size`` results");
+//        print("constructed completions in ``system.milliseconds - before``ms => ``ctx.proposals.size`` results");
     }
 
     Boolean isDirectlyInsideBlock(Node node, CompletionContext ctx,
