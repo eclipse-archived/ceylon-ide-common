@@ -128,6 +128,8 @@ shared class CeylonProjectConfig(project) {
     initMergedConfig();
     initProjectConfig();
 
+    "The underlying [[CeylonConfig]] object. WARNING: changes made to this object
+     will be lost when [[save]] or [[refresh]] are called."
     shared CeylonConfig ceylonConfig => mergedConfig;
 
     shared Repositories repositories => mergedRepositories;
