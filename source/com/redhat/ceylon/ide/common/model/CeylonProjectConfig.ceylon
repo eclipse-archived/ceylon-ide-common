@@ -145,96 +145,112 @@ shared class CeylonProjectConfig(project) {
     shared String outputRepoProjectRelativePath =>
             removeCurrentDirPrefix(outputRepo);
 
-    shared {String*} globalLookupRepos => toRepositoriesUrlList(mergedRepositories.globalLookupRepositories);
+    shared {String*} globalLookupRepos =>
+            toRepositoriesUrlList(mergedRepositories.globalLookupRepositories);
 
-    shared {String*} otherRemoteRepos => toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
+    shared {String*} otherRemoteRepos =>
+            toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
 
-    shared {String*} projectLocalRepos=> toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
-    assign projectLocalRepos {
-        transientProjectLocalRepos = projectLocalRepos;
-    }
+    shared {String*} projectLocalRepos=>
+            toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
+    assign projectLocalRepos =>
+            transientProjectLocalRepos = projectLocalRepos;
 
-    shared {String*} projectRemoteRepos => toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
-    assign projectRemoteRepos {
-        transientProjectRemoteRepos = projectRemoteRepos;
-    }
+    shared {String*} projectRemoteRepos =>
+            toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
+    assign projectRemoteRepos =>
+            transientProjectRemoteRepos = projectRemoteRepos;
 
-    shared String? encoding => mergedConfig.getOption(DefaultToolOptions.defaultsEncoding);
+    shared String? encoding =>
+            mergedConfig.getOption(DefaultToolOptions.defaultsEncoding);
 
-    shared String? projectEncoding => projectConfig.getOption(DefaultToolOptions.defaultsEncoding);
+    shared String? projectEncoding =>
+            projectConfig.getOption(DefaultToolOptions.defaultsEncoding);
     assign projectEncoding {
         isEncodingChanged = true;
         transientEncoding = projectEncoding;
     }
 
-    shared Boolean offline => mergedConfig.getBoolOption(DefaultToolOptions.defaultsOffline, false);
+    shared Boolean offline =>
+            mergedConfig.getBoolOption(DefaultToolOptions.defaultsOffline, false);
 
-    shared Boolean? projectOffline => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsOffline)) option?.booleanValue();
+    shared Boolean? projectOffline =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsOffline)?.booleanValue();
     assign projectOffline {
         this.isOfflineChanged = true;
         this.transientOffline = projectOffline;
     }
 
-    shared String? overrides => DefaultToolOptions.getDefaultOverrides(mergedConfig);
+    shared String? overrides =>
+            DefaultToolOptions.getDefaultOverrides(mergedConfig);
 
-    shared String? projectOverrides => DefaultToolOptions.getDefaultOverrides(projectConfig);
+    shared String? projectOverrides =>
+            DefaultToolOptions.getDefaultOverrides(projectConfig);
     assign projectOverrides {
         this.isOverridesChanged = true;
         this.transientOverrides = projectOverrides;
     }
 
-    shared String? jdkProvider => DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
-    shared String? projectJdkProvider => DefaultToolOptions.getCompilerJdkProvider(projectConfig);
+    shared String? jdkProvider =>
+            DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
+    shared String? projectJdkProvider =>
+            DefaultToolOptions.getCompilerJdkProvider(projectConfig);
     assign projectJdkProvider {
         this.isJdkProviderChanged = true;
         this.transientJdkProvider = projectJdkProvider;
     }
 
-    shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
+    shared Boolean flatClasspath =>
+            DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
 
-    shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsFlatClasspath)) option?.booleanValue();
+    shared Boolean? projectFlatClasspath =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsFlatClasspath)?.booleanValue();
     assign projectFlatClasspath {
         this.isFlatClasspathChanged = true;
         this.transientFlatClasspath = projectFlatClasspath;
     }
 
-    shared Boolean autoExportMavenDependencies => DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
+    shared Boolean autoExportMavenDependencies =>
+            DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
 
-    shared Boolean? projectAutoExportMavenDependencies => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)) option?.booleanValue();
+    shared Boolean? projectAutoExportMavenDependencies =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)?.booleanValue();
     assign projectAutoExportMavenDependencies {
         this.isAutoExportMavenDependenciesChanged = true;
         this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
     }
 
-    shared {String*} sourceDirectories => sourceDirectoriesFromCeylonConfig(mergedConfig);
+    shared {String*} sourceDirectories =>
+            sourceDirectoriesFromCeylonConfig(mergedConfig);
 
-    shared {String*} projectSourceDirectories => sourceDirectoriesFromCeylonConfig(projectConfig);
-    assign projectSourceDirectories {
-        transientSourceDirectories = projectSourceDirectories;
-    }
+    shared {String*} projectSourceDirectories =>
+            sourceDirectoriesFromCeylonConfig(projectConfig);
+    assign projectSourceDirectories =>
+            transientSourceDirectories = projectSourceDirectories;
 
 
-    shared {String*} resourceDirectories => resourceDirectoriesFromCeylonConfig(mergedConfig);
+    shared {String*} resourceDirectories =>
+            resourceDirectoriesFromCeylonConfig(mergedConfig);
 
-    shared {String*} projectResourceDirectories => resourceDirectoriesFromCeylonConfig(projectConfig);
-    assign projectResourceDirectories {
-        transientResourceDirectories = projectResourceDirectories;
-    }
+    shared {String*} projectResourceDirectories =>
+            resourceDirectoriesFromCeylonConfig(projectConfig);
+    assign projectResourceDirectories =>
+            transientResourceDirectories = projectResourceDirectories;
 
-    shared EnumSet<Warning> suppressWarningsEnum
-        => let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
+    shared EnumSet<Warning> suppressWarningsEnum =>
+            let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
                 buildSuppressWarningsEnum(suppressWarnings);
 
-    shared {String*}? projectSuppressWarnings
-        => getConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, null);
+    shared {String*}? projectSuppressWarnings =>
+            getConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, null);
 
      assign projectSuppressWarnings {
         transientSuppressWarnings = projectSuppressWarnings;
         isSuppressWarningsChanged = true;
     }
 
-    shared EnumSet<Warning> projectSuppressWarningsEnum
-        => buildSuppressWarningsEnum(projectSuppressWarnings);
+    shared EnumSet<Warning> projectSuppressWarningsEnum =>
+            buildSuppressWarningsEnum(projectSuppressWarnings);
 
     "CAUTION : When assigned from Java code, take care of not passing a null value"
     assign projectSuppressWarningsEnum {
