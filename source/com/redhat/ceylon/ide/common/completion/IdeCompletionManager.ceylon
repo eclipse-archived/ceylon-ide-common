@@ -1492,7 +1492,7 @@ shared object completionManager
 
     Boolean isExceptionType(Unit unit, Declaration dec) 
             => if (is TypeDeclaration dec) 
-            then dec.inherits(unit.exceptionDeclaration) 
+            then dec.inherits(unit.throwableDeclaration)
             else false;
 
     Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {
