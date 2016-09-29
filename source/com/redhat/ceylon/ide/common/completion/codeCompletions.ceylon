@@ -34,8 +34,10 @@ Boolean forceExplicitTypeArgs(Declaration d, OccurrenceLocation? ol) {
         //      guess if explicit type args will be
         //      necessary (variance, etc)
         if (is Functional d) {
-            value pls = d.parameterLists;
-            return pls.empty || pls.get(0).parameters.empty;
+            return
+                if (exists pl = d.parameterLists[0])
+                then pl.parameters.empty
+                else true;
         } else {
             return false;
         }
@@ -222,7 +224,6 @@ void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent,
                     }
                     case (is TypedReference) {
                         t = st.substitute(pr);
-                         
                     }
                     else {
                         assert (false);
@@ -374,7 +375,8 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit,
                 if (p.sequenced) {
                     result.append("*");
                 }
-                result.append(escaping.escapeName(p.model)).append(", ");
+                result.append(escaping.escapeName(p.model))
+                    .append(", ");
             }
             result.deleteTerminal(2);
             result.append(")");
@@ -450,8 +452,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
                         result.append(" {} ");
                     }
                     else {
-                        result.append(" => ")
-                            .append("nothing; ");
+                        result.append(" => nothing; ");
                     }
                 }
                 else {
@@ -467,7 +468,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
                         }
                         result.append(name);
                         if (!descriptionOnly) {
-                            result.append(" = ").append("nothing");
+                            result.append(" = nothing");
                         }
                         result.append("; ");
                     }
@@ -515,36 +516,38 @@ shared void appendTypeParametersWithArguments(Declaration d,
             result.append("<");
             
             CeylonIterable(types).fold(true)((isFirst, tp) {
-                if (!isFirst) { result.append(", "); }
+                if (!isFirst) {
+                    result.append(", ");
+                }
                 
-                value arg = if (exists pr) then pr.typeArguments.get(tp) else null;
-                
-                if (!exists arg) {
+                if (exists arg = if (exists pr) then pr.typeArguments[tp] else null) {
+                    if (is Type pr, variances) {
+                        switch (variance = pr.varianceOverrides[tp])
+                        case (SiteVariance.\iOUT) {
+                            result.append("out ");
+                        }
+                        case (SiteVariance.\iIN) {
+                            result.append("in ");
+                        }
+                        else if (tp.covariant) {
+                            result.append("out ");
+                        }
+                        else if (tp.contravariant) {
+                            result.append("in ");
+                        }
+                    }
+                    result.append(arg.asString(unit));
+                }
+                else {
                     if (variances) {
                         if (tp.covariant) {
                             result.append("out ");
-                        } else if (tp.contravariant) {
+                        }
+                        else if (tp.contravariant) {
                             result.append("in ");
                         }
                     }
                     result.append(tp.name);
-                } else {
-                    if (is Type pr, variances) {
-                        if (exists variance = pr.varianceOverrides.get(tp)) {
-                            if (variance == SiteVariance.\iOUT) {
-                                result.append("out ");
-                            } else if (variance == SiteVariance.\iIN) {
-                                result.append("in ");
-                            }
-                        } else {
-                            if (tp.covariant) {
-                                result.append("out ");
-                            } else if (tp.contravariant) {
-                                result.append("in ");
-                            }
-                        }
-                    }
-                    result.append(arg.asString(unit));
                 }
                 
                 return false;
@@ -580,7 +583,7 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
     } else {
         switch (decl)
         case (is Class) {
-            builder.append(if (decl.anonymous) then "object" else "class");
+            builder.append(decl.anonymous then "object" else "class");
         }
         case (is Interface) {
             builder.append("interface");
@@ -590,35 +593,32 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
         }
         case (is TypedDeclaration) {
             value sequenced 
-                    = if (is FunctionOrValue decl,
-                        decl.parameter && decl.initializerParameter.sequenced)
-            then true else false;
+                    = if (is FunctionOrValue decl)
+                    then decl.parameter
+                      && decl.initializerParameter.sequenced
+                    else false;
             
-            variable Type? type 
-                    = if (exists pr) then pr.type else decl.type;
-            
-            if (sequenced, exists t = type) {
-//                type = unit.getIteratedType(type);
+            Type? tt = if (exists pr) then pr.type else decl.type;
+            Type type;
+            if (sequenced, exists tt,
                 //TODO: nasty workaround because unit can be null
                 //      in docs for Open dialogs
-                if (!t.typeArgumentList.empty) {
-                    type = t.typeArgumentList.get(0);
-                }
+                !tt.typeArgumentList.empty) {
+                //type = unit.getIteratedType(type);
+                type = tt.typeArgumentList[0] else unit.unknownType;
             }
-            
-            if (!exists t = type) {
-                type = unit.unknownType;
+            else {
+                type = tt else unit.unknownType;
             }
-            
-            assert (exists t = type);
-            
-            String typeName = if (descriptionOnly)
-                then t.asString(unit)
-                else t.asSourceCodeString(unit);
+
+            String typeName
+                    = descriptionOnly
+                    then type.asString(unit)
+                    else type.asSourceCodeString(unit);
             
             if (decl.dynamicallyTyped) {
                 builder.append("dynamic");
-            } else if (is Value decl, t.declaration.anonymous, !t.typeConstructor) {
+            } else if (is Value decl, type.declaration.anonymous, !type.typeConstructor) {
                 builder.append("object");
             } else if (is Functional decl) {
                 builder.append(decl.declaredVoid then "void" else typeName);
@@ -628,7 +628,8 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
             
             if (sequenced) {
                 builder.append(if (is FunctionOrValue decl,
-                    decl.initializerParameter.atLeastOne) then "+" else "*");
+                    decl.initializerParameter.atLeastOne)
+                    then "+" else "*");
             }
         }
         else {
@@ -638,7 +639,8 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
     builder.append(" ");
     
     if (exists name = decl.name) {
-        builder.append(if (descriptionOnly) then name else escaping.escapeName(decl));
+        builder.append(descriptionOnly then name
+            else escaping.escapeName(decl));
     }
 }
 
@@ -649,22 +651,20 @@ void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
     if (is Functional fp = p.model, fp.declaredVoid) {
         result.append("void").append(" ");
     }
-    result.append(descriptionOnly then p.name else escaping.escapeName(p.model));
+    result.append(descriptionOnly then p.name
+        else escaping.escapeName(p.model));
 }
 
 void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit,
     String indent, StringBuilder result, ClassOrInterface? ci) {
     
     if (is Function d) {
-        if (exists ci, !ci.anonymous) {
-            if (d.name=="equals") {
-                value pl = d.parameterLists;
-                if (!pl.empty) {
-                    value ps = pl.get(0).parameters;
-                    if (!ps.empty) {
-                        appendEqualsImpl(unit, indent, result, ci, ps);
-                        return;
-                    }
+        if (exists ci, !ci.anonymous, d.name=="equals") {
+            if (exists pl = d.parameterLists[0]) {
+                value ps = pl.parameters;
+                if (!ps.empty) {
+                    appendEqualsImpl(unit, indent, result, ci, ps);
+                    return;
                 }
             }
         }
@@ -673,18 +673,16 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
             appendSuperArgsText(d, pr, unit, result, true);
             result.append(";");
         } else {
-            if ((d).declaredVoid) {
+            if (d.declaredVoid) {
                 result.append(" {}");
             } else {
                 result.append(" => nothing;");
             }
         }
     } else if (is Value d) {
-        if (exists ci, !ci.anonymous) {
-            if (d.name=="hash") {
-                appendHashImpl(unit, indent, result, ci);
-                return;
-            }
+        if (exists ci, !ci.anonymous, d.name=="hash") {
+            appendHashImpl(unit, indent, result, ci);
+            return;
         }
         if (isInterface/*||d.isParameter()*/) {
             //interfaces can't have references,
@@ -700,7 +698,7 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
         } else {
             //we can have a references, so use = instead 
             //of => for variables
-            value arrow = if (isVariable(d)) then " = " else " => ";
+            value arrow = isVariable(d) then " = " else " => ";
             if (d.formal) {
                 result.append(arrow).append("nothing;");
             } else {
@@ -784,7 +782,7 @@ void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
         targs.append(">");
     }
     
-    value p = ps.get(0);
+    assert (exists p = ps[0]);
     value defaultIndent = platformServices.document.defaultIndent;
     result.append(" {")
             .append(indent).append(defaultIndent)
@@ -808,9 +806,9 @@ void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
 }
 
 Boolean isObjectField(Declaration m) {
-    String? name = m.name;
-    return if (exists name, (name.equals("hash") || name.equals("string")))
-    then true else false;
+    return if (exists name = m.name)
+        then m.name=="hash" || m.name=="string"
+        else false;
 }
 
 void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
@@ -820,8 +818,9 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
-            !isObjectField(m), !isConstructor(m), 
-            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
+            !isObjectField(m) && !isConstructor(m),
+            !m.transient,
+            intersectionType(unit.nullType, m.type, unit).nothing) {
             if (found) {
                 result.append(" && ").append(indent);
             }
@@ -846,8 +845,9 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
-            !isObjectField(m), !isConstructor(m),
-            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
+            !isObjectField(m) && !isConstructor(m),
+            !m.transient,
+            intersectionType(unit.nullType, m.type, unit).nothing) {
             result.append("hash = 31*hash + ").append(name);
             if (exists type = m.type) {
                 if (! type.integer) {
@@ -862,7 +862,9 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
 }
 
 String extraIndent(String indent, Boolean containsNewline) 
-        => if (containsNewline) then indent + platformServices.document.defaultIndent else indent;
+        => containsNewline
+        then indent + platformServices.document.defaultIndent
+        else indent;
 
 shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result) {
@@ -872,23 +874,22 @@ shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
 void appendParameters(Declaration d, Reference? pr,
     Unit unit, StringBuilder result, LocalAnalysisResult? cpc,
     Boolean descriptionOnly) {
-    if (is Functional d) {
-        if (exists plists = d.parameterLists) {
-            for (params in plists) {
-                if (params.parameters.empty) {
-                    result.append("()");
-                } else {
-                    result.append("(");
-                    for (p in params.parameters) {
-                        appendParameter(result, pr, p, unit, descriptionOnly);
-                        if (exists cpc) {
-                            result.append(getDefaultValueDescription(p, cpc));
-                        }
-                        result.append(", ");
+    if (is Functional d,
+        exists plists = d.parameterLists) {
+        for (params in plists) {
+            if (params.parameters.empty) {
+                result.append("()");
+            } else {
+                result.append("(");
+                for (p in params.parameters) {
+                    appendParameter(result, pr, p, unit, descriptionOnly);
+                    if (exists cpc) {
+                        result.append(getDefaultValueDescription(p, cpc));
                     }
-                    result.deleteTerminal(2);
-                    result.append(")");
+                    result.append(", ");
                 }
+                result.deleteTerminal(2);
+                result.append(")");
             }
         }
     }
@@ -900,7 +901,7 @@ shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
     if (!exists mod = p.model) {
         result.append(p.name);
     } else {
-        value ppr = if (!exists pr) then null else pr.getTypedParameter(p);
+        value ppr = pr?.getTypedParameter(p);
         appendDeclarationHeader(p.model, ppr, unit, result, descriptionOnly);
         appendParameters(p.model, ppr, unit, result, null, descriptionOnly);
     }
