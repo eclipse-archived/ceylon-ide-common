@@ -1395,8 +1395,7 @@ shared object completionManager
         if (!isLocation(ol, OL.\iexists), !isLocation(ol, OL.\inonempty),
             !isLocation(ol, OL.\iis)) {
             return true;
-        } else if (is Value val = dec) {
-            Type type = val.type;
+        } else if (is Value val = dec, exists type = val.type) {
             if (val.variable || val.transient || val.default || val.formal || isTypeUnknown(type)) {
                 return false;
             } else {
