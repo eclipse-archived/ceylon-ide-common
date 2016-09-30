@@ -234,14 +234,12 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                 }
                 for (dependingOn in declarationsDependingOn) {
                     createDependency(dependingOn);
-                    Unit u = dependingOn.unit;
-                    if (is JavaCompilationUnitAlias u) {
-                        if (exists javaFile = u.resourceFile,
-                            exists javaFileProject = u.resourceProject) {
-                            if (exists projectRelativePath = vfsServices.getProjectRelativePath(javaFile, javaFileProject)) {
-                                addDependentsOf(decl.unit, u, projectRelativePath.string);
-                            }
-                        }
+                    if (is JavaCompilationUnitAlias u = dependingOn.unit,
+                        exists javaFile = u.resourceFile,
+                        exists javaFileProject = u.resourceProject,
+                        exists projectRelativePath = vfsServices.getProjectRelativePath(javaFile, javaFileProject)) {
+
+                        addDependentsOf(decl.unit, u, projectRelativePath.string);
                     }
                 }
             }
