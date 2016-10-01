@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.common {
     Backends
 }
@@ -127,8 +123,8 @@ shared interface DocGenerator {
         if (exists target,
             exists lastCompilationUnit = cmp.lastCompilationUnit,
             exists typechecker = cmp.typeChecker) {
-            if (javaString(target)
-                .matches("doc:ceylon.language/.*:ceylon.language:Nothing")) {
+            if (target.startsWith("doc:ceylon.language/")
+             && target.endsWith(":ceylon.language:Nothing")) {
                 return lastCompilationUnit.unit.nothingDeclaration;
             }
             return getLinkedModelInternal(target, typechecker);
