@@ -662,12 +662,11 @@ given NativeFile satisfies NativeResource {
     }
 
     shared void removeFolderFromModel(NativeFolder folder) {
-        void removeProperty(
-        String propertyName,
-        Anything(CeylonProjectAlias, NativeFolder) remove)  {
+        void removeProperty(String propertyName,
+                void remove(CeylonProjectAlias cpa, NativeFolder nf))  {
             try {
                 remove(this, folder);
-            } catch(Exception e) {
+            } catch (e) {
                 platformUtils.log(
                     Status._WARNING,
                     "``propertyName`` property could not be removed from native folder : ``

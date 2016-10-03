@@ -51,7 +51,8 @@ import com.redhat.ceylon.ide.common.doc {
     Icons
 }
 import com.redhat.ceylon.cmr.impl {
-    DefaultRepository
+    DefaultRepository,
+    JDKRepository
 }
 
 SortedSet<String> sortedJdkModuleNames
@@ -63,7 +64,7 @@ SortedSet<String> sortedJdkModuleNames
 shared interface ModuleCompletion {
 
     function isImplicitNamespace(String ns)
-            => ns == DefaultRepository.\iNAMESPACE;
+            => ns in [DefaultRepository.\iNAMESPACE, JDKRepository.\iNAMESPACE];
 
     shared void addModuleCompletions(CompletionContext ctx, Integer offset,
         String prefix, Tree.ImportPath? path, Node node, 

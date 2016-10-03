@@ -1,8 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable,
-    javaString
-}
-
 import com.redhat.ceylon.common {
     Backends
 }
@@ -29,7 +24,6 @@ import com.redhat.ceylon.ide.common.typechecker {
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
-    unsafeCast,
     equalsWithNulls
 }
 import com.redhat.ceylon.model.cmr {
@@ -86,10 +80,8 @@ import com.redhat.ceylon.model.typechecker.util {
 
 import java.lang {
     JCharacter=Character {
-        UnicodeScript,
-        UnicodeBlock
-    },
-    JString=String
+        ...
+    }
 }
 import java.util {
     Collections,
@@ -107,7 +99,7 @@ shared String convertToHTML(String content)
                   .replace(">", "&gt;");
 
 shared interface DocGenerator {
-    
+
     shared alias IdeComponent => LocalAnalysisResult;
     
     shared formal String buildLink(Referenceable|String model, String text,
@@ -131,8 +123,8 @@ shared interface DocGenerator {
         if (exists target,
             exists lastCompilationUnit = cmp.lastCompilationUnit,
             exists typechecker = cmp.typeChecker) {
-            if (javaString(target)
-                .matches("doc:ceylon.language/.*:ceylon.language:Nothing")) {
+            if (target.startsWith("doc:ceylon.language/")
+             && target.endsWith(":ceylon.language:Nothing")) {
                 return lastCompilationUnit.unit.nothingDeclaration;
             }
             return getLinkedModelInternal(target, typechecker);
@@ -152,13 +144,11 @@ shared interface DocGenerator {
             return null;
         }
 
-        if (is Value scope,
-            scope.typeDeclaration.anonymous) {
-            return scope.typeDeclaration;
-        }
-        else {
-            return scope;
-        }
+        return
+            if (is Value scope,
+                scope.typeDeclaration.anonymous)
+            then scope.typeDeclaration
+            else scope;
     }
 
     Referenceable? getLinkedModelInternal(String link, TypeChecker typeChecker) {
@@ -172,32 +162,36 @@ shared interface DocGenerator {
             String moduleVersion
                     = moduleNameAndVersion[loc+1...];
             
-            value linkedModule 
-                    = CeylonIterable(typeChecker.context.modules.listOfModules)
-                        .find((candidate)
-                            => candidate.nameAsString == moduleName
-                            && candidate.version == moduleVersion);
-            
-            if (exists linkedModule) {
-                value packageName = bits[2];
-                if (!exists packageName) {
-                    return linkedModule;
+            Module linkedModule;
+            for (candidate in typeChecker.context.modules.listOfModules) {
+                if (candidate.nameAsString == moduleName
+                 && candidate.version == moduleVersion) {
+                    linkedModule = candidate;
+                    break;
                 }
-                if (exists linkedPackage
-                        = linkedModule.getPackage(packageName)) {
-                    variable Referenceable target = linkedPackage;
-                    for (bit in bits.skip(3)) {
-                        if (exists scope = targetScope(target),
-                            exists member = scope.getDirectMember(bit, null, false)) {
-                            target = member;
-                        }
-                        else {
-                            return null;
-                        }
+            }
+            else {
+                return null;
+            }
+
+            if (exists packageName = bits[2],
+                exists linkedPackage
+                    = linkedModule.getPackage(packageName)) {
+                variable Referenceable target = linkedPackage;
+                for (bit in bits.skip(3)) {
+                    if (exists scope = targetScope(target),
+                        exists member = scope.getDirectMember(bit, null, false)) {
+                        target = member;
                     }
-                    return target;
+                    else {
+                        return null;
+                    }
                 }
-             }
+                return target;
+            }
+            else {
+                return linkedModule;
+            }
         }
         
         return null;
@@ -206,25 +200,14 @@ shared interface DocGenerator {
     
     // see getHoverText(CeylonEditor editor, IRegion hoverRegion)
     shared String? getDocumentation(Tree.CompilationUnit rootNode, 
-        Integer offset, IdeComponent cmp, String? selection = null) {
-
-        switch (node = getHoverNode(rootNode, offset))
-        case (null) {
-            return null;
-        }
-        case (is Tree.LocalModifier) {
-            return getInferredTypeText(node);
-        }
-        case (is Tree.Literal) {
-            return getTermTypeText(node, selection);
-        }
-        else {
-            return if (exists model 
-                    = nodes.getReferencedDeclaration(node))
-            then getDocumentationText(model, node, rootNode, cmp)
-            else null;
-        }
-    }
+        Integer offset, IdeComponent cmp, String? selection = null)
+            => switch (node = getHoverNode(rootNode, offset))
+            case (null) null
+            case (is Tree.LocalModifier) getInferredTypeText(node)
+            case (is Tree.Literal) getTermTypeText(node, selection)
+            else if (exists model = nodes.getReferencedDeclaration(node))
+                then getDocumentationText(model, node, rootNode, cmp)
+                else null;
     
     // see SourceInfoHover.getHoverNode(IRegion, CeylonParseController)
     Node? getHoverNode(Tree.CompilationUnit rootNode, Integer offset) 
@@ -286,19 +269,26 @@ shared interface DocGenerator {
                     then "Literal&nbsp;of&nbsp;type" 
                     else "Expression&nbsp;of&nbsp;type";
             appendTypeInfo(builder, desc, term.unit, type);
-            
-            if (is Tree.StringLiteral term) {
+
+            switch (term)
+            case (is Tree.StringLiteral) {
                 appendStringInfo(term, builder);
                 if (exists selection, selection.size==1) {
                     appendCharacterInfo(selection, builder);
                 }
-            } else if (is Tree.CharLiteral term, term.text.size>2) {
-                appendCharacterInfo(term.text[1..1], builder);
-            } else if (is Tree.NaturalLiteral term) {
+            }
+            case (is Tree.CharLiteral) {
+                if (term.text.size>2) {
+                    appendCharacterInfo(term.text[1..1], builder);
+                }
+            }
+            case (is Tree.NaturalLiteral) {
                 appendIntegerInfo(term, builder);
-            } else if (is Tree.FloatLiteral term) {
+            }
+            case (is Tree.FloatLiteral) {
                 appendFloatInfo(term, builder);
             }
+            else {}
             
             appendPageEpilog(builder);
             return builder.string;
@@ -376,83 +366,77 @@ shared interface DocGenerator {
     String getCodepointGeneralCategoryName(Integer codepoint)
             => let (t = JCharacter.getType(codepoint).byte)
                  // we can't use a switch, see https://github.com/ceylon/ceylon-spec/issues/938 
-                 if (t == JCharacter.combiningSpacingMark) 
+                 if (t == combiningSpacingMark)
                     then "Mark, combining spacing"
-            else if (t == JCharacter.connectorPunctuation) 
+            else if (t == connectorPunctuation)
                     then "Punctuation, connector"
-            else if (t == JCharacter.control) 
+            else if (t == control)
                     then "Other, control"
-            else if (t == JCharacter.currencySymbol) 
+            else if (t == currencySymbol)
                     then "Symbol, currency"
-            else if (t == JCharacter.dashPunctuation) 
+            else if (t == dashPunctuation)
                     then "Punctuation, dash"
-            else if (t == JCharacter.decimalDigitNumber) 
+            else if (t == decimalDigitNumber)
                     then "Number, decimal digit"
-            else if (t == JCharacter.enclosingMark) 
+            else if (t == enclosingMark)
                     then "Mark, enclosing"
-            else if (t == JCharacter.endPunctuation) 
+            else if (t == endPunctuation)
                     then "Punctuation, close"
-            else if (t == JCharacter.finalQuotePunctuation) 
+            else if (t == finalQuotePunctuation)
                     then "Punctuation, final quote"
-            else if (t == JCharacter.format) 
+            else if (t == format)
                     then "Other, format"
-            else if (t == JCharacter.initialQuotePunctuation) 
+            else if (t == initialQuotePunctuation)
                     then "Punctuation, initial quote"
-            else if (t == JCharacter.letterNumber) 
+            else if (t == letterNumber)
                     then "Number, letter"
-            else if (t == JCharacter.lineSeparator) 
+            else if (t == lineSeparator)
                     then "Separator, line"
-            else if (t == JCharacter.lowercaseLetter) 
+            else if (t == lowercaseLetter)
                     then "Letter, lowercase"
-            else if (t == JCharacter.mathSymbol) 
+            else if (t == mathSymbol)
                     then "Symbol, math"
-            else if (t == JCharacter.modifierLetter) 
+            else if (t == modifierLetter)
                     then "Letter, modifier"
-            else if (t == JCharacter.modifierSymbol) 
+            else if (t == modifierSymbol)
                     then "Symbol, modifier"
-            else if (t == JCharacter.nonSpacingMark) 
+            else if (t == nonSpacingMark)
                     then "Mark, nonspacing"
-            else if (t == JCharacter.otherLetter) 
+            else if (t == otherLetter)
                     then "Letter, other"
-            else if (t == JCharacter.otherNumber) 
+            else if (t == otherNumber)
                     then "Number, other"
-            else if (t == JCharacter.otherPunctuation) 
+            else if (t == otherPunctuation)
                     then "Punctuation, other"
-            else if (t == JCharacter.otherSymbol) 
+            else if (t == otherSymbol)
                     then "Symbol, other"
-            else if (t == JCharacter.paragraphSeparator) 
+            else if (t == paragraphSeparator)
                     then "Separator, paragraph"
-            else if (t == JCharacter.privateUse) 
+            else if (t == privateUse)
                     then "Other, private use"
-            else if (t == JCharacter.spaceSeparator) 
+            else if (t == spaceSeparator)
                     then "Separator, space"
-            else if (t == JCharacter.startPunctuation) 
+            else if (t == startPunctuation)
                     then "Punctuation, open"
-            else if (t == JCharacter.surrogate) 
+            else if (t == surrogate)
                     then "Other, surrogate"
-            else if (t == JCharacter.titlecaseLetter) 
+            else if (t == titlecaseLetter)
                     then "Letter, titlecase"
-            else if (t == JCharacter.unassigned) 
+            else if (t == unassigned)
                     then "Other, unassigned"
-            else if (t == JCharacter.uppercaseLetter) 
+            else if (t == uppercaseLetter)
                     then "Letter, uppercase"
             else "&lt;Unknown&gt;";
 
 
     // see getDocumentationHoverText(Referenceable, CeylonEditor editor, Node node)
     shared String? getDocumentationText(Referenceable model, Node? node,
-        Tree.CompilationUnit rootNode, IdeComponent cmp) {
-        
-        if (is Declaration model) {
-            return getDeclarationDoc(model, node, rootNode.unit, cmp, null);
-        } else if (is Package model) {
-            return getPackageDoc(model, cmp);
-        } else if (is Module model) {
-            return getModuleDoc(model, cmp);
-        }
-        
-        return null;
-    }
+        Tree.CompilationUnit rootNode, IdeComponent cmp)
+            => switch (model)
+            case (is Declaration) getDeclarationDoc(model, node, rootNode.unit, cmp, null)
+            case (is Package) getPackageDoc(model, cmp)
+            case (is Module) getModuleDoc(model, cmp)
+            else null;
 
     // see getDocumentationFor(CeylonParseController, Declaration, Node, Reference)
     shared String getDeclarationDoc(Declaration model, Node? node,
@@ -470,7 +454,7 @@ shared interface DocGenerator {
 
         addMainDescription(builder, decl, node, pr, cmp, unit);
         value isObj = addInheritanceInfo(decl, node, pr, builder, unit);
-        if (!is NothingType d = decl) {
+        if (!decl is NothingType) {
             addPackageInfo(decl, builder);
         }
         addContainerInfo(decl, pr, node, builder);
@@ -481,7 +465,7 @@ shared interface DocGenerator {
         if (showMembers) {
             addClassMembersInfo(decl, builder);
         }
-        if (is NothingType d = decl) {
+        if (decl is NothingType) {
             addNothingTypeInfo(builder);
         } else {
             addUnitInfo(decl, builder);
@@ -552,7 +536,7 @@ shared interface DocGenerator {
         variable Boolean first = true;
         
         for (dec in pack.members) {
-            if (!exists n = dec.name) {
+            if (!dec.name exists) {
                 continue;
             }
             if (is Class dec, dec.overloaded) {
@@ -716,6 +700,7 @@ shared interface DocGenerator {
                     buildLink(pack, pack.nameAsString)).append("</tt>");
             }
         }
+
         if (!first) {
             buffer.append(".</p>");
         }
@@ -782,7 +767,7 @@ shared interface DocGenerator {
             annotationsBuilder.append("annotation&nbsp;");
         }
         
-        if (annotationsBuilder.size > 0) {
+        if (!annotationsBuilder.empty) {
             value colored 
                     = color(annotationsBuilder.string, 
                             Colors.annotations);
@@ -836,8 +821,10 @@ shared interface DocGenerator {
         value result = highlight(description.string, cmp);
         value liveValue = getLiveValue(decl, unit);
         
-        return if (exists liveValue) 
-            then result + liveValue else result;
+        return
+            if (exists liveValue)
+            then result + liveValue
+            else result;
     }
 
     // see addInheritanceInfo(Declaration, Node, Reference, StringBuilder, Unit)
@@ -925,12 +912,12 @@ shared interface DocGenerator {
 
         for (tp in typeParameters) {
             value bounds = StringBuilder();
-            CeylonIterable(tp.satisfiedTypes)
-                    .fold(true)((isFirst, st) {
+            variable value isFirst = true;
+            for (st in tp.satisfiedTypes) {
                 bounds.append(isFirst then " satisfies " else " &amp; ");
                 bounds.append(printer.print(st, decl.unit));
-                return false;
-            });
+                isFirst = false;
+            }
             
             String arg;
             if (exists liveValue = getLiveValue(tp, unit)) {
@@ -962,7 +949,6 @@ shared interface DocGenerator {
                 for (p in typeParameters) {
                     list.add(p.type);
                 }
-                
                 return list;
             }
         } else {
@@ -981,17 +967,13 @@ shared interface DocGenerator {
             //a member declaration - unfortunately there is 
             //nothing matching TypeDeclaration.getType() for
             //TypedDeclarations!
-            Type? qt;
+            value qt
+                    = if (decl.classOrInterfaceMember,
+                          is ClassOrInterface ci = decl.container)
+                    then ci.type
+                    else null;
             
-            if (decl.classOrInterfaceMember,
-                is ClassOrInterface ci = decl.container) {
-                qt = ci.type;
-            } else {
-                qt = null; 
-            }
-            
-            return decl.appliedReference(qt, 
-                getTypeParameters(decl));
+            return decl.appliedReference(qt, getTypeParameters(decl));
         }
     }
 
@@ -1103,8 +1085,7 @@ shared interface DocGenerator {
     }
 
     void addPackageInfo(Declaration decl, StringBuilder builder) {
-        if (exists pkg = decl.unit.\ipackage, 
-            decl.toplevel) {
+        if (exists pkg = decl.unit.\ipackage, decl.toplevel) {
             value label = if (pkg.nameAsString.empty)
                 then "<span>Member of default package.</span>"
                 else "<span>Member of package&nbsp;``buildLink(pkg, pkg.qualifiedNameString)``.</span>";
@@ -1149,9 +1130,16 @@ shared interface DocGenerator {
             then decl 
             else decl?.container;
     
-    function findAnnotationModel(Annotated&Referenceable annotated, String name) 
-            => CeylonIterable(annotated.annotations)
-                .find((ann) => ann.name == name);
+    function findAnnotationModel(Annotated&Referenceable annotated, String name) {
+        for (ann in annotated.annotations) {
+            if (ann.name == name) {
+                return ann;
+            }
+        }
+        else {
+            return null;
+        }
+    }
     
     // see appendDeprecatedAnnotationContent(Tree.AnnotationList, StringBuilder, Scope)
     void appendDeprecatedAnnotationContent(Annotated & Referenceable annotated, 
@@ -1240,18 +1228,15 @@ shared interface DocGenerator {
                     + markdown(text, cmp, linkScope, unit);
             addIconAndText(documentation, Icons.exceptions, doc);
         }
-        
-        String name = "throws";
+
         if (exists annotationList,
-            exists annotation = findAnnotation(annotationList, name),
+            exists annotation = findAnnotation(annotationList, "throws"),
             exists argList = annotation.positionalArgumentList,
             !argList.positionalArguments.empty) {
             value args = argList.positionalArguments;
-            value typeArg = args[0];
-            value textArg = args[1];
-            
-            if (is Tree.ListedArgument typeArg, 
-                is Tree.ListedArgument? textArg) {
+
+            if (is Tree.ListedArgument typeArg = args[0],
+                is Tree.ListedArgument? textArg = args[1]) {
                 value typeArgTerm = typeArg.expression.term;
                 value text = textArg?.expression?.term?.text else "";
                 
@@ -1262,21 +1247,34 @@ shared interface DocGenerator {
             }
         } else if (exists annotatedMirror = toAnnotatedMirror(annotated)) {
             if (exists annotationMirror = 
-                            annotatedMirror.getAnnotation(LanguageAnnotation.throws.annotationType),
-                exists thrownExceptions = 
-                            unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
+                            annotatedMirror.getAnnotation(
+                                LanguageAnnotation.throws.annotationType),
+                is JList<out Anything> thrownExceptions
+                        = annotationMirror.getValue("value")) {
                 for (thrown in thrownExceptions) {
-                    if (exists typeArg = thrown.getValue("type")?.string,
+                    if (is AnnotationMirror thrown,
+                        exists typeArg = thrown.getValue("type")?.string,
                         exists dec = parseAnnotationType(typeArg, cmp.ceylonProject)) {
-                        String textArg = if (is String t=thrown.getValue("when")?.string) then t else "";
+                        String textArg = thrown.getValue("when")?.string else "";
                         addThrowsText(dec, textArg);
                     }
                 }
             }
         }
     }
-    
-    Declaration? parseAnnotationType(String encodedDeclaration, 
+
+    function toRealParent(Declaration? parent)
+            => switch(parent)
+            case (is Null) null
+            case (is LazyValue)
+                let (TypeDeclaration? typeDeclaration = parent.typeDeclaration)
+                if (equalsWithNulls(typeDeclaration?.qualifiedNameString,
+                                    parent.qualifiedNameString))
+                then typeDeclaration
+                else parent
+            else parent;
+
+    Declaration? parseAnnotationType(String encodedDeclaration,
         BaseCeylonProject? project) {
         String withoutVersion;
         if (!exists project) {
@@ -1300,13 +1298,22 @@ shared interface DocGenerator {
             withoutVersion = encodedDeclaration;
         }
         
-        value fromModule 
+        value fromModule
                 = withoutVersion.split(':'.equals, true, false);
         value moduleName = fromModule.first;
-        Module? mod 
-                = project.modules?.find((m) 
-                    => m.nameAsString == moduleName);
-        if (!exists mod) {
+
+        Module mod;
+        if (exists modules = project.modules) {
+            for (m in modules) {
+                if (m.nameAsString == moduleName) {
+                    mod = m;
+                    break;
+                }
+            } else {
+                return null;
+            }
+        }
+        else {
             return null;
         }
 
@@ -1320,7 +1327,7 @@ shared interface DocGenerator {
                 nameStart == '.')
             then packageName.rest
             else 
-                if (packageName.empty) 
+                if (packageName.empty)
                 then moduleName
                 else "``moduleName``.``packageName``");
         if (!exists pkg) {
@@ -1337,25 +1344,14 @@ shared interface DocGenerator {
         }
         value declarationParts = declaration.split('.'.equals)
             .map((s) => s.rest);
-        Declaration? topLeveldeclaration 
+        Declaration? topLevelDeclaration
                 = pkg.getMember(declarationParts.first, null, false);
         
-        function toRealParent(Declaration? parent) 
-                => switch(parent)
-                case (is Null) null
-                case (is LazyValue) 
-                    let (TypeDeclaration? typeDeclaration 
-                            = parent.typeDeclaration) 
-                        if (equalsWithNulls(typeDeclaration?.qualifiedNameString, 
-                                            parent.qualifiedNameString))
-                        then typeDeclaration else parent
-                else parent;
-        
-        return declarationParts.rest
-                    .fold(topLeveldeclaration)
-                        ((Declaration? parent, String member) 
-                            => toRealParent(parent)
-                                ?.getMember(member, null, false));
+        variable Declaration? result = topLevelDeclaration;
+        for (member in declarationParts.rest) {
+            result = toRealParent(result)?.getMember(member, null, false);
+        }
+        return result;
     }
     
     void appendSeeAnnotationContent(
@@ -1389,15 +1385,18 @@ shared interface DocGenerator {
                     addSeeText(dec);
                 }
             }
-        } else if (exists annotatedMirror=toAnnotatedMirror(annotated)){
-            if (exists annotationMirror = 
-                annotatedMirror.getAnnotation(LanguageAnnotation.see.annotationType),
-            exists seeAnnotations = 
-                    unsafeCast<JList<AnnotationMirror>?>(annotationMirror.getValue("value"))) {
+        } else if (exists annotatedMirror = toAnnotatedMirror(annotated)) {
+            if (exists annotationMirror
+                    = annotatedMirror.getAnnotation(LanguageAnnotation.see.annotationType),
+                is JList<out Anything> seeAnnotations
+                        = annotationMirror.getValue("value")) {
                 for (see in seeAnnotations) {
-                    if (exists programElements = unsafeCast<JList<JString>?>(see.getValue("programElements"))) {
+                    if (is AnnotationMirror see,
+                        is JList<out Anything> programElements
+                                = see.getValue("programElements")) {
                         for (pe in programElements) {
-                            if (exists dec = parseAnnotationType(pe.string, cmp.ceylonProject)) {
+                            if (exists pe,
+                                exists dec = parseAnnotationType(pe.string, cmp.ceylonProject)) {
                                 addSeeText(dec);
                             }
                         }
@@ -1413,12 +1412,15 @@ shared interface DocGenerator {
     }
 
     Tree.Annotation? findAnnotation(Tree.AnnotationList annotations, String name) {
-        return CeylonIterable(annotations.annotations).find((element) {
-            if (is Tree.BaseMemberExpression primary = element.primary) {
-                return name == primary.identifier.text;
+        for (element in annotations.annotations) {
+            if (is Tree.BaseMemberExpression primary = element.primary,
+                name == primary.identifier.text) {
+                return element;
             }
-            return false;
-        });
+        }
+        else {
+            return null;
+        }
     }
     
     // see addRefinementInfo(Declaration, Node, StringBuilder,  boolean, Unit)
@@ -1434,7 +1436,7 @@ shared interface DocGenerator {
                     = getQualifyingType(dec, pr, node)
                         ?.getSupertype(superclass);
             value icon 
-                    = if (rd.formal) 
+                    = rd.formal
                     then Icons.implementation 
                     else Icons.override;
             
@@ -1462,21 +1464,20 @@ shared interface DocGenerator {
     void addReturnType(Declaration dec, StringBuilder buffer, 
         Node? node, Reference? r, Boolean obj, Unit unit) {
         
-        if (is TypedDeclaration dec, !obj) {
-            value pr = r else appliedReference(dec, node);
-            
-            if (exists pr, exists ret = pr.type) {
-                buffer.append("<div class='paragraph'>");
-                
-                value buf = StringBuilder()
-                    .append("Returns&nbsp;<tt>")
-                    .append(printer.print(ret, unit))
-                    .append("</tt>.");
-                
-                addIconAndText(buffer, Icons.returns, buf.string);
-                
-                buffer.append("</div>");
-            }
+        if (is TypedDeclaration dec, !obj,
+            exists pr = r else appliedReference(dec, node),
+            exists ret = pr.type) {
+
+            buffer.append("<div class='paragraph'>");
+
+            value buf = StringBuilder()
+                .append("Returns&nbsp;<tt>")
+                .append(printer.print(ret, unit))
+                .append("</tt>.");
+
+            addIconAndText(buffer, Icons.returns, buf.string);
+
+            buffer.append("</div>");
         }
     }
     
@@ -1531,7 +1532,7 @@ shared interface DocGenerator {
                 result.append(color("void", Colors.keywords));
             } else {
                 if (exists t = ppr?.type) {
-                    Type? pt = if (p.sequenced) 
+                    Type? pt = p.sequenced
                         then unit.getSequentialElementType(t) 
                         else t;
                     result.append(printer.print(pt, unit));
@@ -1626,11 +1627,10 @@ shared interface DocGenerator {
     void addPackageModuleInfo(Package pack, StringBuilder buffer) {
         value mod = pack.\imodule;
         value label = 
-            if (mod.nameAsString.empty 
-                || mod.nameAsString == "default")
+            if (mod.nameAsString.empty || mod.nameAsString == "default")
             then "<span>Belongs to default module.</span>"
             else "<span>Belongs to&nbsp;``buildLink(mod, mod.nameAsString)``"
-                  + "&nbsp;<tt>``color("\"``mod.version``\"", Colors.strings)``</tt>.</span>";
+               + "&nbsp;<tt>``color("\"``mod.version``\"", Colors.strings)``</tt>.</span>";
         addIconAndText(buffer, mod, label);
     }
 }

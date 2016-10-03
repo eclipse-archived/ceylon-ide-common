@@ -1424,8 +1424,7 @@ shared object completionManager
         if (!isLocation(ol, OL.\iexists), !isLocation(ol, OL.\inonempty),
             !isLocation(ol, OL.\iis)) {
             return true;
-        } else if (is Value val = dec) {
-            Type type = val.type;
+        } else if (is Value val = dec, exists type = val.type) {
             if (val.variable || val.transient || val.default || val.formal || isTypeUnknown(type)) {
                 return false;
             } else {
@@ -1492,7 +1491,7 @@ shared object completionManager
 
     Boolean isExceptionType(Unit unit, Declaration dec) 
             => if (is TypeDeclaration dec) 
-            then dec.inherits(unit.exceptionDeclaration) 
+            then dec.inherits(unit.throwableDeclaration)
             else false;
 
     Boolean isValueCaseOfSwitch(Type? requiredType, Declaration dec) {

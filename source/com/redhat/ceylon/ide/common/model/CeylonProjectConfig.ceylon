@@ -1,10 +1,8 @@
 import ceylon.interop.java {
-    javaStringArray,
-    javaObjectArray,
     toStringArray,
     javaClass,
-    CeylonIterable,
-    createJavaObjectArray
+    createJavaObjectArray,
+    createJavaStringArray
 }
 
 import com.redhat.ceylon.common {
@@ -29,8 +27,6 @@ import java.io {
 }
 import java.lang {
     ObjectArray,
-    JBoolean=Boolean,
-    JString=String,
     IllegalArgumentException
 }
 import java.util {
@@ -45,7 +41,6 @@ shared class EclipseCeylonProjectConfig(IProject ideArtifact)
 
 */
 
-
 shared {String*} resourceDirectoriesFromCeylonConfig(CeylonConfig config)
         => getConfigValuesAsList(config, DefaultToolOptions.compilerResource, Constants.defaultResourceDir);
 
@@ -53,24 +48,25 @@ shared {String*} sourceDirectoriesFromCeylonConfig(CeylonConfig config)
         => getConfigValuesAsList(config, DefaultToolOptions.compilerSource, Constants.defaultSourceDir);
 
 shared String removeCurrentDirPrefix(String url)
-        => if (url.startsWith("./") || url.startsWith(".\\")) then url.spanFrom(2) else url;
+        => if (url.startsWith("./") || url.startsWith(".\\")) then url[2...] else url;
 
 {String*}|Default getConfigValuesAsList<Default=Nothing>(CeylonConfig config, String optionKey, String|Default defaultKey)
         given Default satisfies Null
-        => let (ObjectArray<JString>? values = config.getOptionValues(optionKey))
-                if (exists values)
-                    then toStringArray(values.array).coalesced
-                    else if (is Default defaultKey) then defaultKey else { defaultKey };
+        => if (exists values = config.getOptionValues(optionKey))
+        then toStringArray(values.array).coalesced
+        else if (is Default defaultKey) then defaultKey else { defaultKey };
 
 void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? values) {
-        if (exists values) {
-            config.setOptionValues(optionKey, javaStringArray(Array<String>(values)));
-        } else {
-            config.removeOption(optionKey);
-        }
+    if (exists values) {
+        config.setOptionValues(optionKey, createJavaStringArray(values));
+    } else {
+        config.removeOption(optionKey);
+    }
 }
 
 shared class CeylonProjectConfig(project) {
+
+    value warningClass = javaClass<Warning>();
 
     shared BaseCeylonProject project;
 
@@ -128,6 +124,8 @@ shared class CeylonProjectConfig(project) {
     initMergedConfig();
     initProjectConfig();
 
+    "The underlying [[CeylonConfig]] object. WARNING: changes made to this object
+     will be lost when [[save]] or [[refresh]] are called."
     shared CeylonConfig ceylonConfig => mergedConfig;
 
     shared Repositories repositories => mergedRepositories;
@@ -143,125 +141,136 @@ shared class CeylonProjectConfig(project) {
     shared String outputRepoProjectRelativePath =>
             removeCurrentDirPrefix(outputRepo);
 
-    shared {String*} globalLookupRepos => toRepositoriesUrlList(mergedRepositories.globalLookupRepositories);
+    shared {String*} globalLookupRepos =>
+            toRepositoriesUrlList(mergedRepositories.globalLookupRepositories);
 
-    shared {String*} otherRemoteRepos => toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
+    shared {String*} otherRemoteRepos =>
+            toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
 
-    shared {String*} projectLocalRepos=> toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
-    assign projectLocalRepos {
-        transientProjectLocalRepos = projectLocalRepos;
-    }
+    shared {String*} projectLocalRepos=>
+            toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
+    assign projectLocalRepos =>
+            transientProjectLocalRepos = projectLocalRepos;
 
-    shared {String*} projectRemoteRepos => toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
-    assign projectRemoteRepos {
-        transientProjectRemoteRepos = projectRemoteRepos;
-    }
+    shared {String*} projectRemoteRepos =>
+            toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
+    assign projectRemoteRepos =>
+            transientProjectRemoteRepos = projectRemoteRepos;
 
-    shared String? encoding => mergedConfig.getOption(DefaultToolOptions.defaultsEncoding);
+    shared String? encoding =>
+            mergedConfig.getOption(DefaultToolOptions.defaultsEncoding);
 
-    shared String? projectEncoding => projectConfig.getOption(DefaultToolOptions.defaultsEncoding);
+    shared String? projectEncoding =>
+            projectConfig.getOption(DefaultToolOptions.defaultsEncoding);
     assign projectEncoding {
         isEncodingChanged = true;
         transientEncoding = projectEncoding;
     }
 
-    shared Boolean offline => mergedConfig.getBoolOption(DefaultToolOptions.defaultsOffline, false);
+    shared Boolean offline =>
+            mergedConfig.getBoolOption(DefaultToolOptions.defaultsOffline, false);
 
-    shared Boolean? projectOffline => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsOffline)) option?.booleanValue();
+    shared Boolean? projectOffline =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsOffline)?.booleanValue();
     assign projectOffline {
         this.isOfflineChanged = true;
         this.transientOffline = projectOffline;
     }
 
-    shared String? overrides => DefaultToolOptions.getDefaultOverrides(mergedConfig);
+    shared String? overrides =>
+            DefaultToolOptions.getDefaultOverrides(mergedConfig);
 
-    shared String? projectOverrides => DefaultToolOptions.getDefaultOverrides(projectConfig);
+    shared String? projectOverrides =>
+            DefaultToolOptions.getDefaultOverrides(projectConfig);
     assign projectOverrides {
         this.isOverridesChanged = true;
         this.transientOverrides = projectOverrides;
     }
 
-    shared String? jdkProvider => DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
-    shared String? projectJdkProvider => DefaultToolOptions.getCompilerJdkProvider(projectConfig);
+    shared String? jdkProvider =>
+            DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
+    shared String? projectJdkProvider =>
+            DefaultToolOptions.getCompilerJdkProvider(projectConfig);
     assign projectJdkProvider {
         this.isJdkProviderChanged = true;
         this.transientJdkProvider = projectJdkProvider;
     }
 
-    shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
+    shared Boolean flatClasspath =>
+            DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
 
-    shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsFlatClasspath)) option?.booleanValue();
+    shared Boolean? projectFlatClasspath =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsFlatClasspath)?.booleanValue();
     assign projectFlatClasspath {
         this.isFlatClasspathChanged = true;
         this.transientFlatClasspath = projectFlatClasspath;
     }
 
-    shared Boolean autoExportMavenDependencies => DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
+    shared Boolean autoExportMavenDependencies =>
+            DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
 
-    shared Boolean? projectAutoExportMavenDependencies => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)) option?.booleanValue();
+    shared Boolean? projectAutoExportMavenDependencies =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)?.booleanValue();
     assign projectAutoExportMavenDependencies {
         this.isAutoExportMavenDependenciesChanged = true;
         this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
     }
 
-    shared {String*} sourceDirectories => sourceDirectoriesFromCeylonConfig(mergedConfig);
+    shared {String*} sourceDirectories =>
+            sourceDirectoriesFromCeylonConfig(mergedConfig);
 
-    shared {String*} projectSourceDirectories => sourceDirectoriesFromCeylonConfig(projectConfig);
-    assign projectSourceDirectories {
-        transientSourceDirectories = projectSourceDirectories;
-    }
+    shared {String*} projectSourceDirectories =>
+            sourceDirectoriesFromCeylonConfig(projectConfig);
+    assign projectSourceDirectories =>
+            transientSourceDirectories = projectSourceDirectories;
 
 
-    shared {String*} resourceDirectories => resourceDirectoriesFromCeylonConfig(mergedConfig);
+    shared {String*} resourceDirectories =>
+            resourceDirectoriesFromCeylonConfig(mergedConfig);
 
-    shared {String*} projectResourceDirectories => resourceDirectoriesFromCeylonConfig(projectConfig);
-    assign projectResourceDirectories {
-        transientResourceDirectories = projectResourceDirectories;
-    }
+    shared {String*} projectResourceDirectories =>
+            resourceDirectoriesFromCeylonConfig(projectConfig);
+    assign projectResourceDirectories =>
+            transientResourceDirectories = projectResourceDirectories;
 
-    shared EnumSet<Warning> suppressWarningsEnum
-        => let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
+    shared EnumSet<Warning> suppressWarningsEnum =>
+            let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
                 buildSuppressWarningsEnum(suppressWarnings);
 
-    shared {String*}? projectSuppressWarnings
-        => getConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, null);
+    shared {String*}? projectSuppressWarnings =>
+            getConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, null);
 
      assign projectSuppressWarnings {
         transientSuppressWarnings = projectSuppressWarnings;
         isSuppressWarningsChanged = true;
     }
 
-    shared EnumSet<Warning> projectSuppressWarningsEnum
-        => buildSuppressWarningsEnum(projectSuppressWarnings);
+    shared EnumSet<Warning> projectSuppressWarningsEnum =>
+            buildSuppressWarningsEnum(projectSuppressWarnings);
 
     "CAUTION : When assigned from Java code, take care of not passing a null value"
     assign projectSuppressWarningsEnum {
-        {String*}? ws;
-        if (projectSuppressWarningsEnum.empty) {
-            ws = null;
-        } else if (projectSuppressWarningsEnum.containsAll(EnumSet<Warning>.allOf(javaClass<Warning>()))) {
-            ws = [""];
-        } else {
-            ws = CeylonIterable(projectSuppressWarningsEnum).map((w) => w.name());
-        }
+        value ws =
+            if (projectSuppressWarningsEnum.empty) then null
+            else if (projectSuppressWarningsEnum.containsAll(EnumSet<Warning>.allOf(warningClass))) then { "" }
+            else { for (w in projectSuppressWarningsEnum) w.name() };
         transientSuppressWarnings = ws;
         isSuppressWarningsChanged = true;
     }
 
-
     EnumSet<Warning> buildSuppressWarningsEnum({String*}? suppressWarnings) {
-        if (! exists suppressWarnings) {
-            return EnumSet<Warning>.noneOf(javaClass<Warning>());
+        if (!exists suppressWarnings) {
+            return EnumSet<Warning>.noneOf(warningClass);
         }
         else if (suppressWarnings.empty) {
-            return EnumSet<Warning>.allOf(javaClass<Warning>());
+            return EnumSet<Warning>.allOf(warningClass);
         }
-        else if ([*suppressWarnings] == [""]) {
+        else if (suppressWarnings.sequence() == [""]) {
             //special case because all warnings is encoded as the empty string
-            return EnumSet<Warning>.allOf(javaClass<Warning>());
+            return EnumSet<Warning>.allOf(warningClass);
         }
         else {
-            EnumSet<Warning> suppressedWarnings = EnumSet<Warning>.noneOf(javaClass<Warning>());
+            value suppressedWarnings = EnumSet<Warning>.noneOf(warningClass);
             for (name in suppressWarnings) {
                 try {
                     suppressedWarnings.add(Warning.valueOf(name.trimmed));
@@ -272,12 +281,7 @@ shared class CeylonProjectConfig(project) {
         }
     }
 
-
-
-
-
     shared void refresh() {
-
         initMergedConfig();
         initProjectConfig();
         isOfflineChanged = false;
@@ -311,7 +315,10 @@ shared class CeylonProjectConfig(project) {
         {String*} oldResourceDirectories = projectResourceDirectories;
 
         function changed<T>(T? transientOne, T oldOne)
-                given T satisfies Object => if (exists tr=transientOne, tr != oldOne) then transientOne else null;
+                given T satisfies Object
+                => if (exists transientOne, transientOne!=oldOne)
+                then transientOne
+                else null;
 
         String? changedOutputRepo = changed(transientOutputRepo, oldOutputRepo);
         {String*}? changedProjectLocalRepos = changed(transientProjectLocalRepos, oldProjectLocalRepos);
@@ -328,7 +335,8 @@ shared class CeylonProjectConfig(project) {
             project.createNewOutputFolder(removeCurrentDirPrefix(newOutputRepo));
         }
 
-        Boolean someSettingsChanged = changedOutputRepo exists
+        Boolean someSettingsChanged
+                =  changedOutputRepo exists
                 || changedProjectLocalRepos exists
                 || changedProjectRemoteRepos exists
                 || changedSourceDirs exists
@@ -341,12 +349,12 @@ shared class CeylonProjectConfig(project) {
                 || isAutoExportMavenDependenciesChanged
                 || isSuppressWarningsChanged;
 
-        if (! project.hasConfigFile ||
+        if (!project.hasConfigFile ||
             someSettingsChanged) {
             try {
                 if (exists changedOutputRepo) {
                     value newOutputRepo = Repositories.SimpleRepository("", transientOutputRepo, null);
-                    projectRepositories.setRepositoriesByType(Repositories.repoTypeOutput, javaObjectArray(Array<Repository?> { newOutputRepo }));
+                    projectRepositories.setRepositoriesByType(Repositories.repoTypeOutput, ObjectArray(1, newOutputRepo));
                 }
                 if (exists changedProjectLocalRepos) {
                     value newLocalRepos = toRepositoriesArray(transientProjectLocalRepos);
@@ -408,15 +416,15 @@ shared class CeylonProjectConfig(project) {
 
 
     {String*} toRepositoriesUrlList(ObjectArray<Repository>? repositories)
-        => if (exists repositories)
-        then { for (repository in repositories.iterable.coalesced) repository.url }
-        else [];
+            => if (exists repositories)
+            then { for (repository in repositories.iterable.coalesced) repository.url }
+            else {};
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
-        => if (exists repositoriesUrl)
-        then createJavaObjectArray {
-            for (url in repositoriesUrl)
-            Repositories.SimpleRepository("", url, null)
-        }
-        else ObjectArray<Repository>(0);
+            => if (exists repositoriesUrl)
+            then createJavaObjectArray {
+                for (url in repositoriesUrl)
+                Repositories.SimpleRepository("", url, null)
+            }
+            else ObjectArray<Repository>(0);
 }
