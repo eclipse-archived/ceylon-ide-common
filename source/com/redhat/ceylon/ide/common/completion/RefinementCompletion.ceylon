@@ -1,6 +1,5 @@
 import ceylon.collection {
-    MutableList,
-    ArrayList
+    HashSet
 }
 import ceylon.interop.java {
     javaString
@@ -9,11 +8,16 @@ import ceylon.interop.java {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
 }
-import com.redhat.ceylon.ide.common.util {
-    Indents
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    TextChange,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -23,7 +27,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Type,
     Generic,
-    FunctionOrValue,
     Module,
     Value,
     Function,
@@ -33,88 +36,68 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     ModelUtil,
     NothingType,
-    DeclarationWithProximity
+    DeclarationWithProximity,
+    TypedReference
 }
 
 import java.util {
-    JArrayList=ArrayList,
-    HashSet
+    JArrayList=ArrayList
 }
 
 // see RefinementCompletionProposal
-shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
-    
-    shared formal CompletionResult newRefinementCompletionProposal(Integer offset, 
-        String prefix, Reference? pr, String desc, String text, IdeComponent cmp,
-        Declaration dec, Scope scope, Boolean fullType, Boolean explicitReturnType);
+shared interface RefinementCompletion {
 
     // see RefinementCompletionProposal.addRefinementProposal(...)
     shared void addRefinementProposal(Integer offset, Declaration dec, 
-        ClassOrInterface ci, Node node, Scope scope, String prefix, IdeComponent cpc,
-        MutableList<CompletionResult> result, Boolean preamble, Indents<Document> indents,
-        Boolean addParameterTypesInCompletions) {
-        
-        value isInterface = scope is Interface;
+        ClassOrInterface ci, Node node, Scope scope, String prefix, CompletionContext ctx,
+        Boolean preamble, Boolean addParameterTypesInCompletions) {
+
         value pr = getRefinedProducedReference(scope, dec);
         value unit = node.unit;
-        value doc = cpc.document;
         
         value desc = getRefinementDescriptionFor(dec, pr, unit);
-        value text = getRefinementTextFor(dec, pr, unit, isInterface, ci, 
-                        indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc), 
-                        true, preamble, indents, addParameterTypesInCompletions);
+        value text
+                = getRefinementTextFor {
+                    d = dec;
+                    pr = pr;
+                    unit = unit;
+                    isInterface = scope is Interface;
+                    ci = ci;
+                    indent
+                        = ctx.commonDocument.defaultLineDelimiter
+                        + ctx.commonDocument.getIndent(node);
+                    containsNewline = true;
+                    preamble = preamble;
+                    addParameterTypesInCompletions = addParameterTypesInCompletions;
+                };
         
-        result.add(newRefinementCompletionProposal(offset, prefix, pr, desc,
-            text, cpc, dec, scope, false, true));
+        platformServices.completion.newRefinementCompletionProposal {
+            offset = offset;
+            prefix = prefix;
+            pr = pr;
+            desc = desc;
+            text = text;
+            cmp = ctx;
+            dec = dec;
+            scope = scope;
+            fullType = false;
+            explicitReturnType = true;
+        };
     }
 
-    shared void addNamedArgumentProposal(Integer offset, String prefix, IdeComponent cpc,
-        MutableList<CompletionResult> result, Declaration dec, Scope scope) {
-        
-        //TODO: type argument substitution using the
-        //     Reference of the primary node
-        value unit = cpc.lastCompilationUnit.unit;
-        value desc = getDescriptionFor(dec, unit);
-        value text = getTextFor(dec, unit) + " = nothing;";
-        
-        result.add(newRefinementCompletionProposal(offset, prefix,
-            dec.reference,  //TODO: this needs to do type arg substitution
-            desc, text, cpc, dec, scope, true, false));
-    }
-    
-    shared void addInlineFunctionProposal(Integer offset, Declaration dec, Scope scope, Node node, String prefix,
-        IdeComponent cmp, Document doc, MutableList<CompletionResult> result, Indents<Document> indents) {
-        
-        //TODO: type argument substitution using the
-        //      Reference of the primary node
-        if (dec.parameter, is FunctionOrValue dec) {
-            value p = dec.initializerParameter;
-            value unit = node.unit;
-            value desc = getInlineFunctionDescriptionFor(p, null, unit);
-            value text = getInlineFunctionTextFor(p, null, unit, 
-                indents.getDefaultLineDelimiter(doc) + indents.getIndent(node, doc));
-            
-            result.add(newRefinementCompletionProposal(offset, prefix, 
-                dec.reference,  //TODO: this needs to do type arg substitution 
-                desc, text, cmp, dec, scope, false, false));
-        }
-    }
-    
     // see getRefinedProducedReference(Scope scope, Declaration d)
     shared Reference? getRefinedProducedReference(Scope|Type scope, Declaration d) {
         if (is Type scope) {
-            value superType = scope;
-            if (superType.intersection) {
-                for (pt in superType.satisfiedTypes) {
+            if (scope.intersection) {
+                for (pt in scope.satisfiedTypes) {
                     if (exists result = getRefinedProducedReference(pt, d)) {
                         return result;
                     }
                 }
                 return null;
             } else {
-                if (exists declaringType = superType.declaration.getDeclaringType(d)) {
-                    value outerType = superType.getSupertype(declaringType.declaration);
+                if (exists declaringType = scope.declaration.getDeclaringType(d)) {
+                    value outerType = scope.getSupertype(declaringType.declaration);
                     return refinedProducedReference(outerType, d);
                 } else {
                     return null;
@@ -124,7 +107,7 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
             return refinedProducedReference(scope.getDeclaringType(d), d);
         }
     }
-
+    
     // see refinedProducedReference(Type outerType, Declaration d)
     Reference refinedProducedReference(Type outerType, 
         Declaration d) {
@@ -136,55 +119,111 @@ shared interface RefinementCompletion<IdeComponent,CompletionResult, Document>
         }
         return d.appliedReference(outerType, params);
     }
+
+    shared void addNamedArgumentProposal(Integer offset, String prefix,
+        CompletionContext ctx, Declaration dec, Scope scope, TypedReference? pr) {
+        
+        value unit = ctx.lastCompilationUnit.unit;
+        
+        platformServices.completion.newRefinementCompletionProposal {
+            offset = offset;
+            prefix = prefix;
+            pr = pr;
+            desc = getDescriptionFor(dec, unit);
+            text = getTextFor(dec, unit) + " = nothing;";
+            cmp = ctx;
+            dec = dec;
+            scope = scope;
+            fullType = true;
+            explicitReturnType = false;
+        };
+    }
+    
+    shared void addInlineFunctionProposal(Integer offset, Declaration dec, 
+        Scope scope, Node node, String prefix, CompletionContext ctx, TypedReference? pr,
+        CommonDocument doc) {
+        
+        if (dec.parameter, is Function dec) {
+            value p = dec.initializerParameter;
+            value unit = node.unit;
+            
+            platformServices.completion.newRefinementCompletionProposal {
+                offset = offset;
+                prefix = prefix;
+                pr = pr;
+                desc = getInlineFunctionDescriptionFor(p, pr, unit);
+                text = getInlineFunctionTextFor {
+                    p = p;
+                    pr = pr;
+                    unit = unit;
+                    indent = ctx.commonDocument.defaultLineDelimiter
+                           + ctx.commonDocument.getIndent(node);
+                };
+                cmp = ctx;
+                dec = dec;
+                scope = scope;
+                fullType = false;
+                explicitReturnType = false;
+            };
+        }
+    }
+
 }
 
-shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region,LinkedMode>
+shared abstract class RefinementCompletionProposal
         (Integer _offset, String prefix, Reference pr, String desc, 
-        String text, IdeComponent cpc, Declaration declaration, Scope scope,
+        String text, CompletionContext ctx, Declaration declaration, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
-        (_offset, prefix, desc, text)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        extends AbstractCompletionProposal
+        (_offset, prefix, desc, text) {
 
-    shared formal CompletionResult newNestedLiteralCompletionProposal(String val, Integer loc);
-    shared formal CompletionResult newNestedCompletionProposal(Declaration dec, Integer loc);
+    // TODO move to CompletionServices
+    shared formal void newNestedLiteralCompletionProposal(ProposalsHolder proposals, String val, Integer loc);
+    shared formal void newNestedCompletionProposal(ProposalsHolder proposals, Declaration dec, Integer loc);
 
     shared String getNestedCompletionText(Boolean description, Unit unit, Declaration dec) {
         value sb = StringBuilder();
         sb.append(getProposedName(null, dec, unit));
         if (is Functional dec) {
-            appendPositionalArgs(dec, dec.reference, unit, sb, false, description, false);
+            appendPositionalArgs {
+                d = dec;
+                pr = dec.reference;
+                unit = unit;
+                result = sb;
+                includeDefaulted = false;
+                descriptionOnly = description;
+                addParameterTypesInCompletions = false;
+            };
         }
         return sb.string;
     }
 
-    Type? type => if (fullType) then pr.fullType else pr.type;
+    Type? type => fullType then pr.fullType else pr.type;
 
-    shared actual Region getSelectionInternal(Document document) {
-        value loc = text.firstInclusion("nothing;");
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
+
         Integer length;
         variable Integer start;
-        if (!exists loc) {
+        if (exists loc = text.firstInclusion("nothing;")) {
+            start = offset + loc - prefix.size;
+            length = 7;
+        }
+        else {
             start = offset + text.size - prefix.size;
             if (text.endsWith("{}")) {
                 start--;
             }
-            
+
             length = 0;
-        } else {
-            start = offset + loc - prefix.size;
-            length = 7;
         }
 
-        return newRegion(start, length);
+        return DefaultRegion(start, length);
     }
 
-    shared TextChange createChange(TextChange change, Document document) {
-        initMultiEditChange(change);
+    shared TextChange createChange(CommonDocument document) {
+        value change = platformServices.document.createTextChange("Add Refinement", document);
         value decs = HashSet<Declaration>();
-        value cu = cpc.lastCompilationUnit;
+        value cu = ctx.lastCompilationUnit;
         if (explicitReturnType) {
             importProposals.importSignatureTypes(declaration, cu, decs);
         } else {
@@ -192,57 +231,55 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         }
         
         value il = importProposals.applyImports(change, decs, cu, document);
-        addEditToChange(change, createEdit(document));
+        change.addEdit(createEdit(document));
         offset += il;
         return change;
     }
 
-    shared void enterLinkedMode(Document document) {
+    shared void enterLinkedMode(CommonDocument document) {
         try {
             value loc = offset - prefix.size;
             
-            if (exists pos = text.firstInclusion("nothing")) {
-                value linkedModeModel = newLinkedMode();
-                value props = ArrayList<CompletionResult>();
+            if (exists pos = text.firstInclusion("nothing"),
+                ctx.options.linkedModeArguments) {
+                value linkedModeModel = platformServices.createLinkedMode(document);
+                value props = platformServices.completion.createProposalsHolder();
                 addProposals(loc + pos, prefix, props);
-                addEditableRegion(linkedModeModel, document, loc + pos, 7, 0, props.sequence());
-                installLinkedMode(document, linkedModeModel, this, 1, loc + text.size);
+                linkedModeModel.addEditableRegion(loc + pos, 7, 0, props);
+                linkedModeModel.install(this, 1, loc + text.size);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    void addProposals(Integer loc, String prefix, MutableList<CompletionResult> props) {
-        value t = type;
-        if (!exists t) {
-            return;
-        }
-        
-        value unit = cpc.lastCompilationUnit.unit;
-        
-        // nothing:
-        props.add(newNestedCompletionProposal(
-            unit.getLanguageModuleDeclaration("nothing"), loc));
-        
-        // this:
-        if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
-            ci.type.isSubtypeOf(type)) {
-            props.add(newNestedLiteralCompletionProposal("this", loc));
-        }
-        
-        // literals:
-        for (val in getAssignableLiterals(t, unit)) {
-            props.add(newNestedLiteralCompletionProposal(val, loc));
-        }
-        
-        // declarations:
-        for (dwp in getSortedProposedValues(scope, unit)) {
-            addValueProposals(props, loc, prefix, t, dwp);
+    void addProposals(Integer loc, String prefix, ProposalsHolder props) {
+        if (exists t = type) {
+            value unit = ctx.lastCompilationUnit.unit;
+
+            // nothing:
+            newNestedCompletionProposal(props,
+                unit.getLanguageModuleDeclaration("nothing"), loc);
+
+            // this:
+            if (exists ci = ModelUtil.getContainingClassOrInterface(scope),
+                ci.type.isSubtypeOf(type)) {
+                newNestedLiteralCompletionProposal(props, "this", loc);
+            }
+
+            // literals:
+            for (val in getAssignableLiterals(t, unit)) {
+                newNestedLiteralCompletionProposal(props, val, loc);
+            }
+
+            // declarations:
+            for (dwp in getSortedProposedValues(scope, unit)) {
+                addValueProposals(props, loc, prefix, t, dwp);
+            }
         }
     }
     
-    void addValueProposals(MutableList<CompletionResult> props, 
+    void addValueProposals(ProposalsHolder props, 
         Integer loc, String prefix, Type type, 
         DeclarationWithProximity dwp) {
         if (dwp.unimported) {
@@ -257,12 +294,13 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
         }
         
         value split = javaString(prefix).split("\\s+");
-        if (split.size > 0, dec.name==split.get(split.size - 1)) {
+        if (split.size > 0, 
+            dec.name==split.get(split.size-1).string) {
             return;
         }
         value pname = dec.unit.\ipackage.nameAsString;
         value inLanguageModule 
-                = pname == Module.\iLANGUAGE_MODULE_NAME;
+                = pname == Module.languageModuleName;
         
         if (is Value dec, 
             dec!=declaration,
@@ -270,7 +308,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             exists vt = dec.type, !vt.nothing, 
             withinBounds(type, vt, scope)) {
             
-            props.add(newNestedCompletionProposal(dec, loc));
+            newNestedCompletionProposal(props, dec, loc);
         }
         
         if (is Function dec, 
@@ -279,7 +317,7 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             exists mt = dec.type, !mt.nothing,
             withinBounds(type, mt, scope)) {
             
-            props.add(newNestedCompletionProposal(dec, loc));
+            newNestedCompletionProposal(props, dec, loc);
         }
         
         if (is Class dec, 
@@ -289,12 +327,12 @@ shared abstract class RefinementCompletionProposal<IdeComponent,CompletionResult
             withinBounds(type, ct, scope) || ct.declaration==type.declaration) {
             
             if (dec.parameterList exists) {
-                props.add(newNestedCompletionProposal(dec, loc));
+                newNestedCompletionProposal(props, dec, loc);
             }
             
             for (m in dec.members) {
                 if (is Constructor m, m.shared, m.name exists) {
-                    props.add(newNestedCompletionProposal(m, loc));
+                    newNestedCompletionProposal(props, m, loc);
                 }
             }
         }

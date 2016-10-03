@@ -49,47 +49,65 @@ shared object escaping {
         }
     }
     
+    "Escapes inital uppercase identifier.
+     
+     Provided argument must be legal unescaped identifier. 
+     Otherwise result of this method is unspecified."
+    shared String escapeInitialUppercase(String name) {
+        value first = name.first;
+        if (exists first) {
+            if (!first.uppercase) {
+                return "\\I``name``";
+            } else {
+                return name;
+            }
+        } else {
+            return "\\I";
+        }
+    }
+    
     shared String escapePackageName(Package p) {
         value path = p.name;
         value sb = StringBuilder();
-        
-        for (pathPart in toCeylonStringIterable(path)) {
+        for (pathPart in path) {
             if (!pathPart.empty) {
-                sb.append(escape(pathPart));
-                sb.append(".");
+                if (!sb.empty) {
+                    sb.append(".");
+                }
+                sb.append(escape(pathPart.string));
             }
         }
-        
-        if (sb.endsWith(".")) {
-            sb.deleteTerminal(1);
-        }
-        
         return sb.string;
     }
     
-    shared String escapeName(DeclarationWithProximity|Declaration d, Unit? unit = null) {
-        switch (d)
+    shared String escapeName(DeclarationWithProximity|Declaration declaration, Unit? unit = null) {
+        switch (declaration)
         case (is DeclarationWithProximity) {
-            return escapeAliasedName(d.declaration, d.name);
+            return escapeAliasedName {
+                declaration = declaration.declaration;
+                aliass = declaration.name;
+            };
         }
-        else {
-            value name = if (exists unit) then d.getName(unit) else d.name;
-            return escapeAliasedName(d, name);
+        case (is Declaration) {
+            return escapeAliasedName { 
+                declaration = declaration; 
+                aliass = if (exists unit) then declaration.getName(unit) else declaration.name; 
+            };
         }
     }
     
-    shared String escapeAliasedName(Declaration d, String? aliass) {
+    shared String escapeAliasedName(Declaration declaration, String? aliass) {
         if (!exists aliass) {
             return "";
         }
         else {
             assert (exists c = aliass.first);
-            if (is TypedDeclaration d, 
+            if (is TypedDeclaration declaration, 
                     c.uppercase || aliass in keywords) {
                 return "\\i``aliass``";
             }
-            else if (is TypeDeclaration d, 
-                    c.lowercase && !d.anonymous) {
+            else if (is TypeDeclaration declaration, 
+                    c.lowercase && !declaration.anonymous) {
                 return "\\I``aliass``";
             }
             else {
@@ -98,19 +116,13 @@ shared object escaping {
         }
     }
 
-    shared String toInitialLowercase(String name) {
-        value first = name.first;
-        
-        return if (exists first)
+    shared String toInitialLowercase(String name) 
+            => if (exists first = name.first)
             then first.lowercased.string + name.spanFrom(1)
             else name;
-    }
     
-    shared String toInitialUppercase(String name) {
-        value first = name.first;
-        
-        return if (exists first)
+    shared String toInitialUppercase(String name) 
+            => if (exists first = name.first)
             then first.uppercased.string + name.spanFrom(1)
             else name;
-    }
 }

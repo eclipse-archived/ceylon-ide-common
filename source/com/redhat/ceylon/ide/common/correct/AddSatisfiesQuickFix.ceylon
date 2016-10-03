@@ -13,6 +13,10 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.ide.common.model {
     AnyModifiableSourceFile
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
@@ -50,17 +54,9 @@ import java.util {
 
  "
 // TODO automatically import satisfied type if needed
-shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addSatisfiesQuickFix {
     
-    shared formal void newProposal(Data data, TypeDeclaration typeParam, 
-            String description, String missingSatisfiedTypeText, 
-            TextChange change, DefaultRegion? region);
-    
-    shared void addSatisfiesProposals(Data data) {
+    shared void addSatisfiesProposals(QuickFixData data) {
         Node? node = determineNode(data.node);
         if (!exists node) {
             return;
@@ -87,65 +83,64 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         if (is AnyModifiableSourceFile unit = typeDec.unit, 
             exists phasedUnit = unit.phasedUnit, 
             exists declaration 
-                = determineContainer(phasedUnit.compilationUnit, typeDec),
-            is IFile file = getFile(phasedUnit, data)) {
+                = determineContainer(phasedUnit.compilationUnit, typeDec)) {
             
             createProposals(data, typeDec, isTypeParam, changeText, 
-                file, declaration, node.unit.equals(unit));
+                declaration, node.unit.equals(unit));
         }
     }
     
-    void createProposals(Data data, TypeDeclaration typeDec, Boolean isTypeParam,
-        String changeText, IFile file, Node declaration, Boolean sameFile) {
+    void createProposals(QuickFixData data, TypeDeclaration typeDec, Boolean isTypeParam,
+        String changeText, Node declaration, Boolean sameFile) {
         
         if (isTypeParam) {
             if (is Tree.ClassDefinition declaration) {
                 value classDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data,
+                addConstraintSatisfiesProposals(typeDec, changeText, data,
                     classDefinition.typeConstraintList, 
                     classDefinition.classBody.startIndex.intValue(), sameFile);
             } else if (is Tree.InterfaceDefinition declaration) {
                 value interfaceDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data, 
+                addConstraintSatisfiesProposals(typeDec, changeText, data, 
                     interfaceDefinition.typeConstraintList, 
                     interfaceDefinition.interfaceBody.startIndex.intValue(), sameFile);
             } else if (is Tree.MethodDefinition declaration) {
                 value methodDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data,
+                addConstraintSatisfiesProposals(typeDec, changeText, data,
                     methodDefinition.typeConstraintList, 
                     methodDefinition.block.startIndex.intValue(), sameFile);
             } else if (is Tree.ClassDeclaration declaration) {
                 value classDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data,
+                addConstraintSatisfiesProposals(typeDec, changeText, data,
                     classDefinition.typeConstraintList, 
                     classDefinition.classSpecifier.startIndex.intValue(), sameFile);
             } else if (is Tree.InterfaceDeclaration declaration) {
                 value interfaceDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data,
+                addConstraintSatisfiesProposals(typeDec, changeText, data,
                     interfaceDefinition.typeConstraintList, 
                     interfaceDefinition.typeSpecifier.startIndex.intValue(), sameFile);
             } else if (is Tree.MethodDeclaration declaration) {
                 value methodDefinition = declaration;
-                addConstraintSatisfiesProposals(typeDec, changeText, file, data,
+                addConstraintSatisfiesProposals(typeDec, changeText, data,
                     methodDefinition.typeConstraintList, 
                     methodDefinition.specifierExpression.startIndex.intValue(), sameFile);
             }
         } else {
             if (is Tree.ClassDefinition declaration) {
                 value classDefinition = declaration;
-                addSatisfiesProposals2(typeDec, changeText, file, data, 
+                addSatisfiesProposals2(typeDec, changeText, data, 
                     classDefinition.satisfiedTypes, 
                     if (!classDefinition.typeConstraintList exists) 
                     then classDefinition.classBody.startIndex.intValue()
                     else classDefinition.typeConstraintList.startIndex.intValue(), sameFile);
             } else if (is Tree.ObjectDefinition declaration) {
                 value objectDefinition = declaration;
-                addSatisfiesProposals2(typeDec, changeText, file, data, 
+                addSatisfiesProposals2(typeDec, changeText, data, 
                     objectDefinition.satisfiedTypes, 
                     objectDefinition.classBody.startIndex.intValue(), sameFile);
             } else if (is Tree.InterfaceDefinition declaration) {
                 value interfaceDefinition = declaration;
-                addSatisfiesProposals2(typeDec, changeText, file, data, 
+                addSatisfiesProposals2(typeDec, changeText, data, 
                     interfaceDefinition.satisfiedTypes, 
                     if (!interfaceDefinition.typeConstraintList exists) 
                     then interfaceDefinition.interfaceBody.startIndex.intValue() 
@@ -155,7 +150,7 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
     }
     
     void addConstraintSatisfiesProposals(TypeDeclaration typeParam, 
-        String missingSatisfiedType, IFile file, Data data, 
+        String missingSatisfiedType, QuickFixData data, 
         TypeConstraintList? typeConstraints, Integer typeContainerBodyStartIndex,
         Boolean sameFile) {
         
@@ -177,19 +172,22 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
         }
         
         if (exists ct = changeText) {
-            value tfc = newTextChange("Add Type Constraint", file);
+            value tfc = platformServices.document.createTextChange("Add Type Constraint", data.phasedUnit);
             assert(exists ci = changeIndex);
-            addEditToChange(tfc, newInsertEdit(ci, ct));
-            value desc = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
-            
-            value region = if (sameFile) then DefaultRegion(ci, ct.size) else null;
+            tfc.addEdit(InsertEdit(ci, ct));
 
-            newProposal(data, typeParam, desc, missingSatisfiedType, tfc, region);
+            data.addQuickFix {
+                description
+                        = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
+                change = tfc;
+                selection = sameFile then DefaultRegion(ci, ct.size) else null;
+                affectsOtherUnits = true;
+            };
         }
     }
     
     void addSatisfiesProposals2(TypeDeclaration typeParam, String missingSatisfiedType,
-        IFile file, Data data, Tree.SatisfiedTypes? typeConstraints, 
+        QuickFixData data, Tree.SatisfiedTypes? typeConstraints, 
         Integer typeContainerBodyStartIndex, Boolean sameFile) {
         
         String changeText;
@@ -202,12 +200,16 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
             changeIndex = typeContainerBodyStartIndex;
         }
         
-        value tfc = newTextChange("Add Inherited Interface", file);
-        addEditToChange(tfc, newInsertEdit(changeIndex, changeText));
-        value desc = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
-        value region = if (sameFile) then DefaultRegion(changeIndex, changeText.size) else null;
+        value tfc = platformServices.document.createTextChange("Add Inherited Interface", data.phasedUnit);
+        tfc.addEdit(InsertEdit(changeIndex, changeText));
 
-        newProposal(data, typeParam, desc, missingSatisfiedType, tfc, region);
+        data.addQuickFix {
+            description
+                    = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
+            change = tfc;
+            selection = sameFile then DefaultRegion(changeIndex, changeText.size) else null;
+            affectsOtherUnits = true;
+        };
     }
     
     Node? determineNode(variable Node node) {
@@ -292,7 +294,7 @@ shared interface AddSatisfiesQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextCh
                 value typeParamType = typeDec.type;
                 value substitutions = HashMap<TypeParameter,Type>();
                 for (stTypeParam in stTypeParams) {
-                    substitutions.put(stTypeParam, typeParamType);
+                    substitutions[stTypeParam] = typeParamType;
                 }
                 
                 for (stTypeParam in stTypeParams) {

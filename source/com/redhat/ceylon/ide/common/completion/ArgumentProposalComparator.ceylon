@@ -1,32 +1,39 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
-    ModelUtil
+    ModelUtil {
+        isNameMatching
+    }
 }
 
 import java.util {
     Comparator
 }
 
-class ArgumentProposalComparator(String? exactName) satisfies Comparator<DeclarationWithProximity> {
+class ArgumentProposalComparator(String? exactName)
+        satisfies Comparator<DeclarationWithProximity> {
     
-    shared actual Integer compare(DeclarationWithProximity x, DeclarationWithProximity y) {
+    shared actual Integer compare(x, y) {
+
+        DeclarationWithProximity y;
+        DeclarationWithProximity x;
+
+        if (x===y) {
+            return 0;
+        }
+
         value xname = x.name;
         value yname = y.name;
         if (exists exactName) {
-            variable value xhit = xname.equals(exactName);
-            variable value yhit = yname.equals(exactName);
-            if (xhit, !yhit) {
+            value xExactHit = xname==exactName;
+            value yExactHit = yname==exactName;
+            if (xExactHit, !yExactHit) {
                 return -1;
             }
-            if (yhit, !xhit) {
+            if (yExactHit, !xExactHit) {
                 return 1;
             }
-            xhit = ModelUtil.isNameMatching(xname, exactName);
-            yhit = ModelUtil.isNameMatching(yname, exactName);
+            value xhit = isNameMatching(xname, exactName);
+            value yhit = isNameMatching(yname, exactName);
             if (xhit, !yhit) {
                 return -1;
             }
@@ -36,6 +43,7 @@ class ArgumentProposalComparator(String? exactName) satisfies Comparator<Declara
         }
         value xd = x.declaration;
         value yd = y.declaration;
+
         value xdepr = xd.deprecated;
         value ydepr = yd.deprecated;
         if (xdepr, !ydepr) {
@@ -44,19 +52,31 @@ class ArgumentProposalComparator(String? exactName) satisfies Comparator<Declara
         if (!xdepr, ydepr) {
             return -1;
         }
+
         value xp = x.proximity;
         value yp = y.proximity;
         value p = xp - yp;
         if (p != 0) {
             return p;
         }
-        value c = javaString(xname).compareTo(yname);
-        if (c != 0) {
-            return c;
+
+        switch (xname <=> yname)
+        case (smaller) {
+            return -1;
         }
-        return javaString(xd.qualifiedNameString)
-                .compareTo(yd.qualifiedNameString);
+        case (larger) {
+            return 1;
+        }
+        else {
+            value xqn = xd.qualifiedNameString;
+            value yqn = yd.qualifiedNameString;
+            return switch (xqn <=> yqn)
+                case (smaller) -1
+                case (larger) 1
+                case (equal) 0;
+        }
     }
     
-    shared actual Boolean equals(Object that) => false;
+    equals(Object that) => (super of Identifiable).equals(that);
+    hash => (super of Identifiable).hash;
 }

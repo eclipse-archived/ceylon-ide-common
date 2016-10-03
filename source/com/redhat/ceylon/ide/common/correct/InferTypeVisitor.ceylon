@@ -1,3 +1,7 @@
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Visitor,
+    Tree
+}
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
@@ -11,10 +15,6 @@ import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration,
     TypeDeclaration,
     Interface
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Visitor,
-    Tree
 }
 
 class InferredType(Unit unit) {
@@ -130,16 +130,20 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         Tree.Term? lt = that.leftTerm;
         
         if (is Tree.BaseMemberExpression lt, 
-            exists dec = declaration, 
-            lt.declaration == dec, 
-            exists rt, exists rtt = rt.typeModel) {
+            exists dec = declaration,
+            exists ltDec = lt.declaration,
+            ltDec == dec,
+            exists rt,
+            exists rtt = rt.typeModel) {
             result.union(rtt);
         }
         
         if (is Tree.BaseMemberExpression rt, 
-            exists dec = declaration, 
-            rt.declaration == dec, 
-            exists lt, exists ltt = lt.typeModel) {
+            exists dec = declaration,
+            exists rtDec = rt.declaration,
+            rtDec == dec,
+            exists lt,
+            exists ltt = lt.typeModel) {
             result.intersect(ltt);
         }
     }
@@ -168,12 +172,14 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
             d == dec, 
             exists p = that.parameter, 
             exists pr = this.pr) {
-            value ft = pr.getTypedParameter(p).fullType;
+            Type? ft = pr.getTypedParameter(p).fullType;
             if (p.sequenced) {
                 result.intersect(unit.getIteratedType(ft));
             }
             else {
-                result.intersect(ft);
+                if (exists ft) {
+                    result.intersect(ft);
+                }
             }
         }
     }
@@ -245,8 +251,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
     shared actual void visit(Tree.ValueIterator that) {
         super.visit(that);
-        value primary = that.specifierExpression.expression.term;
-        if (is Tree.BaseMemberExpression primary, 
+        if (is Tree.BaseMemberExpression primary =
+                that.specifierExpression?.expression?.term,
             exists bmed = primary.declaration, 
             exists dec = declaration,
             bmed == dec, 
@@ -259,8 +265,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
 
     shared actual void visit(Tree.BooleanCondition that) {
         super.visit(that);
-        value primary = that.expression.term;
-        if (is Tree.BaseMemberExpression primary, 
+        if (is Tree.BaseMemberExpression primary =
+                that.expression?.term,
             exists bmed = primary.declaration, 
             exists dec = declaration,
             bmed == dec) {
@@ -367,7 +373,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
     
-    shared void operatorTerm(TypeDeclaration sd, Tree.Term lhs) {
+    shared void operatorTerm(TypeDeclaration sd, Tree.Term? lhs) {
         if (is Tree.BaseMemberExpression lhs, 
             exists bmed = lhs.declaration, 
             exists dec = declaration,
@@ -377,7 +383,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
     
-    shared void genericOperatorTerm(TypeDeclaration sd, Tree.Term lhs) {
+    shared void genericOperatorTerm(TypeDeclaration sd, Tree.Term? lhs) {
         if (is Tree.BaseMemberExpression lhs, 
             exists bmed = lhs.declaration, 
             exists dec = declaration,

@@ -1,27 +1,32 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.ide.common.util {
-    types,
-    RequiredType
+    RequiredType,
+    types
 }
 import com.redhat.ceylon.model.typechecker.model {
     DeclarationWithProximity,
-    ModelUtil
+    ModelUtil {
+        isNameMatching
+    }
 }
 
-import java.lang {
-    JInteger=Integer
-}
 import java.util {
     Comparator
 }
 
-class ProposalComparator(String prefix, RequiredType required) satisfies Comparator<DeclarationWithProximity> {
+class ProposalComparator(String prefix, RequiredType required)
+        satisfies Comparator<DeclarationWithProximity> {
 
-    shared actual Integer compare(DeclarationWithProximity x, DeclarationWithProximity y) {
+    shared actual Integer compare(x, y) {
+
+        DeclarationWithProximity x;
+        DeclarationWithProximity y;
+
+        if (x===y) {
+            return 0;
+        }
+
         try {
+
             //variable Boolean xbt = x.declaration is NothingType;
             //variable Boolean ybt = y.declaration is NothingType;
             //if (xbt, ybt) {
@@ -33,17 +38,25 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             //if (ybt, !xbt) {
             //    return -1;
             //}
+
             String xName = x.name;
             String yName = y.name;
-            Boolean yUpperCase = yName.first?.uppercase else false;
-            Boolean xUpperCase = xName.first?.uppercase else false;
+            Boolean yUpperCase
+                    = yName.first?.uppercase
+                    else false;
+            Boolean xUpperCase
+                    = xName.first?.uppercase
+                    else false;
             if (!prefix.empty) {
                 //proposals which match the case of the
                 //typed prefix first
-                Boolean upperCasePrefix = prefix.first?.uppercase else false;
+                Boolean upperCasePrefix
+                        = prefix.first?.uppercase
+                        else false;
                 if (!xUpperCase, yUpperCase) {
                     return if (upperCasePrefix) then 1 else -1;
-                } else if (xUpperCase, !yUpperCase) {
+                }
+                else if (xUpperCase, !yUpperCase) {
                     return if (upperCasePrefix) then -1 else 1;
                 }
             }
@@ -53,25 +66,29 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             if (exists requiredType = required.type) {
                 value xtype = types.getResultType(xd);
                 value ytype = types.getResultType(yd);
-                Boolean xassigns = xtype?.isSubtypeOf(requiredType) else false;
-                Boolean yassigns = ytype?.isSubtypeOf(requiredType) else false;
-                if (xassigns, !yassigns) {
+                Boolean xassigns
+                        = xtype?.isSubtypeOf(requiredType)
+                        else false;
+                Boolean yassigns
+                        = ytype?.isSubtypeOf(requiredType)
+                        else false;
+                if (xassigns && !yassigns) {
                     return -1;
                 }
-                if (yassigns, !xassigns) {
+                else if (yassigns && !xassigns) {
                     return 1;
                 }
                 if (xassigns, yassigns) {
                     //both are assignable - prefer the
                     //one which isn't assignable to
-                    //*everything*
+                    //everything
                     Boolean xbottom = xtype?.nothing else false;
                     Boolean ybottom = ytype?.nothing else false;
                     if (xbottom, !ybottom) {
-                        return -1;
-                    }
-                    if (ybottom, !xbottom) {
                         return 1;
+                    }
+                    else if (ybottom, !xbottom) {
+                        return -1;
                     }
                 }
             }
@@ -81,42 +98,57 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
             if (xdepr && !ydepr) {
                 return 1;
             }
-            if (!xdepr && ydepr) {
+            else if (!xdepr && ydepr) {
                 return -1;
             }
 
-            Integer pc = JInteger.compare(x.proximity, y.proximity);
-            if (pc!=0) {
-                return pc;
+            switch(x.proximity<=>y.proximity)
+            case (equal) {}
+            case (larger) {
+                return 1;
+            }
+            case (smaller) {
+                return -1;
             }
             
             if (exists requiredName = required.parameterName) {
-                Boolean xnr = ModelUtil.isNameMatching(xName, requiredName);
-                Boolean ynr = ModelUtil.isNameMatching(yName, requiredName);
+                Boolean xnr = isNameMatching(xName, requiredName);
+                Boolean ynr = isNameMatching(yName, requiredName);
                 if (xnr && !ynr) {
                     return -1;
                 }
-                if (!xnr && ynr) {
+                else if (!xnr && ynr) {
                     return 1;
                 }
-
             }
 
             //lowercase proposals first if no prefix
             if (!xUpperCase, yUpperCase) {
                 return -1;
-            } else if (xUpperCase, !yUpperCase) {
+            }
+            else if (xUpperCase, !yUpperCase) {
                 return 1;
             }
-            Integer nc = javaString(xName).compareTo(yName);
-            if (nc != 0) {
-                return nc;
-            }
             
-            String xqn = x.declaration.qualifiedNameString;
-            String yqn = y.declaration.qualifiedNameString;
-            return javaString(xqn).compareTo(yqn);
-        } catch (Exception e) {
+            //sort by unqualified name
+            switch (xName<=>yName)
+            case (equal) {}
+            case (larger) {
+                return 1;
+            }
+            case (smaller) {
+                return -1;
+            }
+
+            //if all else fails sort by qualified name
+            String xqn = xd.qualifiedNameString;
+            String yqn = yd.qualifiedNameString;
+            return switch (xqn<=>yqn) 
+                case (larger) 1
+                case (smaller) -1
+                case (equal) 0;
+        }
+        catch (e) {
             e.printStackTrace();
             return 0;
         }
@@ -129,5 +161,11 @@ class ProposalComparator(String prefix, RequiredType required) satisfies Compara
         else {
             return false;
         }
+    }
+
+    shared actual Integer hash {
+        variable value hash = 1;
+        hash = 31*hash + prefix.hash;
+        return hash;
     }
 }

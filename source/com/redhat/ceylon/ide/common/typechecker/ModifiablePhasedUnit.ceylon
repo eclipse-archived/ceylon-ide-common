@@ -1,20 +1,18 @@
-import java.util {
-    List
-}
-import org.antlr.runtime {
-    CommonToken
-}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
+}
+import com.redhat.ceylon.ide.common.model {
+    IResourceAware,
+    ModelAliases,
+    BaseIdeModuleSourceMapper
+}
+import com.redhat.ceylon.ide.common.vfs {
+    FileVirtualFile,
+    FolderVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
@@ -22,18 +20,13 @@ import com.redhat.ceylon.model.typechecker.model {
 import com.redhat.ceylon.model.typechecker.util {
     ModuleManager
 }
-import com.redhat.ceylon.ide.common.model {
-    IResourceAware,
-    BaseIdeModuleSourceMapper,
-    ModelAliases
+
+import java.util {
+    List
 }
-import com.redhat.ceylon.ide.common.vfs {
-    FileVirtualFile,
-    FolderVirtualFile,
-    VfsAliases
-}
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+
+import org.antlr.runtime {
+    CommonToken
 }
 
 shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
@@ -46,11 +39,14 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
         given NativeFolder satisfies NativeResource 
         given NativeFile satisfies NativeResource {
     
+    FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> _unitFile;
+    FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> _srcDir;
+    
     shared new (
         FileVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> unitFile, 
         FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> srcDir, 
         Tree.CompilationUnit cu, Package p, ModuleManager moduleManager, 
-        ModuleSourceMapper moduleSourceMapper, 
+        BaseIdeModuleSourceMapper moduleSourceMapper, 
         TypeChecker typeChecker, 
         List<CommonToken> tokenStream)
             extends IdePhasedUnit(
@@ -62,20 +58,20 @@ shared abstract class ModifiablePhasedUnit<NativeProject, NativeResource, Native
             moduleSourceMapper, 
             typeChecker, 
             tokenStream) {
-        
+        this._unitFile = unitFile;
+        this._srcDir = srcDir;
     }
 
-    shared new clone(PhasedUnit other) 
+    shared new clone(ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> other) 
             extends IdePhasedUnit.clone(other) {
+        this._unitFile = other.unitFile;
+        this._srcDir = other.srcDir;
     }
     
-    shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
-            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
+    /*shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
+            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);*/
     
-    shared actual FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> unitFile =>
-            unsafeCast<FileVirtualFileAlias>(super.unitFile);
-
-    shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir =>
-            unsafeCast<FolderVirtualFileAlias>(super.srcDir);
+    shared actual FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> unitFile => _unitFile;
+    shared actual FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir => _srcDir;
 }
 

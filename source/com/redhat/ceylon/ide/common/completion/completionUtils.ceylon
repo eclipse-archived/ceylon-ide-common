@@ -1,12 +1,13 @@
-import ceylon.interop.java {
-    CeylonIterable,
-    javaString
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     TreeUtil,
     Visitor
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
@@ -32,61 +33,115 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     Interface,
-    ModelUtil,
     Constructor,
-    TypeParameter
+    TypeParameter,
+    ModelUtil {
+        isTypeUnknown
+    },
+    Cancellable
 }
 
-import java.lang {
-    JCharacter=Character
-}
 import java.util {
-    List,
+    JList=List,
     ArrayList,
+    Arrays,
     Collections
 }
 
 import org.antlr.runtime {
-    CommonToken
+    CommonToken,
+    Token
 }
 
-shared Boolean isLocation(OccurrenceLocation? loc1, OccurrenceLocation loc2) {
+shared Boolean isLocation(loc1, loc2) {
+
+    OccurrenceLocation? loc1;
+    OccurrenceLocation loc2;
+
     if (exists loc1) {
         return loc1 == loc2;
     }
     return false;
 }
 
-shared String anonFunctionHeader(Type? requiredType, Unit unit) {
+shared String anonFunctionHeader(Type? requiredType, Unit unit, Parameter? param = null) {
     value text = StringBuilder();
     text.append("(");
     
-    variable Character c = 'a';
-    
-    CeylonIterable(unit.getCallableArgumentTypes(requiredType)).fold(true)((isFirst, paramType) {
-        if (!isFirst) { text.append(", "); }
-        text.append(paramType.asSourceCodeString(unit))
-                .append(" ")
-                .append(c.string);
-        c++;
-        
-        return false;
-    });
+    variable value c = 'a';
+    value params
+            = if (is Functional fun = param?.model)
+            then fun.firstParameterList?.parameters
+            else null;
+    variable value index = 0;
+    for (paramType in unit.getCallableArgumentTypes(requiredType)) {
+        if (index>0) {
+            text.append(", ");
+        }
+        if (paramType.entry && !isTypeUnknown(paramType)) {
+            text.append(unit.getKeyType(paramType).asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name).append("Key");
+            } else {
+                text.append(c.string);
+                c++;
+            }
+            text.append(" -> ");
+            text.append(unit.getValueType(paramType).asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name).append("Item");
+            } else {
+                text.append(c.string);
+                c++;
+            }
+        }
+        else {
+            text.append(paramType.asSourceCodeString(unit))
+                .append(" ");
+            if (exists params, exists p = params[index]) {
+                text.append(p.name);
+            } else {
+                text.append(c.string);
+                c++;
+            }
+        }
+        index++;
+    }
     text.append(")");
     
     return text.string;
 }
 
+shared DefaultRegion getCurrentSpecifierRegion(CommonDocument document, Integer offset) {
+    variable Integer length = 0;
+    variable Integer i = offset;
+    while (i < document.size) {
+        value ch = document.getChar(i);
+        if (ch.whitespace || ch==';' || ch==',' || ch==')') {
+            break;
+        }
+        
+        length++;
+        i++;
+    }
+    
+    return DefaultRegion(offset, length);
+}
+
+
 shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit) {
     value buf = StringBuilder();
     if (exists qualifier) {
-        buf.append(escaping.escapeName(qualifier, unit)).append(".");
+        buf.append(escaping.escapeName(qualifier, unit))
+            .append(".");
     }
     
     if (is Constructor dec) {
-        value constructor = dec;
-        value clazz = constructor.extendedType.declaration;
-        buf.append(escaping.escapeName(clazz, unit)).append(".");
+        value clazz = dec.extendedType.declaration;
+        buf.append(escaping.escapeName(clazz, unit))
+            .append(".");
     }
     
     buf.append(escaping.escapeName(dec, unit));
@@ -96,36 +151,57 @@ shared String getProposedName(Declaration? qualifier, Declaration dec, Unit unit
 
 // see CompletionUtil.overloads(Declaration dec)
 shared {Declaration*} overloads(Declaration dec) {
-    return if (dec.abstraction)
-    then CeylonIterable(dec.overloads)
-    else {dec};
+    if (dec.abstraction) {
+        //TODO: walk up the chain of refinedDeclarations
+        if (exists refined = dec.overloads[0]?.refinedDeclaration, refined.overloaded,
+            exists abstraction = refined.scope.getDirectMember(dec.name, null, false),
+            abstraction.abstraction) {
+            return { for (d in dec.overloads) d }
+                .chain { for (r in abstraction.overloads)
+                         if (!any { for (d in dec.overloads) r==d.refinedDeclaration })
+                         r };
+        }
+        else {
+            return { for (d in dec.overloads) d };
+        }
+    }
+    else {
+        //TODO: walk up the chain of refinedDeclarations
+        if (exists refined = dec.refinedDeclaration, refined.overloaded,
+            exists abstraction = refined.scope.getDirectMember(dec.name, null, false),
+            abstraction.abstraction) {
+            return { dec, for (r in abstraction.overloads) if (r!=refined) r };
+        }
+        else {
+            return { dec };
+        }
+    }
 }
 
 // see CompletionUtil.getParameters
-List<Parameter> getParameters(ParameterList pl,
+JList<Parameter> getParameters(ParameterList pl,
     Boolean includeDefaults, Boolean namedInvocation) {
-    List<Parameter> ps = pl.parameters;
+    value ps = pl.parameters;
     if (includeDefaults) {
         return ps;
     }
     else {
-        List<Parameter> list = ArrayList<Parameter>();
-        for (p in ps) {
-            if (!p.defaulted || 
-                (namedInvocation && spreadable(p, ps))) {
-                list.add(p);
-            }
-        }
-        return list;
+        return Arrays.asList(
+            for (p in ps)
+            if (!p.defaulted
+                || (namedInvocation && spreadable(p, ps)))
+            p);
     }
 }
 
-Boolean spreadable(Parameter param, List<Parameter> list) {
-    value lastParam = list.get(list.size() - 1);
-    if (param == lastParam, param.model is Value) {
-        Type? type = param.type;
-        value unit = param.declaration.unit;
-        return type exists && unit.isIterableParameterType(type);
+Boolean spreadable(Parameter param, JList<Parameter> list) {
+    if (exists lastParam = list[list.size()-1],
+        param == lastParam,
+        param.model is Value) {
+        return if (exists type = param.type) 
+            then param.declaration.unit
+                .isIterableParameterType(type)
+            else false;
     } else {
         return false;
     }
@@ -139,10 +215,11 @@ Boolean isPackageDescriptor(Tree.CompilationUnit? cu)
         => (cu?.unit?.filename else "") == "package.ceylon";
 
 String getTextForDocLink(Unit? unit, Declaration decl) {
-    Package? pkg = decl.unit.\ipackage;
     String qname = decl.qualifiedNameString;
     
-    if (exists pkg, (Module.\iLANGUAGE_MODULE_NAME.equals(pkg.nameAsString) || (if (exists unit) then pkg.equals(unit.\ipackage) else false))) {
+    if (exists pkg = decl.unit.\ipackage, 
+        Module.languageModuleName.equals(pkg.nameAsString) 
+            || (if (exists unit) then pkg.equals(unit.\ipackage) else false)) {
         if (decl.toplevel) {
             return decl.nameAsString;
         } else {
@@ -162,30 +239,27 @@ Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu)
             then true else false;
 
 Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) 
-        => if (exists cu, 
-               exists u = cu.unit,
-               u.filename == "package.ceylon",
-               cu.packageDescriptors.empty) 
-            then true else false;
+        => if (exists cu, exists u = cu.unit)
+        then u.filename == "package.ceylon"
+          && cu.packageDescriptors.empty
+        else false;
 
 String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {
-    StringBuilder fullPath = StringBuilder();
-    
     if (exists path) {
-        fullPath.append(TreeUtil.formatPath(path.identifiers));
-        fullPath.append(".");
+        value fullPath = TreeUtil.formatPath(path.identifiers) + ".";
         value maxLength = offset - path.startIndex.intValue() - prefix.size;
-        return fullPath.substring(0, maxLength);
+        return fullPath.initial(maxLength);
     }
-    return fullPath.string;
+    else {
+        return "";
+    }
 }
 
-Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken token) {
+Integer nextTokenType(LocalAnalysisResult cpc, CommonToken token) {
     variable Integer i = token.tokenIndex + 1;
-    assert(exists tokens = cpc.tokens);
-    while (i < tokens.size()) {
-        CommonToken tok = tokens.get(i);
-        if (tok.channel != CommonToken.\iHIDDEN_CHANNEL) {
+    value tokens = cpc.tokens;
+    while (exists tok = tokens[i]) {
+        if (tok.channel != Token.hiddenChannel) {
             return tok.type;
         }
         i++;
@@ -193,17 +267,17 @@ Integer nextTokenType<Document>(LocalAnalysisResult<Document> cpc, CommonToken t
     return -1;
 }
 
-String getDefaultValueDescription<Document>(Parameter p, LocalAnalysisResult<Document>? cpc) 
+String getDefaultValueDescription(Parameter p, LocalAnalysisResult? cpc) 
         => if (p.defaulted) 
-            then if (is Functional m = p.model) 
-                then " => ..." 
-                else getInitialValueDescription(p.model, cpc) 
-            else "";
+        then if (p.model is Functional)
+            then " => ..."
+            else getInitialValueDescription(p.model, cpc)
+        else "";
 
-shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysisResult<Document>? cpc) {
+shared String getInitialValueDescription(Declaration dec, LocalAnalysisResult? cpc) {
     if (exists cpc) {
-        variable Tree.SpecifierOrInitializerExpression? sie = null;
-        variable String arrow = "";
+        Tree.SpecifierOrInitializerExpression? sie;
+        String arrow;
         switch (refnode = nodes.getReferencedNode(dec))
         case (is Tree.AttributeDeclaration) {
             sie = refnode.specifierOrInitializerExpression;
@@ -213,8 +287,7 @@ shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysi
             sie = refnode.specifierExpression;
             arrow = " => ";
         }
-        else {}
-        if (!exists s = sie) {
+        else {
             variable Tree.SpecifierOrInitializerExpression? result = null;
             object extends Visitor() {
                 shared actual void visit(Tree.InitializerParameter that) {
@@ -225,34 +298,38 @@ shared String getInitialValueDescription<Document>(Declaration dec, LocalAnalysi
                 }
             }.visit(cpc.lastCompilationUnit);
             sie = result;
+            arrow = "";
         }
-        if (exists term = sie?.expression?.term) {
-            switch (term)
-            case (is Tree.Literal) {
-                value text = term.token.text;
-                if (text.size < 20) {
-                    return arrow + text;
-                }
-            } 
-            case (is Tree.BaseMemberOrTypeExpression) {
-                if (exists id = term.identifier, 
-                    !exists b = term.typeArguments) {
-                    return arrow + id.text;
-                }
-            }
-            else if (exists tokens = cpc.tokens, 
-                    term.unit == cpc.lastCompilationUnit.unit) {
-                value impl = nodes.text(term, tokens);
-                if (impl.size < 10) {
-                    return arrow + impl;
-                }
-            }
-            //don't have the token stream :-/
-            //TODO: figure out where to get it from!
-            return arrow + "...";
+
+        switch (term = sie?.expression?.term)
+        case (null) {
+            return "";
         }
+        case (is Tree.Literal) {
+            value text = term.token.text;
+            if (text.size < 20) {
+                return arrow + text;
+            }
+        }
+        case (is Tree.BaseMemberOrTypeExpression) {
+            if (exists id = term.identifier,
+                !exists b = term.typeArguments) {
+                return arrow + id.text;
+            }
+        }
+        else if (exists unit = cpc.lastCompilationUnit?.unit,
+                    term.unit == unit) {
+            value tokens = cpc.tokens;
+            value impl = nodes.text(tokens, term);
+            if (impl.size < 10) {
+                return arrow + impl;
+            }
+        }
+        return arrow + "...";
     }
-    return "";
+    else {
+        return "";
+    }
 }
 
 String? getPackageName(Tree.CompilationUnit cu) 
@@ -260,7 +337,7 @@ String? getPackageName(Tree.CompilationUnit cu)
             then pack.qualifiedNameString 
             else null;
 
-shared Boolean isInBounds(List<Type> upperBounds, Type type) {
+shared Boolean isInBounds(JList<Type> upperBounds, Type type) {
     for (ub in upperBounds) {
         if (!type.isSubtypeOf(ub) &&
             !(ub.involvesTypeParameters() && 
@@ -304,77 +381,83 @@ Boolean withinBounds(Type requiredType, Type type, Scope scope) {
     }
 }
 
-
-shared List<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit, String? exactName = null) {
-    value map = scope.getMatchingDeclarations(unit, "", 0, null);
+void hackSortedResults(String? exactName, ArrayList<DeclarationWithProximity> results) {
     if (exists exactName) {
-        for (dwp in ArrayList(map.values())) {
-            if (!dwp.unimported, !dwp.\ialias,
-                ModelUtil.isNameMatching(dwp.name, exactName)) {
-                
-                map.put(javaString(dwp.name), DeclarationWithProximity(dwp.declaration, -5));
+        //hack to take advantage of code in InvocationCompletion.addValueArgumentProposals
+        for (i in 0:results.size()) {
+            assert (exists dwp = results[i]);
+            if (!dwp.unimported && !dwp.\ialias
+                //if it matches the parameter name
+                && ModelUtil.isNameMatching(dwp.name, exactName)) {
+                //mess with its proximity
+                results[i] = DeclarationWithProximity(dwp.declaration, -5);
             }
         }
     }
+}
+
+shared JList<DeclarationWithProximity> getSortedProposedValues(Scope scope, Unit unit,
+        String? exactName = null, Cancellable? cancellable = null) {
+    value map = scope.getMatchingDeclarations(unit, "", 0, cancellable);
     value results = ArrayList(map.values());
     Collections.sort(results, ArgumentProposalComparator(exactName));
+    hackSortedResults(exactName, results);
     return results;
 }
 
-shared Boolean isIgnoredLanguageModuleClass(Class clazz) {
-    return clazz.isString()
-            || clazz.integer
-            || clazz.float
-            || clazz.character
-            || clazz.annotation;
-}
+shared Boolean isIgnoredLanguageModuleClass(Class clazz)
+        => clazz.isString()
+        || clazz.integer
+        || clazz.float
+        || clazz.character
+        || clazz.annotation;
 
-shared Boolean isIgnoredLanguageModuleValue(Value \ivalue) {
-    value name = \ivalue.name;
-    return name.equals("process")
-            || name.equals("runtime") 
-            || name.equals("system") 
-            || name.equals("operatingSystem") 
-            || name.equals("language") 
-            || name.equals("emptyIterator") 
-            || name.equals("infinity") 
-            || name.endsWith("IntegerValue") 
-            || name.equals("finished");
+shared Boolean isIgnoredLanguageModuleValue(Value val) {
+    value name = val.name;
+    return name == "process"
+        || name == "runtime"
+        || name == "system"
+        || name == "operatingSystem"
+        || name == "language"
+        || name == "emptyIterator"
+        || name == "infinity"
+        || name == "IntegerValue"
+        || name == "finished";
 }
 
 shared Boolean isIgnoredLanguageModuleMethod(Function method) {
     value name = method.name;
-    return name.equals("className") 
-            || name.equals("flatten") 
-            || name.equals("unflatten") 
-            || name.equals("curry") 
-            || name.equals("uncurry") 
-            || name.equals("compose") 
-            || method.annotation;
+    return name == "className"
+        || name == "flatten"
+        || name == "unflatten"
+        || name == "curry"
+        || name == "uncurry"
+        || name == "compose"
+        || method.annotation;
 }
 
-Boolean isIgnoredLanguageModuleType(TypeDeclaration td) {
-    return !td.\iobject 
-            && !td.anything 
-            && !td.isString() 
-            && !td.integer 
-            && !td.character 
-            && !td.float 
-            && !td.boolean;
-}
+Boolean isIgnoredLanguageModuleType(TypeDeclaration td)
+        => !td.\iobject
+        && !td.anything
+        && !td.isString()
+        && !td.integer
+        && !td.character
+        && !td.float
+        && !td.boolean;
 
-Integer findCharCount<Document>(Integer count, Document document, Integer start, Integer end,
-    String increments, String decrements, Boolean considerNesting, JCharacter(Document,Integer) getChar) {
+Integer findCharCount(Integer count, CommonDocument document, 
+    Integer start, Integer end,
+    String increments, String decrements, Boolean considerNesting) {
 
-    assert((!increments.empty || !decrements.empty) && !increments.equals(decrements));
+    assert (!(increments.empty && decrements.empty) && increments!=decrements);
 
-    value \iNONE = 0;
-    value \iBRACKET = 1;
-    value \iBRACE = 2;
-    value \iPAREN = 3;
-    value \iANGLE = 4;
+    value none = 0;
+    value bracket = 1;
+    value brace = 2;
+    value paren = 3;
+    value angle = 4;
 
-    variable value nestingMode = \iNONE;
+    variable value nestingMode = none;
     variable value nestingLevel = 0;
 
     variable value charCount = 0;
@@ -387,11 +470,11 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                 return offset - 1;
             }
         }
-        value curr = getChar(document, offset++).charValue();
+        value curr = document.getChar(offset++);
         switch (curr)
         case ('/') {
             if (offset < end) {
-                value next = getChar(document, offset);
+                value next = document.getChar(offset);
                 if (next == '*') {
                     // a comment starts, advance to the comment end
                     // TODO offset = getCommentEnd(document, offset + 1, end);
@@ -408,7 +491,7 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
         }
         case ('*') {
             if (offset < end) {
-                value next = getChar(document, offset);
+                value next = document.getChar(offset);
                 if (next == '/') {
                     charCount = 0;
                     ++offset;
@@ -422,23 +505,23 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
             if (considerNesting) {
                 switch (curr)
                 case ('[') {
-                    if (nestingMode==\iBRACKET || nestingMode==\iNONE) {
-                        nestingMode = \iBRACKET;
+                    if (nestingMode==bracket || nestingMode==none) {
+                        nestingMode = bracket;
                         nestingLevel++;
                     }
                 }
                 case (']') {
-                    if (nestingMode == \iBRACKET && --nestingLevel == 0) {
-                        nestingMode = \iNONE;
+                    if (nestingMode == bracket && --nestingLevel == 0) {
+                        nestingMode = none;
                     }
                 }
                 case ('(') {
-                    if (nestingMode == \iANGLE) {
-                        nestingMode = \iPAREN;
+                    if (nestingMode == angle) {
+                        nestingMode = paren;
                         nestingLevel = 1;
                     }
-                    if (nestingMode==\iPAREN || nestingMode==\iNONE) {
-                        nestingMode = \iPAREN;
+                    if (nestingMode==paren || nestingMode==none) {
+                        nestingMode = paren;
                         nestingLevel++;
                     }
                 }            
@@ -446,19 +529,19 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iPAREN) {
+                    if (nestingMode == paren) {
                         if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
+                            nestingMode = none;
                         }
                     }
                 }
                 case ('{') {
-                    if (nestingMode == \iANGLE) {
-                        nestingMode = \iBRACE;
+                    if (nestingMode == angle) {
+                        nestingMode = brace;
                         nestingLevel = 1;
                     }
-                    if (nestingMode==\iBRACE || nestingMode==\iNONE) {
-                        nestingMode = \iBRACE;
+                    if (nestingMode==brace || nestingMode==none) {
+                        nestingMode = brace;
                         nestingLevel++;
                     }
                 }
@@ -466,13 +549,13 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iBRACE && --nestingLevel == 0) {
-                        nestingMode = \iNONE;
+                    if (nestingMode == brace && --nestingLevel == 0) {
+                        nestingMode = none;
                     }
                 }
                 case ('<') {
-                    if (nestingMode==\iANGLE || nestingMode==\iNONE) {
-                        nestingMode = \iANGLE;
+                    if (nestingMode==angle || nestingMode==none) {
+                        nestingMode = angle;
                         nestingLevel++;
                     }
                 }
@@ -480,9 +563,9 @@ Integer findCharCount<Document>(Integer count, Document document, Integer start,
                     if (nestingMode == 0) {
                         return offset - 1;
                     }
-                    if (nestingMode == \iANGLE) {
+                    if (nestingMode == angle) {
                         if (--nestingLevel == 0) {
-                            nestingMode = \iNONE;
+                            nestingMode = none;
                         }
                     }
                 }
@@ -527,7 +610,7 @@ shared String[] getAssignableLiterals(Type type, Unit unit) {
         } else if (dtd.isString()) {
             return ["\"\"", "\"\"\"\"\"\""];
         } else if (dtd.character) {
-            return ["' '", "'\\n'", "'\\t'"];
+            return ["''", "' '", "'\\n'", "'\\t'", "'.'", "'/'"];
         } else {
             return [];
         }

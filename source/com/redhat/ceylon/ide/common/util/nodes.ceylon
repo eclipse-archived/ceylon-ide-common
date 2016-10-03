@@ -1,6 +1,7 @@
 import ceylon.collection {
     HashSet,
-    MutableSet
+    MutableSet,
+    SetMutator
 }
 import ceylon.interop.java {
     javaString
@@ -17,9 +18,7 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonUnit,
-    CeylonBinaryUnit,
-    BaseIdeModule
+    CeylonUnit
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -31,7 +30,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     FunctionOrValue,
     Function,
-    Class
+    Class,
+    Type
 }
 
 import java.lang {
@@ -87,19 +87,19 @@ shared object nodes {
         cu.visit(visitor);
         return visitor.context;
     }
-    
+
     shared Tree.OperatorExpression? findOperator(Tree.CompilationUnit cu, Node node) {
         variable Tree.OperatorExpression? result = null;
         cu.visit(object extends Visitor() {
-                shared actual void visit(Tree.OperatorExpression that) {
-                    if (node.startIndex.intValue() >= that.startIndex.intValue(),
-                        node.endIndex.intValue() <= that.endIndex.intValue()) {
-                        
-                        result = that;
-                    }
-                    super.visit(that);
+            shared actual void visit(Tree.OperatorExpression that) {
+                if (node.startIndex.intValue() >= that.startIndex.intValue(),
+                    node.endIndex.intValue() <= that.endIndex.intValue()) {
+
+                    result = that;
                 }
-            });
+                super.visit(that);
+            }
+        });
         return result;
     }
     
@@ -362,15 +362,6 @@ shared object nodes {
     shared Integer getNodeEndOffset(Node? node)
             => node?.endIndex?.intValue() else 0;
     
-    "Get the Node referenced by the given model, searching
-     in all relevant compilation units."
-    shared Node? getReferencedNode(Referenceable? model) {
-        if (exists model, is CeylonUnit unit = model.unit) {
-            return getReferencedNodeInUnit(model, unit.compilationUnit);
-        }
-        return null;
-    }
-    
     shared Referenceable? getReferencedModel(Node node) {
         if (is Tree.ImportPath node) {
             value importPath = node;
@@ -399,7 +390,8 @@ shared object nodes {
     }
     
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
-        if (exists node, exists dec = getReferencedDeclaration(node)) {
+        if (exists node, 
+            exists dec = getReferencedDeclaration(node)) {
             if (exists unit = dec.unit,
                 exists nodeUnit = node.unit,
                 unit == nodeUnit) {
@@ -474,64 +466,31 @@ shared object nodes {
         }
     }
     
-    "Find the Node defining the given model within the given CompilationUnit."
-    shared Node? getReferencedNodeInUnit(variable Referenceable? model, Tree.CompilationUnit? rootNode) {
-        if (exists rootNode, exists m = model) {
-            if (is Declaration decl = model) {
-                if (exists unit = decl.unit, !unit.filename.lowercased.endsWith(".ceylon")) {
-                    variable Boolean foundTheCeylonDeclaration = false;
-                    
-                    if (is CeylonBinaryUnit<out Anything,out Anything,out Anything> unit,
-                        is BaseIdeModule mod = unit.\ipackage.\imodule) {
-                        value sourceRelativePath = mod.toSourceUnitRelativePath(unit.relativePath);
-                        if (exists sourceRelativePath) {
-                            value ceylonSourceRelativePath = mod.getCeylonDeclarationFile(sourceRelativePath);
-                            if (exists ceylonSourceRelativePath) {
-                                value externalPhasedUnit = mod.getPhasedUnitFromRelativePath(ceylonSourceRelativePath);
-                                if (exists externalPhasedUnit) {
-                                    value sourceFile = externalPhasedUnit.unit;
-                                    
-                                    for (sourceDecl in sourceFile.declarations) {
-                                        if (sourceDecl.qualifiedNameString.equals(decl.qualifiedNameString)) {
-                                            model = sourceDecl;
-                                            foundTheCeylonDeclaration = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (!foundTheCeylonDeclaration) {
-                        if (decl.native, !unit.filename.lowercased.endsWith(".ceylon")) {
-                            if (exists headerDeclaration
-                                        = ModelUtil.getNativeHeader(decl)) {
-                                if (exists overloads = headerDeclaration.overloads) {
-                                    for (overload in overloads) {
-                                        if (overload.nativeBackends.header()) {
-                                            model = overload;
-                                            foundTheCeylonDeclaration = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            value visitor = FindReferencedNodeVisitor(model);
-            rootNode.visit(visitor);
-            return visitor.declarationNode;
+    "Get the Node referenced by the given model, using the
+     given [[rootNode]] if specified."
+    shared Node? getReferencedNode(Referenceable? model,
+            //TODO: this argument is probably always useless 
+            Tree.CompilationUnit? rootNode = null) {
+        if (!exists model) {
+            return null;
         }
         
-        return null;
+        if (exists rootNode) {
+            return findReferencedNode(rootNode, model);
+        }
+        else if (is CeylonUnit unit = model.unit,
+                exists node = unit.compilationUnit) {
+            return findReferencedNode(node, model);
+        }
+        else {
+            return null;
+        }
     }
     
     shared void appendParameters(StringBuilder result, 
-        Tree.FunctionArgument fa, 
+        Tree.FunctionArgument anonFunction, 
         Unit unit, JList<CommonToken> tokens) {
-        for (pl in fa.parameterLists) {
+        for (pl in anonFunction.parameterLists) {
             result.append("(");
             variable Boolean first = true;
             for (p in pl.parameters) {
@@ -548,7 +507,7 @@ shared object nodes {
                               .append(" ");
                     }
                 }
-                result.append(text(p, tokens));
+                result.append(text(tokens, p));
             }
             result.append(")");
         }
@@ -570,26 +529,27 @@ shared object nodes {
         }
     }
     
-    shared String? getImportedPackageName(Tree.Import im) {
-        if (exists ip = im.importPath) {
-            return TreeUtil.formatPath(ip.identifiers);
-        } else {
-            return null;
-        }
-    }
+    shared String? getImportedPackageName(Tree.Import im)
+            => if (exists ip = im.importPath)
+            then TreeUtil.formatPath(ip.identifiers)
+            else null;
     
-    shared String text(Node term, JList<CommonToken> tokens) {
-        value start = term.startIndex.intValue();
-        value length = term.endIndex.intValue() - start;
+    shared String text(JList<CommonToken> tokens, Node from, Node to = from) {
+        value start = from.startIndex.intValue();
+        value length = to.endIndex.intValue() - start;
         value exp = StringBuilder();
-        if (exists ti = getTokenIterator(tokens, DefaultRegion(start, length))) {
-            while (ti.hasNext()) {
-                value token = ti.next();
+        if (exists tokenIterator 
+                = getTokenIterator(tokens, 
+                        DefaultRegion(start, length))) {
+            while (tokenIterator.hasNext()) {
+                value token = tokenIterator.next();
                 value type = token.type;
                 value text = token.text;
-                if (type == CeylonLexer.\iLIDENTIFIER, getTokenLength(token) > text.size) {
+                if (type == CeylonLexer.lidentifier, 
+                        getTokenLength(token) > text.size) {
                     exp.append("\\i");
-                } else if (type == CeylonLexer.\iUIDENTIFIER, getTokenLength(token) > text.size) {
+                } else if (type == CeylonLexer.uidentifier, 
+                        getTokenLength(token) > text.size) {
                     exp.append("\\I");
                 }
                 exp.append(text);
@@ -601,14 +561,53 @@ shared object nodes {
     shared Integer getTokenLength(CommonToken token)
             => token.stopIndex - token.startIndex + 1;
     
+    shared Set<String> renameProposals(node, rootNode = null) {
+        "If given a [[Tree.Declaration]], suggest names based on the
+         type of the term."
+        Tree.Declaration? node;
+        "If specified, and the given [[node]] occurs in an 
+         argument list, suggest the name of the parameter."
+        Tree.CompilationUnit? rootNode;
+        
+        value names = HashSet<String>();
+
+        if (exists dec = node?.declarationModel) {
+            addNameProposals {
+                names = names;
+                plural = false;
+                name = dec.name;
+                lowercase = node is Tree.TypedDeclaration
+                                  | Tree.ObjectDefinition;
+            };
+        }
+
+        nameProposals {
+            node = switch (node)
+                case (is Tree.AttributeDeclaration)
+                    node.specifierOrInitializerExpression?.expression
+                case (is Tree.MethodDeclaration)
+                    node.specifierExpression?.expression
+                case (is Tree.Variable)
+                    node.specifierExpression?.expression
+                else null;
+            rootNode = rootNode;
+            unplural = false;
+            avoidClash = true;
+        }
+        .filter(not("it".equals))
+        .each(names.add);
+
+        return names;
+    }
+    
     "Generates proposed names for provided node.
      
      Returned names are quoted to be valid text representing a 
      variable name."
-    shared [String+] nameProposals(node = null, rootNode = null, unplural = false, avoidClash = true) {
+    shared [String+] nameProposals(node, rootNode = null, unplural = false, avoidClash = true) {
         "If given a [[Tree.Term]], suggest names based on the
          type of the term."
-        Node? node;
+       Tree.Term|Tree.Type? node;
         "Use English pluralization rules to find a singular 
          form of the proposed name."
         Boolean unplural;
@@ -621,9 +620,16 @@ shared object nodes {
         
         value names = HashSet<String>();
         
-        if (is Tree.Term node) {
-            Tree.Term term = TreeUtil.unwrapExpressionUntilTerm(node);
-            Tree.Term typedTerm =
+        switch (node)
+        case (null) {}
+        case (is Tree.Type) {
+            if (exists type = node.typeModel) {
+                addNameProposalsForType(names, type, unplural, node.unit);
+            }
+        }
+        case (is Tree.Term) {
+            value term = TreeUtil.unwrapExpressionUntilTerm(node);
+            value typedTerm =
                 //TODO: is this really a good idea?!
                 if (is Tree.FunctionArgument term)
                 then (TreeUtil.unwrapExpressionUntilTerm(term.expression) else term)
@@ -693,33 +699,8 @@ shared object nodes {
             }
             else {}
             
-            if (exists type = typedTerm.typeModel,
-                !ModelUtil.isTypeUnknown(type)) {
-                if (!unplural, type.classOrInterface || type.typeParameter) {
-                    addNameProposals(names, false, type.declaration.name);
-                }
-                if (exists unit = node.unit) {
-                    if (unit.isOptionalType(type),
-                        exists def = unit.getDefiniteType(type),
-                        def.classOrInterface || def.typeParameter) {
-                        addNameProposals(names, false, def.declaration.name);
-                    }
-                    if (unit.isIterableType(type),
-                        exists iter = unit.getIteratedType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                    if (unit.isJavaIterableType(type),
-                        exists iter = unit.getJavaIteratedType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                    if (unit.isJavaArrayType(type),
-                        exists iter = unit.getJavaArrayElementType(type),
-                        iter.classOrInterface || iter.typeParameter) {
-                        addNameProposals(names, !unplural, iter.declaration.name);
-                    }
-                }
+            if (exists type = typedTerm.typeModel) {
+                addNameProposalsForType(names, type, unplural, node.unit);
             }
         }
         
@@ -814,14 +795,22 @@ shared object nodes {
     }
     
     shared void addNameProposals(
-        MutableSet<String>|JSet<JString> names,
-        Boolean plural, String name) {
+        SetMutator<String>|JSet<JString> names,
+        Boolean plural, String name,
+        Boolean lowercase = true) {
+        
         value matcher = idPattern.matcher(javaString(name));
+        function lower(String str) 
+                => lowercase then str.lowercased else str;
         while (matcher.find()) {
-            value subname 
-                    = matcher.group(1).lowercased 
+            value subname
+                    = lower(matcher.group(1))
                     + name[matcher.start(2) ...];
-            value pluralized 
+            if (subname.startsWith("get"),
+                exists ch = subname[3], ch.uppercase) {
+                continue;
+            }
+            value pluralized
                     = plural 
                     then pluralize(subname) 
                     else subname; 
@@ -829,7 +818,7 @@ shared object nodes {
                     pluralized in escaping.keywords
                         then "\\i" + pluralized
                         else pluralized;
-            if (is MutableSet<String> names) {
+            if (is SetMutator<String> names) {
                 names.add(escaped);
             } else {
                 names.add(javaString(escaped));
@@ -851,5 +840,52 @@ shared object nodes {
                 }
             }
         }*/
+    }
+    
+    void addNameProposalsForType(SetMutator<String>|JSet<JString> names, 
+            Type type, Boolean unplural, Unit? unit = null) {
+        if (!ModelUtil.isTypeUnknown(type)) {
+            if (!unplural, type.classOrInterface || type.typeParameter) {
+                addNameProposals(names, false, type.declaration.name);
+            }
+            if (exists unit) {
+                if (unit.isOptionalType(type),
+                    exists def = unit.getDefiniteType(type),
+                    def.classOrInterface || def.typeParameter) {
+                    addNameProposals(names, false, def.declaration.name);
+                }
+                if (unit.isIterableType(type),
+                    exists iter = unit.getIteratedType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+                if (unit.isJavaIterableType(type),
+                    exists iter = unit.getJavaIteratedType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+                if (unit.isJavaArrayType(type),
+                    exists iter = unit.getJavaArrayElementType(type),
+                    iter.classOrInterface || iter.typeParameter) {
+                    addNameProposals(names, !unplural, iter.declaration.name);
+                }
+            }
+        }
+    }
+    
+    shared Tree.SpecifierOrInitializerExpression? getDefaultArgSpecifier(Tree.Parameter p) {
+        if (is Tree.ValueParameterDeclaration p,
+            is Tree.AttributeDeclaration pd = p.typedDeclaration) {
+
+            return pd.specifierOrInitializerExpression;
+        } else if (is Tree.FunctionalParameterDeclaration p,
+                   is Tree.MethodDeclaration pd = p.typedDeclaration) {
+
+            return pd.specifierExpression;
+        } else if (is Tree.InitializerParameter p) {
+            return p.specifierExpression;
+        } else {
+            return null;
+        }
     }
 }

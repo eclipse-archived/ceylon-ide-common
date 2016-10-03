@@ -1,16 +1,17 @@
-import ceylon.collection {
-    MutableList
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
-    Indents,
-    nodes,
     singularize
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -19,210 +20,200 @@ import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
-shared interface ControlStructureCompletionProposal<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+shared interface ControlStructureCompletionProposal {
     
-    shared formal CompletionResult newControlStructureCompletionProposal(Integer offset, String prefix,
-        String desc, String text, Declaration dec, IdeComponent cpc, Node? node = null);
-    
-    shared void addForProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addForProposal(Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp, Declaration d) {
         
-        if (is Value d) {
-            value td = d;
-            if (exists t = td.type, 
-                    d.unit.isIterableType(t) ||
-                    d.unit.isJavaIterableType(t) ||
-                    d.unit.isJavaArrayType(t)) {
-                value name = d.name;
-                value elemName = 
-                        switch (name.size)
-                        case (1) "element"
-                        case (2) if (name.endsWith("s"))
-                            then name.spanTo(0) 
-                            else "element"
-                        else let (singular = singularize(name))
-                            if (singular==name)
-                            then "element"
-                            else singular;
-                
-                value unit = cpc.lastCompilationUnit.unit;
-                value desc = "for (" + elemName + " in " + getDescriptionFor(d, unit) + ")";
-                value text = "for (" + elemName + " in " + getTextFor(d, unit) + ") {}";
-                
-                result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
-            }
+        if (is Value d,
+            exists t = d.type,
+            d.unit.isIterableType(t) ||
+            d.unit.isJavaIterableType(t) ||
+            d.unit.isJavaArrayType(t)) {
+            value name = d.name;
+            value elemName =
+                    switch (name.size)
+                    case (1) "element"
+                    case (2) if (name.endsWith("s"))
+                        then name.spanTo(0)
+                        else "element"
+                    else let (singular = singularize(name))
+                        if (singular==name)
+                        then "element"
+                        else singular;
+
+            value unit = ctx.lastCompilationUnit.unit;
+
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "for (``elemName`` in ``getDescriptionFor(d, unit)``)";
+                    text = "for (``elemName`` in ``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
-    shared void addIfExistsProposal(Integer offset, String prefix, IdeComponent cpc,
-        MutableList<CompletionResult> result, DeclarationWithProximity dwp,
+    shared void addIfExistsProposal(Integer offset, String prefix, CompletionContext ctx,
+        DeclarationWithProximity dwp,
         Declaration d, Node? node = null, String? forcedText = null) {
         
-        if (!dwp.unimported) {
-            if (is Value v = d) {
-                if (exists type = v.type, d.unit.isOptionalType(type), !v.variable) {
-                    value unit = cpc.lastCompilationUnit.unit;
-                    value desc = "if (exists " 
-                            + (forcedText else getDescriptionFor(d, unit)) + ")";
-                    value text = "if (exists "
-                            + (forcedText else getTextFor(d, unit)) + ") {}";
-                    
-                    result.add(newControlStructureCompletionProposal(offset, prefix,
-                        desc, text, d, cpc, node));
-                }
-            }
+        if (!dwp.unimported,
+            is Value d,
+            exists type = d.type,
+            d.unit.isOptionalType(type),
+            !d.variable) {
+            value unit = ctx.lastCompilationUnit.unit;
+
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "if (exists ``forcedText else getDescriptionFor(d, unit)``)";
+                    text = "if (exists ``forcedText else getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                    node = node;
+                };
         }
     }
     
-    shared void addAssertExistsProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addAssertExistsProposal(Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp, Declaration d) {
         
-        if (!dwp.unimported) {
-            if (is Value d) {
-                value v = d;
-                if (v.type exists, d.unit.isOptionalType(v.type), !v.variable) {
-                    value unit = cpc.lastCompilationUnit.unit;
-                    result.add(newControlStructureCompletionProposal(offset, prefix,
-                            "assert (exists " + getDescriptionFor(d, unit) + ")",
-                            "assert (exists " + getTextFor(d, unit) + ");", d, cpc));
-                }
-            }
+        if (!dwp.unimported,
+            is Value d,
+            d.type exists,
+            d.unit.isOptionalType(d.type),
+            !d.variable) {
+            value unit = ctx.lastCompilationUnit.unit;
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "assert (exists ``getDescriptionFor(d, unit)``)";
+                    text = "assert (exists ``getTextFor(d, unit)``);";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
-    shared void addIfNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addIfNonemptyProposal(Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp, Declaration d) {
         
-        if (!dwp.unimported) {
-            if (is Value v = d) {
-                if (exists type = v.type, d.unit.isPossiblyEmptyType(type), !v.variable) {
-                    value unit = cpc.lastCompilationUnit.unit;
-                    value desc = "if (nonempty " + getDescriptionFor(d, unit) + ")";
-                    value text = "if (nonempty " + getTextFor(d, unit) + ") {}";
-                    result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
-                }
-            }
+        if (!dwp.unimported,
+            is Value d,
+            exists type = d.type,
+            d.unit.isPossiblyEmptyType(type),
+            !d.variable) {
+            value unit = ctx.lastCompilationUnit.unit;
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "if (nonempty ``getDescriptionFor(d, unit)``)";
+                    text = "if (nonempty ``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
-    shared void addAssertNonemptyProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addAssertNonemptyProposal(Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp, Declaration d) {
         
-        if (!dwp.unimported) {
-            if (is Value d) {
-                value v = d;
-                if (v.type exists, d.unit.isPossiblyEmptyType(v.type), !v.variable) {
-                    value unit = cpc.lastCompilationUnit.unit;
-                    result.add(newControlStructureCompletionProposal(offset, prefix,
-                            "assert (nonempty " + getDescriptionFor(d, unit) + ")",
-                            "assert (nonempty " + getTextFor(d, unit) + ");",
-                            d, cpc));
-                }
-            }
+        if (!dwp.unimported,
+            is Value d,
+            d.type exists,
+            d.unit.isPossiblyEmptyType(d.type),
+            !d.variable) {
+            value unit = ctx.lastCompilationUnit.unit;
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "assert (nonempty ``getDescriptionFor(d, unit)``)";
+                    text = "assert (nonempty ``getTextFor(d, unit)``);";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
-    shared void addTryProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
+    shared void addTryProposal(Integer offset, String prefix, CompletionContext ctx,
         DeclarationWithProximity dwp, Declaration d) {
         
-        if (!dwp.unimported) {
-            if (is Value d) {
-                value v = d;
-                if (exists type = v.type, v.type.declaration.inherits(d.unit.obtainableDeclaration), !v.variable) {
-                    value unit = cpc.lastCompilationUnit.unit;
-                    value desc = "try (" + getDescriptionFor(d, unit) + ")";
-                    value text = "try (" + getTextFor(d, unit) + ") {}";
-                    
-                    result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
-                }
-            }
+        if (!dwp.unimported,
+            is Value d,
+            exists type = d.type,
+            d.type.declaration.inherits(d.unit.obtainableDeclaration),
+            !d.variable) {
+            value unit = ctx.lastCompilationUnit.unit;
+
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "try (``getDescriptionFor(d, unit)``)";
+                    text = "try (``getTextFor(d, unit)``) {}";
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
     
-    shared void addSwitchProposal(Integer offset, String prefix, IdeComponent cpc, MutableList<CompletionResult> result,
-        DeclarationWithProximity dwp, Declaration d, Node node, Indents<Document> indents) {
+    shared void addSwitchProposal(Integer offset, String prefix, CompletionContext ctx,
+        DeclarationWithProximity dwp, Declaration d, Node node) {
         
-        if (!dwp.unimported) {
-            if (is Value v = d) {
-                if (exists type = v.type, exists caseTypes = v.type.caseTypes, !v.variable) {
-                    value body = StringBuilder();
-                    value indent = indents.getIndent(node, cpc.document);
-                    value unit = node.unit;
-                    for (pt in caseTypes) {
-                        body.append(indent).append("case (");
-                        value ctd = pt.declaration;
-                        if (ctd.anonymous) {
-                            if (!ctd.toplevel) {
-                                body.append(type.declaration.getName(unit)).append(".");
-                            }
-                            body.append(ctd.getName(unit));
-                        } else {
-                            body.append("is ").append(pt.asSourceCodeString(unit));
-                        }
-                        body.append(") {}").append(indents.getDefaultLineDelimiter(cpc.document));
+        if (!dwp.unimported,
+            is Value d,
+            exists type = d.type,
+            exists caseTypes = d.type.caseTypes,
+            !d.variable) {
+            value body = StringBuilder();
+            value indent = ctx.commonDocument.getIndent(node);
+            value unit = node.unit;
+            for (pt in caseTypes) {
+                body.append(indent).append("case (");
+                value ctd = pt.declaration;
+                if (ctd.anonymous) {
+                    if (!ctd.toplevel) {
+                        body.append(type.declaration.getName(unit)).append(".");
                     }
-                    body.append(indent);
-                    value u = cpc.lastCompilationUnit.unit;
-                    value desc = "switch (" + getDescriptionFor(d, u) + ")";
-                    value text = "switch (" + getTextFor(d, u) + ")"
-                            + indents.getDefaultLineDelimiter(cpc.document) + body.string;
-                    result.add(newControlStructureCompletionProposal(offset, prefix, desc, text, d, cpc));
+                    body.append(ctd.getName(unit));
+                } else {
+                    body.append("is ").append(pt.asSourceCodeString(unit));
                 }
+                body.append(") {}").append(ctx.commonDocument.defaultLineDelimiter);
             }
+            body.append(indent);
+            value u = ctx.lastCompilationUnit.unit;
+
+            platformServices.completion
+                .newControlStructureCompletionProposal {
+                    offset = offset;
+                    prefix = prefix;
+                    desc = "switch (``getDescriptionFor(d, u)``)";
+                    text = "switch (``getTextFor(d, u)``)"
+                    + ctx.commonDocument.defaultLineDelimiter + body.string;
+                    dec = d;
+                    cpc = ctx;
+                };
         }
     }
 }
 
-shared abstract class ControlStructureProposal<IdeComponent,
-        IFile,CompletionResult,Document, InsertEdit,TextEdit,TextChange,
-        Region,LinkedMode>
+shared abstract class ControlStructureProposal
         (Integer offset, String prefix, String desc, String text,
-            Node? node, Declaration dec, IdeComponent cpc)
+            Node? node, Declaration dec, LocalAnalysisResult cpc)
         
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,
-                InsertEdit,TextEdit,TextChange,Region>
-        (offset, prefix, desc, text)
-        satisfies LinkedModeSupport<LinkedMode,Document,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+        extends AbstractCompletionProposal(offset, prefix, desc, text) {
 
-    shared formal CompletionResult newNameCompletion(String? name);
-    
-    shared actual void applyInternal(Document document) {
-        super.applyInternal(document);
-
-        enterLinkedMode(document);
-    }
-    
-    shared void enterLinkedMode(Document doc) {
-        if (exists loc = text.firstInclusion(" val =")) {
-            value linkedMode = newLinkedMode();
-            
-            value startOffset = node?.startIndex?.intValue() else offset;
-            value exitOffset = text.endsWith("{}")
-                                then startOffset + text.size - 1
-                                else startOffset + text.size;
-            
-            addEditableRegion(linkedMode, doc, 
-                startOffset + loc + 1, 3, 0, 
-                nodes.nameProposals {
-                        node = node;
-                        unplural = false;
-                        rootNode = cpc.parsedRootNode;
-                    }.collect(newNameCompletion));
-            
-            installLinkedMode(doc, linkedMode, this, 1, exitOffset);
-        }
-    }
-    
-    shared actual Region getSelectionInternal(Document document) {
-        if (exists loc = text.firstInclusion(" val =")) {
-            return newRegion(offset + loc + 1 - prefix.size, 3);
-        } else {
-            value loc = text.firstOccurrence('}') 
-                        else ((text.firstOccurrence(';') else - 1) + 1);
-            return newRegion(offset + loc - prefix.size, 0);
-        }
+    shared actual DefaultRegion getSelectionInternal(CommonDocument document) {
+        value loc = (text.firstOccurrence('{') else text.firstOccurrence(';') else -1) + 1;
+        return DefaultRegion(offset + loc - prefix.size);
     }
 }

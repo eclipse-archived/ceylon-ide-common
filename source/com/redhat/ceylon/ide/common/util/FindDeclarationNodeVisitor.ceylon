@@ -13,9 +13,8 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
     
     shared variable Tree.StatementOrArgument? declarationNode = null;
     
-    Boolean isDeclaration(Declaration? dec) {
-        return dec?.equals(declaration) else false;
-    }
+    Boolean isDeclaration(Declaration? dec) 
+            => if (exists dec) then dec==declaration else false;
     
     shared actual void visit(Tree.Declaration that) {
         if (isDeclaration(that.declarationModel)) {
@@ -25,7 +24,7 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
     }
     
     shared actual default void visit(Tree.ObjectDefinition that) {
-        if (isDeclaration(that.declarationModel.typeDeclaration)) {
+        if (isDeclaration(that.declarationModel?.typeDeclaration)) {
             declarationNode = that;
         }
         super.visit(that);
@@ -51,5 +50,12 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
         if (!exists n = declarationNode) {
             super.visitAny(node);
         }
+    }
+
+    shared actual void visit(Tree.SpecifierStatement that) {
+        if (isDeclaration(that.declaration)) {
+            declarationNode = that;
+        }
+        super.visit(that);
     }
 }

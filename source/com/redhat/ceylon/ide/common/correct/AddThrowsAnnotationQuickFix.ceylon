@@ -1,9 +1,8 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    Type,
-    TypeDeclaration
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
@@ -11,16 +10,14 @@ import com.redhat.ceylon.ide.common.refactoring {
 import com.redhat.ceylon.ide.common.util {
     FindContainerVisitor
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Type,
+    TypeDeclaration
+}
 
-shared interface AddThrowsAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addThrowsAnnotationQuickFix {
 
-    shared formal AddAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-    addAnnotationsQuickFix;
-    
-    shared void addThrowsAnnotationProposal(Data data, IFile file, IDocument doc, Tree.Statement? statement) {
+    shared void addThrowsAnnotationProposal(QuickFixData data, Tree.Statement? statement) {
         if (!exists statement) {
             return;
         }
@@ -42,18 +39,21 @@ shared interface AddThrowsAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit
         }
         
         value throwsAnnotation = "throws (`class " + exceptionType.asString() + "`, \"\")";
-        value edit = addAnnotationsQuickFix
-                .createInsertAnnotationEdit(throwsAnnotation, throwContainer, doc);
-        value change = newTextChange("Add Throws Annotation", file);
-        addEditToChange(change, edit);
+        value edit = addAnnotationQuickFix
+                .createInsertAnnotationEdit(throwsAnnotation, throwContainer, data.document);
+        value change = platformServices.document.createTextChange("Add Throws Annotation", data.phasedUnit);
+        change.addEdit(edit);
         
-        value cursorOffset = getTextEditOffset(edit)
-                + (getInsertedText(edit).firstOccurrence(')') else -1) - 1;
+        value cursorOffset = edit.start
+                + (edit.text.firstOccurrence(')') else -1) - 1;
         
-        value declName = if (throwContainer.identifier exists) then throwContainer.identifier.text else "";
-        value desc = "Add throws annotation to '" + declName + "'";
+        value declName = throwContainer.identifier?.text else "";
 
-        newProposal(data, desc, change, DefaultRegion(cursorOffset, 0));
+        data.addQuickFix {
+            description = "Add throws annotation to '``declName``'";
+            change = change;
+            selection = DefaultRegion(cursorOffset, 0);
+        };
     }
     
     Type? determineExceptionType(Tree.Statement statement) {
@@ -83,7 +83,7 @@ shared interface AddThrowsAnnotationQuickFix<IFile,IDocument,InsertEdit,TextEdit
     Boolean isAlreadyPresent(Tree.Declaration throwContainer, Type exceptionType) {
         if (exists annotationList = throwContainer.annotationList) {
             for (annotation in annotationList.annotations) {
-                value annotationIdentifier = addAnnotationsQuickFix.getAnnotationIdentifier(annotation);
+                value annotationIdentifier = addAnnotationQuickFix.getAnnotationIdentifier(annotation);
                 if (exists annotationIdentifier,
                     annotationIdentifier == "throws",
                     exists positionalArgumentList = annotation.positionalArgumentList,

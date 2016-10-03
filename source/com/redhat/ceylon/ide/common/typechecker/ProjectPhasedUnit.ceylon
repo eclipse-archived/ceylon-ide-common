@@ -20,12 +20,13 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.model {
-    ProjectSourceFile,
     BaseIdeModule,
-    ModelAliases
+    ModelAliases,
+    BaseIdeModuleSourceMapper,
+    ProjectSourceFile
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformServices
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.util {
     synchronize,
@@ -57,13 +58,15 @@ shared alias AnyProjectPhasedUnit => ProjectPhasedUnit<in Nothing, in Nothing, i
 
 shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
         extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
+    
     value theWorkingCopies = WeakHashMap<EditedPhasedUnitAlias, String>();
     WeakReference<CeylonProjectAlias> ceylonProjectRef;
 
@@ -74,10 +77,11 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         Tree.CompilationUnit cu,
         Package p,
         ModuleManager moduleManager,
-        ModuleSourceMapper moduleSourceMapper,
+        BaseIdeModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker,
         JList<CommonToken> tokenStream)
-        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
+        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
+            (unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
         ceylonProjectRef = WeakReference(project);
     }
 
@@ -86,23 +90,19 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         ceylonProjectRef = WeakReference(other.ceylonProjectRef.get());
     }
 
-    shared CeylonProjectAlias ceylonProject => 
-            ceylonProjectRef.get();
+    shared CeylonProjectAlias ceylonProject 
+            => ceylonProjectRef.get();
 
-    shared actual TypecheckerUnit newUnit() => 
-            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newProjectSourceFile(this);
+    shared actual TypecheckerUnit createUnit() 
+            => object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
+            }.modelServices.newProjectSourceFile(this);
 
-    shared actual NativeFile resourceFile => 
-            unitFile.nativeResource;
-    
-    shared actual NativeProject resourceProject => 
-            ceylonProject.ideArtifact;
-    
-    shared actual NativeFolder resourceRootFolder => 
-            srcDir.nativeResource;
+    shared actual NativeFile resourceFile => unitFile.nativeResource;
+    shared actual NativeProject resourceProject => ceylonProject.ideArtifact;
+    shared actual NativeFolder resourceRootFolder => srcDir.nativeResource;
 
-    shared actual ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> unit =>
-            unsafeCast<ProjectSourceFileAlias>(super.unit);
+    shared actual ProjectSourceFile<NativeProject, NativeResource, NativeFolder, NativeFile> unit 
+            => unsafeCast<ProjectSourceFileAlias>(super.unit);
     
     shared void addWorkingCopy(EditedPhasedUnitAlias workingCopy) {
         synchronize {
@@ -116,20 +116,20 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
                              itr.remove();
                          }
                      }
-                     theWorkingCopies.put(workingCopy, fullPath);
+                     theWorkingCopies[workingCopy] = fullPath;
                  }
              }
         };
     }
 
-    shared {EditedPhasedUnitAlias*} workingCopies {
-        return CeylonIterable(theWorkingCopies.keySet());
-    }
+    shared {EditedPhasedUnitAlias*} workingCopies 
+            => CeylonIterable(theWorkingCopies.keySet());
 
     shared void install() {
         if (exists tc = typeChecker) {
             PhasedUnits phasedUnits = tc.phasedUnits;
-            if (is ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> oldPhasedUnit = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
+            if (is ProjectPhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile> oldPhasedUnit 
+                    = phasedUnits.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
                 if (oldPhasedUnit === this) {
                     return; // Nothing to do : the PhasedUnit is already installed in the typechecker
                 }
@@ -157,7 +157,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
             }
 
             phasedUnits.addPhasedUnit(unitFile, this);
-            assert(is BaseIdeModule ideModule = \ipackage.\imodule);
+            assert (is BaseIdeModule ideModule = \ipackage.\imodule);
             for (moduleInReferencingProject in ideModule.moduleInReferencingProjects) {
                 moduleInReferencingProject.addedOriginalUnit(pathRelativeToSrcDir);
             }
@@ -169,8 +169,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
 
     shared void remove() {
         if (exists tc = typeChecker) {
-            PhasedUnits phasedUnits = tc.phasedUnits;
-            phasedUnits.removePhasedUnitForRelativePath(pathRelativeToSrcDir); // remove also the ProjectSourceFile (unit) from the Package
+            tc.phasedUnits.removePhasedUnitForRelativePath(pathRelativeToSrcDir); // remove also the ProjectSourceFile (unit) from the Package
             assert (is BaseIdeModule ideModule = \ipackage.\imodule);
             for (moduleInReferencingProject in ideModule.moduleInReferencingProjects) {
                 moduleInReferencingProject.removedOriginalUnit(pathRelativeToSrcDir);

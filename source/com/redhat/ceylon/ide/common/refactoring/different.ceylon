@@ -9,7 +9,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 import java.util {
-    JList=List
+    JList=List,
+    Collections
 }
 
 Boolean different(Tree.Term? term, Tree.Term? expression, 
@@ -209,16 +210,21 @@ Boolean different(Tree.Term? term, Tree.Term? expression,
         if (different(term.primary, expression.primary, localRefs, arguments)) {
             return true;
         }
-        if (exists tp = term.positionalArgumentList,
-            exists ep = expression.positionalArgumentList) {
-            return positionalArgsDifferent(term.positionalArgumentList.positionalArguments,
-                        expression.positionalArgumentList.positionalArguments);
+        if (exists tpal = term.positionalArgumentList,
+            exists epal = expression.positionalArgumentList) {
+            value ts = tpal.positionalArguments;
+            value es = epal.positionalArguments;
+            return positionalArgsDifferent(ts, es);
         }
-        if (exists tp = term.namedArgumentList,
-            exists ep = expression.namedArgumentList) {
-            return positionalArgsDifferent(term.namedArgumentList.sequencedArgument.positionalArguments,
-                        expression.namedArgumentList.sequencedArgument.positionalArguments) ||
-                    namedArgsDifferent(term.namedArgumentList.namedArguments, expression.namedArgumentList.namedArguments);
+        if (exists tnal = term.namedArgumentList,
+            exists enal = expression.namedArgumentList) {
+            value noArgs = Collections.emptyList<Tree.PositionalArgument>();
+            value ts = tnal.sequencedArgument?.positionalArguments else noArgs;
+            value es = enal.sequencedArgument?.positionalArguments else noArgs;
+            value tns = tnal.namedArguments;
+            value ens = enal.namedArguments;
+            return positionalArgsDifferent(ts, es) 
+                || namedArgsDifferent(tns, ens);
         }
         return true;
     }

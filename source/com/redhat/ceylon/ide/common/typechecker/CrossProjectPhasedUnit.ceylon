@@ -1,9 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
 import com.redhat.ceylon.compiler.typechecker.context {
     TypecheckerUnit
 }
@@ -11,10 +8,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.model {
-    ModelAliases
+    ModelAliases,
+    BaseIdeModuleSourceMapper
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.vfs {
     ZipEntryVirtualFile,
@@ -37,20 +35,19 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
+
 shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile> 
         extends ExternalPhasedUnit
-        satisfies ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
-        & TypecheckerAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+        satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+                & ModelAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
+                & TypecheckerAliases<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>
         given NativeProject satisfies Object
         given OriginalNativeResource satisfies Object
         given OriginalNativeFolder satisfies OriginalNativeResource
         given OriginalNativeFile satisfies OriginalNativeResource {
     
-    variable value originalProjectRef = WeakReference<CeylonProjectAlias>(null);
-    variable value originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(null);
+    WeakReference<CeylonProjectAlias> originalProjectRef;
+    variable WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>> originalProjectPhasedUnitRef;
     
     shared new (
         ZipEntryVirtualFile unitFile, 
@@ -58,44 +55,55 @@ shared class CrossProjectPhasedUnit<NativeProject, OriginalNativeResource, Origi
         Tree.CompilationUnit cu, 
         Package p, 
         ModuleManager moduleManager, 
-        ModuleSourceMapper moduleSourceMapper, 
+        BaseIdeModuleSourceMapper moduleSourceMapper, 
         TypeChecker typeChecker, 
         List<CommonToken> tokenStream, 
         CeylonProjectAlias originalProject) 
-            extends ExternalPhasedUnit(unitFile, srcDir, cu, p, moduleManager, moduleSourceMapper, typeChecker, tokenStream) {
-        originalProjectRef = WeakReference<CeylonProjectAlias>(originalProject);
+            extends ExternalPhasedUnit(unitFile, srcDir, 
+                                       cu, p, 
+                                       moduleManager, 
+                                       moduleSourceMapper, 
+                                       typeChecker, 
+                                       tokenStream) {
+        originalProjectRef 
+                = WeakReference(originalProject);
+        originalProjectPhasedUnitRef
+                = WeakReference<ProjectPhasedUnit<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>>(null);
     }
     
     shared new clone(CrossProjectPhasedUnitAlias other)
             extends ExternalPhasedUnit.clone(other) {
-        originalProjectRef = WeakReference<CeylonProjectAlias>(other.originalProjectRef.get());
-        originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(other.originalProjectPhasedUnit);
+        originalProjectRef 
+                = WeakReference(other.originalProjectRef.get());
+        originalProjectPhasedUnitRef 
+                = WeakReference(other.originalProjectPhasedUnit);
     }
     
     shared ProjectPhasedUnitAlias? originalProjectPhasedUnit {
-        if (exists originalPhasedUnit = originalProjectPhasedUnitRef.get()) {
+        if (exists originalPhasedUnit 
+                = originalProjectPhasedUnitRef.get()) {
             return originalPhasedUnit;
         } 
-        CeylonProjectAlias? originalProject = originalProjectRef.get();
-        if (exists originalProject) {
-            TypeChecker? originalTypeChecker = originalProject.typechecker;
-            if (exists originalTypeChecker,
-                is ProjectPhasedUnitAlias originalPhasedUnit =
-                        originalTypeChecker.getPhasedUnitFromRelativePath(pathRelativeToSrcDir)) {
-                originalProjectPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(originalPhasedUnit);
-                return originalPhasedUnit;
-            }
+        if (exists originalProject = originalProjectRef.get(), 
+            exists originalTypeChecker = originalProject.typechecker,
+            is ProjectPhasedUnitAlias originalPhasedUnit 
+                    = originalTypeChecker.getPhasedUnitFromRelativePath(
+                            pathRelativeToSrcDir)) {
+            originalProjectPhasedUnitRef 
+                    = WeakReference<ProjectPhasedUnitAlias>
+                        (originalPhasedUnit);
+            return originalPhasedUnit;
         }
-        
         return null;
     }
     
-    shared actual IdeModuleSourceMapperAlias moduleSourceMapper => 
-            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
+    /*shared actual IdeModuleSourceMapperAlias moduleSourceMapper 
+            => unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);*/
     
-    shared actual TypecheckerUnit newUnit()  => 
-            platformServices.model<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>().newCrossProjectSourceFile(this);
+    shared actual TypecheckerUnit createUnit()
+            => object satisfies ModelServicesConsumer<NativeProject, OriginalNativeResource, OriginalNativeFolder, OriginalNativeFile>{
+            }.modelServices.newCrossProjectSourceFile(this);
     
-    shared actual CrossProjectSourceFileAlias unit =>
-            unsafeCast<CrossProjectSourceFileAlias>(super.unit);
+    /*shared actual CrossProjectSourceFileAlias unit 
+            => unsafeCast<CrossProjectSourceFileAlias>(super.unit);*/
 }

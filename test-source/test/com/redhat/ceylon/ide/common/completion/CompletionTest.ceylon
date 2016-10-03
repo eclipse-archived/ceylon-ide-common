@@ -17,6 +17,9 @@ import test.com.redhat.ceylon.ide.common.testUtils {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
+import com.redhat.ceylon.ide.common.completion {
+    completionManager
+}
 
 Directory resourcesRoot = resourcesRootForPackage(`package`);
 
@@ -42,7 +45,9 @@ Result[] callCompletion(String fileName, Integer caretPosition, Integer line, Bo
 
     value completionData = CompletionData(code.contents, pu);
     
-    return dummyCompletionManager.getContentProposals(pu.compilationUnit, completionData, caretPosition, line, secondLevel, dummyMonitor, true);
+    completionManager.getContentProposals(pu.compilationUnit, completionData, caretPosition, line, secondLevel, dummyMonitor, true);
+    
+    return empty;
 }
 
 void assertContains(Result[] list, Result el, String? message = null) {
@@ -55,8 +60,8 @@ test shared void testReferenceAndPositionalInvocation() {
     value result = callCompletion("basic.ceylon", 24, 2);
     
     // suggest the current function
-    assertEquals(result.first, Result("newPositionalInvocationCompletion", "run();", "run()"));
-    assertEquals(result.get(1), Result("newReferenceCompletion", "run"));
+    assertContains(result, Result("newPositionalInvocationCompletion", "run();", "run()"));
+    assertContains(result, Result("newReferenceCompletion", "run"));
     
     // suggest something from ceylon.lang
     assertContains(result, Result("newReferenceCompletion", "print"));
@@ -108,8 +113,8 @@ test shared void testNamedInvocation() {
         "any { Boolean selecting(Character element); }"));
     
     result = callCompletion("namedInvocation.ceylon", 58, 4);
-    assertContains(result, Result("newNamedArgumentProposal", "selecting = nothing;", "selecting"));
-    assertContains(result, Result("newInlineFunctionProposal", "function selecting(Character element) => nothing;",
+    assertContains(result, Result("newRefinementCompletionProposal", "selecting = nothing;", "selecting"));
+    assertContains(result, Result("newRefinementCompletionProposal", "function selecting(Character element) => nothing;",
         "function selecting(Character element)"));
 }
 

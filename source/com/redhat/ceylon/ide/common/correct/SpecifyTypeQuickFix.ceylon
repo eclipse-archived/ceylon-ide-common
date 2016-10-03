@@ -1,8 +1,24 @@
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+import ceylon.collection {
+    HashSet
 }
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    Node
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    CommonDocument
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -12,111 +28,140 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
-import java.util {
-    HashSet
-}
-
-shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Project,Data,CompletionResult,LinkedMode>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,
-        Region,Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+shared object specifyTypeQuickFix {
     
-    shared formal void newSpecifyTypeProposal(String desc,
-        Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data);
-
-    shared formal SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-        TextChange,Region,Project,Data,CompletionResult> specifyTypeArgumentsQuickFix;
-    //shared formal void applyChange(TextChange change);
-    
-    shared Region? specifyType(IDocument document, Tree.Type typeNode,
-        Boolean inEditor, Tree.CompilationUnit rootNode, Type _infType) {
+    shared DefaultRegion? specifyType(Tree.CompilationUnit rootNode, CommonDocument document, Tree.Type typeNode,
+        Boolean inEditor, Type type) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
-        value infType = rootNode.unit.denotableType(_infType);
+        value unit = rootNode.unit;
+        value infType = unit.denotableType(type);
         
         if (!inEditor) {
             if (is Tree.LocalModifier typeNode) {
-                value change = newTextChange("Specify Type", document);
-                initMultiEditChange(change);
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Specify Type";
+                    input = document;
+                };
+                change.initMultiEdit();
                 value decs = HashSet<Declaration>();
-                importProposals.importType(decs, infType, rootNode);
-                value il = importProposals.applyImports(change, decs, rootNode, document);
-                value typeName = infType.asSourceCodeString(rootNode.unit);
-                addEditToChange(change, newReplaceEdit(offset, length, typeName));
+                importProposals.importType {
+                    declarations = decs;
+                    type = infType;
+                    rootNode = rootNode;
+                };
+                value il = importProposals.applyImports {
+                    change = change;
+                    declarations = decs;
+                    rootNode = rootNode;
+                    doc = document;
+                };
+                value typeName 
+                        = infType.asSourceCodeString(unit);
+                change.addEdit(ReplaceEdit {
+                        start = offset;
+                        length = length;
+                        text = typeName;
+                    });
                 
-                //applyChange(change);
+                change.apply();
                 
-                return newRegion(offset + il, typeName.size);
+                return DefaultRegion {
+                    start = offset + il;
+                    length = typeName.size;
+                };
             }
         } else {
-            value lm = newLinkedMode();
-            value proposals = completionManager.getTypeProposals(document, offset,
-                length, infType, rootNode, null);
-            addEditableRegion(lm, document, offset, length, 0, proposals);
-            installLinkedMode(document, lm, this, -1, -1);
+            value proposals = typeCompletion.getTypeProposals {
+                rootNode = rootNode;
+                offset = offset;
+                length = length;
+                infType = infType;
+                kind = null;
+            };
+            value lm = platformServices.createLinkedMode(document);
+            lm.addEditableRegion {
+                start = offset;
+                length = length;
+                exitSeqNumber = 0;
+                proposals = proposals;
+            };
+            lm.install(this, -1, -1);
         }
         
         return null;
     }
     
-    shared void addSpecifyTypeProposal(Tree.Type node, Data data) {
-        createProposals(node, data);
-    }
+    shared void addSpecifyTypeProposal(Node node, QuickFixData data) 
+            => createProposals(node, data);
 
-    shared void createProposal(Tree.Type type, Data data) {
-        newProposal("Declare explicit type", type, data.rootNode, type.typeModel, data);
-    }
+    shared void createProposal(Tree.Type type, QuickFixData data) 
+            => newProposal {
+                desc = "Declare explicit type";
+                type = type;
+                infType = type.typeModel;
+                data = data;
+            };
 
-    void createProposals(Tree.Type type, Data data) {
-        value cu = data.rootNode;
-        value result = inferType(cu, type);
+    void createProposals(Node node, QuickFixData data) {
+        Tree.Type type;
+        switch (node)
+        case (is Tree.Type) {
+            type = node;
+        }
+        case (is Tree.SpecifierExpression) {
+            if (is Tree.TypedDeclaration td = 
+                nodes.findDeclaration(data.rootNode, node)) {
+                type = td.type;
+            }
+            else {
+                return;
+            }
+        }
+        else {
+            return;
+        }
+        value result = inferType(data.rootNode, type);
         value declaredType = type.typeModel;
         
+        value it = result.inferredType;
+        value gt = result.generalizedType;
         if (!isTypeUnknown(declaredType)) {
-            if (!isTypeUnknown(result.generalizedType)) {
-                assert(exists gt = result.generalizedType);
-
-                if (isTypeUnknown(result.inferredType)
-                        || !gt.isSubtypeOf(result.inferredType),
+            if (type is Tree.VoidModifier) {
+                if (exists it, !isTypeUnknown(it)) {
+                    newProposal("Declare return type", type, it, data);
+                }
+            }
+            else {
+                if (exists gt, !isTypeUnknown(gt), 
+                    isTypeUnknown(it) || !gt.isSubtypeOf(it),
                     !gt.isSubtypeOf(declaredType)) {
-
-                    newProposal("Widen type to", type, cu, gt, data);
+                    newProposal("Widen type to", type, gt, data);
+                }
+                
+                if (exists it, !isTypeUnknown(it)) {
+                    if (!it.isSubtypeOf(declaredType)) {
+                        newProposal("Change type to", type, it, data);
+                    } else if (!declaredType.isSubtypeOf(it)) {
+                        newProposal("Narrow type to", type, it, data);
+                    }
+                }
+                
+                if (type is Tree.LocalModifier) {
+                    newProposal("Declare explicit type", type, declaredType, data);
                 }
             }
             
-            if (!isTypeUnknown(result.inferredType)) {
-                assert(exists it = result.inferredType);
-                if (!it.isSubtypeOf(declaredType)) {
-                    newProposal("Change type to", type, cu, it, data);
-                } else if (!declaredType.isSubtypeOf(result.inferredType)) {
-                    newProposal("Narrow type to", type, cu, it, data);
-                }
-            }
-            
-            if (is Tree.LocalModifier type) {
-                newProposal("Declare explicit type", type, cu,
-                    declaredType, data);
-            }
         } else {
-            if (!isTypeUnknown(result.inferredType)) {
-                assert(exists it = result.inferredType);
-                newProposal("Declare type", type, cu, it, data);
+            if (exists it, !isTypeUnknown(it)) {
+                newProposal("Declare type", type, it, data);
             }
             
-            if (!isTypeUnknown(result.generalizedType)) {
-                assert(exists gt = result.generalizedType);
-
-                if (isTypeUnknown(result.inferredType)
-                    || !gt.isSubtypeOf(result.inferredType)) {
-                    
-                    newProposal("Declare type", type, cu, gt, data);                    
-                }
-            
+            if (exists gt, !isTypeUnknown(gt), 
+                isTypeUnknown(it) || !gt.isSubtypeOf(it)) {
+                newProposal("Declare type", type, gt, data);                    
             }
         }
     }
@@ -124,11 +169,10 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
     InferredType inferType(Tree.CompilationUnit cu, Tree.Type type) {
         value itv = object extends InferTypeVisitor(type.unit) {
             shared actual void visit(Tree.TypedDeclaration that) {
-                if (that.type == type) {
+                if (exists t = that.type, t == type) {
                     declaration = that.declarationModel;
                     // union(that.getType().getTypeModel());
                 }
-                
                 super.visit(that);
             }
         };
@@ -136,28 +180,32 @@ shared interface SpecifyTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,
         return itv.result;
     }
 
-    shared void addTypingProposals(Data data, IFile file, Tree.Declaration? decNode) {
+    shared void addTypingProposals(QuickFixData data, Tree.Declaration? decNode) {
         if (is Tree.TypedDeclaration decNode, 
-            !(decNode is Tree.ObjectDefinition),
-            !(decNode is Tree.Variable)) {
-            
-            value type = decNode.type;
-            if (type is Tree.LocalModifier || type is Tree.StaticType) {
+            !(decNode is Tree.ObjectDefinition|Tree.Variable)) {
+            Tree.Type? type = decNode.type;
+            if (is Tree.LocalModifier|Tree.StaticType type) {
                 addSpecifyTypeProposal(type, data);
             }
         } else if (is Tree.LocalModifier|Tree.StaticType node = data.node) {
             addSpecifyTypeProposal(node, data);
         }
-        
-        if (is Tree.MemberOrTypeExpression node = data.node) {
-            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data, file);
-        }
     }
     
-    void newProposal(String desc,
-        Tree.Type type, Tree.CompilationUnit cu, Type infType, Data data) {
+    void newProposal(String desc, Tree.Type type, Type infType, QuickFixData data) {
         
-        newSpecifyTypeProposal("``desc`` '``infType.asString(data.rootNode.unit)``'",
-            type, cu, infType, data);
+        data.addQuickFix {
+            description = "``desc`` '``infType.asString(data.rootNode.unit)``'";
+            image = Icons.reveal;
+            void change() {
+                 specifyType {
+                     rootNode = data.rootNode;
+                     document = data.document;
+                     typeNode = type;
+                     inEditor = true;
+                     type = infType;
+                 };
+            }
+        };
     }
 }

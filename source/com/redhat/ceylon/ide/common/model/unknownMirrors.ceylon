@@ -15,6 +15,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     Collections
 }
+import java.lang {
+    JString=String
+}
 
 shared object unknownClassMirror satisfies ClassMirror {
     
@@ -52,6 +55,8 @@ shared object unknownClassMirror satisfies ClassMirror {
     
     shared actual AnnotationMirror? getAnnotation(String? string) => null;
     
+    annotationNames => Collections.emptySet<JString>();
+
     shared actual String? getCacheKey(Module? \imodule) => null;
     
     innerClass => false;
@@ -90,7 +95,7 @@ shared class UnknownTypeMirror(shared actual String qualifiedName = "unknown")
     
     declaredClass => unknownClassMirror;
     
-    kind => TypeKind.\iDECLARED;
+    kind => TypeKind.declared;
     
     shared actual TypeMirror? lowerBound => null;
     
@@ -105,4 +110,7 @@ shared class UnknownTypeMirror(shared actual String qualifiedName = "unknown")
     shared actual TypeParameterMirror? typeParameter => null;
     
     shared actual TypeMirror? upperBound => null;
+}
+
+shared object unknownTypeMirror extends UnknownTypeMirror() {
 }

@@ -1,44 +1,44 @@
-import com.redhat.ceylon.ide.common.vfs {
-    ZipFileVirtualFile,
-    ZipEntryVirtualFile
-}
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager
-}
-import java.util {
-    JList=List
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    TypecheckerUnit,
-    PhasedUnit
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
-import com.redhat.ceylon.ide.common.model {
-    ExternalSourceFile
-}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
+}
+import com.redhat.ceylon.compiler.typechecker.context {
+    TypecheckerUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import org.antlr.runtime {
-    CommonToken
+import com.redhat.ceylon.ide.common.model {
+    ExternalSourceFile,
+    BaseIdeModuleSourceMapper,
+    CeylonUnit
+}
+import com.redhat.ceylon.ide.common.vfs {
+    ZipFileVirtualFile,
+    ZipEntryVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager
 }
 
-shared class ExternalPhasedUnit 
-        extends IdePhasedUnit {
-    shared new(ZipEntryVirtualFile unitFile, ZipFileVirtualFile srcDir,
+import java.util {
+    JList=List
+}
+
+import org.antlr.runtime {
+    CommonToken
+}
+
+shared class ExternalPhasedUnit extends IdePhasedUnit {
+    
+    ZipEntryVirtualFile _unitFile;
+    ZipFileVirtualFile _srcDir;
+    
+    shared new (ZipEntryVirtualFile unitFile, ZipFileVirtualFile srcDir,
         Tree.CompilationUnit cu, Package p, ModuleManager moduleManager,
-        ModuleSourceMapper moduleSourceMapper,
+        BaseIdeModuleSourceMapper moduleSourceMapper,
         TypeChecker typeChecker, JList<CommonToken> tokenStream) 
             extends IdePhasedUnit(
             unitFile, 
@@ -49,21 +49,25 @@ shared class ExternalPhasedUnit
             moduleSourceMapper, 
             typeChecker, 
             tokenStream) {
+        this._unitFile = unitFile;
+        this._srcDir = srcDir;
     }
     
-    shared new clone(PhasedUnit other) 
+    shared new clone(ExternalPhasedUnit other) 
             extends IdePhasedUnit.clone(other) {
+        this._srcDir = other.srcDir;
+        this._unitFile = other.unitFile;
     }
     
-    shared actual default TypecheckerUnit newUnit() =>
-            ExternalSourceFile(this);
+    shared actual default TypecheckerUnit createUnit() 
+            => ExternalSourceFile(this);
     
-    shared actual default ExternalSourceFile unit =>
-            unsafeCast<ExternalSourceFile>(super.unit);
+    shared actual CeylonUnit unit {
+        assert (is CeylonUnit unit = super.unit);
+        return unit;
+    }
     
-    shared actual ZipFileVirtualFile srcDir =>
-            unsafeCast<ZipFileVirtualFile>(super.srcDir);
-
-    shared actual ZipEntryVirtualFile unitFile => 
-            unsafeCast<ZipEntryVirtualFile>(super.unitFile);
+    shared actual ZipFileVirtualFile srcDir => _srcDir;
+    shared actual ZipEntryVirtualFile unitFile => _unitFile;
+    
 }

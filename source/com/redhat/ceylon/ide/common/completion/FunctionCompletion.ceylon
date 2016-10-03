@@ -1,29 +1,27 @@
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
+import ceylon.collection {
+    HashSet
 }
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import ceylon.collection {
-    MutableList
+import com.redhat.ceylon.ide.common.correct {
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    TextChange
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
-    Functional,
-    Unit
+    Functional
 }
-import java.util {
-    HashSet
-}
-shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
 
-    shared formal CompletionResult newFunctionCompletionProposal(Integer offset, String prefix,
-           String desc, String text, Declaration dec, Unit unit, IdeComponent cmp);
-    
-    shared void addFunctionProposal(Integer offset, IdeComponent cpc, Tree.Primary primary, 
-            MutableList<CompletionResult> result, Declaration dec,
-            IdeCompletionManager<IdeComponent, CompletionResult, Document> cm) {
+shared interface FunctionCompletion {
+
+    shared void addFunctionProposal(Integer offset, CompletionContext ctx,
+        Tree.Primary primary, Declaration dec) {
 
         variable Tree.Term arg = primary;
         while (is Tree.Expression a = arg) {
@@ -33,32 +31,35 @@ shared interface FunctionCompletion<IdeComponent,CompletionResult,Document>
         value start = arg.startIndex.intValue();
         value stop = arg.endIndex.intValue();
         value origin = primary.startIndex.intValue();
-        value doc = cpc.document;
-        value argText = cm.getDocumentSubstring(doc, start, stop - start);
-        value prefix = cm.getDocumentSubstring(doc, origin, offset - origin);
-        variable String text = dec.getName(arg.unit) + "(" + argText + ")";
+        value doc = ctx.commonDocument;
+        value argText = doc.getText(start, stop - start);
+        value prefix = doc.getText(origin, offset - origin);
+        value unit = ctx.lastCompilationUnit.unit;
         
-        if (is Functional dec, dec.declaredVoid) {
-            text += ";";
-        }
-        value unit = cpc.lastCompilationUnit.unit;
-        value desc = getDescriptionFor(dec, unit) + "(...)";
-        result.add(newFunctionCompletionProposal(offset, prefix, desc, text, dec, unit, cpc));
+        platformServices.completion.newFunctionCompletionProposal {
+            offset = offset;
+            prefix = prefix;
+            desc = getDescriptionFor(dec, unit) + "(...)";
+            text = dec.getName(arg.unit) + "(``argText``)"
+                 + (if (is Functional dec, dec.declaredVoid) then ";" else "");
+            dec = dec;
+            unit = unit;
+            cmp = ctx;
+        };
     }
+
 }
 
-shared abstract class FunctionCompletionProposal<CompletionResult,IFile,Document,InsertEdit,TextEdit,TextChange,Region>  
+shared abstract class FunctionCompletionProposal  
         (Integer _offset, String prefix, String desc, String text, Declaration declaration, Tree.CompilationUnit rootNode)
-        extends AbstractCompletionProposal<IFile,CompletionResult,Document,InsertEdit,TextEdit,TextChange,Region>
-        (_offset, prefix, desc, text)
-        given InsertEdit satisfies TextEdit {
+        extends AbstractCompletionProposal(_offset, prefix, desc, text) {
     
-    shared TextChange createChange(TextChange change, Document document) {
-        initMultiEditChange(change);
+    shared TextChange createChange(CommonDocument document) {
+        value change = platformServices.document.createTextChange("Complete Invocation", document);
         value decs = HashSet<Declaration>();
         importProposals.importDeclaration(decs, declaration, rootNode);
         value il = importProposals.applyImports(change, decs, rootNode, document);
-        addEditToChange(change, createEdit(document));
+        change.addEdit(createEdit(document));
         offset += il;
         return change;
     }

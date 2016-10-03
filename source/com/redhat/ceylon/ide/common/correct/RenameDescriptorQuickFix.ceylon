@@ -1,24 +1,35 @@
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
 import com.redhat.ceylon.ide.common.util {
     escaping
 }
 
-shared interface RenameDescriptorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object renameDescriptorQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change);
-    
-    shared void addRenameDescriptorProposal(Data data, IFile file) {
-        value pn = escaping.escapePackageName(data.rootNode.unit.\ipackage);
-        value change = newTextChange("Rename", file);
+    shared void addRenameDescriptorProposal(QuickFixData data) {
+        value pack = data.rootNode.unit.\ipackage;
+        value pname = escaping.escapePackageName(pack);
         
-        addEditToChange(change, newReplaceEdit(data.problemOffset, data.problemLength, pn));
+        value change 
+                = platformServices.document.createTextChange {
+            name = "Rename";
+            input = data.phasedUnit;
+        };
         
-        value desc = "Rename to '" + pn + "'";
+        change.addEdit(ReplaceEdit {
+            start = data.problemOffset;
+            length = data.problemLength;
+            text = pname;
+        });
         
-        newProposal(data, desc, change);
+        data.addQuickFix {
+            description = "Rename to '``pack.qualifiedNameString``'";
+            change = change;
+            qualifiedNameIsPath = true;
+            affectsOtherUnits = true;
+        };
     }
 }
  

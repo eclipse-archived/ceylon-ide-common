@@ -2,7 +2,9 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    CeylonIterable
+    CeylonIterable,
+    javaClass,
+    javaString
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -16,6 +18,9 @@ import com.redhat.ceylon.cmr.ceylon {
         CeylonRepoManagerBuilder
     }
 }
+import com.redhat.ceylon.cmr.spi {
+    ContentStore
+}
 import com.redhat.ceylon.common {
     Constants,
     FileUtil,
@@ -26,7 +31,8 @@ import com.redhat.ceylon.compiler.typechecker {
     TypeCheckerBuilder
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleValidator
+    ModuleValidator,
+    Warning
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnits,
@@ -41,10 +47,18 @@ import com.redhat.ceylon.ide.common.model.parsing {
     ModulesScanner,
     ProjectFilesScanner
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    VfsServicesConsumer,
+    ModelServicesConsumer,
+    Status
+}
+import com.redhat.ceylon.ide.common.typechecker {
+    TypecheckerAliases
+}
 import com.redhat.ceylon.ide.common.util {
     Path,
     unsafeCast,
-    toJavaStringList,
     BaseProgressMonitor,
     ImmutableMapWrapper,
     BaseProgressMonitorChild
@@ -53,7 +67,8 @@ import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
     BaseFolderVirtualFile,
     BaseFileVirtualFile,
-    FileVirtualFile
+    FileVirtualFile,
+    VfsAliases
 }
 import com.redhat.ceylon.launcher {
     Bootstrap
@@ -83,26 +98,28 @@ import java.lang {
     ByteArray
 }
 import java.lang.ref {
-    WeakReference
+    WeakReference,
+    SoftReference
+}
+import java.net {
+    URI
+}
+import java.util {
+    WeakHashMap,
+    EnumSet,
+    Arrays
 }
 import java.util.concurrent {
     TimeUnit
 }
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
-    ReadWriteLock,
     Lock,
     ReentrantLock
 }
 
 import org.xml.sax {
     SAXParseException
-}
-import java.net {
-    URI
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils
 }
 
 shared final class ProjectState
@@ -115,64 +132,66 @@ shared final class ProjectState
     shared new typechecking {ordinal=3;}
     shared new typechecked {ordinal=4;}
     shared new compiled {ordinal=5;}
-    compare(ProjectState other) => 
+    compare(ProjectState other) =>
             ordinal <=> other.ordinal;
     equals(Object that) =>
             if (is ProjectState that)
-    then ordinal==that.ordinal
-    else false;
+            then ordinal==that.ordinal
+            else false;
 }
 
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
     variable CeylonProjectConfig? ceylonConfig = null;
     variable CeylonIdeConfig? ideConfig = null;
-    shared ReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
+    shared ReentrantReadWriteLock sourceModelLock =  ReentrantReadWriteLock();
     Lock repositoryManagerLock = ReentrantLock();
     variable RepositoryManager? _repositoryManager = null;
-    
+
     shared ModuleDependencies moduleDependencies = ModuleDependencies();
-    
+
     "TODO: should not be shared. Will be made unshared when the
      using methods will have been implemented in Ceylon"
     shared variable ProjectState state = ProjectState.missing;
-    
+
     shared Boolean parsing => state == ProjectState.parsing;
     shared Boolean parsed => state >= ProjectState.parsed;
     shared Boolean typechecking => state == ProjectState.typechecking;
     shared Boolean typechecked => state >= ProjectState.typechecked;
     shared Boolean compiled => state >= ProjectState.compiled;
-    
+
     shared formal BaseCeylonProjects model;
     shared formal String name;
     shared formal File rootDirectory;
     shared formal Boolean hasConfigFile;
     shared formal String systemRepository;
     shared formal void createOverridesProblemMarker(
-        Exception theOverridesException, 
-        File absoluteFile, 
-        Integer overridesLine, 
-        Integer overridesColumn);
-    deprecated("Only here for compatibility with legacy code
-                This should be removed, since the real entry point is the [[PhasedUnits]] object
-                
-                The only interesting data contained in the [[TypeChecker]] is the
-                [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. But new they
-                should be managed in a modular way in each [[IdeModule]] object accessible from the
-                [[PhasedUnits]]")
+    Exception theOverridesException,
+    File absoluteFile,
+    Integer overridesLine,
+    Integer overridesColumn);
+    //TODO: Only here for compatibility with legacy code!
+    //
+    //      This should be removed, since the real entry point is the 
+    //      [[PhasedUnits]] object
+    //            
+    //      The only interesting data contained in the [[TypeChecker]] is the
+    //      [[phasedUnitsOfDependencies|TypeChecker.phasedUnitsOfDependencies]]. 
+    //      But now they should be managed in a modular way in each [[IdeModule]] 
+    //      object accessible from the [[PhasedUnits]]")
     shared variable TypeChecker? typechecker=null;
-    
+
     shared formal void removeOverridesProblemMarker();
 
-    function createRepositoryManager() {
-        return object extends CeylonRepoManagerBuilder() {
+    function createRepositoryManager() 
+        => object extends CeylonRepoManagerBuilder() {
             shared actual Overrides? getOverrides(String? path) {
                 if (! path exists) {
                     removeOverridesProblemMarker();
                 }
                 return super.getOverrides(path);
             }
-            
+
             shared actual Overrides? getOverrides(File absoluteFile) {
                 variable Overrides? result = null;
                 variable Exception? overridesException = null;
@@ -199,30 +218,29 @@ shared abstract class BaseCeylonProject() {
                 } catch(Exception e) {
                     overridesException = e;
                 }
-                
+
                 if (exists theOverridesException = overridesException) {
                     createOverridesProblemMarker(
-                        theOverridesException, 
-                        absoluteFile, 
-                        overridesLine, 
+                        theOverridesException,
+                        absoluteFile,
+                        overridesLine,
                         overridesColumn);
                 } else {
                     removeOverridesProblemMarker();
                 }
                 return result;
             }
-        }.offline(configuration.offline)
-                .cwd(rootDirectory)
-                .systemRepo(systemRepository)
-                .extraUserRepos(
-                    toJavaStringList(
-                        referencedCeylonProjects.map((p) 
-                            => p.ceylonModulesOutputDirectory.absolutePath)))
-                .logger(platformUtils.cmrLogger)
-                .isJDKIncluded(true)
-                .buildManager();
-    }
-    
+        }
+        .offline(configuration.offline)
+        .cwd(rootDirectory)
+        .systemRepo(systemRepository)
+        .extraUserRepos(Arrays.asList(
+            for (p in referencedCeylonProjects)
+            javaString(p.ceylonModulesOutputDirectory.absolutePath)))
+        .logger(platformUtils.cmrLogger)
+        .isJDKIncluded(true)
+        .buildManager();
+
     shared RepositoryManager repositoryManager {
         try {
             repositoryManagerLock.lock();
@@ -236,25 +254,30 @@ shared abstract class BaseCeylonProject() {
         } finally {
             repositoryManagerLock.unlock();
         }
-        
+
     }
 
-    shared void resetRepositoryManager() {
+    shared default void resetRepositoryManager() {
         try {
             repositoryManagerLock.lock();
             _repositoryManager = null;
         } finally {
             repositoryManagerLock.unlock();
         }
-        
+
     }
 
-    shared {PhasedUnit*} parsedUnits =>
+    shared default {PhasedUnit*} parsedUnits => {
+            if (parsed, exists units = typechecker?.phasedUnits?.phasedUnits)
+            for (unit in units) unit
+        };
+
+    shared default PhasedUnit? getParsedUnit(BaseFileVirtualFile virtualFile) =>
             if (parsed,
-                exists units=typechecker?.phasedUnits?.phasedUnits)
-            then CeylonIterable(units)
-            else {};
-    
+                exists phasedUnits=typechecker?.phasedUnits)
+            then phasedUnits.getPhasedUnit(virtualFile)
+            else null;
+
     shared CeylonProjectConfig configuration {
         if (exists config = ceylonConfig) {
             return config;
@@ -274,8 +297,9 @@ shared abstract class BaseCeylonProject() {
             return newConfig;
         }
     }
-    
-    
+
+    shared Boolean showWarnings =>
+            configuration.suppressWarningsEnum != EnumSet.allOf(javaClass<Warning>());
 
     "Returns:
      - [[true]] if no error occured while creating the ceylon bootstrap files,
@@ -292,12 +316,12 @@ shared abstract class BaseCeylonProject() {
             return "The 'bin' folder is not accessible in the embedded Ceylon distribution";
         }
 
+        value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
+        value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
         if (!force) {
-            value scriptFile = FileUtil.applyCwd(rootDirectory, File("ceylonb"));
-            value batFile = FileUtil.applyCwd(rootDirectory, File("ceylonb.bat"));
-            value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.\iCEYLON_CONFIG_DIR)), "bootstrap");
-            value propsFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_PROPERTIES);
-            value jarFile = File(bootstrapDir, Bootstrap.\iFILE_BOOTSTRAP_JAR);
+            value bootstrapDir = File(FileUtil.applyCwd(rootDirectory, File(Constants.ceylonConfigDir)), "bootstrap");
+            value propsFile = File(bootstrapDir, Bootstrap.fileBootstrapProperties);
+            value jarFile = File(bootstrapDir, Bootstrap.fileBootstrapJar);
             if (scriptFile.\iexists() || batFile.\iexists() || propsFile.\iexists() || jarFile.\iexists()) {
                 return false;
             }
@@ -307,80 +331,95 @@ shared abstract class BaseCeylonProject() {
         } catch(IOException ioe) {
             return ioe.message;
         }
+        
+        try {
+            scriptFile.setExecutable(true);
+            batFile.setExecutable(true);
+        } catch(IOException ioe) {
+            return ioe.message;
+        }
+        
         return true;
     }
 
     shared String defaultCharset
             => configuration.encoding else defaultDefaultCharset;
-    
+
     shared default String defaultDefaultCharset
             => "utf8";
-    
+
     "Un-hide a previously hidden output folder in old Eclipse projects
      For other IDEs, do nothing"
     shared default void fixHiddenOutputFolder(String folderProjectRelativePath) => noop();
     shared formal void deleteOldOutputFolder(String folderProjectRelativePath);
     shared formal void createNewOutputFolder(String folderProjectRelativePath);
-    shared formal void refreshConfigFile();
-    
+    shared formal void refreshConfigFile(String projectRelativePath);
+
     shared formal Boolean synchronizedWithConfiguration;
     shared formal Boolean nativeProjectIsAccessible;
     shared formal Boolean compileToJs;
     shared formal Boolean compileToJava;
 
-    value loadBinariesFirst => 
-            "true".equals(process.propertyValue("ceylon.loadBinariesFirst") else "true");
-    
+    shared default Boolean loadBinariesFirst =>
+            true.string == (process.propertyValue("ceylon.loadBinariesFirst") else true.string);
+
     shared Boolean loadDependenciesFromModelLoaderFirst =>
             compileToJava && loadBinariesFirst;
-    
+
+    shared default Boolean loadInterProjectDependenciesFromSourcesFirst => false;
+
     shared {String*} ceylonRepositories
             => let (c = configuration) c.projectLocalRepos
-            .chain(c.globalLookupRepos)
-            .chain(c.projectRemoteRepos)
-            .chain(c.otherRemoteRepos);
+        .chain(c.globalLookupRepos)
+        .chain(c.projectRemoteRepos)
+        .chain(c.otherRemoteRepos);
+
+    shared {File*} ceylonRepositoryBaseDirectories => CeylonIterable(repositoryManager.repositories)
+        .map((repo) => repo.root.getService(javaClass<ContentStore>()) else null)
+        .coalesced
+        .flatMap((contentStore) => CeylonIterable(contentStore.baseDirectories));
 
     shared default Boolean isJavaLikeFileName(String fileName) =>
             fileName.endsWith(".java");
-    
+
     shared formal {BaseCeylonProject*} referencedCeylonProjects;
     shared formal {BaseCeylonProject*} referencingCeylonProjects;
 
     shared File ceylonModulesOutputDirectory =>
             File(
-        Path(rootDirectory.absolutePath)
-                .append(configuration.outputRepoProjectRelativePath)
-                .platformDependentString);
-    
+                Path(rootDirectory.absolutePath)
+                    .append(configuration.outputRepoProjectRelativePath)
+                    .platformDependentString);
+
     shared default abstract class Modules() satisfies {BaseIdeModule*} {
         shared formal BaseIdeModule default;
         shared formal BaseIdeModule language;
-        shared formal Package? javaLangPackage;        
+        shared formal Package? javaLangPackage;
         shared formal {BaseIdeModule*} fromProject;
         shared formal {BaseIdeModule*} external;
-        
+
         shared default BaseIdeModuleManager manager {
             assert(exists units=typechecker?.phasedUnits,
                 is BaseIdeModuleManager mm=units.moduleManager);
-            return mm; 
+            return mm;
         }
-        
+
         shared default BaseIdeModuleSourceMapper sourceMapper {
             assert(exists units=typechecker?.phasedUnits,
                 is BaseIdeModuleSourceMapper msm=units.moduleSourceMapper);
-            return msm; 
+            return msm;
         }
     }
 
     shared formal Modules? modules;
 
     shared default BaseIdeModelLoader? modelLoader => modules?.manager?.modelLoader;
-    
+
     shared formal {BaseFolderVirtualFile*} sourceFolders;
     shared formal {BaseFolderVirtualFile*} resourceFolders;
     shared formal {BaseFolderVirtualFile*} rootFolders;
     shared formal {BaseFileVirtualFile*} projectFiles;
-    
+
     "
      Allows synchronizing operations that involve the source-related
      Ceylon model, for example:
@@ -394,15 +433,15 @@ shared abstract class BaseCeylonProject() {
      after which the it stops waiting for the source 
      model availability and throws a [[RuntimeException|java.lang::RuntimeException]] Exception.
      The thrown exception is the one produced by 
-     [[IdePlatformUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.util::IdePlatformUtils.newOperationCanceledException]]
+     [[IdeUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.platform::IdeUtils.newOperationCanceledException]]
      "
     shared Return withSourceModel<Return>(Boolean readonly, Return() do, Integer waitForModelInSeconds=20) {
         try {
-            value theLock = 
-                    if (readonly) 
-                    then sourceModelLock.readLock() 
+            value theLock =
+                    if (readonly)
+                    then sourceModelLock.readLock()
                     else sourceModelLock.writeLock();
-            if (theLock.tryLock(waitForModelInSeconds, TimeUnit.\iSECONDS)) {
+            if (theLock.tryLock(waitForModelInSeconds, TimeUnit.seconds)) {
                 try {
                     return do();
                 } finally {
@@ -413,7 +452,7 @@ shared abstract class BaseCeylonProject() {
                     "The source model ``
                     if (readonly) then "read" else "write"
                     `` lock of project ``
-                    name 
+                    name
                     `` could not be acquired within ``
                     waitForModelInSeconds`` seconds");
             }
@@ -433,149 +472,234 @@ shared abstract class BaseCeylonProject() {
 }
 
 
-
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
-    shared MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFilesMap = 
-            ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+        satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+given NativeProject satisfies Object
+given NativeResource satisfies Object
+given NativeFolder satisfies NativeResource
+given NativeFile satisfies NativeResource {
+    shared MutableMap<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> projectFilesMap =
+            ImmutableMapWrapper<NativeFile, FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>(emptyMap, map);
 
-    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
-    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>>();
+    value sourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>(emptyMap, map);
+    value resourceFoldersMap = ImmutableMapWrapper<NativeFolder, FolderVirtualFileAlias>(emptyMap, map);
+
+    value virtualFolderCache = WeakHashMap<NativeFolder, SoftReference<FolderVirtualFileAlias>>();
+    value virtualFileCache = WeakHashMap<NativeFile, SoftReference<FileVirtualFileAlias>>();
+    // value virtualFolderCacheLock = ReentrantReadWriteLock();
+
+    variable CeylonProjectBuildAlias? build_ = null;
 
     shared actual formal CeylonProjectsAlias model;
     shared formal NativeProject ideArtifact;
-    
-    shared CeylonProjects<NativeProject,NativeResource,NativeFolder,NativeFile>.VirtualFileSystem vfs => model.vfs; 
-    
-    shared actual abstract class Modules() 
-            extends super.Modules() 
+
+    shared CeylonProjectBuildAlias build {
+        if (exists build=build_) {
+            return build;
+        }
+        value build = CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, NativeFile>(this);
+        build_ = build;
+        return build;
+    }
+
+    shared actual default void resetRepositoryManager() {
+        super.resetRepositoryManager();
+        buildHooks.each((hook) => hook.repositoryManagerReset(this));
+    }
+
+    shared actual Boolean nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
+
+    shared actual abstract class Modules()
+            extends super.Modules()
             satisfies {IdeModuleAlias*} {
         shared formal TypecheckerModules typecheckerModules;
-        
-        shared actual Iterator<IdeModuleAlias> iterator() => 
+
+        shared actual Iterator<IdeModuleAlias> iterator() =>
                 typecheckerModules.listOfModules
-                .toArray(ObjectArray<Module>(typecheckerModules.listOfModules.size()))
-                .array.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
-        
+                    .toArray(ObjectArray<Module>(typecheckerModules.listOfModules.size()))
+                    .iterable.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
+
         shared actual IdeModuleAlias default =>
                 unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.defaultModule);
-        
+
         shared actual IdeModuleAlias language =>
                 unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.languageModule);
-        
+
         shared actual Package? javaLangPackage =>
                 find((m) => m.nameAsString == "java.base")
-                    ?.getDirectPackage("java.lang");
-        
+                ?.getDirectPackage("java.lang");
+
         shared actual {IdeModuleAlias*} fromProject
                 => filter((m) => m.isProjectModule);
-        
+
         shared actual {IdeModuleAlias*} external
                 => filter((m) => ! m.isProjectModule);
-        
+
         shared actual IdeModuleManagerAlias manager
-                => unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.manager); 
-        
+                => unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.manager);
+
         shared actual IdeModuleSourceMapperAlias sourceMapper
-                => unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.sourceMapper); 
+                => unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.sourceMapper);
     }
-    
+
     shared actual Modules? modules =>
             if (exists tcMods = typechecker?.phasedUnits?.moduleManager?.modules)
-            then 
-                object extends Modules() {
-                    typecheckerModules = tcMods;
-                }
+            then
+            object extends Modules() {
+                typecheckerModules = tcMods;
+            }
             else
-                null;
-    
+            null;
+
     "Virtual folders of existing source folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} sourceFolders =>
             sourceFoldersMap.resetKeys(
-                sourceNativeFolders, 
-                (nativeFolder) => 
-                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
-    
+                sourceNativeFolders,
+                (nativeFolder) =>
+                vfsServices.createVirtualFolder(nativeFolder, ideArtifact), true).items;
+
     "Virtual folders of existing resource folders as read form the IDE native project"
     shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} resourceFolders =>
             resourceFoldersMap.resetKeys(
-                resourceNativeFolders, 
-                (nativeFolder) => 
-                        vfs.createVirtualFolder(nativeFolder, ideArtifact)).items;
+                resourceNativeFolders,
+                (nativeFolder) =>
+                vfsServices.createVirtualFolder(nativeFolder, ideArtifact), true).items;
 
-    shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders => 
+    shared actual {FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} rootFolders =>
             sourceFolders.chain(resourceFolders);
 
-    shared FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolderFromNative(NativeFolder folder) => 
+    shared FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? rootFolderFromNative(NativeFolder folder) =>
             sourceFoldersMap[folder] else resourceFoldersMap[folder];
-    
+
     shared actual {FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} projectFiles => projectFilesMap.items;
 
-    shared FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? projectFileFromNative(NativeFile file) => 
+    shared FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>? projectFileFromNative(NativeFile file) =>
             projectFilesMap[file];
-    
-    shared {NativeFile*} projectNativeFiles => 
+
+    shared {NativeFile*} projectNativeFiles =>
             projectFilesMap.keys;
 
-    shared void addFile(NativeFile file) {
-        projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
-        projectFilesMap.put(file, vfs.createVirtualFile(file, ideArtifact));
-        // TODO : add the delta element
-    }
-    
-    shared void removeFile(NativeFile file) {
-        projectFilesMap.remove(file);
-        // TODO : add the delta element
-    }
-    
-    shared void addFolder(NativeFolder folder, NativeFolder parent) {
-        value parentVirtualFile = vfs.createVirtualFolder(parent, ideArtifact);
-        if (exists parentPkg = parentVirtualFile.ceylonPackage, 
-            exists root=parentVirtualFile.rootFolder,
-            exists loader = modelLoader) {
-            Package pkg = loader.findOrCreatePackage(parentPkg.\imodule, 
-                if (parentPkg.nameAsString.empty) 
-                then vfs.getShortName(folder) 
-                else ".".join {parentPkg.nameAsString, vfs.getShortName(folder)});
-            setPackageForNativeFolder(folder, WeakReference(pkg));
-            setRootForNativeFolder(folder, WeakReference(root));
+    shared actual {ProjectPhasedUnitAlias*} parsedUnits =>
+            super.parsedUnits.map((pu) => unsafeCast<ProjectPhasedUnitAlias>(pu));
+
+    shared actual ProjectPhasedUnitAlias? getParsedUnit(BaseFileVirtualFile virtualFile) =>
+            unsafeCast<ProjectPhasedUnitAlias?>(super.getParsedUnit(virtualFile));
+
+    "Returns the [[FileVirtualFileAlias]] added to the model,
+     or [[null]] if it could not be added"
+    shared FileVirtualFileAlias? addFileToModel(NativeFile file) {
+        value parentFolder = vfsServices.getParent(file);
+        if (!exists parentFolder) {
+            // the file is a direct child of the project: 
+            //files directly under the project are not part of the project source files.
+            return null;
         }
 
-        // TODO : add the delta element
+        if (! vfsServices.getRootPropertyForNativeFolder(this, parentFolder) exists &&
+        ! addFolderToModel(parentFolder) exists) {
+            return null;
+        }
+
+        projectFilesMap.remove(file);  // TODO : why don't we keep the virtualFile if it is there ?
+        value virtualFile = vfsServices.createVirtualFile(file, ideArtifact);
+        projectFilesMap[file] = virtualFile;
+        return virtualFile;
     }
 
-    "Existing source folders as read form the IDE native project"
-    shared formal {NativeFolder*} sourceNativeFolders;
-    "Existing resource folders as read form the IDE native project"
-    shared formal {NativeFolder*} resourceNativeFolders;
+
+    shared void removeFileFromModel(NativeFile file) {
+        projectFilesMap.remove(file);
+    }
+
+    shared FolderVirtualFileAlias? addFolderToModel(NativeFolder folder) {
+        NativeFolder? parent = vfsServices.getParent(folder);
+        if (!exists parent) {
+            return null;
+        }
+
+        value parentVirtualFile = vfsServices.createVirtualFolder(parent, ideArtifact);
+        FolderVirtualFileAlias? addIfParentAlreadyAdded() {
+            if (exists parentPkg = parentVirtualFile.ceylonPackage,
+                exists root=parentVirtualFile.rootFolder,
+                exists loader = modelLoader) {
+                Package pkg = loader.findOrCreatePackage(parentPkg.\imodule,
+                    if (parentPkg.nameAsString.empty)
+                    then vfsServices.getShortName(folder)
+                    else ".".join {parentPkg.nameAsString, vfsServices.getShortName(folder)});
+                vfsServices.setPackagePropertyForNativeFolder(this,folder, WeakReference(pkg));
+                vfsServices.setRootPropertyForNativeFolder(this, folder, WeakReference(root));
+                return vfsServices.createVirtualFolder(folder, ideArtifact);
+            }
+            return null;
+        }
+
+        FolderVirtualFileAlias addedVirtualFolder;
+        if (exists added = addIfParentAlreadyAdded()) {
+            addedVirtualFolder = added;
+        } else {
+            if (addFolderToModel(parent) exists) {
+                if (exists added = addIfParentAlreadyAdded()) {
+                    addedVirtualFolder = added;
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        // TODO : for incremental module and package build support, manage the module and package here
+        // (local step corresponding to the ModuleScanner and ProjectFilesScanner)
+
+        // TODO : add the delta element
+        return addedVirtualFolder;
+    }
+
+    shared void removeFolderFromModel(NativeFolder folder) {
+        void removeProperty(
+        String propertyName,
+        Anything(CeylonProjectAlias, NativeFolder) remove)  {
+            try {
+                remove(this, folder);
+            } catch(Exception e) {
+                platformUtils.log(
+                    Status._WARNING,
+                    "``propertyName`` property could not be removed from native folder : ``
+                    vfsServices.getVirtualFilePathString(folder)``", e);
+            }
+        }
+        removeProperty("Package", vfsServices.removePackagePropertyForNativeFolder);
+        removeProperty("Root", vfsServices.removeRootPropertyForNativeFolder);
+        removeProperty("RootIsSource", vfsServices.removeRootIsSourceProperty);
+    }
+
+    "Existing source folders as read from the IDE native project"
+    shared {NativeFolder*} sourceNativeFolders =>
+            modelServices.sourceNativeFolders(this);
+
+    "Existing resource folders as read from the IDE native project"
+    shared {NativeFolder*} resourceNativeFolders =>
+            modelServices.resourceNativeFolders(this);
 
     shared {NativeFolder*} rootNativeFolders =>
             sourceNativeFolders.chain(resourceNativeFolders);
 
-    
-    shared formal {NativeProject*} referencedNativeProjects(NativeProject nativeProject);
-    shared formal {NativeProject*} referencingNativeProjects(NativeProject nativeProject);
-    
     shared actual {CeylonProjectAlias*} referencedCeylonProjects =>
-            referencedNativeProjects(ideArtifact)
-            .map((NativeProject nativeProject) => model.getProject(nativeProject))
-            .coalesced;
+            modelServices.referencedNativeProjects(ideArtifact)
+                .map((NativeProject nativeProject) => model.getProject(nativeProject))
+                .coalesced;
 
     shared actual {CeylonProjectAlias*} referencingCeylonProjects =>
-            referencingNativeProjects(ideArtifact)
-            .map((NativeProject nativeProject) => model.getProject(nativeProject))
-            .coalesced;
-    
-    shared formal void setPackageForNativeFolder(NativeFolder folder, WeakReference<Package> p);
-    shared formal void setRootForNativeFolder(NativeFolder folder, WeakReference<FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>> root);
-    shared formal void setRootIsForSource(NativeFolder rootFolder, Boolean isSource);
-    shared formal void scanRootFolder(RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner);
-    
+            modelServices.referencingNativeProjects(ideArtifact)
+                .map((NativeProject nativeProject) => model.getProject(nativeProject))
+                .coalesced;
+
     shared Boolean isCompilable(NativeFile file) {
         if (isCeylon(file)) {
             return true;
@@ -588,46 +712,46 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
         }
         return false;
     }
-    
-    shared default Boolean isCeylon(NativeFile file) => 
-            vfs.getShortName(file).endsWith(".ceylon");
-    
+
+    shared default Boolean isCeylon(NativeFile file) =>
+            vfsServices.getShortName(file).endsWith(".ceylon");
+
     shared default Boolean isJava(NativeFile file) =>
-            isJavaLikeFileName(vfs.getShortName(file));
-    
+            isJavaLikeFileName(vfsServices.getShortName(file));
+
     shared default Boolean isJavascript(NativeFile file) =>
-            vfs.getShortName(file).endsWith(".js");
-    
+            vfsServices.getShortName(file).endsWith(".js");
+
     "TODO: make it unshared as soon as the calling method is also in CeylonProject"
     shared void scanFiles(BaseProgressMonitor monitor) {
         try (progress = monitor.Progress(10000, null)) {
             void scan(
-                {FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>*} roots,
-                RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner(FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> root)) {
+            {FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile>*} roots,
+            RootFolderScanner<NativeProject, NativeResource, NativeFolder, NativeFile> scanner(FolderVirtualFile<NativeProject,NativeResource,NativeFolder,NativeFile> root)) {
                 for (root in roots) {
                     if (progress.cancelled) {
                         throw platformUtils.newOperationCanceledException("");
                     }
-                    scanRootFolder(scanner(root));
+                    modelServices.scanRootFolder(scanner(root));
                 }
             }
-            
+
             // First scan all non-default source modules and attach the contained packages 
-            scan (sourceFolders, (root) => 
-                ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, progress));
-            
+            scan (sourceFolders, (root) =>
+            ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, progress));
+
             // Then scan all source files
-            scan (sourceFolders, (root) => 
-                ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFilesMap, progress));
-            
+            scan (sourceFolders, (root) =>
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, true, projectFilesMap, progress));
+
             // Finally scan all resource files
-            scan (resourceFolders, (root) => 
-                ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, progress));
+            scan (resourceFolders, (root) =>
+            ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(this, root, false, projectFilesMap, progress));
         }
     }
 
     shared formal ModuleManagerFactory moduleManagerFactory;
-        
+
     shared default void parseCeylonModel(BaseProgressMonitor mon) => withSourceModel {
         readonly = false;
         waitForModelInSeconds = 20;
@@ -638,69 +762,84 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                 resetRepositoryManager();
                 projectFilesMap.clear();
                 moduleDependencies.reset();
-                
+
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
-                
-                value newTypechecker = TypeCheckerBuilder(vfs)
-                        .verbose(false)
-                        .moduleManagerFactory(moduleManagerFactory)
-                        .setRepositoryManager(repositoryManager).typeChecker;
+
+                value newTypechecker = TypeCheckerBuilder(model.vfs)
+                    .verbose(false)
+                    .moduleManagerFactory(moduleManagerFactory)
+                    .setRepositoryManager(repositoryManager).typeChecker;
                 typechecker = newTypechecker;
                 PhasedUnits phasedUnits = newTypechecker.phasedUnits;
-                
+
                 value moduleManager = unsafeCast<IdeModuleManagerAlias>(phasedUnits.moduleManager);
+
+                if (exists jdkProvider = configuration.jdkProvider) {
+                    value parts = jdkProvider.split('/'.equals).sequence();
+                    if (parts.size == 2,
+                        exists name = parts[0],
+                        exists version = parts[1],
+                        exists file = repositoryManager.getArtifact(
+                            ArtifactContext(null, name, version, ArtifactContext.jar))) {
+
+                        // OK
+                    } else {
+                        throw platformUtils.newOperationCanceledException(
+                            "JDK provider not found in repository: " + jdkProvider);
+                    }
+                }
                 value moduleSourceMapper = unsafeCast<IdeModuleSourceMapperAlias>(phasedUnits.moduleSourceMapper);
                 moduleManager.typeChecker = newTypechecker;
                 moduleSourceMapper.typeChecker = newTypechecker;
                 Context context = newTypechecker.context;
                 BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
-                Module defaultModule = context.modules.defaultModule;
-                
+                //Module defaultModule = context.modules.defaultModule;
+
                 progress.worked(1);
-                
+
                 progress.subTask("parsing source files for project `` name ``");
-                
+
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException();
                 }
-                
+
                 phasedUnits.moduleManager.prepareForTypeChecking();
-                
+
                 scanFiles(progress.newChild(10));
-                
+
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
                 modelLoader.setupSourceFileObjects(phasedUnits.phasedUnits);
-                
+
                 progress.worked(1);
-                
+
                 // Parsing of ALL units in the source folder should have been done
-                
+
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
-                
+
                 progress.subTask("determining module dependencies for `` name ``");
-                
+
                 phasedUnits.visitModules();
-                
+
                 //By now the language module version should be known (as local)
                 //or we should use the default one.
                 Module languageModule = context.modules.languageModule;
                 if (! languageModule.version exists) {
-                    languageModule.version = TypeChecker.\iLANGUAGE_MODULE_VERSION;
+                    languageModule.version = TypeChecker.languageModuleVersion;
                 }
-                
+
                 if (progress.cancelled) {
                     throw platformUtils.newOperationCanceledException("");
                 }
-                
+
                 ModuleValidator moduleValidator = object extends ModuleValidator(context, phasedUnits) {
                     shared actual void executeExternalModulePhases() {}
-                    
+
                     shared actual Exception catchIfPossible(Exception e) {
                         if (platformUtils.isOperationCanceledException(e)) {
                             throw e;
@@ -708,7 +847,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                         return e;
                     }
                 };
-                
+
                 Integer maxModuleValidatorWork = 100000;
                 try(validatorProgress = progress.newChild(100).Progress(maxModuleValidatorWork, null)) {
                     moduleValidator.setListener(object satisfies ModuleValidator.ProgressListener {
@@ -718,7 +857,7 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                             Integer oneModuleWork = maxModuleValidatorWork / totalNumberOfModules;
                             Integer workRemaining = numberOfModulesNotAlreadySearched * oneModuleWork;
                             if(validatorProgress.cancelled) {
-                                throw platformUtils.newOperationCanceledException("Interrupted the retrieving of module : " + _module.signature);
+                                throw platformUtils.newOperationCanceledException("Interrupted the retrieval of module : " + _module.signature);
                             }
                             validatorProgress.updateRemainingWork(workRemaining);
                             artifactContext.callback = object satisfies ArtifactCallback {
@@ -726,9 +865,9 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                                 late variable Integer size;
                                 variable Integer alreadyDownloaded = 0;
                                 value messageBuilder = StringBuilder()
-                                        .append("- downloading module ")
-                                        .append(_module.signature)
-                                        .appendCharacter(' ');
+                                    .append("- downloading module ")
+                                    .append(_module.signature)
+                                    .appendCharacter(' ');
                                 shared actual void start(String nodeFullPath, Integer size, String contentStore) {
                                     this.size = size;
                                     Integer ticks = if (size > 0) then size else 100000;
@@ -761,56 +900,58 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                                         throw t;
                                     }
                                 }
-                                shared actual void done(File file) =>
-                                        artifactProgress.destroy(null);
+                                done(File file) => artifactProgress.destroy(null);
                             };
                         }
-                        
+
                         shared actual void resolvingModuleArtifact(Module _module,
-                            ArtifactResult artifactResult) {
+                        ArtifactResult artifactResult) {
                             if (validatorProgress.cancelled) {
-                                throw platformUtils.newOperationCanceledException("Interrupted the resolving of module : " + _module.signature);
+                                throw platformUtils.newOperationCanceledException("Interrupted the resolution of module : " + _module.signature);
                             }
                             Integer numberOfModulesNotAlreadySearched = moduleValidator.numberOfModulesNotAlreadySearched();
                             validatorProgress.updateRemainingWork(numberOfModulesNotAlreadySearched * 100
-                                / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
-                            validatorProgress.subTask("resolving module ``_module.signature``");
+                            / (numberOfModulesNotAlreadySearched + moduleValidator.numberOfModulesAlreadySearched()));
+                            validatorProgress.subTask("Resolving module ``_module.signature``");
                         }
-                        
+
                         retrievingModuleArtifactFailed(Module m, ArtifactContext ac) => noop();
                         retrievingModuleArtifactSuccess(Module m, ArtifactResult ar) => noop();
                     });
-                    
+
+                    buildHooks.each((hook) => hook.beforeDependencyTreeValidation(this, progress));
                     moduleValidator.verifyModuleDependencyTree();
+                    buildHooks.each((hook) => hook.afterDependencyTreeValidation(this, progress));
                 }
-                
+
                 newTypechecker.phasedUnitsOfDependencies = moduleValidator.phasedUnitsOfDependencies;
-                
+
                 for (dependencyPhasedUnits in newTypechecker.phasedUnitsOfDependencies) {
                     modelLoader.addSourceArchivePhasedUnits(dependencyPhasedUnits.phasedUnits);
                 }
-                
+
                 modelLoader.setModuleAndPackageUnits();
-                
+
                 if (compileToJs) {
                     for (_module in newTypechecker.context.modules.listOfModules) {
                         if (is BaseIdeModule _module) {
                             if (_module.isCeylonArchive
-                                && ModelUtil.isForBackend(_module.nativeBackends, Backend.\iJavaScript.asSet())) {
-                                value importedModuleImports = 
+                            && ModelUtil.isForBackend(_module.nativeBackends, Backend.javaScript.asSet())) {
+                                value importedModuleImports =
                                         CeylonIterable(moduleSourceMapper.retrieveModuleImports(_module))
-                                        .filter((moduleImport) => 
-                                    ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.\iJavaScript.asSet()))
-                                        .sequence();
+                                            .filter((moduleImport) =>
+                                        ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.javaScript.asSet()))
+                                            .sequence();
                                 if (nonempty importedModuleImports) {
                                     File? artifact = repositoryManager.getArtifact(
                                         ArtifactContext(
-                                            _module.nameAsString, 
-                                            _module.version, 
-                                            ArtifactContext.\iJS));
+                                            null,
+                                            _module.nameAsString,
+                                            _module.version,
+                                            ArtifactContext.js));
                                     if (artifact is Null) {
                                         for (importInError in importedModuleImports) {
-                                            moduleSourceMapper.attachErrorToModuleImport(importInError, 
+                                            moduleSourceMapper.attachErrorToModuleImport(importInError,
                                                 "module not available for JavaScript platform: '``_module.nameAsString``' \"``_module.version``\"");
                                         }
                                     }
@@ -819,20 +960,231 @@ shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder,
                         }
                     }
                 }
-                
+
                 moduleDependencies.addModulesWithDependencies(newTypechecker.context.modules.listOfModules);
-                
+
                 progress.worked(1);
-                
+
                 state = ProjectState.parsed;
-                
+
                 completeCeylonModelParsing(progress.newChild(10));
-                
-                model.modelParsed(this);
+
+                model.ceylonModelParsed(this);
             }
         });
     };
-    
+
+    shared FileVirtualFileAlias getOrCreateFileVirtualFile(NativeFile nativeFile) {
+        if (exists existingFile=projectFilesMap.get(nativeFile)) {
+            return existingFile;
+        }
+        else {
+            SoftReference<FileVirtualFileAlias>? virtualFileRef = virtualFileCache.get(nativeFile);
+            if (exists virtualFile=virtualFileRef?.get()) {
+                return virtualFile;
+            }
+            value virtualFile = vfsServices.createVirtualFile(nativeFile, ideArtifact);
+            virtualFileCache[virtualFile.nativeResource] = SoftReference(virtualFile);
+            return virtualFile;
+        }
+    }
+
+
+    shared FolderVirtualFileAlias getOrCreateFolderVirtualFile(NativeFolder nativeFolder) {
+        SoftReference<FolderVirtualFileAlias>? virtualFolderRef = virtualFolderCache.get(nativeFolder);
+        if (exists virtualFile=virtualFolderRef?.get()) {
+            return virtualFile;
+        }
+        value virtualFile = vfsServices.createVirtualFolder(nativeFolder, ideArtifact);
+        virtualFolderCache[virtualFile.nativeResource] = SoftReference(virtualFile);
+        return virtualFile;
+    }
+
+    shared Boolean isFileInSourceFolder(NativeFile file) =>
+            isFileInRootFolder(file, true);
+
+    shared Boolean isFileInResourceFolder(NativeFile file) =>
+            isFileInRootFolder(file, false);
+
+    Boolean isFileInRootFolder(NativeFile file, Boolean? sourceRoot=null) {
+        value parentFolder = vfsServices.getParent(file);
+        if (exists parentFolder) {
+            return isFolderInRootFolder(parentFolder, sourceRoot);
+        }
+        return false;
+    }
+
+    Boolean isFolderInRootFolder(NativeFolder folder, Boolean? sourceRoot=null) {
+        if (exists rootIsSource = vfsServices.getRootIsSourceProperty(this, folder)) {
+            if (exists sourceRoot) {
+                return sourceRoot == rootIsSource;
+            } else {
+                return true;
+            }
+        }
+        return vfsServices.isDescendantOfAny(folder,
+            if (exists sourceRoot)
+            then
+            if (sourceRoot)
+            then sourceNativeFolders
+            else resourceNativeFolders
+            else rootNativeFolders);
+    }
+
+    shared Boolean isResourceForModel(NativeResource resource) {
+        if (!vfsServices.isFolder(resource),
+            is NativeFile file=resource) {
+            return isSourceFile(file)
+            || isResourceFile(file);
+        }
+        else {
+            assert(is NativeFolder folder=resource);
+            return isFolderInRootFolder(folder);
+        }
+    }
+
+    shared Boolean isSourceFile(NativeFile file) =>
+            isFileInSourceFolder(file) && isCompilable(file);
+
+    shared Boolean isResourceFile(NativeFile file) =>
+            isFileInResourceFolder(file); // TODO: add the constraint that it should be in the right packages ?
+
+    "This iterable contains resources that need an additional action to be fully visible
+     during the model update (for example flushing the contents to the disk or
+     refreshing a configuration).
+
+     If the action cannot not be done, they will not be fully visible and should be removed
+     from the changed resources submitted to the model update."
+    value shouldBeMadeFullyVisibleBeforeModelUpdate => {
+
+        if (exists configResource =
+                vfsServices.fromJavaFile(
+                    configuration.projectConfigFile, ideArtifact))
+        then configResource -> (() {
+            if (vfsServices.flushIfNecessary(configResource)) {
+                configuration.refresh();
+                return true;
+            } else {
+                return false;
+            }
+        }) else null,
+
+        if (exists ideConfigResource =
+                vfsServices.fromJavaFile(
+                    ideConfiguration.ideConfigFile, ideArtifact))
+        then ideConfigResource -> (() {
+            if (vfsServices.flushIfNecessary(ideConfigResource)) {
+                ideConfiguration.refresh();
+                return true;
+            } else {
+                return false;
+            }
+        }) else null,
+
+        if (exists overridesResource =
+                if (exists overridesFilePath = configuration.overrides,
+                    exists overridesFile = FileUtil.absoluteFile(
+                        FileUtil.applyCwd(rootDirectory, File(overridesFilePath))))
+                then vfsServices.fromJavaFile(overridesFile, ideArtifact)
+                else null)
+        then overridesResource -> (() {
+            return vfsServices.flushIfNecessary(overridesResource);
+        }) else null
+
+    }.coalesced;
+
+    shared void projectFileTreeChanged({NativeResourceChange*} projectFileChanges) {
+
+        ChangeToConvert updateModelAndConvertToProjectFileChange(NativeResourceChange nativeChange) {
+            switch (nativeChange)
+            case(is NativeFileChange) {
+                function convertToVirtualFile(NativeFile file) {
+                    switch(nativeChange)
+                    case(is NativeFileContentChange) {
+                        return getOrCreateFileVirtualFile(file);
+                    }
+                    case(is NativeFileAddition) {
+                        return addFileToModel(file);
+                    }
+                    case(is NativeFileRemoval) {
+                        FileVirtualFileAlias removedFile = getOrCreateFileVirtualFile(file);
+                        removeFileFromModel(file);
+                        return removedFile;
+                    }
+                }
+                return [nativeChange, convertToVirtualFile];
+            }
+            case(is NativeFolderChange) {
+                function convertToVirtualFile(NativeFolder folder) {
+                    switch(nativeChange)
+                    case(is NativeFolderAddition) {
+                        if(vfsServices.existsOnDisk(folder)) {
+                            return addFolderToModel(folder);
+                        } else {
+                            return null;
+                        }
+                    }
+                    case(is NativeFolderRemoval) {
+                        FolderVirtualFileAlias removedFolder = getOrCreateFolderVirtualFile(folder);
+                        removeFolderFromModel(folder);
+                        return removedFolder;
+                    }
+                }
+                return [nativeChange, convertToVirtualFile];
+            }
+        }
+
+        value shouldBeMadeFullyVisible = map(shouldBeMadeFullyVisibleBeforeModelUpdate);
+
+        function changeFullyVisible(NativeResourceChange change) {
+            value resource = change.resource;
+            value actionToMakeItVisible = shouldBeMadeFullyVisible[resource];
+            if (exists actionToMakeItVisible) {
+                return actionToMakeItVisible();
+            }
+            return true;
+        }
+
+        build.fileTreeChanged(
+            projectFileChanges
+                .filter(changeFullyVisible)
+                .map((nativeChange) =>
+            if (isResourceForModel(nativeChange.resource),
+                exists projectFileChange=model.toProjectChange(updateModelAndConvertToProjectFileChange(nativeChange)))
+            then projectFileChange
+            else [nativeChange, ideArtifact]));
+
+
+        for (referencingProject in referencingCeylonProjects) {
+            referencingProject.referencedProjectFileTreeChanged(this, projectFileChanges);
+        }
+        // Positionner le full-build, etc ... + quelque chose à builder en fonction des change events (aussi des changements de binaires, d'overrides.xml, etc ...)
+        // Ajouter des changements dans le sourceChangeEvent du CeylonProjectBuild (seulement sur les sources qui font partie des root folders de moi ou des projets référencés) (=> créer les ResourceVirtualFileChange)
+        // Ajouter les changements dans tous les projets qui me référencent
+    }
+
+    shared void referencedProjectFileTreeChanged(CeylonProjectAlias referencedProject, {NativeResourceChange*} changesInReferencedProject) {
+        function convertToProjectFileChange(NativeResourceChange nativeChange) {
+            switch (nativeChange)
+            case(is NativeFileChange) {
+                return [nativeChange, referencedProject.getOrCreateFileVirtualFile];
+            }
+            case(is NativeFolderChange) {
+                return [nativeChange, referencedProject.getOrCreateFolderVirtualFile];
+            }
+        }
+
+        build.fileTreeChanged(changesInReferencedProject.map((nativeChange) =>
+        if (referencedProject.isResourceForModel(nativeChange.resource),
+            exists projectFileChange=model.toProjectChange(convertToProjectFileChange(nativeChange)))
+        then projectFileChange
+        else [nativeChange, referencedProject.ideArtifact]));
+    }
+
     shared formal void completeCeylonModelParsing(BaseProgressMonitorChild monitor);
+
+    shared default {BuildHookAlias*} buildHooks => {};
+
+    string => ideArtifact.string;
 }
 

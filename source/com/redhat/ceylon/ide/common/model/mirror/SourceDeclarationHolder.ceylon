@@ -7,6 +7,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
+import com.redhat.ceylon.ide.common.model {
+    cancelDidYouMeanSearch
+}
 
 shared class SourceDeclarationHolder {
     shared PhasedUnit phasedUnit;
@@ -39,7 +42,7 @@ shared class SourceDeclarationHolder {
         }
         
         if (!phasedUnit.typeDeclarationsScanned) {
-            phasedUnit.scanTypeDeclarations();
+            phasedUnit.scanTypeDeclarations(cancelDidYouMeanSearch);
         }
         
         _modelDeclaration = astDeclaration.declarationModel;

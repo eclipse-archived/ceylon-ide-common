@@ -1,5 +1,8 @@
 import ceylon.collection {
-    ArrayList
+    ArrayList,
+    HashMap,
+    HashSet,
+    MutableSet
 }
 
 import com.redhat.ceylon.compiler.typechecker.parser {
@@ -11,16 +14,20 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor
 }
 import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
+    importProposals
 }
 import com.redhat.ceylon.ide.common.model {
-    CeylonUnit
+    CeylonUnit,
+    SourceFile
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    AnyProjectPhasedUnit
+    CompositeChange,
+    CommonDocument,
+    TextChange,
+    platformServices,
+    DeleteEdit,
+    InsertEdit,
+    ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -36,50 +43,47 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     TypeParameter,
     Generic,
-    Referenceable
+    Referenceable,
+    Value,
+    Scope,
+    ModelUtil
 }
 
 import java.util {
-    JList=List,
-    HashSet,
-    Set
+    JList=List
 }
 
 import org.antlr.runtime {
     CommonToken,
     Token
 }
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
 
-shared Boolean isInlineRefactoringAvailable(Referenceable? ref, 
-    Tree.CompilationUnit rootNode, Boolean inSameProject) {
+shared Boolean isInlineRefactoringAvailable(
+    Referenceable? declaration, 
+    Tree.CompilationUnit rootNode, 
+    Boolean inSameProject) {
     
-    if (is Declaration declaration = ref,
+    if (is Declaration declaration,
         inSameProject) {
-        if (is FunctionOrValue declaration) {
-            value fov = declaration;
-            return !fov.parameter 
-                    && !(fov is Setter) 
-                    && !fov.default 
-                    && !fov.formal 
-                    && !fov.native 
-                    && (fov.typeDeclaration exists) 
-                    && (!fov.typeDeclaration.anonymous) 
-                    && (fov.toplevel 
-                        || !fov.shared 
-                        || (!fov.formal && !fov.default && !fov.actual))
-                    && (!fov.unit.equals(rootNode.unit) 
+        switch (declaration)
+        case (is FunctionOrValue) {
+            return !(declaration is Setter)
+                    && (declaration.typeDeclaration exists) 
+                    //&& (!declaration.typeDeclaration.anonymous) 
+                    && (!declaration.unit == rootNode.unit 
                     //not a Destructure
-                    || !(getDeclarationNode(rootNode, declaration) is Tree.Variable));
+                    || !(getDeclarationNode(rootNode, declaration) 
+                            is Tree.Variable));
             //TODO: && !declaration is a control structure variable 
             //TODO: && !declaration is a value with lazy init
-        } else if (is TypeAlias declaration) {
+        }
+        case (is TypeAlias) {
             return true;
-        } else if (is ClassOrInterface declaration) {
+        }
+        case (is ClassOrInterface) {
             return declaration.\ialias;
-        } else {
+        }
+        else {
             return false;
         }
     } else {
@@ -88,41 +92,45 @@ shared Boolean isInlineRefactoringAvailable(Referenceable? ref,
 }
 
 Tree.StatementOrArgument? getDeclarationNode(
-    Tree.CompilationUnit declarationUnit, Declaration declaration) {
-    
+    Tree.CompilationUnit declarationRootNode, 
+    Declaration declaration) {
     value fdv = FindDeclarationNodeVisitor(declaration);
-    declarationUnit.visit(fdv);
+    declarationRootNode.visit(fdv);
     return fdv.declarationNode;
 }
 
-shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change>
-        satisfies AbstractRefactoring<Change>
-                & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        given InsertEdit satisfies TextEdit {
+Declaration original(Declaration d) {
+    if (is Value d,
+        exists od = d.originalDeclaration) {
+        return original(od);
+    }
+    return d;
+}
+
+shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange> {
     
     shared interface InlineData satisfies EditorData {
         shared formal Declaration declaration;
         shared formal Boolean justOne;
         shared formal Boolean delete;
-        shared formal IDocument doc;
+        shared formal CommonDocument doc;
     }
     
     shared formal actual InlineData editorData;
-    shared formal TextChange newFileChange(PhasedUnit pu);
-    shared formal TextChange newDocChange(IDocument doc);
-    shared formal void addChangeToChange(Change change, TextChange tc);
 
-    shared Boolean isReference =>
-            let (node = editorData.node)
+    shared Boolean isReference 
+            => let (node = editorData.node)
             !node is Tree.Declaration 
             && nodes.getIdentifyingNode(node) is Tree.Identifier;
     
-    shared actual Boolean enabled => true;
+    enabled => true;
 
     shared actual Integer countReferences(Tree.CompilationUnit cu) { 
         value vis = FindReferencesVisitor(editorData.declaration);
+        //TODO: don't count references which are being narrowed
+        //      in a Tree.Variable, since they don't get inlined
         cu.visit(vis);
-        return vis.nodeSet.size();
+        return vis.referenceNodes.size;
     }
 
     name => "Inline";
@@ -131,131 +139,233 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     shared String|String[] checkAvailability() {
         value declaration = editorData.declaration;
         value unit = declaration.unit;
-        value declarationUnit = if (is CeylonUnit cu = unit)
-            then cu.phasedUnit?.compilationUnit
-            else null;
-        
+        value declarationUnit 
+                = if (is CeylonUnit unit)
+                then unit.phasedUnit?.compilationUnit
+                else null;
         if (!exists declarationUnit) {
             return "Compilation unit not found";
         }
         
-        value declarationNode = getDeclarationNode(declarationUnit, editorData.declaration);
-        if (is Tree.AttributeDeclaration declarationNode,
-            !declarationNode.specifierOrInitializerExpression exists) {
-
-            return "Cannot inline forward declaration: " + declaration.name;
-        }
-        if (is Tree.MethodDeclaration declarationNode,
-            !declarationNode.specifierExpression exists) {
-
-            return "Cannot inline forward declaration: " + declaration.name;            
+        value declarationNode 
+                = getDeclarationNode {
+                    declarationRootNode = declarationUnit;
+                    declaration = editorData.declaration;
+                };
+        if (!exists declarationNode) {
+            return "Declaration not found";
         }
         
-        if (is Tree.AttributeGetterDefinition declarationNode) {
-            value getterDefinition = declarationNode;
-            value statements = getterDefinition.block.statements;
+        switch (declarationNode)
+        case (is Tree.AttributeDeclaration) {
+            if (!declarationNode.specifierOrInitializerExpression exists) {
+                return "Cannot inline forward declaration: " + declaration.name;
+            }
+        }
+        case (is Tree.MethodDeclaration) {
+            if (!declarationNode.specifierExpression exists) {
+                return "Cannot inline forward declaration: " + declaration.name;
+            }
+        }
+        case (is Tree.AttributeGetterDefinition) {
+            value statements = declarationNode.block.statements;
             if (statements.size() != 1) {
                 return "Getter body is not a single statement: " + declaration.name;
             }
-            
-            if (!(statements.get(0) is Tree.Return)) {
+            if (!(statements[0] is Tree.Return)) {
                 return "Getter body is not a return statement: " + declaration.name;
             }
         }
-        
-        if (is Tree.MethodDefinition declarationNode) {
-            value statements = declarationNode.block.statements;
-            if (statements.size() != 1) {
-                return "Function body is not a single statement: " + declaration.name;
-            }
-            
-            value statement = statements.get(0);
-            if (declarationNode.type is Tree.VoidModifier) {
-                if (!statement is Tree.ExpressionStatement) {
-                    return "Function body is not an expression: " + declaration.name;
+        case (is Tree.MethodDefinition) {
+            if (!declarationNode.type is Tree.VoidModifier) {
+                value statements = declarationNode.block.statements;
+                if (statements.size() != 1) {
+                    return "Function body is not a single statement: " + declaration.name;
                 }
-            } else if (!statement is Tree.Return) {
-                return "Function body is not a return statement: " + declaration.name;
+                else if (!statements[0] is Tree.Return) {
+                    return "Function body is not a return statement: " + declaration.name;
+                }
             }
+        }
+        case (is Tree.ObjectDefinition) {}
+        case (is Tree.ClassDeclaration|Tree.InterfaceDeclaration) {}
+        case (is Tree.TypeAliasDeclaration) {}
+        else {
+            return "Declaration is not a value, function, or type alias: " + declaration.name;
         }
         
         value warnings = ArrayList<String>();
         
-        if (is Tree.AnyAttribute declarationNode) {
-            value attribute = declarationNode;
-            if (attribute.declarationModel.variable) {
+        if (is FunctionOrValue declaration) {
+            if (declaration.parameter) {
+                return "Declaration is a parameter: " + declaration.name;
+            }
+            if (declaration.native) {
+                return "Declaration is native: " + declaration.name;
+            }
+            if (declaration.formal) {
+                return "Declaration is formal: " + declaration.name;
+            }
+            if (declaration.default) {
+                return "Declaration is default: " + declaration.name;
+            }
+            if (declaration.actual) {
+                return "Declaration is actual: " + declaration.name;
+            }
+            if (declaration.variable) {
                 warnings.add("Inlined value is variable");
             }
         }
         
-        if (exists declarationNode) {
-            declarationNode.visit(object extends Visitor() {
-                shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
-                    super.visit(that);
-                    if (exists dec = that.declaration) {
-                        if (declaration.shared, !dec.shared, !dec.parameter) {
-                            warnings.add("Definition contains reference to " 
-                                          + "unshared declaration: " + dec.name);
-                        }
-                    } else {
-                        warnings.add("Definition contains unresolved reference");
-                    }
+        declarationNode.visit(object extends Visitor() {
+            shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
+                super.visit(that);
+                if (exists dec = that.declaration,
+                    if (is Scope scope = declaration)
+                        then !ModelUtil.contains(scope, dec.container) 
+                        else true,
+                    declaration.shared && !dec.shared && !dec.parameter) {
+                    warnings.add("Definition contains reference to unshared declaration: " + dec.name);
                 }
-            });
-        }
+            }
+            shared actual void visit(Tree.Return that) {
+                super.visit(that);
+                if (is Tree.MethodDefinition declarationNode,
+                    declarationNode.type is Tree.VoidModifier) {
+                    warnings.add("Void function body contains return statement");
+                }
+            }
+        });
         
         return warnings.sequence();
     }
-
-    shared actual Change build(Change cc) {
-        variable Tree.CompilationUnit? declarationUnit = null;
-        variable JList<CommonToken>? declarationTokens = null;
-        value editorTokens = editorData.tokens;
+    
+    shared actual Boolean affectsOtherFiles {
         value declaration = editorData.declaration;
-        
-        value unit = declaration.unit;
-        if (searchInEditor()) {
-            if (editorData.rootNode.unit.equals(unit)) {
-                declarationUnit = editorData.rootNode;
-                declarationTokens = editorTokens;
+        if (editorData.delete ||
+            declaration.unit != editorData.rootNode.unit) {
+            if (declaration.toplevel || declaration.shared) {
+                return true;
             }
-        }
-        
-        if (!exists _ = declarationUnit) {
-            for (pu in getAllUnits()) {
-                if (pu.unit.equals(unit)) {
-                    declarationUnit = pu.compilationUnit;
-                    declarationTokens = pu.tokens;
-                    break;
+            if (declaration.parameter) {
+                assert (is FunctionOrValue declaration);
+                assert (is Declaration container = declaration.container);
+                if (container.toplevel || container.shared) {
+                    return true;
                 }
             }
         }
-        
-        if (exists declUnit = declarationUnit,
-            exists declTokens = declarationTokens,
-            is Tree.Declaration declarationNode = getDeclarationNode(declUnit, 
-                editorData.declaration)) {
+        return false;
+    }
 
-            value term = getInlinedTerm(declarationNode);
+
+    void inlineInFiles(
+        Tree.Declaration declarationNode, 
+        CompositeChange change, 
+        Tree.CompilationUnit declarationRootNode, 
+        JList<CommonToken> declarationTokens, 
+        Unit editorUnit) {
         
-            for (pu in getAllUnits()) {
-                if (searchInFile(pu), affectsUnit(pu.unit)) {
-                    assert (is AnyProjectPhasedUnit ppu = pu);
-                    value tfc = newFileChange(ppu);
-                    value cu = pu.compilationUnit;
-                    inlineInFile(tfc, cc, declarationNode, declUnit, term,
-                        declTokens, cu, pu.tokens);
+        value term = getInlinedDefinition(declarationNode);
+        
+        //TODO: progress reporting!
+        if (affectsOtherFiles) {
+            for (phasedUnit in getAllUnits()) {
+                if (searchInFile(phasedUnit)
+                        && affectsUnit(phasedUnit.unit)) {
+                    inlineInFile {
+                        textChange = platformServices.document.createTextChange("Inline", phasedUnit);
+                        parentChange = change;
+                        declarationNode = declarationNode;
+                        declarationRootNode = declarationRootNode;
+                        definition = term;
+                        declarationTokens = declarationTokens;
+                        rootNode = phasedUnit.compilationUnit;
+                        tokens = phasedUnit.tokens;
+                    };
                 }
             }
-
-            if (searchInEditor(), affectsUnit(editorData.rootNode.unit)) {
-                value dc = newDocChange(editorData.doc);
-                inlineInFile(dc, cc, declarationNode, declUnit, term, declTokens,
-                    editorData.rootNode, editorTokens);
+        }
+        else {
+            value phasedUnit = editorPhasedUnit;
+            if (searchInFile(phasedUnit)
+                    && affectsUnit(phasedUnit.unit)) {
+                inlineInFile {
+                    textChange = platformServices.document.createTextChange("Inline", phasedUnit);
+                    parentChange = change;
+                    declarationNode = declarationNode;
+                    declarationRootNode = declarationRootNode;
+                    definition = term;
+                    declarationTokens = declarationTokens;
+                    rootNode = phasedUnit.compilationUnit;
+                    tokens = phasedUnit.tokens;
+                };
             }
         }
         
-        return cc;
+        if (searchInEditor() 
+                && affectsUnit(editorUnit)) {
+            inlineInFile {
+                textChange = platformServices.document.createTextChange("Inline", editorData.doc);
+                parentChange = change;
+                declarationNode = declarationNode;
+                declarationRootNode = declarationRootNode;
+                definition = term;
+                declarationTokens = declarationTokens;
+                rootNode = editorData.rootNode;
+                tokens = editorData.tokens;
+            };
+        }
+    }
+    
+    void inlineIfDeclaration(
+        Tree.CompilationUnit rootNode, 
+        Declaration dec, 
+        CompositeChange change, 
+        Unit editorUnit, 
+        JList<CommonToken> tokens) {
+        if (is Tree.Declaration declarationNode 
+            = getDeclarationNode {
+            declarationRootNode = rootNode;
+            declaration = dec;
+        }) {
+            inlineInFiles {
+                declarationNode = declarationNode;
+                change = change;
+                declarationRootNode = rootNode;
+                declarationTokens = tokens;
+                editorUnit = editorUnit;
+            };
+        }
+    }
+    
+    shared actual CompositeChange build(CompositeChange change) {
+        value declarationUnit = editorData.declaration.unit;
+        value editorUnit = editorData.rootNode.unit;
+        
+        if ((!affectsOtherFiles || searchInEditor()) &&
+            editorUnit == declarationUnit) {
+            inlineIfDeclaration {
+                rootNode = editorData.rootNode;
+                dec = editorData.declaration;
+                change = change;
+                editorUnit = editorUnit;
+                tokens = editorData.tokens;
+            };
+        }
+        else if (is SourceFile declarationUnit, 
+                declarationUnit.modifiable,
+                exists phasedUnit = declarationUnit.phasedUnit) {
+            inlineIfDeclaration {
+                rootNode = phasedUnit.compilationUnit;
+                dec = editorData.declaration;
+                change = change;
+                editorUnit = editorUnit;
+                tokens = phasedUnit.tokens;
+            };
+        }
+        
+        return change;
     }
 
     Boolean affectsUnit(Unit unit) {
@@ -264,24 +374,23 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 || unit == editorData.node.unit;
     }
 
-    value importProposals => platformServices.importProposals<Nothing,ICompletionProposal,IDocument,InsertEdit,TextEdit,TextChange>();
-
     Boolean addImports(TextChange change, Tree.Declaration declarationNode,
-        Tree.CompilationUnit cu) {
+        Tree.CompilationUnit rootNode) {
         
         value decPack = declarationNode.unit.\ipackage;
-        value filePack = cu.unit.\ipackage;
+        value filePack = rootNode.unit.\ipackage;
         variable Boolean importedFromDeclarationPackage = false;
 
         class AddImportsVisitor(already) extends Visitor() {
-            Set<Declaration> already;
+            MutableSet<Declaration> already;
             
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);
                 if (exists dec = that.declaration) {
-                    importProposals.importDeclaration(already, dec, cu);
+                    importProposals.importDeclaration(already, dec, rootNode);
                     value refPack = dec.unit.\ipackage;
-                    importedFromDeclarationPackage = importedFromDeclarationPackage
+                    importedFromDeclarationPackage = 
+                            importedFromDeclarationPackage
                             || refPack.equals(decPack)
                             && !decPack.equals(filePack); //unnecessary
                 }
@@ -291,67 +400,110 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         value already = HashSet<Declaration>();
         value aiv = AddImportsVisitor(already);
         declarationNode.visit(aiv);
-        value dnd = declarationNode.declarationModel;
-        importProposals.applyImports(change, already, cu, editorData.doc, dnd);
+        importProposals.applyImports {
+            change = change;
+            declarations = already;
+            rootNode = rootNode;
+            doc = editorData.doc;
+            declarationBeingDeleted 
+                    = declarationNode.declarationModel;
+        };
         return importedFromDeclarationPackage;
     }
 
-    void inlineInFile(TextChange tfc, Change parentChange, 
-        Tree.Declaration declarationNode, Tree.CompilationUnit declarationUnit, 
-        Node term, JList<CommonToken> declarationTokens, Tree.CompilationUnit cu,
+    void inlineInFile(TextChange textChange, CompositeChange parentChange, 
+        Tree.Declaration declarationNode, Tree.CompilationUnit declarationRootNode, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition definition, 
+        JList<CommonToken> declarationTokens, Tree.CompilationUnit rootNode,
         JList<CommonToken> tokens) {
         
-        initMultiEditChange(tfc);
-        inlineReferences(declarationNode, declarationUnit, term, 
-            declarationTokens, cu, tokens, tfc);
-        value inlined = hasChildren(tfc);
-        deleteDeclaration(declarationNode, declarationUnit, cu, tokens, tfc);
-        value importsAdded = inlined && addImports(tfc, declarationNode, cu);
-        
-        deleteImports(tfc, declarationNode, cu, tokens, importsAdded);
-        if (hasChildren(tfc)) {
-            addChangeToChange(parentChange, tfc);
+        textChange.initMultiEdit();
+        inlineReferences {
+            declarationNode = declarationNode;
+            declarationUnit = declarationRootNode;
+            definition = definition;
+            declarationTokens = declarationTokens;
+            rootNode = rootNode;
+            tokens = tokens;
+            textChange = textChange;
+        };
+        value inlined = textChange.hasEdits;
+        deleteDeclaration {
+            declarationNode = declarationNode;
+            declarationUnit = declarationRootNode;
+            rootNode = rootNode;
+            tokens = tokens;
+            textChange = textChange;
+        };
+        value importsAdded 
+                = inlined && addImports {
+            change = textChange;
+            declarationNode = declarationNode;
+            rootNode = rootNode;
+        };
+        deleteImports {
+            textChange = textChange;
+            declarationNode = declarationNode;
+            rootNode = rootNode;
+            tokens = tokens;
+            importsAddedToDeclarationPackage = importsAdded;
+        };
+        if (textChange.hasEdits) {
+            parentChange.addTextChange(textChange);
         }
     }
 
-    void deleteImports(TextChange tfc, Tree.Declaration declarationNode, 
-        Tree.CompilationUnit cu, JList<CommonToken> tokens,
+    void deleteImports(TextChange textChange, Tree.Declaration declarationNode, 
+        Tree.CompilationUnit rootNode, JList<CommonToken> tokens,
         Boolean importsAddedToDeclarationPackage) {
         
-        if (exists il = cu.importList) {
+        if (exists il = rootNode.importList) {
             for (i in il.imports) {
                 value list = i.importMemberOrTypeList.importMemberOrTypes;
                 for (imt in list) {
-                    value dnd = declarationNode.declarationModel;
-                    if (exists d = imt.declarationModel, d == dnd) {
-                        if (list.size() == 1, !importsAddedToDeclarationPackage) {
+                    if (exists d = imt.declarationModel, 
+                        d == declarationNode.declarationModel) {
+                        if (list.size() == 1 
+                            && !importsAddedToDeclarationPackage) {
                             //delete the whole import statement
-                            addEditToChange(tfc, newDeleteEdit(i.startIndex.intValue(),
-                                i.distance.intValue()));
+                            textChange.addEdit( 
+                                DeleteEdit {
+                                    start = i.startIndex.intValue();
+                                    length = i.distance.intValue();
+                                });
                         } else {
                             //delete just the item in the import statement...
-                            addEditToChange(tfc, newDeleteEdit(imt.startIndex.intValue(),
-                                imt.distance.intValue()));
+                            textChange.addEdit( 
+                                DeleteEdit {
+                                    start = imt.startIndex.intValue();
+                                    length = imt.distance.intValue();
+                                });
                             //...along with a comma before or after
                             value ti = nodes.getTokenIndexAtCharacter(tokens,
                                 imt.startIndex.intValue());
                             
                             variable CommonToken prev = tokens.get(ti - 1);
-                            if (prev.channel == CommonToken.\iHIDDEN_CHANNEL) {
+                            if (prev.channel == Token.hiddenChannel) {
                                 prev = tokens.get(ti - 2);
                             }
                             
                             variable CommonToken next = tokens.get(ti + 1);
-                            if (next.channel == CommonToken.\iHIDDEN_CHANNEL) {
+                            if (next.channel == Token.hiddenChannel) {
                                 next = tokens.get(ti + 2);
                             }
                             
-                            if (prev.type == CeylonLexer.\iCOMMA) {
-                                addEditToChange(tfc, newDeleteEdit(prev.startIndex,
-                                    imt.startIndex.intValue() - prev.startIndex));
-                            } else if (next.type == CeylonLexer.\iCOMMA) {
-                                addEditToChange(tfc, newDeleteEdit(imt.endIndex.intValue(),
-                                    next.stopIndex - imt.endIndex.intValue() + 1));
+                            if (prev.type == CeylonLexer.comma) {
+                                textChange.addEdit( 
+                                    DeleteEdit {
+                                        start = prev.startIndex;
+                                        length = imt.startIndex.intValue() - prev.startIndex;
+                                    });
+                            } else if (next.type == CeylonLexer.comma) {
+                                textChange.addEdit( 
+                                    DeleteEdit {
+                                        start = imt.endIndex.intValue();
+                                        length = next.stopIndex - imt.endIndex.intValue() + 1;
+                                    });
                             }
                         }
                     }
@@ -361,153 +513,435 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
     }
     
     void deleteDeclaration(Tree.Declaration declarationNode,
-        Tree.CompilationUnit declarationUnit, Tree.CompilationUnit cu,
-        JList<CommonToken> tokens, TextChange tfc) {
+        Tree.CompilationUnit declarationUnit, Tree.CompilationUnit rootNode,
+        JList<CommonToken> tokens, TextChange textChange) {
         
-        if (editorData.delete) {
-            value unit = declarationUnit.unit;
-            if (cu.unit.equals(unit)) {
+        if (editorData.delete 
+            && rootNode.unit == declarationUnit.unit) {
 
-                variable value from = declarationNode.token;
-                value anns = declarationNode.annotationList;
-                if (!anns.annotations.empty) {
-                    from = anns.annotations.get(0).token;
-                }
-                
-                value prevIndex = from.tokenIndex - 1;
-                if (prevIndex >= 0, 
-                    exists tok = tokens.get(prevIndex),
-                    tok.channel == Token.\iHIDDEN_CHANNEL) {
-                    
-                    from = tok;
-                }
-                
-                if (is CommonToken t = from) {
-                    addEditToChange(tfc, newDeleteEdit(t.startIndex,
-                        declarationNode.endIndex.intValue() - t.startIndex));
-                }
-            }
-        }
-    }
-
-    Node getInlinedTerm(Tree.Declaration declarationNode) {
-        if (is Tree.AttributeDeclaration declarationNode) {
-            value att = declarationNode;
-            return att.specifierOrInitializerExpression.expression.term;
-        } else if (is Tree.MethodDefinition declarationNode) {
-            value meth = declarationNode;
-            value statements = meth.block.statements;
-            if (meth.type is Tree.VoidModifier) {
-                //TODO: in the case of a void method, tolerate 
-                //      multiple statements , including control
-                //      structures, not just expression statements
-                if (!isSingleExpression(statements)) {
-                    throw Exception("method body is not a single expression statement");
-                }
-                
-                assert(is Tree.ExpressionStatement e = statements[0]);
-                return e.expression.term;
-            } else {
-                if (!isSingleReturn(statements)) {
-                    throw Exception("method body is not a single expression statement");
-                }
-                
-                assert (is Tree.Return ret = statements[0]);
-                return ret.expression.term;
-            }
-        } else if (is Tree.MethodDeclaration declarationNode) {
-            value meth = declarationNode;
-            return meth.specifierExpression.expression.term;
-        } else if (is Tree.AttributeGetterDefinition declarationNode) {
-            value att = declarationNode;
-            value statements = att.block.statements;
-            if (!isSingleReturn(statements)) {
-                throw Exception("getter body is not a single expression statement");
+            variable value from = declarationNode.token;
+            value anns = declarationNode.annotationList;
+            if (!anns.annotations.empty) {
+                from = anns.annotations.get(0).token;
             }
             
-            assert(is Tree.Return r = att.block.statements[0]);
-            return r.expression.term;
-        } else if (is Tree.ClassDeclaration declarationNode) {
-            value \ialias = declarationNode;
-            return \ialias.classSpecifier;
-        } else if (is Tree.InterfaceDeclaration declarationNode) {
-            value \ialias = declarationNode;
-            return \ialias.typeSpecifier;
-        } else if (is Tree.TypeAliasDeclaration declarationNode) {
-            value \ialias = declarationNode;
-            return \ialias.typeSpecifier;
-        } else {
-            throw Exception("not a value, function, or type alias");
+            value prevIndex = from.tokenIndex - 1;
+            if (prevIndex >= 0, 
+                exists tok = tokens.get(prevIndex),
+                tok.channel == Token.hiddenChannel) {
+                from = tok;
+            }
+            
+            if (is CommonToken t = from) {
+                textChange.addEdit( 
+                    DeleteEdit {
+                        start = t.startIndex;
+                        length = declarationNode.endIndex.intValue() - t.startIndex;
+                    });
+            }
         }
     }
 
-    Boolean isSingleExpression(JList<Tree.Statement> statements) {
-        return statements.size() == 1
-                && statements.get(0) is Tree.ExpressionStatement;
+    Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition
+    getInlinedDefinition(Tree.Declaration declarationNode) {
+        switch (declarationNode)
+        case (is Tree.MethodDeclaration) {
+            return declarationNode.specifierExpression.expression;
+        }
+        case (is Tree.AttributeDeclaration) {
+            return declarationNode.specifierOrInitializerExpression.expression;
+        }
+        case (is Tree.MethodDefinition) {
+            value statements = declarationNode.block.statements;
+            if (declarationNode.type is Tree.VoidModifier) {
+                if (statements.size() == 1, 
+                    is Tree.ExpressionStatement e = statements[0]) {
+                    return e.expression;
+                }
+                else {
+                    return declarationNode.block;
+                }
+            }
+            else {
+                if (statements.size() == 1,
+                    is Tree.Return r = statements[0]) {
+                    return r.expression;
+                }
+                else {
+                    "function body is not a single return statement"
+                    assert (false);
+                }
+            }
+        }
+        case (is Tree.AttributeGetterDefinition) {
+            value statements = declarationNode.block.statements;
+            if (statements.size() == 1, 
+                is Tree.Return r = statements[0]) {
+                return r.expression;
+            }
+            else {
+                "getter body is not a single return statement"
+                assert (false);
+            }
+        }
+        case (is Tree.ClassDeclaration) {
+            return declarationNode.classSpecifier;
+        }
+        case (is Tree.ObjectDefinition) {
+            return declarationNode;
+        }
+        case (is Tree.InterfaceDeclaration) {
+            return declarationNode.typeSpecifier;
+        }
+        case (is Tree.TypeAliasDeclaration) {
+            return declarationNode.typeSpecifier;
+        } else {
+            "not a value, function, or type alias"
+            assert (false);
+        }
     }
     
-    Boolean isSingleReturn(JList<Tree.Statement> statements) {
-        return statements.size() == 1
-                && statements.get(0) is Tree.Return;
-    }
-
-    void inlineReferences(Tree.Declaration declarationNode, 
-        Tree.CompilationUnit declarationUnit, Node definition, 
-        JList<CommonToken> declarationTokens, Tree.CompilationUnit pu, 
-        JList<CommonToken> tokens, TextChange tfc) {
+    shared void inlineObjectReferences(
+        Tree.CompilationUnit rootNode, 
+        JList<CommonToken> tokens, 
+        Tree.ObjectDefinition declarationNode, 
+        JList<CommonToken> declarationTokens, 
+        TextChange textChange) {
         
-        if (is Tree.AnyAttribute declarationNode,
-            is Tree.Term expression = definition) {
-
-            inlineAttributeReferences(pu, tokens, expression, declarationTokens, tfc);
-        } else if (is Tree.AnyMethod method = declarationNode,
-                   is Tree.Term expression = definition) {
-            inlineFunctionReferences(pu, tokens, expression, method,
-                declarationTokens, tfc);
-        } else if (is Tree.ClassDeclaration classAlias = declarationNode,
-                   is Tree.ClassSpecifier spec = definition) {
-            inlineClassAliasReferences(pu, tokens, spec.invocationExpression,
-                spec.type, classAlias, declarationTokens, tfc);
-        } else if (is Tree.TypeAliasDeclaration|Tree.InterfaceDeclaration declarationNode,
-                   is Tree.TypeSpecifier definition) {
-            inlineTypeAliasReferences(pu, tokens, definition.type, 
-                declarationTokens, tfc);
+        object extends Visitor() {
+            shared actual void visit(Tree.MemberOrTypeExpression that) {
+                super.visit(that);
+                inlineDefinition {
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    definition = declarationNode;
+                    textChange = textChange;
+                    invocation = null;
+                    reference = that;
+                    needsParens = false;
+                    removeBraces = false;
+                    inlinedScope = declarationNode.anonymousClass;
+                };
+            }
+        }.visit(rootNode);
+    }
+    
+    void inlineReferences(Tree.Declaration declarationNode, 
+        Tree.CompilationUnit declarationUnit, 
+        Tree.Expression|Tree.ClassSpecifier|Tree.TypeSpecifier|Tree.Block|Tree.ObjectDefinition definition, 
+        JList<CommonToken> declarationTokens, 
+        Tree.CompilationUnit rootNode, 
+        JList<CommonToken> tokens, TextChange textChange) {
+        
+        switch (declarationNode)
+        case (is Tree.AnyAttribute) {
+            assert (is Tree.Expression definition);
+            inlineValueReferences {
+                rootNode = rootNode;
+                tokens = tokens;
+                term = definition.term;
+                declarationTokens = declarationTokens;
+                decNode = declarationNode;
+                textChange = textChange;
+            };
         }
+        case (is Tree.AnyMethod) {
+            assert (is Tree.Expression|Tree.Block definition);
+            inlineFunctionReferences {
+                rootNode = rootNode;
+                tokens = tokens;
+                definition = if (is Tree.Expression definition) then definition.term else definition;
+                decNode = declarationNode;
+                declarationTokens = declarationTokens;
+                textChange = textChange;
+            };
+        }
+        case (is Tree.ClassDeclaration) {
+            assert (is Tree.ClassSpecifier definition);
+            inlineClassAliasReferences {
+                rootNode = rootNode;
+                tokens = tokens;
+                term = definition.invocationExpression;
+                type = definition.type;
+                declarationNode = declarationNode;
+                declarationTokens = declarationTokens;
+                textChange = textChange;
+            };
+        } 
+        case (is Tree.TypeAliasDeclaration|Tree.InterfaceDeclaration) {
+            assert (is Tree.TypeSpecifier definition);
+            inlineTypeAliasReferences {
+                rootNode = rootNode;
+                tokens = tokens;
+                type = definition.type;
+                declarationNode = declarationNode;
+                declarationTokens = declarationTokens;
+                textChange = textChange;
+            };
+        }
+        case (is Tree.ObjectDefinition) {
+            inlineObjectReferences {
+                rootNode = rootNode;
+                tokens = tokens;
+                declarationNode = declarationNode;
+                declarationTokens = declarationTokens;
+                textChange = textChange;
+            };
+        }
+        else {}
     }
 
-    void inlineFunctionReferences(Tree.CompilationUnit pu, JList<CommonToken> tokens,
-        Tree.Term term, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
-        TextChange tfc) {
+    void inlineFunctionReferences(Tree.CompilationUnit rootNode, JList<CommonToken> tokens,
+        Tree.Term|Tree.Block definition, Tree.AnyMethod decNode, JList<CommonToken> declarationTokens,
+        TextChange textChange) {
+        
+        value defaultArgs = HashMap<Declaration,Tree.Expression>();
+        for (pl in decNode.parameterLists) {
+            for (p in pl.parameters) {
+                switch (p) 
+                case (is Tree.InitializerParameter) {
+                    if (exists e = p.specifierExpression?.expression,
+                        exists d = p.parameterModel?.declaration) {
+                        defaultArgs[d] = e;
+                    }
+                }
+                case (is Tree.ValueParameterDeclaration) {
+                    if (is Tree.AttributeDeclaration ad = p.typedDeclaration,
+                        exists e = ad.specifierOrInitializerExpression?.expression) {
+                        defaultArgs[ad.declarationModel] = e;
+                    }
+                }
+                //TODO: default args for function parameters
+                else {}
+            }
+        }
         
         object extends Visitor() {
             variable Boolean needsParens = false;
+            
+            shared actual void visit(Tree.MethodDeclaration that) {
+                if (is Tree.Block definition,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //delete the fat arrow
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = false;
+                        removeBraces = false;
+                        defaultArgs = defaultArgs;
+                        inlinedScope = decNode.declarationModel;
+                    };
+                    //delete the semicolon
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.AttributeDeclaration that) {
+                if (is Tree.Block definition,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierOrInitializerExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //delete the fat arrow
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = false;
+                        removeBraces = false;
+                        defaultArgs = defaultArgs;
+                        inlinedScope = null;
+                    };
+                    //delete the semicolon
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.SpecifierStatement that) {
+                if (is Tree.Block definition,
+                    that.refinement,
+                    is Tree.LazySpecifierExpression se 
+                            = that.specifierExpression,
+                    is Tree.InvocationExpression ie = se.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    //convert from shortcut refinement
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = that.startIndex.intValue();
+                            text = "shared actual void ";
+                        });
+                    //delete the fat arrow
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = se.startIndex.intValue();
+                            length = 2;
+                        });
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = false;
+                        removeBraces = false;
+                        inlinedScope = decNode.declarationModel;
+                        defaultArgs = defaultArgs;
+                    };
+                    //delete the semicolon
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
+            shared actual void visit(Tree.ExpressionStatement that) {
+                if (is Tree.Block definition,
+                    is Tree.InvocationExpression ie = that.expression.term,
+                    is Tree.MemberOrTypeExpression primary = ie.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = ie;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = true;
+                        inlinedScope = decNode.declarationModel;
+                        defaultArgs = defaultArgs;
+                    };
+                    //delete the semicolon
+                    textChange.addEdit( 
+                        DeleteEdit {
+                            start = that.stopIndex.intValue();
+                            length = 1;
+                        });
+                }
+                else {
+                    super.visit(that);
+                }
+            }
+            
             shared actual void visit(Tree.InvocationExpression that) {
-                super.visit(that);
-                value primary = that.primary;
-                if (is Tree.MemberOrTypeExpression primary) {
-                    value mte = primary;
-                    inlineDefinition(tokens, declarationTokens, term, tfc, that, mte, needsParens);
+                if (!is Tree.Block definition,
+                    is Tree.MemberOrTypeExpression primary = that.primary,
+                    inlineRef(primary, primary.declaration)) {
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = that;
+                        reference = primary;
+                        needsParens = needsParens;
+                        removeBraces = true;
+                        inlinedScope = decNode.declarationModel;
+                        defaultArgs = defaultArgs;
+                    };
+                }
+                else {
+                    super.visit(that);
                 }
             }
             
             shared actual void visit(Tree.MemberOrTypeExpression that) {
-                super.visit(that);
-                value dec = that.declaration;
-                if (!that.directlyInvoked, inlineRef(that, dec)) {
+                if (inlineRef(that, that.declaration)) {
+                    //we have a function ref to the inlined
+                    //function (not an invocation)
+                    
+                    //create an anonymous function to wrap
+                    //the inlined function
                     value text = StringBuilder();
-                    value \ifunction = decNode.declarationModel;
-                    if (\ifunction.declaredVoid) {
+                    if (that.directlyInvoked) {
+                        text.append("(");
+                    }
+                    if (decNode.declarationModel.declaredVoid) {
                         text.append("void ");
                     }
-                    
                     for (pl in decNode.parameterLists) {
-                        text.append(nodes.text(pl, declarationTokens));
+                        text.append(nodes.text(declarationTokens, pl));
                     }
-                    
-                    text.append(" => ");
-                    text.append(nodes.text(term, declarationTokens));
-                    addEditToChange(tfc, newReplaceEdit(that.startIndex.intValue(),
-                        that.distance.intValue(), text.string));
+                    text.append(" ");
+                    if (!definition is Tree.Block) {
+                        text.append("=> ");
+                    }
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = that.startIndex.intValue();
+                            text = text.string;
+                        });
+                    //now inline the body of the function
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = definition;
+                        textChange = textChange;
+                        invocation = null;
+                        reference = that;
+                        needsParens = needsParens;
+                        removeBraces = false;
+                        inlinedScope = decNode.declarationModel;
+                        defaultArgs = defaultArgs;
+                    };
+                    if (that.directlyInvoked) {
+                        textChange.addEdit( 
+                            InsertEdit {
+                                start = that.endIndex.intValue();
+                                text = ")";
+                            });
+                    }
+                }
+                else {
+                    value onp = needsParens;
+                    if (that is Tree.QualifiedMemberOrTypeExpression) {
+                        needsParens = true;
+                    }
+                    super.visit(that);
+                    needsParens = onp;
                 }
             }
             
@@ -531,34 +965,68 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 super.visit(that);
                 needsParens = onp;
             }
-        }.visit(pu);
+        }.visit(rootNode);
     }
 
-    void inlineTypeAliasReferences(Tree.CompilationUnit pu, 
-        JList<CommonToken> tokens, Tree.Type term, 
-        JList<CommonToken> declarationTokens, TextChange tfc) {
+    void inlineTypeAliasReferences(Tree.CompilationUnit rootNode, 
+        JList<CommonToken> tokens, Tree.Type type, 
+        Tree.TypeAliasDeclaration|Tree.InterfaceDeclaration declarationNode,
+        JList<CommonToken> declarationTokens, TextChange textChange) {
+        
+        value defaultTypeArgs = map {
+            if (exists typeParameterList = declarationNode.typeParameterList)
+            for (tp in typeParameterList.typeParameterDeclarations)
+            if (exists t = tp.typeSpecifier?.type)
+            tp.declarationModel -> t
+        };
         
         object extends Visitor() {
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                inlineDefinition(tokens, declarationTokens, term, tfc, 
-                    null, that, false);
+                inlineDefinitionWithDefaultArgs {
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    definition = type;
+                    textChange = textChange;
+                    invocation = null;
+                    reference = that;
+                    needsParens = false;
+                    removeBraces = false;
+                    inlinedScope = null;
+                    defaultArgs = defaultTypeArgs;
+                };
             }
-        }.visit(pu);
+        }.visit(rootNode);
     }
 
-    void inlineClassAliasReferences(Tree.CompilationUnit pu, 
+    void inlineClassAliasReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.InvocationExpression term,
-        Tree.Type type, Tree.ClassDeclaration decNode,
-        JList<CommonToken> declarationTokens, TextChange tfc) {
+        Tree.Type type, Tree.ClassDeclaration declarationNode,
+        JList<CommonToken> declarationTokens, TextChange textChange) {
+        
+        value defaultTypeArgs = map {
+            for (tp in declarationNode.typeParameterList.typeParameterDeclarations)
+            if (exists t = tp.typeSpecifier?.type)
+            tp.declarationModel -> t
+        };
         
         object extends Visitor() {
             variable Boolean needsParens = false;
 
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                inlineDefinition(tokens, declarationTokens, type, tfc, null,
-                    that, false);
+                inlineDefinitionWithDefaultArgs {
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    definition = type;
+                    textChange = textChange;
+                    invocation = null;
+                    reference = that;
+                    needsParens = false;
+                    removeBraces = false;
+                    inlinedScope = null;
+                    defaultArgs = defaultTypeArgs;
+                };
             }
             
             shared actual void visit(Tree.InvocationExpression that) {
@@ -566,8 +1034,18 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value primary = that.primary;
                 if (is Tree.MemberOrTypeExpression primary) {
                     value mte = primary;
-                    inlineDefinition(tokens, declarationTokens, term, tfc,
-                        that, mte, needsParens);
+                    inlineDefinitionWithDefaultArgs {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        definition = term;
+                        textChange = textChange;
+                        invocation = that;
+                        reference = mte;
+                        needsParens = needsParens;
+                        removeBraces = false;
+                        inlinedScope = null;
+                        defaultArgs = defaultTypeArgs;
+                    };
                 }
             }
             
@@ -576,17 +1054,18 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 value d = that.declaration;
                 if (!that.directlyInvoked, inlineRef(that, d)) {
                     value text = StringBuilder();
-                    value dec = decNode.declarationModel;
-                    if (dec.declaredVoid) {
+                    if (declarationNode.declarationModel.declaredVoid) {
                         text.append("void ");
                     }
-                    
-                    value pl = decNode.parameterList;
-                    text.append(nodes.text(pl, declarationTokens));
-                    text.append(" => ");
-                    text.append(nodes.text(term, declarationTokens));
-                    addEditToChange(tfc, newReplaceEdit(that.startIndex.intValue(), 
-                        that.distance.intValue(), text.string));
+                    text.append(nodes.text(declarationTokens, declarationNode.parameterList))
+                        .append(" => ")
+                        .append(nodes.text(declarationTokens, term));
+                    textChange.addEdit( 
+                        ReplaceEdit {
+                            start = that.startIndex.intValue();
+                            length = that.distance.intValue();
+                            text = text.string;
+                        });
                 }
             }
             
@@ -610,43 +1089,75 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 super.visit(that);
                 needsParens = onp;
             }
-        }.visit(pu);
+        }.visit(rootNode);
     }
 
-    void inlineAttributeReferences(Tree.CompilationUnit pu, 
+    void inlineValueReferences(Tree.CompilationUnit rootNode, 
         JList<CommonToken> tokens, Tree.Term term, 
-        JList<CommonToken> declarationTokens, TextChange tfc) {
+        JList<CommonToken> declarationTokens,
+        Tree.AnyAttribute decNode, 
+        TextChange textChange) {
         
         object extends Visitor() {
-            variable Boolean needsParens = false;
+            variable value needsParens = false;
+            variable value disabled = false;
             
             shared actual void visit(Tree.Variable that) {
+                value dec = that.declarationModel;
                 if (that.type is Tree.SyntheticVariable,
-                    exists od = that.declarationModel.originalDeclaration,
-                    od == editorData.declaration,
+                    exists id = that.identifier,
+                    original(dec) == editorData.declaration,
                     editorData.delete) {
-                    
-                    value startIndex = that.specifierExpression.startIndex.intValue();
-                    value text = that.identifier.text + " = ";
-                    addEditToChange(tfc, newInsertEdit(startIndex, text));
+                    disabled = true;
+                    textChange.addEdit( 
+                        InsertEdit {
+                            start = id.startIndex.intValue();
+                            text = id.text + " = ";
+                        });
                 }
-                
                 super.visit(that);
+            }
+            
+            shared actual void visit(Tree.Body that) {
+                if (!disabled) {
+                    super.visit(that);
+                }
+                disabled = false;
+            }
+            
+            shared actual void visit(Tree.ElseClause that) {
+                //don't re-visit the Variable!
+                if (exists block = that.block) { 
+                    block.visit(this);
+                }
+                if (exists expression = that.expression) { 
+                    expression.visit(this);
+                }
             }
             
             shared actual void visit(Tree.MemberOrTypeExpression that) {
+                value onp = needsParens;
+                if (that is Tree.QualifiedMemberOrTypeExpression) {
+                    needsParens = true;
+                }
                 super.visit(that);
-                inlineDefinition(tokens, declarationTokens, term, tfc, null, that, needsParens);
+                needsParens = onp;
+                inlineDefinition {
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    definition = term;
+                    textChange = textChange;
+                    invocation = null;
+                    reference = that;
+                    needsParens = needsParens;
+                    removeBraces = false;
+                    inlinedScope = 
+                            if (is Tree.AttributeGetterDefinition decNode) 
+                            then decNode.declarationModel else null;
+                };
             }
             
             shared actual void visit(Tree.OperatorExpression that) {
-                value onp = needsParens;
-                needsParens = true;
-                super.visit(that);
-                needsParens = onp;
-            }
-            
-            shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
                 value onp = needsParens;
                 needsParens = true;
                 super.visit(that);
@@ -666,172 +1177,279 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                 super.visit(that);
                 needsParens = onp;
             }
-        }.visit(pu);
+        }.visit(rootNode);
     }
 
     void inlineAliasDefinitionReference(JList<CommonToken> tokens, 
         JList<CommonToken> declarationTokens, Node reference, 
-        StringBuilder result, Tree.Type it) {
+        StringBuilder result, Tree.BaseType baseType,
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
-        value t = it.typeModel;
-        value td = t.declaration;
-        if (is TypeParameter td,
+        if (exists t = baseType.typeModel,
+            is TypeParameter td = t.declaration,
             is Generic ta = editorData.declaration) {
             
             value index = ta.typeParameters.indexOf(td);
-            
             if (index >= 0) {
-                if (is Tree.SimpleType reference) {
-                    value st = reference;
-                    value tal = st.typeArgumentList;
-                    value types = tal.types;
-                    if (types.size() > index) {
-                        value type = types.get(index);
-                        result.append(nodes.text(type, tokens));
-                        return;
+                switch (reference)
+                case (is Tree.SimpleType) {
+                    if (exists type 
+                            = reference.typeArgumentList.types[index] 
+                            else defaultArgs[td]) {
+                        result.append(nodes.text(tokens, type));
+                        return; //EARLY EXIT!
                     }
-                } else if (is Tree.StaticMemberOrTypeExpression st = reference) {
-                    value tas = st.typeArguments;
-                    
+                }
+                case (is Tree.StaticMemberOrTypeExpression) {
+                    value tas = reference.typeArguments;
                     if (is Tree.TypeArgumentList tas) {
-                        value tal = tas;
-                        value types = tal.types;
-                        if (types.size() > index) {
-                            if (exists type = types[index]) {
-                                result.append(nodes.text(type, tokens));
-                            }
-                            
-                            return;
+                        if (exists type 
+                                = tas.types[index] 
+                                else defaultArgs[td]) {
+                            result.append(nodes.text(tokens, type));
+                            return;  //EARLY EXIT!
                         }
                     } else {
-                        value types = tas.typeModels;
-                        if (types.size() > index) {
-                            if (exists type = types[index]) {
-                                result.append(type.asSourceCodeString(it.unit));
-                            }
-                            
-                            return;
+                        if (exists type = tas.typeModels[index]) {
+                            result.append(type.asSourceCodeString(baseType.unit));
+                            return; //EARLY EXIT!
                         }
                     }
                 }
+                else {}
             }
         }
         
-        result.append(nodes.text(it, declarationTokens));
+        result.append(baseType.identifier.text);
     }
 
-    void inlineDefinitionReference(JList<CommonToken> tokens, 
-        JList<CommonToken> declarationTokens, Node reference,
-        Tree.InvocationExpression? ie, StringBuilder result, 
-        Tree.StaticMemberOrTypeExpression it) {
+    void inlineDefinitionReference(
+        JList<CommonToken> tokens, 
+        JList<CommonToken> declarationTokens, 
+        Node reference, 
+        Tree.InvocationExpression? invocation, 
+        Tree.BaseMemberExpression|Tree.This localReference, 
+        Scope? inlinedScope,
+        StringBuilder result, 
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
-        value dec = it.declaration;
-        if (dec.parameter,
-            exists ie,
-            it is Tree.BaseMemberOrTypeExpression,
-            is FunctionOrValue fov = dec) {
-
-            value param = fov.initializerParameter;
-            if (param.declaration.equals(editorData.declaration)) {
-                value sequenced = param.sequenced;
-                if (ie.positionalArgumentList exists) {
-                    interpolatePositionalArguments(result, ie, it, sequenced, tokens);
-                }
-                
-                if (ie.namedArgumentList exists) {
-                    interpolateNamedArguments(result, ie, it, sequenced, tokens);
-                }
-                
-                return; //NOTE: early exit!
+        if (is Tree.This localReference) {
+            if (is Tree.QualifiedMemberOrTypeExpression reference,
+                exists refdec = localReference.declarationModel,
+                !ModelUtil.contains(inlinedScope, refdec)) {
+                result.append(nodes.text(tokens, reference.primary));
+            }
+            else {
+                result.append(nodes.text(declarationTokens, localReference));
             }
         }
-        
-        value expressionText = nodes.text(it, declarationTokens);
-        if (is Tree.QualifiedMemberOrTypeExpression reference) {
-            //TODO: handle more depth, for example, foo.bar.baz
-            value qmtre = reference;
-            value prim = nodes.text(qmtre.primary, tokens);
-            if (is Tree.QualifiedMemberOrTypeExpression it) {
-                value qmte = it;
-                value p = qmte.primary;
-                if (is Tree.This p) {
-                    value op = qmte.memberOperator.text;
-                    value id = qmte.identifier.text;
-                    result.append(prim).append(op).append(id);
-                } else {
-                    value primaryText = nodes.text(p, declarationTokens);
-                    if (is Tree.MemberOrTypeExpression p) {
-                        value mte = p;
-                        if (mte.declaration.classOrInterfaceMember) {
-                            result.append(prim).append(".").append(primaryText);
-                        }
-                    } else {
-                        result.append(primaryText);
-                    }
-                }
-            } else {
-                if (it.declaration.classOrInterfaceMember) {
-                    result.append(prim).append(".").append(expressionText);
-                } else {
-                    result.append(expressionText);
-                }
+        else if (exists invocation,
+            is FunctionOrValue dec = localReference.declaration,
+            dec.parameter, 
+            exists param = dec.initializerParameter, 
+            param.declaration == editorData.declaration) {
+            if (exists pal = invocation.positionalArgumentList) {
+                interpolatePositionalArguments {
+                    result = result;
+                    positionalArgumentList = pal;
+                    reference = localReference;
+                    sequenced = param.sequenced;
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    defaultArgs = defaultArgs;
+                };
             }
-        } else {
-            result.append(expressionText);
+            if (exists nal = invocation.namedArgumentList) {
+                interpolateNamedArguments {
+                    result = result;
+                    namedArgumentList = nal;
+                    reference = localReference;
+                    sequenced = param.sequenced;
+                    tokens = tokens;
+                    declarationTokens = declarationTokens;
+                    defaultArgs = defaultArgs;
+                };
+            }
+        }
+        else if (is Tree.QualifiedMemberOrTypeExpression reference,
+            exists refDec = localReference.declaration, 
+            refDec.classOrInterfaceMember,
+            !ModelUtil.contains(inlinedScope, refDec.container)) {
+            //assume it's a reference to the immediately 
+            //containing class, i.e. the receiver
+            //TODO: handle refs to outer classes
+            result.append(nodes.text(tokens, reference.primary))
+                    .append(".")
+                    .append(nodes.text(declarationTokens, localReference));
+        }
+        else {
+            result.append(nodes.text(declarationTokens, localReference));
         }
     }
-
+    
+    //TODO: Needed due to compiler backend bug
+    //      Should just use a default arg!
     void inlineDefinition(JList<CommonToken> tokens, 
-        JList<CommonToken> declarationTokens, Node definition, TextChange tfc,
-        Tree.InvocationExpression? that, Node reference, Boolean needsParens) {
+        JList<CommonToken> declarationTokens, 
+        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition, 
+        TextChange textChange, 
+        Tree.InvocationExpression? invocation, 
+        Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
+        Boolean needsParens, Boolean removeBraces, 
+        Scope? inlinedScope) 
+            => inlineDefinitionWithDefaultArgs {
+                tokens = tokens;
+                declarationTokens = declarationTokens;
+                definition = definition;
+                textChange = textChange;
+                invocation = invocation;
+                reference = reference;
+                needsParens = needsParens;
+                removeBraces = removeBraces;
+                inlinedScope = inlinedScope;
+                defaultArgs = emptyMap;
+            };
+
+    void inlineDefinitionWithDefaultArgs(JList<CommonToken> tokens, 
+        JList<CommonToken> declarationTokens, 
+        Tree.Term|Tree.Type|Tree.Block|Tree.ObjectDefinition definition, 
+        TextChange textChange, 
+        Tree.InvocationExpression? invocation, 
+        Tree.MemberOrTypeExpression|Tree.SimpleType reference, 
+        Boolean needsParens, Boolean removeBraces, 
+        Scope? inlinedScope,
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
-        Declaration dec;
-        if (is Tree.MemberOrTypeExpression reference) {
-            value mte = reference;
-            dec = mte.declaration;
-        } else if (is Tree.SimpleType reference) {
-            value st = reference;
-            dec = st.declarationModel;
-        } else {
-            //can't happen
-            return;
-        }
-        
-        if (inlineRef(reference, dec)) {
+        if (inlineRef {
+            node = reference;
+            declaration =
+                switch (reference)
+                case (is Tree.MemberOrTypeExpression)
+                    reference.declaration
+                case (is Tree.SimpleType)
+                    reference.declarationModel;
+        }) {
             //TODO: breaks for invocations like f(f(x, y),z)
             value result = StringBuilder();
-
+            
             class InterpolationVisitor() extends Visitor() {
                 variable Integer start = 0;
-                value template = nodes.text(definition, declarationTokens);
-                value templateStart = definition.startIndex.intValue();
-                void text(Node it) {
-                    value text = template.span(start, 
-                        it.startIndex.intValue() - templateStart - 1);
-                    result.append(text);
-                    start = it.endIndex.intValue() - templateStart;
+                String template;
+                Integer templateStart;
+                if (is Tree.ObjectDefinition definition) {
+                    result.append("object");
+                    templateStart = definition.startIndex.intValue();
+                    start = definition.identifier.endIndex.intValue() - templateStart;
+                    template = nodes.text(declarationTokens, definition);
+                }
+                else if (removeBraces, is Tree.Block definition) {
+                    value sts = definition.statements;
+                    if (sts.empty) {
+                        template = "";
+                        templateStart = definition.startIndex.intValue()+1;
+                    }
+                    else {
+                        value firstStatement = sts.get(0);
+                        value lastStatement = sts.get(sts.size()-1);
+                        template = nodes.text(declarationTokens, firstStatement, lastStatement);
+                        templateStart = sts.get(0).startIndex.intValue();
+                    }
+                }
+                else {
+                    template = nodes.text(declarationTokens, definition);
+                    templateStart = definition.startIndex.intValue();
+                }
+                
+                void appendUpTo(Node it) {
+                    value len = it.startIndex.intValue() - templateStart - start;
+                    if (len>=0) {
+                        value text = template[start:len];
+                        result.append(text);
+                        start = it.endIndex.intValue() - templateStart;
+                    }
+                }
+                
+                shared actual void visit(Tree.IsCase it) {
+                    if (exists t = it.type) {
+                        t.visit(this);
+                    }
+                }
+                
+                shared actual void visit(Tree.QualifiedMemberOrTypeExpression it) {
+                    //visit the primary first!
+                    if (exists p = it.primary) {
+                        p.visit(this);
+                    }
+                }
+                
+                shared actual void visit(Tree.This it) {
+                    appendUpTo(it);
+                    inlineDefinitionReference {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        reference = reference;
+                        invocation = invocation;
+                        result = result;
+                        localReference = it;
+                        inlinedScope = inlinedScope;
+                        defaultArgs = defaultArgs;
+                    };
+                    super.visit(it);
+                }
+                
+                shared actual void visit(Tree.AnnotationList it) {}
+                
+                shared actual void visit(Tree.SpecifierStatement it) {
+                    if (!it.refinement, 
+                        exists lhs = it.baseMemberExpression) {
+                        lhs.visit(this);
+                    }
+                    if (exists se = it.specifierExpression) {
+                        se.visit(this);
+                    }
                 }
                 
                 shared actual void visit(Tree.BaseMemberExpression it) {
+                    appendUpTo(it.identifier);
+                    inlineDefinitionReference {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        reference = reference;
+                        invocation = invocation;
+                        result = result;
+                        localReference = it;
+                        inlinedScope = inlinedScope;
+                        defaultArgs = defaultArgs;
+                    };
                     super.visit(it);
-                    text(it);
-                    inlineDefinitionReference(tokens, declarationTokens, reference, that, result, it);
                 }
                 
-                shared actual void visit(Tree.QualifiedMemberExpression it) {
-                    super.visit(it);
-                    text(it);
-                    inlineDefinitionReference(tokens, declarationTokens, reference, that, result, it);
+                shared actual void visit(Tree.QualifiedType it) {
+                    //visit the qualifying type before 
+                    //visiting the type argument list
+                    if (exists ot = it.outerType) {
+                        ot.visit(this);
+                    }
+                    if (exists tal = it.typeArgumentList) {
+                        tal.visit(this);
+                    }
                 }
                 
-                shared actual void visit(Tree.Type it) {
+                shared actual void visit(Tree.BaseType it) {
+                    appendUpTo(it.identifier);
+                    inlineAliasDefinitionReference {
+                        tokens = tokens;
+                        declarationTokens = declarationTokens;
+                        reference = reference;
+                        result = result;
+                        baseType = it;
+                        defaultArgs = defaultArgs;
+                    };
                     super.visit(it);
-                    text(it);
-                    inlineAliasDefinitionReference(tokens, declarationTokens, reference, result, it);
                 }
                 
                 shared void finish() {
-                    value text = template.span(start, template.size - 1);
+                    value text = template[start:template.size-start];
                     result.append(text);
                 }
             }
@@ -840,34 +1458,46 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
             definition.visit(iv);
             iv.finish();
             
-            if (needsParens, 
-                (definition is Tree.OperatorExpression 
-                    || definition is Tree.IfExpression
-                    || definition is Tree.SwitchExpression
-                    || definition is Tree.ObjectExpression
-                    || definition is Tree.LetExpression
-                    || definition is Tree.FunctionArgument)) {
+            if (needsParens &&
+                (definition is 
+                    Tree.OperatorExpression
+                  | Tree.IfExpression
+                  | Tree.SwitchExpression
+                  | Tree.ObjectExpression
+                  | Tree.LetExpression
+                  | Tree.FunctionArgument)) {
                 result.insert(0, "(").append(")");
             }
             
-            value node = that else reference;
+            value node = invocation else reference;
             
-            addEditToChange(tfc, newReplaceEdit(node.startIndex.intValue(),
-                node.distance.intValue(), result.string));
+            textChange.addEdit( 
+                ReplaceEdit {
+                    start = node.startIndex.intValue();
+                    length = node.distance.intValue();
+                    text = result.string;
+                });
         }
     }
 
-    Boolean inlineRef(Node that, Declaration dec) {
-        return (!editorData.justOne 
-            || that.unit == editorData.node.unit
-                && that.startIndex exists
-                && that.startIndex == editorData.node.startIndex)
-                && dec == editorData.declaration;
+    Boolean inlineRef(Node node, Declaration? declaration) {
+        if (!exists declaration) {
+            return false;
+        }
+        return (!editorData.justOne
+              || node.unit == editorData.node.unit
+                 && node.startIndex exists
+                 && node.startIndex == editorData.node.startIndex)
+            && original(declaration) == editorData.declaration;
     }
 
     void interpolatePositionalArguments(StringBuilder result, 
-        Tree.InvocationExpression that, Tree.StaticMemberOrTypeExpression it, 
-        Boolean sequenced, JList<CommonToken> tokens) {
+        Tree.PositionalArgumentList positionalArgumentList, 
+        Tree.StaticMemberOrTypeExpression reference, 
+        Boolean sequenced, 
+        JList<CommonToken> tokens,
+        JList<CommonToken> declarationTokens,
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         variable Boolean first = true;
         variable Boolean found = false;
@@ -875,13 +1505,11 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         if (sequenced) {
             result.append("{");
         }
-        
-        value args = that.positionalArgumentList.positionalArguments;
-        for (arg in args) {
+        for (arg in positionalArgumentList.positionalArguments) {
             value param = arg.parameter;
-            value model = param.model;
-            if (it.declaration.equals(model)) {
-                if (param.sequenced, arg is Tree.ListedArgument) {
+            if (reference.declaration == param.model) {
+                if (param.sequenced &&
+                    arg is Tree.ListedArgument) {
                     if (first) {
                         result.append(" ");
                     }
@@ -893,7 +1521,7 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
                     first = false;
                 }
                 
-                result.append(nodes.text(arg, tokens));
+                result.append(nodes.text(tokens, arg));
                 found = true;
             }
         }
@@ -907,66 +1535,69 @@ shared interface InlineRefactoring<ICompletionProposal, IDocument, InsertEdit, T
         }
         
         if (!found) {
-            //TODO: use default value!
+            if (exists e = defaultArgs[reference.declaration]) {
+                result.append(nodes.text(declarationTokens, e));
+            }
         }
     }
 
     void interpolateNamedArguments(StringBuilder result, 
-        Tree.InvocationExpression that, Tree.StaticMemberOrTypeExpression it,
-        Boolean sequenced, JList<CommonToken> tokens) {
+        Tree.NamedArgumentList namedArgumentList, 
+        Tree.StaticMemberOrTypeExpression reference,
+        Boolean sequenced, 
+        JList<CommonToken> tokens,
+        JList<CommonToken> declarationTokens,
+        Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         variable Boolean found = false;
-        value args = that.namedArgumentList.namedArguments;
-        
-        for (arg in args) {
-            value pm = arg.parameter.model;
-            if (it.declaration.equals(pm)) {
+        for (arg in namedArgumentList.namedArguments) {
+            if (reference.declaration == arg.parameter.model) {
                 assert (is Tree.SpecifiedArgument sa = arg);
                 value argTerm = sa.specifierExpression.expression.term;
                 result//.append(template.substring(start,it.getStartIndex()-templateStart))
-                    .append(nodes.text(argTerm, tokens));
+                    .append(nodes.text(tokens, argTerm));
                 //start = it.getStopIndex()-templateStart+1;
                 found = true;
             }
         }
         
-        if (exists seqArg = that.namedArgumentList.sequencedArgument) {
-            value spm = seqArg.parameter.model;
-            if (it.declaration.equals(spm)) {
-                result//.append(template.substring(start,it.getStartIndex()-templateStart))
-                    .append("{");
-                //start = it.getStopIndex()-templateStart+1;;
-                
-                variable Boolean first = true;
-                value pargs = seqArg.positionalArguments;
-                
-                for (pa in pargs) {
-                    if (first) {
-                        result.append(" ");
-                    }
-                    
-                    if (!first) {
-                        result.append(", ");
-                    }
-                    
-                    first = false;
-                    result.append(nodes.text(pa, tokens));
-                }
-                
-                if (!first) {
+        if (exists seqArg = namedArgumentList.sequencedArgument, 
+            reference.declaration == seqArg.parameter.model) {
+            result//.append(template.substring(start,it.getStartIndex()-templateStart))
+                .append("{");
+            //start = it.getStopIndex()-templateStart+1;;
+            
+            variable Boolean first = true;
+            value pargs = seqArg.positionalArguments;
+            
+            for (pa in pargs) {
+                if (first) {
                     result.append(" ");
                 }
                 
-                result.append("}");
-                found = true;
+                if (!first) {
+                    result.append(", ");
+                }
+                
+                first = false;
+                result.append(nodes.text(tokens, pa));
             }
+            
+            if (!first) {
+                result.append(" ");
+            }
+            
+            result.append("}");
+            found = true;
         }
         
         if (!found) {
             if (sequenced) {
                 result.append("{}");
             } else {
-                //TODO: use default value!
+                if (exists e = defaultArgs[reference.declaration]) {
+                    result.append(nodes.text(declarationTokens, e));
+                }
             }
         }
     }

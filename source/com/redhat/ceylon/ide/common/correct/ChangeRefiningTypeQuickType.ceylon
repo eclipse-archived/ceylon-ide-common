@@ -1,12 +1,21 @@
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.completion {
+    appendParameter
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    DeleteEdit,
+    InsertEdit
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
     types
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
 }
 import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration,
@@ -15,81 +24,96 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Functional
 }
-import java.util {
-    Collections,
-    HashSet
-}
-import com.redhat.ceylon.ide.common.completion {
-    appendParameter
-}
-shared interface ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
-    
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
 
-    shared void addChangeRefiningTypeProposal(Data data, IFile file) {
-        value decNode = nodes.findDeclaration(data.rootNode, data.node);
-        if (is Tree.TypedDeclaration td = decNode) {
+import java.util {
+    Collections
+}
+
+shared object changeRefiningTypeQuickFix {
+    
+    shared void addProposal(QuickFixData data) {
+        if (is Tree.TypedDeclaration td
+                 = nodes.findDeclaration {
+                    cu = data.rootNode;
+                    node = data.node;
+                }) {
             value dec = td.declarationModel;
             value rd = types.getRefinedDeclaration(dec);
 
             //TODO: this can return the wrong member when
             //      there are multiple ... better to look
             //      at what RefinementVisitor does
-            if (is TypedDeclaration rd) {
-                assert(is TypeDeclaration decContainer = dec.container);
-                assert(is TypeDeclaration rdContainer = rd.container);
-                value supertype = decContainer.type.getSupertype(rdContainer);
-                value ref = rd.appliedReference(supertype, Collections.emptyList<Type>());
+            if (is TypedDeclaration rd,
+                is TypeDeclaration decContainer = dec.container,
+                is TypeDeclaration rdContainer = rd.container) {
+                value supertype 
+                        = decContainer.type.getSupertype(rdContainer);
+                value ref 
+                        = rd.appliedReference(supertype, 
+                            Collections.emptyList<Type>());
                 value t = ref.type;
                 value type = t.asSourceCodeString(td.unit);
-                value declarations = HashSet<Declaration>();
-
-                importProposals.importType(declarations, t, data.rootNode);
-
-                value change = newTextChange("Change Type", file);
-                value offset = data.node.startIndex.intValue();
-                value length = data.node.distance.intValue();
-                initMultiEditChange(change);
-                importProposals.applyImports(change, declarations, data.rootNode, getDocumentForChange(change));
                 
-                addEditToChange(change, newReplaceEdit(offset, length, type));
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Change Type";
+                    input = data.phasedUnit;
+                };
+                change.initMultiEdit();
                 
-                value selection = DefaultRegion(offset, type.size);
-                newProposal(data, "Change type to '" + type + "'", change, selection);
+                value importProposals 
+                        = CommonImportProposals {
+                    document = change.document;
+                    rootNode = data.rootNode;
+                };
+                importProposals.importType(t);
+                importProposals.apply(change);
+                
+                change.addEdit(ReplaceEdit {
+                    start = data.node.startIndex.intValue();
+                    length = data.node.distance.intValue();
+                    text = type;
+                });
+                data.addQuickFix {
+                    description = "Change type to '``type``'";
+                    change = change;
+                    selection = DefaultRegion {
+                        start = data.node.startIndex.intValue();
+                        length = type.size;
+                    };
+                };
             }
         }
     }
     
-    shared void addChangeRefiningParametersProposal(Data data, IFile file) {
-        assert (is Tree.Statement decNode = nodes.findStatement(data.rootNode, data.node));
+    shared void addChangeRefiningParametersProposal(QuickFixData data) {
+        assert (is Tree.Statement decNode 
+            = nodes.findStatement(data.rootNode, data.node));
         
         Tree.ParameterList list;
         Declaration dec;
         
-        if (is Tree.AnyMethod decNode) {
-            value am = decNode;
-            list = am.parameterLists.get(0);
-            dec = am.declarationModel;
-        } else if (is Tree.AnyClass decNode) {
-            value ac = decNode;
-            list = ac.parameterList;
-            dec = ac.declarationModel;
-        } else if (is Tree.SpecifierStatement decNode) {
-            value ss = decNode;
-            value lhs = ss.baseMemberExpression;
+        switch (decNode)
+        case (is Tree.AnyMethod) {
+            list = decNode.parameterLists.get(0);
+            dec = decNode.declarationModel;
+        }
+        case (is Tree.AnyClass) {
+            list = decNode.parameterList;
+            dec = decNode.declarationModel;
+        }
+        case (is Tree.SpecifierStatement) {
+            value lhs = decNode.baseMemberExpression;
             if (is Tree.ParameterizedExpression lhs) {
                 value pe = lhs;
                 list = pe.parameterLists.get(0);
-                dec = ss.declaration;
-            } else {
+                dec = decNode.declaration;
+            }
+            else {
                 return;
             }
-        } else {
+        }
+        else {
             return;
         }
         
@@ -113,41 +137,59 @@ shared interface ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit
             Type? supertype;
             if (is TypeDeclaration decContainer,
                 is TypeDeclaration rdContainer) {
-                supertype = decContainer.type.getSupertype(rdContainer);
+                supertype 
+                        = decContainer.type
+                            .getSupertype(rdContainer);
             } else {
                 supertype = null;
             }
             
-            value pr = rd.appliedReference(supertype, Collections.emptyList<Type>());
+            value pr 
+                    = rd.appliedReference(supertype, 
+                        Collections.emptyList<Type>());
             value params = list.parameters;
-            value change = newTextChange("Fix Refining Parameter List", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Fix Refining Parameter List";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             
             value unit = decNode.unit;
-            value declarations = HashSet<Declaration>();
-            variable value i = 0;
+            value importProposals 
+                    = CommonImportProposals {
+                document = change.document;
+                rootNode = data.rootNode;
+            };
             
+            variable value i = 0;            
             while (i < params.size()) {
                 value p = params.get(i);
                 if (rdpl.size() <= i) {
-                    value start = if (i == 0)
-                                  then list.startIndex.intValue() + 1
-                                  else params.get(i - 1).endIndex.intValue();
-                    value stop = params.get(params.size() - 1).endIndex.intValue();
-                    addEditToChange(change, newDeleteEdit(start, stop - start));
+                    value start 
+                            = if (i == 0)
+                            then list.startIndex.intValue() + 1
+                            else params.get(i-1).endIndex.intValue();
+                    value stop 
+                            = params.get(params.size() - 1).endIndex.intValue();
+                    change.addEdit(DeleteEdit {
+                        start = start;
+                        length = stop - start;
+                    });
                     break;
-                } else {
+                }
+                else {
                     value rdp = rdpl.get(i);
                     value pt = pr.getTypedParameter(rdp).fullType;
                     value dt = dpl.get(i).model.typedReference.fullType;
                     if (!dt.isExactly(pt)) {
-                        addEditToChange(change, 
-                            newReplaceEdit(p.startIndex.intValue(), 
-                                p.distance.intValue(),
-                                //TODO: better handling for callable parameters
-                                pt.asSourceCodeString(unit) + " " + rdp.name)
-                        );
-                        importProposals.importType(declarations, pt, data.rootNode);
+                        change.addEdit(ReplaceEdit {
+                            start = p.startIndex.intValue();
+                            length = p.distance.intValue();
+                            //TODO: better handling for callable parameters
+                            text = pt.asSourceCodeString(unit) + " " + rdp.name;
+                        });
+                        importProposals.importType(pt);
                     }
                 }
                 
@@ -165,23 +207,29 @@ shared interface ChangeRefiningTypeQuickType<IFile,IDocument,InsertEdit,TextEdit
                     
                     appendParameter(buf, pr, rdp, unit, false);
                     value pt = pr.getTypedParameter(rdp).fullType;
-                    importProposals.importType(declarations, pt, data.rootNode);
+                    importProposals.importType(pt);
                     j++;
                 }
                 
-                value offset = if (params.empty) 
-                               then list.startIndex.intValue() + 1
-                               else params.get(params.size() - 1).endIndex.intValue();
-                
-                addEditToChange(change, newInsertEdit(offset, buf.string));
+                change.addEdit(InsertEdit {
+                    start 
+                        = if (params.empty) 
+                        then list.startIndex.intValue() + 1
+                        else params.get(params.size() - 1).endIndex.intValue();
+                    text = buf.string;
+                });
             }
             
-            importProposals.applyImports(change, declarations, data.rootNode,
-                getDocumentForChange(change));
+            importProposals.apply(change);
             
-            if (hasChildren(change)) {
-                value selection = DefaultRegion(list.startIndex.intValue() + 1, 0);
-                newProposal(data, "Fix refining parameter list", change, selection);
+            if (change.hasEdits) {
+                data.addQuickFix {
+                    description = "Fix refining parameter list";
+                    change = change;
+                    selection = DefaultRegion {
+                        start = list.startIndex.intValue() + 1;
+                    };
+                };
             }
         }
     }

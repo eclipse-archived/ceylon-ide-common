@@ -2,77 +2,96 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.completion {
-    IdeCompletionManager,
     getRefinementTextFor,
-    overloads
+    overloads,
+    completionManager
 }
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
-import com.redhat.ceylon.ide.common.util {
-    Indents
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeParameter,
     Declaration,
     ModelUtil,
-    TypeDeclaration
+    TypeDeclaration,
+    NothingType
 }
 
 import java.util {
     LinkedHashMap,
     ArrayList,
-    HashSet,
-    Set
+    HashSet
 }
 
-shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
-    shared actual Tree.MemberOrTypeExpression node, shared actual Tree.CompilationUnit rootNode,
-    shared actual String description, shared actual Icons image, shared actual Type? returnType,
-    shared actual LinkedHashMap<String,Type>? parameters,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals,
-    Indents<out Anything> indents,
-    IdeCompletionManager<out Anything,out Anything,out Anything> completionManager)
+shared class ObjectClassDefinitionGenerator(
+    brokenName, node, rootNode, image, returnType, parameters, document)
         extends DefinitionGenerator() {
     
-    shared actual Boolean isFormalSupported => classGenerator;
+    shared actual String brokenName;
+    shared actual Tree.MemberOrTypeExpression node;
+    shared actual Tree.CompilationUnit rootNode;
+    shared actual Icons image;
+    shared actual Type? returnType;
+    shared actual LinkedHashMap<String,Type>? parameters;
+    CommonDocument document;
+    
+    isFormalSupported => classGenerator;
     
     Boolean isUpperCase => brokenName.first?.uppercase else false;
     
-    shared actual String generateShared(String indent, String delim) {
-        return "shared " + generateInternal(indent, delim, false);
-    }
-    shared actual String generate(String indent, String delim) {
-        return generateInternal(indent, delim, false);
-    }
-    shared actual String generateSharedFormal(String indent, String delim) {
-        return "shared formal " + generateInternal(indent, delim, true);
+    shared actual String description {
+        if (exists parameters) {
+            value params = StringBuilder();
+            appendParameters(parameters, params, defaultedSupertype);
+            value supertype = supertypeDeclaration(returnType) else "";
+            return "'class ``brokenName + params.string + supertype``'";
+        } else {
+            return "'object ``brokenName``'";
+        }
     }
     
-    String generateInternal(String indent, String delim, Boolean isFormal) {
+    shared actual String generateInternal(String indent, 
+        String delim, Boolean isFormal) {
         value def = StringBuilder();
         value isVoid = !(returnType exists);
         if (classGenerator) {
             value typeParams = ArrayList<TypeParameter>();
             value typeParamDef = StringBuilder();
             value typeParamConstDef = StringBuilder();
-            appendTypeParams2(typeParams, typeParamDef, typeParamConstDef, returnType);
+            appendTypeParams2(typeParams, 
+                typeParamDef, typeParamConstDef, 
+                returnType);
             if (exists parameters) {
-                appendTypeParams3(typeParams, typeParamDef, typeParamConstDef, parameters.values());
+                appendTypeParams3(typeParams, 
+                    typeParamDef, typeParamConstDef, 
+                    parameters.values());
             }
             if (typeParamDef.size > 0) {
                 typeParamDef.insert(0, "<");
                 typeParamDef.deleteTerminal(1);
                 typeParamDef.append(">");
             }
-            value defIndent = indents.defaultIndent;
-            value supertype = if (isVoid) then null else supertypeDeclaration(returnType);
-            def.append("class ").append(brokenName).append(typeParamDef.string);
+            value defIndent = platformServices.document.defaultIndent;
+            value supertype 
+                    = if (isVoid) then null
+                    else supertypeDeclaration(returnType);
+            def.append("class ")
+                .append(brokenName)
+                .append(typeParamDef.string);
             assert (exists parameters);
-            appendParameters(parameters, def, defaultedSupertype);
+            appendParameters(parameters, def, 
+                defaultedSupertype);
             if (exists supertype) {
-                def.append(delim).append(indent).append(defIndent).append(defIndent).append(supertype);
+                def.append(delim)
+                   .append(indent)
+                   .append(defIndent)
+                   .append(defIndent)
+                   .append(supertype);
             }
             def.append(typeParamConstDef.string);
             def.append(" {").append(delim);
@@ -81,11 +100,18 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
             }
             def.append(indent).append("}");
         } else if (objectGenerator) {
-            value defIndent = indents.defaultIndent;
-            value supertype = if (isVoid) then null else supertypeDeclaration(returnType);
-            def.append("object ").append(brokenName);
+            value defIndent = platformServices.document.defaultIndent;
+            value supertype = 
+                    if (isVoid) then null 
+                    else supertypeDeclaration(returnType);
+            def.append("object ")
+               .append(brokenName);
             if (exists supertype) {
-                def.append(delim).append(indent).append(defIndent).append(defIndent).append(supertype);
+                def.append(delim)
+                    .append(indent)
+                    .append(defIndent)
+                    .append(defIndent)
+                    .append(supertype);
             }
             def.append(" {").append(delim);
             if (!isVoid) {
@@ -98,50 +124,53 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
         return def.string;
     }
     
-    Boolean classGenerator {
-        return isUpperCase && parameters exists;
-    }
+    Boolean classGenerator => isUpperCase && parameters exists;
     
-    Boolean objectGenerator {
-        return !isUpperCase && !parameters exists;
-    }
+    Boolean objectGenerator => !isUpperCase && !parameters exists;
     
-    shared actual Set<Declaration> getImports() {
-        value imports = HashSet<Declaration>();
-        importProposals.importType(imports, returnType, rootNode);
+    shared actual void generateImports(CommonImportProposals importProposals) {
+        importProposals.importType {
+            type = returnType;
+        };
         if (exists parameters) {
-            importProposals.importTypes(imports, parameters.values(), rootNode);
+            importProposals.importTypes {
+                for (p in parameters.values()) p
+            };
         }
         if (exists returnType) {
-            importMembers(imports);
+            importMembers(importProposals);
         }
-        return imports;
     }
     
-    void importMembers(Set<Declaration> imports) {
+    void importMembers(CommonImportProposals importProposals) {
         //TODO: this is a major copy/paste from appendMembers() below
         value td = defaultedSupertype;
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
-        value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
+        value members = td.getMatchingMemberDeclarations(unit, null, "", 0, null).values();
         for (dwp in members) {
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
                 if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
-                    importProposals.importSignatureTypes(d, rootNode, imports);
+                    importProposals.importSignatureTypes {
+                        declaration = d;
+                    };
                     ambiguousNames.add(d.name);
                 }
             }
         }
-        for (superType in td.supertypeDeclarations) {
-            for (m in superType.members) {
-                if (m.shared) {
-                    Declaration? r = td.getMember(m.name, null, false);
-                    if (!(r?.refines(m) else false),
-                        // !r.getContainer().equals(ut) &&  
-                        !ambiguousNames.add(m.name)) {
-                        
-                        importProposals.importSignatureTypes(m, rootNode, imports);
+        if (!td is NothingType) {
+            for (superType in td.supertypeDeclarations) {
+                for (m in superType.members) {
+                    if (m.shared) {
+                        Declaration? r = td.getMember(m.name, null, false);
+                        if (!(r?.refines(m) else false),
+                            // !r.getContainer().equals(ut) &&  
+                            !ambiguousNames.add(m.name)) {
+                            importProposals.importSignatureTypes {
+                                declaration = m;
+                            };
+                        }
                     }
                 }
             }
@@ -152,13 +181,21 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
         value td = defaultedSupertype;
         value ambiguousNames = HashSet<String>();
         value unit = rootNode.unit;
-        value members = td.getMatchingMemberDeclarations(unit, null, "", 0).values();
+        value members = 
+                td.getMatchingMemberDeclarations(unit, null, "", 0, null)
+                    .values();
         for (dwp in members) {
             value dec = dwp.declaration;
             if (ambiguousNames.add(dec.name)) {
                 for (d in overloads(dec)) {
                     if (d.formal /*&& td.isInheritedFromSupertype(d)*/) {
-                        appendRefinementText(indent, delim, def, defIndent, d);
+                        appendRefinementText {
+                            indent = indent;
+                            delim = delim;
+                            def = def;
+                            defIndent = defIndent;
+                            d = d;
+                        };
                     }
                 }
             }
@@ -170,8 +207,13 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
                     if (!(r?.refines(m) else false),
                         // !r.getContainer().equals(ut)) && 
                         ambiguousNames.add(m.name)) {
-                        
-                        appendRefinementText(indent, delim, def, defIndent, m);
+                        appendRefinementText {
+                            indent = indent;
+                            delim = delim;
+                            def = def;
+                            defIndent = defIndent;
+                            d = m;
+                        };
                     }
                 }
             }
@@ -189,13 +231,30 @@ shared class ObjectClassDefinitionGenerator(shared actual String brokenName,
     
     void appendRefinementText(String indent, String delim, StringBuilder def, String defIndent, Declaration d) {
         assert (exists returnType);
-        value pr = completionManager.getRefinedProducedReference(returnType, d);
-        value unit = node.unit;
-        variable value text = getRefinementTextFor(d, pr, unit, false, null, "", false, true, indents, false);
-        if (exists parameters, parameters.containsKey(d.name)) {
-            text = text.spanTo((text.firstInclusion(" =>") else 0) - 1) + ";";
+        value text = getRefinementTextFor {
+            d = d;
+            pr = completionManager.getRefinedProducedReference(returnType, d);
+            unit = node.unit;
+            isInterface = false;
+            ci = null;
+            indent = "";
+            containsNewline = false;
+            preamble = true;
+            addParameterTypesInCompletions = false;
+        };
+        String realText;
+        if (exists parameters,
+            parameters.containsKey(d.name),
+            exists loc = text.firstInclusion(" =>")) {
+            realText = text[0:loc] + ";";
         }
-        def.append(indent).append(defIndent).append(text).append(delim);
+        else {
+            realText = text;
+        }
+        def.append(indent)
+            .append(defIndent)
+            .append(realText)
+            .append(delim);
     }
     
     Boolean isNotBasic(Type? returnType) {
@@ -226,15 +285,15 @@ String? supertypeDeclaration(Type? returnType) {
         return null;
     } else if (exists returnType) {
         if (returnType.\iclass) {
-            return " extends " + returnType.asString() + "()"; //TODO: supertype arguments!
+            return " extends ``returnType.asString()``()"; //TODO: supertype arguments!
         } else if (returnType.\iinterface) {
-            return " satisfies " + returnType.asString();
+            return " satisfies ``returnType.asString()``";
         } else if (returnType.intersection) {
-            variable value extendsClause = "";
+            value extendsClause = StringBuilder();
             value satisfiesClause = StringBuilder();
             for (st in returnType.satisfiedTypes) {
                 if (st.\iclass) {
-                    extendsClause = " extends " + st.asString() + "()"; //TODO: supertype arguments!
+                    extendsClause.append(" extends ``st.asString()``()"); //TODO: supertype arguments!
                 } else if (st.\iinterface) {
                     if (satisfiesClause.empty) {
                         satisfiesClause.append(" satisfies ");
@@ -244,7 +303,7 @@ String? supertypeDeclaration(Type? returnType) {
                     satisfiesClause.append(st.asString());
                 }
             }
-            return extendsClause + satisfiesClause.string;
+            return extendsClause.string + satisfiesClause.string;
         }
     }
     return null;
@@ -262,7 +321,7 @@ Boolean isValidSupertype(Type? returnType) {
             return !rtd.final;
         } else if (returnType.\iinterface) {
             value cd = rtd.unit.callableDeclaration;
-            return !rtd.equals(cd);
+            return rtd != cd;
         } else if (returnType.intersection) {
             for (st in returnType.satisfiedTypes) {
                 if (!isValidSupertype(st)) {
@@ -275,40 +334,57 @@ Boolean isValidSupertype(Type? returnType) {
     return false;
 }
 
-ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(String brokenName, 
-    Tree.MemberOrTypeExpression node, Tree.CompilationUnit rootNode,
-    ImportProposals<out Anything,out Anything,out Anything,out Anything,out Anything,out Anything> importProposals,
-    Indents<out Anything> indents,
-    IdeCompletionManager<out Anything,out Anything,out Anything> completionManager) {
+ObjectClassDefinitionGenerator? createObjectClassDefinitionGenerator(
+    brokenName, node, rootNode, document) {
+    
+    String brokenName;
+    Tree.MemberOrTypeExpression node;
+    Tree.CompilationUnit rootNode;
+    CommonDocument document;
     
     value isUpperCase = brokenName.first?.uppercase else false;
     value fav = FindArgumentsVisitor(node);
     rootNode.visit(fav);
     value unit = node.unit;
-    variable Type? returnType = unit.denotableType(fav.expectedType);
-    //value params = StringBuilder();
     value paramTypes = getParameters(fav);
-    if (exists rt = returnType) {
-        if (unit.isOptionalType(rt)) {
-            returnType = rt.eliminateNull();
-        }
-        if (rt.\iobject || rt.anything) {
+    Type? returnType;
+    if (exists type = unit.denotableType(fav.expectedType)) {
+        if (type.\iobject || type.anything) {
             returnType = null;
         }
+        else if (unit.isOptionalType(type)) {
+            returnType = type.eliminateNull();
+        }
+        else {
+            returnType = type;
+        }
+    }
+    else {
+        returnType = null;
     }
     if (!isValidSupertype(returnType)) {
         return null;
     }
-    if (exists paramTypes, isUpperCase) {
-        value supertype = supertypeDeclaration(returnType) else "";
-        value desc = "'class " + brokenName + supertype + "'";
-        return ObjectClassDefinitionGenerator(brokenName, node, rootNode, desc, Icons.localClass, returnType, paramTypes,
-            importProposals, indents, completionManager);
-    } else if (!exists paramTypes, !isUpperCase) {
-        value desc = "'object " + brokenName + "'";
-        return ObjectClassDefinitionGenerator(brokenName, node, rootNode, desc, Icons.localAttribute, returnType, null,
-            importProposals, indents, completionManager);
-    } else {
-        return null;
-    }
+    return 
+    if (exists paramTypes, isUpperCase)
+        then ObjectClassDefinitionGenerator {
+            brokenName = brokenName;
+            node = node;
+            rootNode = rootNode;
+            image = Icons.localClass;
+            returnType = returnType;
+            parameters = paramTypes;
+            document = document;
+        }
+    else if (!exists paramTypes, !isUpperCase)
+        then ObjectClassDefinitionGenerator {
+            brokenName = brokenName;
+            node = node;
+            rootNode = rootNode;
+            image = Icons.localAttribute;
+            returnType = returnType;
+            parameters = null;
+            document = document;
+        }
+    else null;
 }

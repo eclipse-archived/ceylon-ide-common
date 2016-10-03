@@ -2,7 +2,7 @@ import com.redhat.ceylon.common {
     Versions
 }
 shared Boolean ceylonVersionHasBeenReleased(String version) =>
-        !version.contains("SNAPSHOT");
+        !version.endsWith("SNAPSHOT");
 
 shared [String*] versionsAvailableForBoostrap = 
         Versions.jvmVersions.array.coalesced

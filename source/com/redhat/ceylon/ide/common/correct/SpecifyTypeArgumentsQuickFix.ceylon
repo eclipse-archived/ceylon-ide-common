@@ -4,17 +4,16 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
 
-shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object specifyTypeArgumentsQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change);
-    
-    shared void addSpecifyTypeArgumentsProposal(Tree.MemberOrTypeExpression ref, 
-        Data data, IFile file) {
+    shared void addSpecifyTypeArgumentsProposal(
+        Tree.MemberOrTypeExpression ref, 
+        QuickFixData data) {
         
         Tree.Identifier identifier;
         Tree.TypeArguments typeArguments;
@@ -29,7 +28,9 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
             return;
         }
         
-        if (typeArguments is Tree.InferredTypeArguments, typeArguments.typeModels exists, !typeArguments.typeModels.empty) {
+        if (typeArguments is Tree.InferredTypeArguments, 
+            typeArguments.typeModels exists, 
+            !typeArguments.typeModels.empty) {
             value builder = StringBuilder().append("<");
             for (arg in typeArguments.typeModels) {
                 if (ModelUtil.isTypeUnknown(arg)) {
@@ -44,11 +45,26 @@ shared interface SpecifyTypeArgumentsQuickFix<IFile,IDocument,InsertEdit,TextEdi
             }
             
             builder.append(">");
-            value change = newTextChange("Specify Explicit Type Arguments", file);
-            addEditToChange(change, newInsertEdit(identifier.endIndex.intValue(), builder.string));
-            
-            String desc = "Specify explicit type arguments '" + builder.string + "'";
-            newProposal(data, desc, change);
+            value change = platformServices.document.createTextChange {
+                name = "Specify Explicit Type Arguments";
+                input = data.phasedUnit;
+            };
+            change.addEdit( 
+                InsertEdit {
+                    start = identifier.endIndex.intValue();
+                    text = builder.string;
+                });
+            data.addQuickFix {
+                description = "Specify explicit type arguments '``builder``'";
+                change = change;
+            };
         }
     }
+
+    shared void addTypingProposals(QuickFixData data) {
+        if (is Tree.MemberOrTypeExpression node = data.node) {
+            specifyTypeArgumentsQuickFix.addSpecifyTypeArgumentsProposal(node, data);
+        }
+    }
+    
 }

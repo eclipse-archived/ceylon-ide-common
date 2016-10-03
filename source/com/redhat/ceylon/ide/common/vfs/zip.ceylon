@@ -44,6 +44,22 @@ shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies BaseFold
     shared actual String name = Helper.getSimpleName(entryName);
     shared actual variable BaseFolderVirtualFile? parent = null;
     
+    shared actual default String? getRelativePath(VirtualFile ancestor) {
+        if (is ZipFolderVirtualFile ancestor) {
+            return super.getRelativePath(ancestor);
+        }
+        if (is ZipFileVirtualFile ancestor) {
+            if (path == ancestor.path) {
+                return "";
+            }
+            value pathWihArchiveSep = ancestor.path + "!/";
+            if (path.startsWith(pathWihArchiveSep)) {
+                return path.removeInitial(pathWihArchiveSep);
+            }
+        }
+        return null;
+    }
+
     shared actual JList<out BaseResourceVirtualFile> children {
         return Collections.unmodifiableList( theChildren );
     }
@@ -81,6 +97,22 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     shared actual String path = "``zipFile.name``!/``entry.name``".trimTrailing('/'.equals);
     shared variable actual BaseFolderVirtualFile? parent = null;
     shared actual Boolean \iexists() => true;
+    
+    shared actual String? getRelativePath(VirtualFile ancestor) {
+        if (is ZipEntryVirtualFile | ZipFolderVirtualFile ancestor) {
+            return super.getRelativePath(ancestor);
+        }
+        if (is ZipFileVirtualFile ancestor) {
+            if (path == ancestor.path) {
+                    return "";
+            }
+            value pathWihArchiveSep = ancestor.path + "!/";
+            if (path.startsWith(pathWihArchiveSep)) {
+                return path.removeInitial(pathWihArchiveSep);
+            }
+        }
+        return null;
+    }
     
     shared actual InputStream inputStream {
         try {
@@ -140,6 +172,12 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtua
         closeable = true;
     }
     
+    shared actual String? getRelativePath(VirtualFile ancestor) {
+        if (ancestor == this) {
+            return "";
+        }
+        return null;
+    }
     
     shared actual String path
             => zipFile.name;

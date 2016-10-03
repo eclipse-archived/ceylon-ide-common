@@ -1,17 +1,26 @@
-shared interface FixAliasQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+shared object fixAliasQuickFix {
     
-    shared formal void newProposal(Data data, String desc, Integer offset, TextChange change);
-    
-    shared void addFixAliasProposal(Data data, IFile file) {
+    shared void addFixAliasProposal(QuickFixData data) {
         value offset = data.problemOffset;
-        value change = newTextChange("Fix Alias Syntax", file);
-        initMultiEditChange(change);
-        addEditToChange(change, newReplaceEdit(offset, 1, "=>"));
+        value change 
+                = platformServices.document.createTextChange {
+            name = "Fix Alias Syntax";
+            input = data.phasedUnit;
+        };
+        change.initMultiEdit();
+        change.addEdit(ReplaceEdit(offset, 1, "=>"));
         
-        newProposal(data, "Change = to =>", offset + 2, change);
+        data.addQuickFix {
+            description = "Change = to =>";
+            change = change;
+            selection = DefaultRegion(offset + 2);
+        };
     }
 }

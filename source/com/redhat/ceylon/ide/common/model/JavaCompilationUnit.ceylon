@@ -1,5 +1,11 @@
+import com.redhat.ceylon.ide.common.platform {
+    JavaModelServicesConsumer
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyPackage
+}
 import com.redhat.ceylon.model.typechecker.model {
-    Package
+    Unit
 }
 
 shared abstract class JavaCompilationUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(
@@ -7,8 +13,15 @@ shared abstract class JavaCompilationUnit<NativeProject, NativeFolder, NativeFil
             String filename,
             String relativePath,
             String fullPath,
-            Package pkg)
-        extends JavaUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(filename, relativePath, fullPath, pkg) {
+            LazyPackage pkg)
+        extends JavaUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(filename, relativePath, fullPath, pkg)
+        satisfies Source
+        & JavaModelServicesConsumer<JavaClassRoot> {
+    language = Language.java;
+    
+    shared actual default Unit clone() 
+            => javaModelServices.newJavaCompilationUnit(typeRoot, relativePath, filename, fullPath, pkg);
+    
     shared actual JavaClassRoot typeRoot;
     
     shared actual String sourceFileName =>

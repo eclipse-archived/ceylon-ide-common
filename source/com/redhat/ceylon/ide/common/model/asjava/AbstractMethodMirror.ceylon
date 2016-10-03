@@ -1,30 +1,38 @@
 import com.redhat.ceylon.model.loader.mirror {
-    MethodMirror,
-    ClassMirror,
-    AnnotationMirror
+    MethodMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue
 }
+import java.util {
+    Collections
+}
+import java.lang {
+    JString=String
+}
 
-shared abstract class AbstractMethodMirror(FunctionOrValue decl)
-        satisfies MethodMirror {
+shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
+        satisfies MethodMirror & DeclarationMirror {
     
-    shared actual Boolean abstract => decl.abstraction;
+    declaration => decl;
     
-    shared actual Boolean default => decl.default;
+    abstract => decl.abstraction;
     
-    shared actual Boolean defaultAccess => !decl.shared;
+    default => decl.default;
     
-    shared actual ClassMirror? enclosingClass => null;
+    defaultAccess => !decl.shared;
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    enclosingClass => null;
     
-    shared actual Boolean protected => false;
+    getAnnotation(String? string) => null;
     
-    shared actual Boolean public => decl.shared;
+    annotationNames => Collections.emptySet<JString>();
+
+    protected => false;
     
-    shared actual Boolean static => false;
+    public => decl.shared;
     
-    shared actual Boolean staticInit => false;
+    shared actual default Boolean static => decl.staticallyImportable;
+    
+    staticInit => false;
 }

@@ -3,6 +3,7 @@
 encoding=UTF-8
 flatclasspath=false
 autoexportmavendependencies=false
+offline=false
 
 [compiler]
 source=source
@@ -10,3 +11,4 @@ source=test-source
 
 [repositories]
 lookup=./repo
+lookup=../ceylon-sdk/modules

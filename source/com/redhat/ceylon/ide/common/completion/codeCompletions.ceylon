@@ -2,13 +2,15 @@ import ceylon.interop.java {
     CeylonIterable
 }
 
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
 import com.redhat.ceylon.ide.common.typechecker {
     LocalAnalysisResult
 }
 import com.redhat.ceylon.ide.common.util {
     escaping,
-    OccurrenceLocation,
-    Indents
+    OccurrenceLocation
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil {
@@ -48,25 +50,32 @@ shared String getTextFor(Declaration dec, Unit unit) {
 }
 
 String getPositionalInvocationTextFor(Declaration dec, OccurrenceLocation? ol,
-    Reference pr, Unit unit, Boolean includeDefaulted, String? typeArgs,
-    Boolean addParameterTypesInCompletions) {
+    Reference pr, Unit unit, Boolean includeDefaulted, String? typeArgs) {
     
-    value result = StringBuilder().append(escaping.escapeName(dec, unit));
+    value result 
+            = StringBuilder()
+                .append(escaping.escapeName(dec, unit));
     
     if (exists typeArgs) {
         result.append(typeArgs);
     } else if (forceExplicitTypeArgs(dec, ol)) {
         appendTypeParameters(dec, result);
     }
-    appendPositionalArgs(dec, pr, unit, result, includeDefaulted, false,
-        addParameterTypesInCompletions);
+    appendPositionalArgs {
+        d = dec;
+        pr = pr;
+        unit = unit;
+        result = result;
+        includeDefaulted = includeDefaulted;
+        descriptionOnly = false;
+        addParameterTypesInCompletions = false;
+    };
     appendSemiToVoidInvocation(result, dec);
     return result.string;
 }
 
 String getNamedInvocationTextFor(Declaration dec, Reference pr, Unit unit, 
-    Boolean includeDefaulted, String? typeArgs,
-    Boolean addParameterTypesInCompletions) {
+    Boolean includeDefaulted, String? typeArgs) {
     
     value result = StringBuilder();
     result.append(escaping.escapeName(dec, unit));
@@ -76,14 +85,23 @@ String getNamedInvocationTextFor(Declaration dec, Reference pr, Unit unit,
     } else if (forceExplicitTypeArgs(dec, null)) {
         appendTypeParameters(dec, result);
     }
-    appendNamedArgs(dec, pr, unit, result, includeDefaulted, false,
-        addParameterTypesInCompletions);
+    appendNamedArgs {
+        d = dec;
+        pr = pr;
+        unit = unit;
+        result = result;
+        includeDefaulted = includeDefaulted;
+        descriptionOnly = false;
+        addParameterTypesInCompletions = false;
+    };
     appendSemiToVoidInvocation(result, dec);
     return result.string;
 }
 
-void appendSemiToVoidInvocation(StringBuilder result, Declaration dd) {
-    if (is Function dd, dd.declaredVoid, dd.parameterLists.size() == 1) {
+void appendSemiToVoidInvocation(StringBuilder result, 
+        Declaration declaration) {
+    if (is Function declaration, declaration.declaredVoid, 
+        declaration.parameterLists.size() == 1) {
         result.append(";");
     }
 }
@@ -94,8 +112,8 @@ shared String getDescriptionFor(Declaration dec, Unit unit) {
     return result.string;
 }
 
-shared String getDescriptionFor2(DeclarationWithProximity dwp, Unit unit,
-    Boolean addTypeParameters) {
+shared String getDescriptionFor2(DeclarationWithProximity dwp, 
+    Unit unit, Boolean addTypeParameters) {
     
     value result = StringBuilder();
     value dec = dwp.declaration;
@@ -112,7 +130,8 @@ shared String getDescriptionFor2(DeclarationWithProximity dwp, Unit unit,
 
 
 shared String getPositionalInvocationDescriptionFor(
-    DeclarationWithProximity? dwp, Declaration dec, OccurrenceLocation? ol,
+    DeclarationWithProximity? dwp, Declaration dec, 
+    OccurrenceLocation? ol,
     Reference pr, Unit unit, 
     Boolean includeDefaulted, 
     String? typeArgs, 
@@ -154,7 +173,7 @@ shared String getNamedInvocationDescriptionFor(Declaration dec, Reference pr,
 
 shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
     Boolean isInterface, ClassOrInterface? ci, String indent,   
-    Boolean containsNewline, Boolean preamble, Indents<out Anything> indents,
+    Boolean containsNewline, Boolean preamble,
     Boolean addParameterTypesInCompletions) {
     
     value result = StringBuilder();
@@ -168,41 +187,47 @@ shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
     appendTypeParameters(d, result);
     appendParameters(d, pr, unit, result, null, false);
     if (is Class d) {
-        result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
+        result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
                 .append(" extends super.").append(escaping.escapeName(d));
         appendPositionalArgs(d, pr, unit, result, true, false,
             addParameterTypesInCompletions);
     }
-    appendConstraints(d, pr, unit, indent, containsNewline, result, indents);
-    appendImplText(d, pr, isInterface, unit, indent, result, ci, indents);
+    appendConstraints(d, pr, unit, indent, containsNewline, result);
+    appendImplText(d, pr, isInterface, unit, indent, result, ci);
     return result.string;
 }
 
 void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent,
-    Boolean containsNewline, StringBuilder result, Indents<out Anything> indents) {
+    Boolean containsNewline, StringBuilder result) {
     
     if (is Generic d) {
         value generic = d;
         for (tp in generic.typeParameters) {
             value sts = tp.satisfiedTypes;
             if (!sts.empty) {
-                result.append(extraIndent(extraIndent(indent, containsNewline, indents), containsNewline, indents))
+                result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
                         .append("given ").append(tp.name).append(" satisfies ");
                 variable Boolean first = true;
                 for (st in sts) {
-                    variable Type _st = st;
                     if (first) {
                         first = false;
-                    } else {
+                    }
+                    else {
                         result.append("&");
                     }
-                    if (is Type pr) {
-                        _st = st.substitute(pr);
-                    } else {
-                        assert (is TypedReference pr);
-                        _st = st.substitute(pr);
+                    Type t;
+                    switch (pr)
+                    case (is Type) {
+                        t = st.substitute(pr);
                     }
-                    result.append(_st.asSourceCodeString(unit));
+                    case (is TypedReference) {
+                        t = st.substitute(pr);
+                         
+                    }
+                    else {
+                        assert (false);
+                    }
+                    result.append(t.asSourceCodeString(unit));
                 }
             }
         }
@@ -224,9 +249,8 @@ shared String getInlineFunctionTextFor(Parameter p, Reference? pr, Unit unit,
     return result.string;
 }
 
-shared Boolean isVariable(Declaration d) {
-    return if (is TypedDeclaration d, d.variable) then true else false;
-}
+shared Boolean isVariable(Declaration d) 
+        => if (is TypedDeclaration d) then d.variable else false;
 
 String getRefinementDescriptionFor(Declaration d, Reference? pr, Unit unit) {
     value result = StringBuilder().append("shared actual ");
@@ -251,8 +275,8 @@ String getInlineFunctionDescriptionFor(Parameter p, Reference? pr, Unit unit) {
 }
 
 // see CodeCompletions.getDocDescriptionFor
-shared String getDocDescriptionFor<Document>(Declaration decl,
-    Reference? pr, Unit unit, LocalAnalysisResult<Document> cmp) {
+shared String getDocDescriptionFor(Declaration decl,
+    Reference? pr, Unit unit, LocalAnalysisResult? cmp) {
     StringBuilder result = StringBuilder();
     appendDeclarationHeader(decl, pr, unit, result, true);
     appendTypeParametersWithArguments(decl, pr, unit, result, true);
@@ -265,43 +289,66 @@ shared void appendPositionalArgs(Declaration d, Reference? pr, Unit unit,
     Boolean addParameterTypesInCompletions) {
     
     if (is Functional d) {
-        value params = getParametersFunctional(d, includeDefaulted, false);
+        value params = getParametersFunctional {
+            fd = d;
+            includeDefaults = includeDefaulted;
+            namedInvocation = false;
+        };
         if (params.empty) {
             result.append("()");
-        } else if (exists pr) {
-            value paramTypes = descriptionOnly && addParameterTypesInCompletions;
+        }
+        else if (exists pr) {
+            value paramTypes 
+                    = descriptionOnly 
+                    && addParameterTypesInCompletions;
             result.append("(");
             for (p in params) {
                 value typedParameter = pr.getTypedParameter(p);
-                if (is Functional mod = p.model) {
+                /*if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
                         result.append("void ");
                     }
-                    appendParameters(mod, typedParameter, unit, result, null,
-                        descriptionOnly);
+                    appendParameters {
+                        d = mod;
+                        pr = typedParameter;
+                        unit = unit;
+                        result = result;
+                        cpc = null;
+                        descriptionOnly = descriptionOnly;
+                    };
                     if (p.declaredVoid) {
                         result.append(" {}");
-                    } else {
+                    }
+                    else {
                         result.append(" => ").append("nothing");
                     }
-                } else {
-                    if (paramTypes, exists pt = typedParameter.type,
+                }
+                else {*/
+                    if (paramTypes, 
+                        exists pt = typedParameter.fullType,
                         !isTypeUnknown(pt)) {
-                        value newPt = if (p.sequenced)
-                                      then unit.getSequentialElementType(pt)
-                                      else pt;
+                        value newPt
+                                = p.sequenced
+                                then unit.getSequentialElementType(pt)
+                                else pt;
                         result.append(newPt.asString(unit));
                         if (p.sequenced) {
-                            result.append(if (p.atLeastOne) then "+" else "*");
+                            result.append(p.atLeastOne then "+" else "*");
                         }
                         result.append(" ");
-                    } else if (p.sequenced) {
+                    }
+                    else if (p.sequenced) {
                         result.append("*");
                     }
-                    FunctionOrValue? mod = p.model;
-                    result.append(if (descriptionOnly || mod is Null)
-                        then p.name else escaping.escapeName(p.model));
-                }
+                    if (!descriptionOnly, 
+                        exists mod = p.model, 
+                        mod.name exists) {
+                        result.append(escaping.escapeName(mod));
+                    }
+                    else if (exists name = p.name) {
+                        result.append(name);
+                    }
+//                }
                 result.append(", ");
             }
             result.deleteTerminal(2);
@@ -314,7 +361,11 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result, Boolean includeDefaulted) {
     
     if (is Functional d) {
-        value params = getParametersFunctional(d, includeDefaulted, false);
+        value params = getParametersFunctional {
+            fd = d;
+            includeDefaults = includeDefaulted;
+            namedInvocation = false;
+        };
         if (params.empty) {
             result.append("()");
         } else {
@@ -331,68 +382,94 @@ void appendSuperArgsText(Declaration d, Reference? pr, Unit unit,
     }
 }
 
-List<Parameter> getParametersFunctional(Functional fd, Boolean includeDefaults,
-    Boolean namedInvocation) {
-    
-    List<ParameterList>? plists = fd.parameterLists;
-    if (plists?.empty else true) {
-        return Collections.emptyList<Parameter>();
+List<Parameter> getParametersFunctional(Functional fd, 
+    Boolean includeDefaults, Boolean namedInvocation) {
+
+    if (exists plists = fd.parameterLists,
+        exists plist = plists[0]) {
+        return getParameters {
+            pl = plist;
+            includeDefaults = includeDefaults;
+            namedInvocation = namedInvocation;
+        };
     } else {
-        assert (exists plists);
-        return getParameters(plists.get(0), includeDefaults, namedInvocation);
+        return Collections.emptyList<Parameter>();
     }
 }
 
-void appendNamedArgs(Declaration d, Reference pr, Unit unit, StringBuilder result,
+void appendNamedArgs(Declaration d, Reference pr, Unit unit, 
+    StringBuilder result,
     Boolean includeDefaulted, Boolean descriptionOnly,
     Boolean addParameterTypesInCompletions) {
     
     if (is Functional d) {
-        value params = getParametersFunctional(d, includeDefaulted, true);
+        value params = getParametersFunctional {
+            fd = d;
+            includeDefaults = includeDefaulted;
+            namedInvocation = true;
+        };
         if (params.empty) {
             result.append(" {}");
-        } else {
+        }
+        else {
             value paramTypes = 
                     descriptionOnly && 
                     addParameterTypesInCompletions;
             result.append(" { ");
             for (p in params) {
-                value name = if (descriptionOnly)
-                    then p.name
-                    else escaping.escapeName(p.model);
+                value name
+                        = descriptionOnly
+                        then p.name
+                        else escaping.escapeName(p.model);
                 if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
                         result.append("void ");
-                    } else {
+                    }
+                    else {
                         if (paramTypes, !isTypeUnknown(p.type)) {
                             value ptn = p.type.asString(unit);
                             result.append(ptn).append(" ");
-                        } else {
+                        }
+                        else {
                             result.append("function ");
                         }
                     }
                     result.append(name);
-                    appendParameters(p.model, pr.getTypedParameter(p), unit,
-                        result, null, descriptionOnly);
+                    appendParameters {
+                        d = p.model;
+                        pr = pr.getTypedParameter(p);
+                        unit = unit;
+                        result = result;
+                        cpc = null;
+                        descriptionOnly = descriptionOnly;
+                    };
                     if (descriptionOnly) {
                         result.append("; ");
-                    } else if (p.declaredVoid) {
-                        result.append(" {} ");
-                    } else {
-                        result.append(" => ").append("nothing; ");
                     }
-                } else {
+                    else if (p.declaredVoid) {
+                        result.append(" {} ");
+                    }
+                    else {
+                        result.append(" => ")
+                            .append("nothing; ");
+                    }
+                }
+                else {
                     if (p == params.get(params.size() - 1),
                         !isTypeUnknown(p.type),
                         unit.isIterableParameterType(p.type)) {
                         // nothing
-                    } else {
+                    }
+                    else {
                         if (paramTypes, !isTypeUnknown(p.type)) {
                             value ptn = p.type.asString(unit);
                             result.append(ptn).append(" ");
                         }
-                        result.append(name).append(" = ")
-                                .append("nothing").append("; ");
+                        result.append(name);
+                        if (!descriptionOnly) {
+                            result.append(" = ").append("nothing");
+                        }
+                        result.append("; ");
                     }
                 }
             }
@@ -406,7 +483,7 @@ void appendTypeParameters(Declaration d, StringBuilder result,
     Boolean variances = false) {
     
     if (is Generic d) {
-        value types = (d).typeParameters;
+        value types = d.typeParameters;
         if (!types.empty) {
             result.append("<");
             for (tp in types) {
@@ -427,8 +504,9 @@ void appendTypeParameters(Declaration d, StringBuilder result,
 }
 
 // see CodeCompletions.appendTypeParameters
-shared void appendTypeParametersWithArguments(Declaration d, Reference? pr,
-    Unit unit, StringBuilder result, Boolean variances) {
+shared void appendTypeParametersWithArguments(Declaration d, 
+    Reference? pr, Unit unit, StringBuilder result, 
+    Boolean variances) {
     
     if (is Generic d) {
         value types = d.typeParameters;
@@ -543,7 +621,7 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
             } else if (is Value decl, t.declaration.anonymous, !t.typeConstructor) {
                 builder.append("object");
             } else if (is Functional decl) {
-                builder.append(if (decl.declaredVoid) then "void" else typeName);
+                builder.append(decl.declaredVoid then "void" else typeName);
             } else {
                 builder.append(typeName);
             }
@@ -568,27 +646,23 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
 void appendNamedArgumentHeader(Parameter p, Reference? pr, StringBuilder result,
     Boolean descriptionOnly) {
     
-    if (is Functional fp = p.model) {
-        result.append(if (fp.declaredVoid) then "void" else "function");
-    } else {
-        result.append("value");
+    if (is Functional fp = p.model, fp.declaredVoid) {
+        result.append("void").append(" ");
     }
-    result.append(" ").append(if (descriptionOnly)
-        then p.name else escaping.escapeName(p.model));
+    result.append(descriptionOnly then p.name else escaping.escapeName(p.model));
 }
 
 void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit,
-    String indent, StringBuilder result, ClassOrInterface? ci,
-    Indents<out Anything> indents) {
+    String indent, StringBuilder result, ClassOrInterface? ci) {
     
     if (is Function d) {
         if (exists ci, !ci.anonymous) {
-            if (d.name.equals("equals")) {
-                value pl = (d).parameterLists;
+            if (d.name=="equals") {
+                value pl = d.parameterLists;
                 if (!pl.empty) {
                     value ps = pl.get(0).parameters;
                     if (!ps.empty) {
-                        appendEqualsImpl(unit, indent, result, ci, ps, indents);
+                        appendEqualsImpl(unit, indent, result, ci, ps);
                         return;
                     }
                 }
@@ -607,8 +681,8 @@ void appendImplText(Declaration d, Reference? pr, Boolean isInterface, Unit unit
         }
     } else if (is Value d) {
         if (exists ci, !ci.anonymous) {
-            if (d.name.equals("hash")) {
-                appendHashImpl(unit, indent, result, ci, indents);
+            if (d.name=="hash") {
+                appendHashImpl(unit, indent, result, ci);
                 return;
             }
         }
@@ -643,7 +717,8 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
     variable Value? result = null;
     value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
-        if (is Value m, 
+        if (is Value m,
+            exists name = m.name,
             !isObjectField(m) && !isConstructor(m),
             !m.transient && !nt.isSubtypeOf(m.type)) {
             if (result exists) {
@@ -659,31 +734,32 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
 }
 
 void appendHashImpl(Unit unit, String indent, StringBuilder result,
-    ClassOrInterface ci, Indents<out Anything> indents) {
+    ClassOrInterface ci) {
     
     if (exists v = getUniqueMemberForHash(unit, ci)) {
         result.append(" => ").append(v.name);
-        if (!v.type.integer) {
+        if (!(v.type?.integer else false)) {
             result.append(".hash");
         }
         result.append(";");
     }
     else {
+        value defaultIndent = platformServices.document.defaultIndent;
         result.append(" {")
                 .append(indent)
-                .append(indents.defaultIndent)
+                .append(defaultIndent)
                 .append("variable value hash = 1;")
                 .append(indent)
-                .append(indents.defaultIndent);
+                .append(defaultIndent);
         
-        value ind = indent + indents.defaultIndent;
+        value ind = indent + defaultIndent;
         appendMembersToHash(unit, ind, result, ci);
         result.append("return hash;").append(indent).append("}");
     }
 }
 
 void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
-    ClassOrInterface ci, List<Parameter> ps, Indents<out Anything> indents) {
+    ClassOrInterface ci, List<Parameter> ps) {
     
     value targs = StringBuilder();
     if (!ci.typeParameters.empty) {
@@ -709,22 +785,23 @@ void appendEqualsImpl(Unit unit, String indent, StringBuilder result,
     }
     
     value p = ps.get(0);
+    value defaultIndent = platformServices.document.defaultIndent;
     result.append(" {")
-            .append(indent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent)
             .append("if (is ").append(ci.name).append(targs.string).append(" ").append(p.name).append(") {")
-            .append(indent).append(indents.defaultIndent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent).append(defaultIndent)
             .append("return ");
     
-    value ind = indent + indents.defaultIndent + indents.defaultIndent
-            + indents.defaultIndent;
+    value ind = indent + defaultIndent + defaultIndent
+            + defaultIndent;
     appendMembersToEquals(unit, ind, result, ci, p);
-    result.append(indent).append(indents.defaultIndent)
+    result.append(indent).append(defaultIndent)
             .append("}")
-            .append(indent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent)
             .append("else {")
-            .append(indent).append(indents.defaultIndent).append(indents.defaultIndent)
+            .append(indent).append(defaultIndent).append(defaultIndent)
             .append("return false;").append(indent)
-            .append(indents.defaultIndent)
+            .append(defaultIndent)
             .append("}")
             .append(indent)
             .append("}");
@@ -740,16 +817,19 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci, Parameter p) {
     
     variable value found = false;
-    value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
+            exists name = m.name,
             !isObjectField(m), !isConstructor(m), 
-            !m.transient, !nt.isSubtypeOf(m.type)) {
+            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
             if (found) {
                 result.append(" && ").append(indent);
             }
-            result.append(m.name).append("==")
-                    .append(p.name).append(".").append(m.name);
+            result.append(name)
+                  .append("==")
+                  .append(p.name)
+                  .append(".")
+                  .append(name);
             found = true;
         }
     }
@@ -763,13 +843,17 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
 void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     ClassOrInterface ci) {
     
-    value nt = unit.nullValueDeclaration.type;
     for (m in ci.members) {
         if (is Value m, 
+            exists name = m.name,
             !isObjectField(m), !isConstructor(m),
-            !m.transient, !nt.isSubtypeOf(m.type)) {
-            result.append("hash = 31*hash + ").append(m.name);
-            if (!m.type.integer) {
+            !m.transient, intersectionType(unit.nullType, m.type, unit).nothing) {
+            result.append("hash = 31*hash + ").append(name);
+            if (exists type = m.type) {
+                if (! type.integer) {
+                    result.append(".hash");
+                }
+            } else {
                 result.append(".hash");
             }
             result.append(";").append(indent);
@@ -777,17 +861,16 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     }
 }
 
-String extraIndent(String indent, Boolean containsNewline,
-    Indents<out Anything> indents) 
-        => if (containsNewline) then indent + indents.defaultIndent else indent;
+String extraIndent(String indent, Boolean containsNewline) 
+        => if (containsNewline) then indent + platformServices.document.defaultIndent else indent;
 
 shared void appendParametersText(Declaration d, Reference? pr, Unit unit,
     StringBuilder result) {
     appendParameters(d, pr, unit, result, null, false);
 }
 
-void appendParameters<Document>(Declaration d, Reference? pr,
-    Unit unit, StringBuilder result, LocalAnalysisResult<Document>? cpc,
+void appendParameters(Declaration d, Reference? pr,
+    Unit unit, StringBuilder result, LocalAnalysisResult? cpc,
     Boolean descriptionOnly) {
     if (is Functional d) {
         if (exists plists = d.parameterLists) {
@@ -825,9 +908,9 @@ shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
 
 
 // see CodeCompletions.appendParametersDescription
-void appendParametersDescription<Document>(Declaration d,
+void appendParametersDescription(Declaration d,
     Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
-    LocalAnalysisResult<Document> cmp) {
+    LocalAnalysisResult? cmp) {
     
     appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
 }

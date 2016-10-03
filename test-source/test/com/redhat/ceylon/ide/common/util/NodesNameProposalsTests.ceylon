@@ -16,7 +16,8 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     UsageWarning
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Message
+    Message,
+    Tree
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -51,8 +52,10 @@ shared class NodesNameProposalsTests() {
 	[String+] nameProposals(String stringLiteralValue) {
 		String searchedText = "\"``stringLiteralValue``\"";
 		value offset = findInLines(theLines, searchedText, 0);
+		value node = nodes.findNode(pu.compilationUnit, pu.tokens, offset, offset);
+		assert(is Tree.Term|Tree.Type? node);
 		return nodes.nameProposals {
-		    node = nodes.findNode(pu.compilationUnit, pu.tokens, offset, offset);
+		    node = node;
 		    rootNode = pu.compilationUnit;
 		};
 	}

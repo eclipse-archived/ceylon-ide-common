@@ -19,21 +19,25 @@ import java.util {
     Collection,
     LinkedHashMap,
     List,
-    Map,
-    Set
+    Map
 }
 
 shared abstract class DefinitionGenerator() {
     
-    shared formal String generateShared(String indent, String delim);
+    shared String generateShared(String indent, String delim) 
+            => "shared " + generateInternal(indent, delim, false);
     
-    shared formal String generate(String indent, String delim);
+    shared String generate(String indent, String delim) 
+            => generateInternal(indent, delim, false);
     
-    shared formal String generateSharedFormal(String indent, String delim);
+    shared String generateSharedFormal(String indent, String delim) 
+            => "shared formal " + generateInternal(indent, delim, true);
     
+    shared formal String generateInternal(String indent, String delim, Boolean isFormal);
+        
     shared formal Boolean isFormalSupported;
     
-    shared formal Set<Declaration> getImports();
+    shared formal void generateImports(CommonImportProposals importProposals);
     
     shared formal String brokenName;
     
@@ -49,15 +53,18 @@ shared abstract class DefinitionGenerator() {
     
     shared formal Node node;
     
-    shared void appendParameters(Map<String,Type> parameters, StringBuilder buffer, TypeDeclaration supertype) {
+    shared void appendParameters(Map<String,Type> parameters, 
+        StringBuilder buffer, 
+        TypeDeclaration supertype = node.unit.anythingDeclaration) {
         if (parameters.empty) {
             buffer.append("()");
         } else {
             buffer.append("(");
             for (e in parameters.entrySet()) {
-                Declaration? member = supertype.getMember(e.key, null, false);
+                Declaration? member 
+                        = supertype.getMember(e.key, null, false);
                 if (!(member?.formal else false)) {
-                    buffer.append(e.\ivalue.asString()).append(" ");
+                    buffer.append(e.\ivalue.asSourceCodeString(node.unit)).append(" ");
                 }
                 buffer.append(e.key).append(", ");
             }
@@ -65,8 +72,10 @@ shared abstract class DefinitionGenerator() {
             buffer.append(")");
         }
     }
-        
-    shared void appendTypeParams(List<TypeParameter> typeParams, StringBuilder typeParamDef, StringBuilder typeParamConstDef, TypeParameter typeParam) {
+    
+    shared void appendTypeParams(List<TypeParameter> typeParams, 
+        StringBuilder typeParamDef, StringBuilder typeParamConstDef, 
+        TypeParameter typeParam) {
         if (typeParams.contains(typeParam)) {
             return;
         } else {
@@ -79,7 +88,8 @@ shared abstract class DefinitionGenerator() {
             typeParamDef.append("out ");
         }
         typeParamDef.append(typeParam.name);
-        if (typeParam.defaulted, exists dta = typeParam.defaultTypeArgument) {
+        if (typeParam.defaulted, 
+            exists dta = typeParam.defaultTypeArgument) {
             typeParamDef.append("=");
             typeParamDef.append(dta.asString());
         }
@@ -87,7 +97,8 @@ shared abstract class DefinitionGenerator() {
         if (typeParam.constrained) {
             typeParamConstDef.append(" given ");
             typeParamConstDef.append(typeParam.name);
-            if (exists satisfiedTypes = typeParam.satisfiedTypes, !satisfiedTypes.empty) {
+            if (exists satisfiedTypes = typeParam.satisfiedTypes, 
+                !satisfiedTypes.empty) {
                 typeParamConstDef.append(" satisfies ");
                 variable value firstSatisfiedType = true;
                 for (satisfiedType in satisfiedTypes) {
@@ -99,7 +110,8 @@ shared abstract class DefinitionGenerator() {
                     typeParamConstDef.append(satisfiedType.asString());
                 }
             }
-            if (exists caseTypes = typeParam.caseTypes, !caseTypes.empty) {
+            if (exists caseTypes = typeParam.caseTypes, 
+                !caseTypes.empty) {
                 typeParamConstDef.append(" of ");
                 variable value firstCaseType = true;
                 for (caseType in caseTypes) {
@@ -114,31 +126,41 @@ shared abstract class DefinitionGenerator() {
         }
     }
     
-    shared void appendTypeParams2(List<TypeParameter> typeParams, StringBuilder typeParamDef, StringBuilder typeParamConstDef, Type? pt) {
+    shared void appendTypeParams2(List<TypeParameter> typeParams, 
+        StringBuilder typeParamDef, StringBuilder typeParamConstDef, 
+        Type? pt) {
         if (exists pt) {
             if (pt.union) {
-                appendTypeParams3(typeParams, typeParamDef, typeParamConstDef, pt.caseTypes);
+                appendTypeParams3(typeParams, 
+                    typeParamDef, typeParamConstDef, 
+                    pt.caseTypes);
             } else if (pt.intersection) {
-                appendTypeParams3(typeParams, typeParamDef, typeParamConstDef, pt.satisfiedTypes);
+                appendTypeParams3(typeParams, 
+                    typeParamDef, typeParamConstDef, 
+                    pt.satisfiedTypes);
             } else if (pt.typeParameter) {
                 assert(is TypeParameter decl = pt.declaration);
-                appendTypeParams(typeParams, typeParamDef, typeParamConstDef, decl);
+                appendTypeParams(typeParams, 
+                    typeParamDef, typeParamConstDef, decl);
             }
         }
     }
     
-    shared void appendTypeParams3(List<TypeParameter> typeParams, StringBuilder typeParamDef, 
-        StringBuilder typeParamConstDef, Collection<Type>? parameterTypes) {
+    shared void appendTypeParams3(List<TypeParameter> typeParams, 
+        StringBuilder typeParamDef, StringBuilder typeParamConstDef, 
+        Collection<Type>? parameterTypes) {
         
         if (exists parameterTypes) {
             for (pt in parameterTypes) {
-                appendTypeParams2(typeParams, typeParamDef, typeParamConstDef, pt);
+                appendTypeParams2(typeParams, 
+                    typeParamDef, typeParamConstDef, pt);
             }
         }
     }
 }
 
-LinkedHashMap<String,Type> getParametersFromPositionalArgs(Tree.PositionalArgumentList pal) {
+LinkedHashMap<String,Type> getParametersFromPositionalArgs(
+    Tree.PositionalArgumentList pal) {
     value types = LinkedHashMap<String,Type>();
     variable value i = 0;
     for (pa in pal.positionalArguments) {
@@ -172,27 +194,30 @@ LinkedHashMap<String,Type> getParametersFromPositionalArgs(Tree.PositionalArgume
                 i++;
                 name = name + i.string;
             }
-            types.put(name, t);
+            types[name] = t;
         }
     }
     return types;
 }
 
-LinkedHashMap<String,Type> getParametersFromNamedArgs(Tree.NamedArgumentList nal) {
+LinkedHashMap<String,Type> getParametersFromNamedArgs(
+    Tree.NamedArgumentList nal) {
     value types = LinkedHashMap<String,Type>();
     variable value i = 0;
     for (a in nal.namedArguments) {
         if (is Tree.SpecifiedArgument a) {
-            value na = a;
-            Tree.Expression? e = na.specifierExpression.expression;
-            variable value name = na.identifier?.text else "";
+            Tree.Expression? e = a.specifierExpression.expression;
+            variable value name = a.identifier?.text else "";
             value unit = a.unit;
-            value type = if (!exists e) then unit.anythingType else unit.denotableType(e.typeModel);
+            value type = 
+                    if (!exists e) 
+                    then unit.anythingType 
+                    else unit.denotableType(e.typeModel);
             if (types.containsKey(name)) {
                 i++;
                 name = name + i.string;
             }
-            types.put(name, type);
+            types[name] = type;
         }
     }
     return types;

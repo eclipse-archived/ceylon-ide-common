@@ -12,11 +12,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil,
     Node
 }
-import com.redhat.ceylon.ide.common.correct {
-    DocumentChanges
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    platformServices,
+    ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.util {
-    Indents,
     escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -24,21 +25,18 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 
-shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange>
-        satisfies DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit {
-    
-    shared formal Indents<IDocument> indents;
+shared interface AbstractImportsCleaner {
     
     "Shows a popup to allow the user to select which `Declaration` should
      be imported between the different `proposals`"
     shared formal Declaration? select(List<Declaration> proposals);
     
-    "Returns true if the change should be applied"
     shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
-        IDocument doc, TextChange change) {
+        CommonDocument doc) {
         
         if (exists rootNode) {
+            value change = platformServices.document.createTextChange("Organize Imports", doc);
+        
             value imp = imports(rootNode, doc);
             value importList = rootNode.importList;
             if (!(imp.trimmed.empty && importList.imports.empty)) {
@@ -49,25 +47,26 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
                 if (il.imports.empty) {
                     start = 0;
                     length = 0;
-                    extra = indents.getDefaultLineDelimiter(doc);
+                    extra = doc.defaultLineDelimiter;
                 } else {
                     start = il.startIndex.intValue();
                     length = il.distance.intValue();
                     extra = "";
                 }
                 
-                if (!getDocContent(doc, start, length).equals(imp + extra)) {
-                    value edit = newReplaceEdit(start, length, imp + extra);
-                    addEditToChange(change, edit);
-                    return true;
+                Boolean changed = doc.getText(start, length) != imp + extra;
+                if (changed) {
+                    change.addEdit(ReplaceEdit(start, length, imp + extra));
+                    change.apply();
                 }
+                return changed;
             }
         }
         
         return false;
     }
     
-    String imports(Tree.CompilationUnit cu, IDocument doc) {
+    String imports(Tree.CompilationUnit cu, CommonDocument doc) {
         value proposals = ArrayList<Declaration>();
         value unused = ArrayList<Declaration>();
         
@@ -78,11 +77,12 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     }
 
     // Formerly CleanImportsHandler.imports(List<Declaration>, IDocument)
-    shared String createImports(List<Declaration> proposed, IDocument doc) {
-        return reorganizeImports(null, empty, proposed, doc);
-    }
+    shared String createImports(List<Declaration> proposed, CommonDocument doc)
+            => reorganizeImports(null, [], proposed, doc);
     
-    shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused, List<Declaration> proposed, IDocument doc) {
+    shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused,
+        List<Declaration> proposed, CommonDocument doc) {
+        
         value packages = naturalOrderTreeMap<String,MutableList<Tree.Import>>({});
         if (exists til) {
             for (i in til.imports) {
@@ -91,7 +91,7 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
                     value imps = packages.get(pn)
                         else ArrayList<Tree.Import>();
                     
-                    packages.put(pn, imps);
+                    packages[pn] = imps;
                     imps.add(i);
                 }
             }
@@ -101,13 +101,13 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
             value p = d.unit.\ipackage;
             value pn = p.nameAsString;
             if (!packages.defines(pn)) {
-                packages.put(pn, ArrayList<Tree.Import>(0));
+                packages[pn] = ArrayList<Tree.Import>(0);
             }
         }
         
         value builder = StringBuilder();
         variable String? lastToplevel = null;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value delim = doc.defaultLineDelimiter;
         for (packageName->imports in packages) {
             value _hasWildcard = hasWildcard(imports);
             value list = getUsedImportElements(imports, unused, _hasWildcard, packages);
@@ -154,7 +154,7 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     }
     
     String appendBreakIfNecessary(String? lastToplevel,
-        String currentPackage, StringBuilder builder, IDocument doc) {
+        String currentPackage, StringBuilder builder, CommonDocument doc) {
         
         value index = currentPackage.firstOccurrence('.');
         value topLevel = if (!exists index)
@@ -162,15 +162,18 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
                          else currentPackage.spanTo(index - 1);
         
         if (exists lastToplevel, !topLevel.equals(lastToplevel)) {
-            builder.append(indents.getDefaultLineDelimiter(doc));
+            builder.append(doc.defaultLineDelimiter);
         }
         
         return topLevel;
     }
     
-    void appendImportElements(String packageName, List<Tree.ImportMemberOrType> elements, List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard, StringBuilder builder, IDocument doc) {
-        value indent = indents.defaultIndent;
-        value delim = indents.getDefaultLineDelimiter(doc);
+    void appendImportElements(String packageName, List<Tree.ImportMemberOrType> elements,
+        List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
+        StringBuilder builder, CommonDocument doc) {
+        
+        value indent = platformServices.document.defaultIndent;
+        value delim = doc.defaultLineDelimiter;
         
         for (i in elements) {
             if (exists d = i.declarationModel,
@@ -209,10 +212,10 @@ shared interface AbstractImportsCleaner<IDocument,InsertEdit,TextEdit,TextChange
     }
     
     void appendNestedImportElements(Tree.ImportMemberOrType imt,
-        List<Declaration> unused, StringBuilder builder, IDocument doc) {
+        List<Declaration> unused, StringBuilder builder, CommonDocument doc) {
         
-        value indent = indents.defaultIndent;
-        value delim = indents.getDefaultLineDelimiter(doc);
+        value indent = platformServices.document.defaultIndent;
+        value delim = doc.defaultLineDelimiter;
         
         if (imt.importMemberOrTypeList exists) {
             builder.append(" {");

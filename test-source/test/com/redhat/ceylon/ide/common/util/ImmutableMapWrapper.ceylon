@@ -61,19 +61,13 @@ shared test void testMap(){
 }
 
 shared test void testMapEquality() {
-    assertEquals(ImmutableMapWrapper(newMap{}), ImmutableMapWrapper(newMap{}));
+    assertEquals(ImmutableMapWrapper(), ImmutableMapWrapper());
     assertEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), ImmutableMapWrapper(newMap{"b"->2, "a"->1}));
     assertNotEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), ImmutableMapWrapper(newMap{"b"->2, "a"->2}));
     assertNotEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), ImmutableMapWrapper(newMap{"b"->2}));
-    assertNotEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), ImmutableMapWrapper(newMap{}));
+    assertNotEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), ImmutableMapWrapper());
     
-    assertEquals(naturalOrderTreeMap{"a"->1, "b"->2}, naturalOrderTreeMap{"b"->2, "a"->1});
-    assertNotEquals(naturalOrderTreeMap{"a"->1, "b"->2}, naturalOrderTreeMap{"b"->2, "a"->2});
-    assertNotEquals(naturalOrderTreeMap{"a"->1, "b"->2}, naturalOrderTreeMap{"b"->2});
-    assertNotEquals(naturalOrderTreeMap{"a"->1, "b"->2}, naturalOrderTreeMap{});
-    assertEquals(naturalOrderTreeMap{}, naturalOrderTreeMap{});
-    
-    assertEquals(ImmutableMapWrapper(newMap{}), HashMap{});
+    assertEquals(ImmutableMapWrapper(), HashMap{});
     assertEquals(ImmutableMapWrapper(newMap{"a"->1, "b"->2}), HashMap{"b"->2, "a"->1});
 }
 

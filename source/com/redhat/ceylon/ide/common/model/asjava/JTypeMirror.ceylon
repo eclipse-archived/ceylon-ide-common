@@ -7,9 +7,7 @@ import com.redhat.ceylon.model.loader.impl.reflect.mirror {
 }
 import com.redhat.ceylon.model.loader.mirror {
     TypeMirror,
-    TypeKind,
-    TypeParameterMirror,
-    ClassMirror
+    TypeKind
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
@@ -26,15 +24,15 @@ import java.util {
     ArrayList
 }
 
-TypeMirror longMirror = PrimitiveMirror(TypeKind.\iLONG, "long");
+TypeMirror longMirror = PrimitiveMirror(TypeKind.long, "long");
 
-TypeMirror doubleMirror = PrimitiveMirror(TypeKind.\iDOUBLE, "double");
+TypeMirror doubleMirror = PrimitiveMirror(TypeKind.double, "double");
 
-TypeMirror booleanMirror = PrimitiveMirror(TypeKind.\iBOOLEAN, "boolean");
+TypeMirror booleanMirror = PrimitiveMirror(TypeKind.boolean, "boolean");
 
-TypeMirror intMirror = PrimitiveMirror(TypeKind.\iINT, "int");
+TypeMirror intMirror = PrimitiveMirror(TypeKind.int, "int");
 
-TypeMirror byteMirror = PrimitiveMirror(TypeKind.\iBYTE, "byte");
+TypeMirror byteMirror = PrimitiveMirror(TypeKind.byte, "byte");
 
 TypeMirror stringMirror = JavaClassType(javaClass<JString>());
 
@@ -42,70 +40,65 @@ TypeMirror objectMirror = JavaClassType(javaClass<Object>());
 
 class JTypeMirror(Type type) satisfies TypeMirror {
     
-    shared actual TypeMirror? componentType => null;
+    componentType => null;
     
-    shared actual ClassMirror? declaredClass {
-        if (type.classOrInterface) {
-            assert(is ClassOrInterface decl = type.declaration);
-            
-            return JClassMirror(decl);
-        }
-        
-        return null;
-    }
+    declaredClass
+            => if (is ClassOrInterface decl = type.declaration)
+            then JClassMirror(decl)
+            else null;
     
-    shared actual TypeKind kind => TypeKind.\iDECLARED;
+    kind => TypeKind.declared;
     
-    shared actual TypeMirror? lowerBound => null;
+    lowerBound => null;
     
-    shared actual Boolean primitive => false;
+    primitive => false;
     
-    shared actual String qualifiedName => type.asQualifiedString();
+    qualifiedName => type.asQualifiedString();
     
-    shared actual TypeMirror? qualifyingType => null;
+    qualifyingType => null;
     
-    shared actual Boolean raw => type.raw;
+    raw => type.raw;
     
     shared actual List<TypeMirror> typeArguments {
         value args = ArrayList<TypeMirror>();
-        
         for (arg in type.typeArgumentList) {
             args.add(JTypeMirror(arg));
         }
-        
         return args;
     }
     
-    shared actual TypeParameterMirror? typeParameter => null;
+    typeParameter => null;
     
-    shared actual TypeMirror? upperBound => null;
+    upperBound => null;
     
     string => type.asString();
 }
 
-class PrimitiveMirror(TypeKind _kind, String name) satisfies TypeMirror {
-    shared actual TypeMirror? componentType => null;
+class PrimitiveMirror(TypeKind _kind, String name)
+        satisfies TypeMirror {
+
+    componentType => null;
     
-    shared actual ClassMirror? declaredClass => null;
+    declaredClass => null;
     
-    shared actual TypeKind kind => _kind;
+    kind => _kind;
     
-    shared actual TypeMirror? lowerBound => null;
+    lowerBound => null;
     
-    shared actual Boolean primitive => true;
+    primitive => true;
     
-    shared actual String qualifiedName => name;
+    qualifiedName => name;
     
-    shared actual TypeMirror? qualifyingType => null;
+    qualifyingType => null;
     
-    shared actual Boolean raw => false;
+    raw => false;
     
-    shared actual List<TypeMirror> typeArguments
+    typeArguments
             => Collections.emptyList<TypeMirror>();
     
-    shared actual TypeParameterMirror? typeParameter => null;
+    typeParameter => null;
     
-    shared actual TypeMirror? upperBound => null;
+    upperBound => null;
     
     string => name;
 }

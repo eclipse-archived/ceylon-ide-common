@@ -1,13 +1,21 @@
 import ceylon.collection {
-    MutableMap
+    MutableMap,
+    unlinked,
+    HashMap,
+    Hashtable
 }
 
-import ceylon.language {
-    newMap = map
-}
-
-shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap = emptyMap) satisfies MutableMap<Key, Item> 
+shared class ImmutableMapWrapper<Key, Item>(
+    variable Map<Key, Item> immutableMap = emptyMap,
+    Map<Key, Item> newMap({<Key->Item>*} entries) => HashMap(unlinked, Hashtable(), entries)) 
+        satisfies MutableMap<Key, Item> 
         given Key satisfies Object {
+    
+    shared Map<Key, Item> immutable =>
+            synchronize { 
+                on = this; 
+                function do() => immutableMap;
+            };
     
     shared actual MutableMap<Key,Item> clone() => ImmutableMapWrapper(immutableMap);
     
@@ -32,10 +40,14 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
         }
     }
     
-    shared actual void clear() => synchronize { 
+    "Clears the whole map,
+     and returns the previous contents as un immutable map"
+    shared actual Map<Key, Item> clear() => synchronize { 
         on = this; 
-        void do() {
+        function do() {
+            value oldMap = immutableMap;
             immutableMap = emptyMap;
+            return oldMap;
         }
     };
     
@@ -48,13 +60,13 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
                 return this;
             }) synchronize(this, do);
     
-    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key)) => 
+    shared ImmutableMapWrapper<Key, Item> resetKeys({Key*} newKeys, Item toItem(Key key), Boolean reuseExistingItems=false) => 
             let(do = () {
-                if (immutableMap.size != newKeys.size
+                if (!reuseExistingItems || immutableMap.size != newKeys.size
                     || !immutableMap.keys.containsEvery(newKeys)) {
                     immutableMap = newMap(newKeys.map((key) => 
                         key -> (
-                            if (exists item=immutableMap[key]) 
+                            if (reuseExistingItems, exists item=immutableMap[key]) 
                             then item 
                             else toItem(key))));
                 }
@@ -64,8 +76,9 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
     shared actual Item? put(Key key, Item item) => 
             let(do = () {
                 Item? result = immutableMap.get(key);
-                immutableMap = newMap { key->item,
-                    *immutableMap.filterKeys((keyToKeep) => keyToKeep != key) };
+                immutableMap = newMap(
+                    immutableMap.filterKeys((keyToKeep) => 
+                        keyToKeep != key).chain { key->item });
                 return result;
             }) synchronize(this, do);
             
@@ -78,11 +91,25 @@ shared class ImmutableMapWrapper<Key, Item>(variable Map<Key, Item> immutableMap
                 return this;
             }) synchronize(this, do);
                     
-    shared ImmutableMapWrapper<Key, Item> putAllKeys({Key*} keys, Item toItem(Key key)) => 
+    shared ImmutableMapWrapper<Key, Item> putAllKeys({Key*} keys, Item toItem(Key key), Boolean reuseExistingItems=false) => 
             let(do = () {
-                immutableMap = newMap(immutableMap
-                    .filterKeys((keyToKeep) => ! keyToKeep in keys)
-                        .chain(keys.map((key) => key->toItem(key))));
+                if (!reuseExistingItems || !immutableMap.keys.containsEvery(keys)) {
+                    immutableMap = newMap(immutableMap
+                        .filterKeys((keyToKeep) => ! keyToKeep in keys)
+                            .chain(keys.map((key) => 
+                        key -> (
+                            if (reuseExistingItems, exists item=immutableMap[key]) 
+                            then item 
+                            else toItem(key)))));
+                }
+                return this;
+            }) synchronize(this, do);
+
+    shared ImmutableMapWrapper<Key, Item> putIfAbsent(Key key, Item toItem()) => 
+            let(do = () {
+                if (! immutableMap[key] exists) {
+                    immutableMap = newMap({key->toItem(), *immutableMap});
+                }
                 return this;
             }) synchronize(this, do);
 

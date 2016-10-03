@@ -4,98 +4,148 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit,
+    ReplaceEdit,
+    CommonDocument,
+    TextChange
+}
 
-shared interface JoinIfStatementsQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object joinIfStatementsQuickFix {
 
-    shared void addJoinIfStatementsProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addJoinIfStatementsProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.IfStatement statement) {
             if (exists elseClause = statement.elseClause) {
                 if (exists block = elseClause.block,
-                    block.token.type != CeylonLexer.\iIF_CLAUSE) {
+                    block.token.type != CeylonLexer.ifClause, 
+                    is Tree.IfStatement inner = block.statements[0],
+                    exists icl = inner.ifClause.conditionList) {
                     
-                    value statements = block.statements;
-                    if (statements.size() == 1) {
-                        value st = statements.get(0);
-                        if (is Tree.IfStatement inner = st,
-                            exists icl = inner.ifClause.conditionList) {
-                            
-                            value change = newTextChange("Join If Statements", file);
-                            value doc = getDocumentForChange(change);
-                            initMultiEditChange(change);
-                            value from = block.startIndex.intValue();
-                            value to = inner.startIndex.intValue();
-                            addEditToChange(change, newDeleteEdit(from, to - from));
-                            decrementIndent(doc, inner, icl, change, 
-                                indents.getIndent(inner, doc), indents.getIndent(statement, doc));
-                            addEditToChange(change, newDeleteEdit(
-                                inner.endIndex.intValue(),
-                                statement.endIndex.intValue() - inner.endIndex.intValue()));
-                            
-                            newProposal(data, "Join 'if' statements at 'else'", change);
-                        }
-                    }
+                    value doc = data.document;
+                    value change 
+                            = platformServices.document.createTextChange {
+                        name = "Join If Statements";
+                        input = data.phasedUnit;
+                    };
+                    change.initMultiEdit();
+                    
+                    value from = block.startIndex.intValue();
+                    value to = inner.startIndex.intValue();
+                    change.addEdit(DeleteEdit {
+                        start = from;
+                        length = to - from;
+                    });
+                    decrementIndent {
+                        doc = doc;
+                        ifSt = inner;
+                        cl = icl;
+                        change = change;
+                        indent = doc.getIndent(inner);
+                        outerIndent = doc.getIndent(statement);
+                    };
+                    change.addEdit(DeleteEdit {
+                        start = inner.endIndex.intValue();
+                        length = statement.endIndex.intValue() 
+                                - inner.endIndex.intValue();
+                    });
+                    
+                    data.addQuickFix {
+                        description = "Join 'if' statements at 'else'";
+                        change = change;
+                    };
                 }
-            } else if (exists block = statement.ifClause.block) {
-                value statements = block.statements;
-                if (statements.size() == 1, 
-                    is Tree.IfStatement inner = statements.get(0),
+            }
+            else if (exists block = statement.ifClause.block) {
+                if (is Tree.IfStatement inner = block.statements[0],
                     exists ocl = statement.ifClause.conditionList,
                     exists icl = inner.ifClause.conditionList,
                     !inner.elseClause exists) {
                     
-                    value change = newTextChange("Join If Statements", file);
-                    value doc = getDocumentForChange(change);
-                    initMultiEditChange(change);
-                    addEditToChange(change, newReplaceEdit(
-                        ocl.endIndex.intValue() - 1,
-                        icl.startIndex.intValue() - ocl.endIndex.intValue() + 2, ", "));
+                    value doc = data.document;
+                    value change 
+                            = platformServices.document.createTextChange {
+                        name = "Join If Statements";
+                        input = data.phasedUnit;
+                    };
+                    change.initMultiEdit();
                     
-                    decrementIndent(doc, inner, icl, change,
-                        indents.getIndent(inner, doc),
-                        indents.getIndent(statement, doc));
+                    change.addEdit(ReplaceEdit {
+                        start = ocl.endIndex.intValue() - 1;
+                        length = icl.startIndex.intValue() 
+                                - ocl.endIndex.intValue() + 2;
+                        text = ", ";
+                    });
                     
-                    addEditToChange(change, newDeleteEdit(
-                        inner.endIndex.intValue(),
-                        statement.endIndex.intValue() - inner.endIndex.intValue()));
+                    decrementIndent {
+                        doc = doc;
+                        ifSt = inner;
+                        cl = icl;
+                        change = change;
+                        indent = doc.getIndent(inner);
+                        outerIndent = doc.getIndent(statement);
+                    };
                     
-                    newProposal(data, "Join 'if' statements at condition list", change);
+                    change.addEdit(DeleteEdit {
+                        start = inner.endIndex.intValue();
+                        length = statement.endIndex.intValue() 
+                                - inner.endIndex.intValue();
+                    });
+                    
+                    data.addQuickFix {
+                        description = "Join 'if' statements at condition list";
+                        change = change;
+                    };
                 }
             }
         }
     }
     
-    void decrementIndent(IDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
+    void decrementIndent(CommonDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
         TextChange change, String indent, String outerIndent) {
         
-        value defaultIndent = indents.defaultIndent;
-        variable Integer line = getLineOfOffset(doc, cl.stopIndex.intValue()) + 1;
-        while (line < getLineOfOffset(doc, ifSt.stopIndex.intValue())) {
-            value lineText = getLineContent(doc, line);
-            value lineStart = getLineStartOffset(doc, line);
+        value defaultIndent = platformServices.document.defaultIndent;
+        variable Integer line = doc.getLineOfOffset(cl.stopIndex.intValue()) + 1;
+        while (line < doc.getLineOfOffset(ifSt.stopIndex.intValue())) {
+            value lineText = doc.getLineContent(line);
+            value lineStart = doc.getLineStartOffset(line);
             
-            if (lineText.startsWith(indent), indent.startsWith(outerIndent)) {
-                addEditToChange(change, newDeleteEdit(lineStart + outerIndent.size,
-                    indent.size - outerIndent.size));
-            } else if (lineText.startsWith(outerIndent + defaultIndent)) {
-                addEditToChange(change, newDeleteEdit(lineStart + outerIndent.size,
-                    defaultIndent.size));
+            if (lineText.startsWith(indent), 
+                indent.startsWith(outerIndent)) {
+                change.addEdit(DeleteEdit {
+                    start = lineStart + outerIndent.size;
+                    length = indent.size - outerIndent.size;
+                });
+            } 
+            else if (lineText.startsWith(outerIndent + defaultIndent)) {
+                change.addEdit(DeleteEdit {
+                    start = lineStart + outerIndent.size;
+                    length = defaultIndent.size;
+                });
             }
             
             line++;
         }
         
-        line = getLineOfOffset(doc, ifSt.stopIndex.intValue());
-        value lineText = getLineContent(doc, line);
-        value lineStart = getLineStartOffset(doc, line);
+        line = doc.getLineOfOffset(ifSt.stopIndex.intValue());
+        value lineText = doc.getLineContent(line);
+        value lineStart = doc.getLineStartOffset(line);
 
-        if (lineText.startsWith(indent), indent.startsWith(outerIndent)) {
-            addEditToChange(change, newReplaceEdit(lineStart, indent.size, outerIndent));
-        } else if (lineText.startsWith(outerIndent + defaultIndent)) {
-            addEditToChange(change, newReplaceEdit(lineStart, 
-                outerIndent.size + defaultIndent.size, outerIndent));
+        if (lineText.startsWith(indent), 
+            indent.startsWith(outerIndent)) {
+            change.addEdit(ReplaceEdit {
+                start = lineStart;
+                length = indent.size;
+                text = outerIndent;
+            });
+        } 
+        else if (lineText.startsWith(outerIndent + defaultIndent)) {
+            change.addEdit(ReplaceEdit {
+                start = lineStart;
+                length = outerIndent.size + defaultIndent.size;
+                text = outerIndent;
+            });
         }
     }
 }

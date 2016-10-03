@@ -1,65 +1,69 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.model.typechecker.model {
-    FunctionOrValue,
-    TypedDeclaration
+    FunctionOrValue
 }
 
-shared interface AddInitializerQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addInitializerQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TypedDeclaration dec, 
-        Integer offset, Integer length, TextChange change);
-    
-    shared void addInitializerProposals(Data data, IFile file) {
-        value node = data.node;
-        
-        if (is Tree.AttributeDeclaration node) {
-            value attDecNode = node;
-            Tree.SpecifierOrInitializerExpression? sie = attDecNode.specifierOrInitializerExpression;
-            
+    shared void addInitializerProposals(QuickFixData data) {
+        switch (node = data.node)
+        case (is Tree.AttributeDeclaration) {
+            Tree.SpecifierOrInitializerExpression? sie 
+                    = node.specifierOrInitializerExpression;
             if (!(sie is Tree.LazySpecifierExpression)) {
-                addInitializerProposal(data, file, attDecNode);
+                addInitializerProposal(data, node);
             }
         }
-        
-        if (is Tree.MethodDeclaration node) {
-            value methDecNode = node;
-            addInitializerProposal(data, file, methDecNode);
+        case (is Tree.MethodDeclaration) {
+            addInitializerProposal(data, node);
         }
+        else {}
     }
 
-    void addInitializerProposal(Data data, IFile file, 
+    void addInitializerProposal(QuickFixData data, 
         Tree.TypedDeclaration decNode) {
         
-        assert (is FunctionOrValue? dec = decNode.declarationModel);
-        if (!exists dec) {
-            return;
-        }
-        
-        if (!dec.initializerParameter exists, !dec.formal) {
-            value change = newTextChange("Add Initializer", file);
+        if (is FunctionOrValue dec = decNode.declarationModel,
+            !dec.parameter && !dec.formal) {
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Add Initializer";
+                input = data.phasedUnit;
+            };
+            
             value offset = decNode.endIndex.intValue() - 1;
-            value defaultValue = correctionUtil.defaultValue(data.rootNode.unit, dec.type);
+            value defaultValue 
+                    = correctionUtil.defaultValue {
+                        unit = data.rootNode.unit;
+                        type = dec.type;
+                    };
             
-            String def;
-            Integer selectionOffset;
-            if (is Tree.MethodDeclaration decNode) {
-                def = " => " + defaultValue;
-                selectionOffset = offset + 4;
-            } else {
-                def = " = " + defaultValue;
-                selectionOffset = offset + 3;
-            }
+            value specifier 
+                    = decNode is Tree.MethodDeclaration
+                        then " => " else " = ";
             
-            addEditToChange(change, newInsertEdit(offset, def));
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = specifier + defaultValue;
+            });
             
-            value desc = "Add initializer to '``dec.name``'";
-            newProposal(data, desc, dec, selectionOffset, defaultValue.size, change);
+            data.addQuickFix {
+                description = "Add initializer to '``dec.name``'";
+                change = change;
+                selection = DefaultRegion {
+                    start = offset + specifier.size;
+                    length = defaultValue.size;
+                };
+            };
         }
     }
 

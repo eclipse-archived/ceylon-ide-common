@@ -10,26 +10,18 @@ import ceylon.interop.java {
     CeylonIterable,
     javaClassFromInstance
 }
+import ceylon.language.meta.model {
+    ClassOrInterface
+}
 
-import com.redhat.ceylon.model.typechecker.util {
-    ModuleManager {
-        moduleDescriptorFileName=MODULE_FILE,
-        packageDescriptorFileName=PACKAGE_FILE
-    },
-    TypePrinter
+import com.redhat.ceylon.common {
+    Backends
 }
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError
 }
 import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit,
-    TypecheckerUnit
-}
-import com.redhat.ceylon.model.typechecker.model {
-    ModelDeclaration=Declaration,
-    Function,
-    ModuleImport,
-    Module
+    PhasedUnit
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Ast=Tree,
@@ -43,14 +35,23 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     },
     Message
 }
+import com.redhat.ceylon.model.typechecker.model {
+    ModelDeclaration=Declaration,
+    Function,
+    ModuleImport,
+    Module,
+    Unit
+}
+import com.redhat.ceylon.model.typechecker.util {
+    ModuleManager {
+        moduleDescriptorFileName=moduleFile,
+        packageDescriptorFileName=packageFile
+    },
+    TypePrinter
+}
+
 import java.util {
     JList=List
-}
-import ceylon.language.meta.model {
-    ClassOrInterface
-}
-import com.redhat.ceylon.common {
-    Backends
 }
 
 shared interface NodeComparisonListener {
@@ -150,17 +151,24 @@ shared class DeltaBuilderFactory(
                         then theseAnalysisErrors == thoseAnalysisErrors
                         else theseAnalysisErrors.size == 0 && thoseAnalysisErrors.size == 0;
 
-    alias AstNode => <Ast.Declaration | Ast.CompilationUnit | Ast.ModuleDescriptor | Ast.ImportModule | Ast.PackageDescriptor> & AstAbstractNode;
-
-    abstract class DeltaBuilder(AstNode oldNode, AstNode? newNode) {
-
-        shared formal [AstNode*] getChildren(AstNode astNode);
+    interface AbstractDeltaBuilder {
         shared formal AbstractDelta buildDelta();
+    }
+    
+    abstract class DeltaBuilder<ParentNode, ChildNode>(ParentNode oldNode, ParentNode? newNode)
+            satisfies AbstractDeltaBuilder
+            given ParentNode of Ast.Declaration  | Ast.SpecifierStatement | Ast.CompilationUnit | Ast.ModuleDescriptor | Ast.ImportModule | Ast.PackageDescriptor
+            given ChildNode of Ast.Statement  | Ast.CompilationUnit | Ast.ModuleDescriptor | Ast.ImportModule | Ast.PackageDescriptor {
+
+//        shared alias ParentNode => ParentNodeType;// & AstAbstractNode;
+//        shared alias ChildNode => ChildNodeType;// & AstAbstractNode;
+        
+        shared formal [ChildNode*] getChildren(ParentNode astNode);
 
         shared formal void registerRemovedChange();
         shared formal void calculateLocalChanges();
-        shared formal void manageChildDelta(AstNode oldChild, AstNode? newChild);
-        shared formal void registerMemberAddedChange(AstNode newChild);
+        shared formal void manageChildDelta(ChildNode oldChild, ChildNode? newChild);
+        shared formal void registerMemberAddedChange(ChildNode newChild);
 
         shared default void recurse() {
             if (newNode is Null) {
@@ -171,16 +179,16 @@ shared class DeltaBuilderFactory(
 
             calculateLocalChanges();
 
-            [AstNode*] oldChildren = getChildren(oldNode);
-            [AstNode*] newChildren = getChildren(newNode);
+            [ChildNode*] oldChildren = getChildren(oldNode);
+            [ChildNode*] newChildren = getChildren(newNode);
 
             if (newChildren nonempty || oldChildren nonempty) {
                 value allChildrenSet = HashSet<String>();
 
-                function toMap([AstNode*] children) {
-                    MutableMap<String,AstNode>? childrenSet;
+                function toMap([ChildNode*] children) {
+                    MutableMap<String,ChildNode>? childrenSet;
                     if (nonempty children) {
-                        childrenSet = HashMap<String,AstNode>();
+                        childrenSet = HashMap<String,ChildNode>();
                         assert (exists childrenSet);
                         for (child in children) {
                             String childKey;
@@ -188,6 +196,10 @@ shared class DeltaBuilderFactory(
                             case(is Ast.Declaration) {
                                 value model = child.declarationModel;
                                 childKey = "``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
+                            }
+                            case(is Ast.SpecifierStatement) {
+                                value model = child.declaration;
+                                childKey = "=>``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
                             }
                             case(is Ast.ModuleDescriptor) {
                                 childKey = child.unit.fullPath;
@@ -200,10 +212,12 @@ shared class DeltaBuilderFactory(
                             }
                             case(is Ast.ImportModule) {
                                 childKey = importedModuleName(child) + "/" + (child.version?.text?.trim('"'.equals) else "<unknown>");
+                            } else {
+                                continue;
                             }
 
                             allChildrenSet.add(childKey);
-                            childrenSet.put(childKey, child);
+                            childrenSet[childKey] = child;
                         }
                     } else {
                         childrenSet = null;
@@ -211,8 +225,8 @@ shared class DeltaBuilderFactory(
                     return childrenSet;
                 }
 
-                MutableMap<String,AstNode>? oldChildrenSet = toMap(oldChildren);
-                MutableMap<String,AstNode>? newChildrenSet = toMap(newChildren);
+                MutableMap<String,ChildNode>? oldChildrenSet = toMap(oldChildren);
+                MutableMap<String,ChildNode>? newChildrenSet = toMap(newChildren);
 
                 for (keyChild in allChildrenSet) {
                     value oldChild = oldChildrenSet?.get(keyChild) else null;
@@ -229,7 +243,7 @@ shared class DeltaBuilderFactory(
     }
 
     class PackageDescriptorDeltaBuilder(Ast.PackageDescriptor oldNode, Ast.PackageDescriptor? newNode, NodeComparisonListener? nodeComparisonListener)
-            extends DeltaBuilder(oldNode, newNode) {
+            extends DeltaBuilder<Ast.PackageDescriptor, Nothing>(oldNode, newNode) {
         variable PackageDescriptorDelta.PossibleChange? change = null;
 
         shared actual PackageDescriptorDelta buildDelta() {
@@ -240,7 +254,7 @@ shared class DeltaBuilderFactory(
                     if (exists existingChange = change) {
                         return [existingChange];
                     } else {
-                        return empty;
+                        return [];
                     }
                 }
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
@@ -248,17 +262,11 @@ shared class DeltaBuilderFactory(
             return delta;
         }
 
-        shared actual void manageChildDelta(AstNode oldChild, AstNode? newChild) {
-            assert(false);
-        }
+        manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
+ 
+        registerMemberAddedChange(Nothing newChild) => noop();
 
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(false);
-        }
-
-        shared actual void registerRemovedChange() {
-            assert(false);
-        }
+        registerRemovedChange() => noop();
 
         shared actual void calculateLocalChanges() {
             assert(exists newNode);
@@ -281,17 +289,19 @@ shared class DeltaBuilderFactory(
             }
         }
 
-        shared actual Ast.Declaration[] getChildren(AstNode astNode)
-            => empty;
+        getChildren(Ast.PackageDescriptor astNode) => [];
     }
 
-    function sameBackend([Ast.AnnotationList, TypecheckerUnit?] oldNode, [Ast.AnnotationList, TypecheckerUnit?] newNode)
+    function sameBackend([Ast.AnnotationList, Unit?] oldNode, 
+                         [Ast.AnnotationList, Unit?] newNode)
             => let (Backends oldNative = getNativeBackend(*oldNode),
                     Backends newNative = getNativeBackend(*newNode))
                         oldNative == newNative;
 
-    class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, Ast.ModuleDescriptor? newNode, NodeComparisonListener? nodeComparisonListener)
-            extends DeltaBuilder(oldNode, newNode) {
+    class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, 
+                                       Ast.ModuleDescriptor? newNode, 
+                                       NodeComparisonListener? nodeComparisonListener)
+            extends DeltaBuilder<Ast.ModuleDescriptor, Ast.ImportModule>(oldNode, newNode) {
         variable value changes = ArrayList<ModuleDescriptorDelta.PossibleChange>();
         variable value childrenDeltas = ArrayList<ModuleImportDelta>();
         Module? oldModule;
@@ -313,10 +323,8 @@ shared class DeltaBuilderFactory(
             return delta;
         }
 
-        shared actual void manageChildDelta(AstNode oldChild, AstNode? newChild) {
-            assert(is Ast.ImportModule oldChild,
-                is Ast.ImportModule? newChild,
-                exists oldModule);
+        shared actual void manageChildDelta(Ast.ImportModule oldChild, Ast.ImportModule? newChild) {
+            assert(exists oldModule);
             value builder = ModuleImportDeclarationDeltaBuilder(oldChild, newChild, oldModule, nodeComparisonListener);
             value delta = builder.buildDelta();
             if (delta.changes.empty && delta.childrenDeltas.empty) {
@@ -325,8 +333,7 @@ shared class DeltaBuilderFactory(
             childrenDeltas.add(delta);
         }
 
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(is Ast.ImportModule newChild);
+        shared actual void registerMemberAddedChange(Ast.ImportModule newChild) {
             changes.add(ModuleImportAdded(
                 importedModuleName(newChild),
                 newChild.version.text.trim('"'.equals),
@@ -336,7 +343,7 @@ shared class DeltaBuilderFactory(
         }
 
         shared actual void registerRemovedChange() {
-            assert(false);
+            assert(false);  // TODO: this will change when we fully support module descriptor incremental build
         }
 
         shared actual void calculateLocalChanges() {
@@ -353,17 +360,16 @@ shared class DeltaBuilderFactory(
             }
         }
 
-        shared actual Ast.ImportModule[] getChildren(AstNode astNode) {
+        shared actual Ast.ImportModule[] getChildren(Ast.ModuleDescriptor astNode) {
             if (structuralChange in changes) {
                 return [];
             }
-            assert(is Ast.ModuleDescriptor astNode);
             return CeylonIterable(astNode.importModuleList.importModules).sequence();
         }
     }
 
     class ModuleImportDeclarationDeltaBuilder(Ast.ImportModule oldNode, Ast.ImportModule? newNode, Module oldParentModule, NodeComparisonListener? nodeComparisonListener)
-            extends DeltaBuilder(oldNode, newNode) {
+            extends DeltaBuilder<Ast.ImportModule, Nothing>(oldNode, newNode) {
 
         variable ModuleImportDelta.PossibleChange? change = null;
 
@@ -385,13 +391,8 @@ shared class DeltaBuilderFactory(
                     assert (exists moduleImport);
                     return moduleImport;
                 }
-                shared actual [ModuleImportDelta.PossibleChange]|[] changes {
-                    if (exists existingChange = change) {
-                        return [existingChange];
-                    } else {
-                        return empty;
-                    }
-                }
+                shared actual [ModuleImportDelta.PossibleChange]|[] changes
+                        => if (exists existingChange = change) then [existingChange] else [];
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
                 shared actual String changedElementString => "ModuleImport[``changedElement.\imodule.nameAsString``, ``changedElement.\imodule.version``]";
             }
@@ -428,24 +429,15 @@ shared class DeltaBuilderFactory(
             }
         }
 
-        shared actual void manageChildDelta(AstNode oldChild, AstNode? newChild) {
-            assert(false);
-        }
+        manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
+        registerMemberAddedChange(Nothing newChild) => noop();
+        registerRemovedChange() => noop();
 
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(false);
-        }
-
-        shared actual void registerRemovedChange() {
-            change = removed;
-        }
-
-        shared actual AstNode[] getChildren(AstNode astNode)
-            => empty;
+        getChildren(Ast.ImportModule astNode) => [];
     }
 
     class RegularCompilationUnitDeltaBuilder(Ast.CompilationUnit oldNode, Ast.CompilationUnit newNode, NodeComparisonListener? nodeComparisonListener)
-            extends DeltaBuilder(oldNode, newNode) {
+            extends DeltaBuilder<Ast.CompilationUnit, Ast.Declaration>(oldNode, newNode) {
 
         variable value changes = ArrayList<RegularCompilationUnitDelta.PossibleChange>();
         variable value childrenDeltas = ArrayList<TopLevelDeclarationDelta>();
@@ -461,10 +453,8 @@ shared class DeltaBuilderFactory(
             return delta;
         }
 
-        shared actual void manageChildDelta(AstNode oldChild, AstNode? newChild) {
-            assert(is Ast.Declaration oldChild,
-                is Ast.Declaration? newChild,
-                oldChild.declarationModel.toplevel);
+        shared actual void manageChildDelta(Ast.Declaration oldChild, Ast.Declaration? newChild) {
+            assert(oldChild.declarationModel.toplevel);
             value builder = TopLevelDeclarationDeltaBuilder(oldChild, newChild, nodeComparisonListener);
             value delta = builder.buildDelta();
             if (delta.changes.empty && delta.childrenDeltas.empty) {
@@ -473,8 +463,8 @@ shared class DeltaBuilderFactory(
             childrenDeltas.add(delta);
         }
 
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(is Ast.Declaration newChild, newChild.declarationModel.toplevel);
+        shared actual void registerMemberAddedChange(Ast.Declaration newChild) {
+            assert(newChild.declarationModel.toplevel);
             changes.add(TopLevelDeclarationAdded(
                 newChild.declarationModel.nameAsString,
                 newChild.declarationModel.shared
@@ -496,7 +486,7 @@ shared class DeltaBuilderFactory(
 
         }
 
-        shared actual Ast.Declaration[] getChildren(AstNode astNode) {
+        shared actual Ast.Declaration[] getChildren(Ast.CompilationUnit astNode) {
             value children = ArrayList<Ast.Declaration>(5);
             object visitor extends Visitor() {
                 shared actual void visitAny(AstAbstractNode? node) {
@@ -513,18 +503,71 @@ shared class DeltaBuilderFactory(
         }
     }
 
+    interface MemberDeltaBuider satisfies AbstractDeltaBuilder {
+        shared actual formal NestedDeclarationDelta | SpecifierDelta buildDelta();
+    }
+    
+    class SpecifierDeltaBuilder(Ast.SpecifierStatement oldNode, Ast.SpecifierStatement? newNode, NodeComparisonListener? nodeComparisonListener)
+            extends DeltaBuilder<Ast.SpecifierStatement, Nothing>(oldNode, newNode)
+            satisfies MemberDeltaBuider {
+        
+        variable value changes = ArrayList<SpecifierDelta.PossibleChange>();
+        
+        shared actual SpecifierDelta buildDelta() {
+            recurse();
+            object delta satisfies SpecifierDelta {
+                changedElement => oldNode.declaration;
+                shared actual {SpecifierDelta.PossibleChange*} changes => outer.changes;
+                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
+            }
+            return delta;
+        }
+        
+        manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
+        
+        registerMemberAddedChange(Nothing newChild) => noop();
+        
+        registerRemovedChange() => noop();
+        
+        
+        shared actual void calculateLocalChanges() {
+            // No structural change can occur within a compilation unit
+            // Well ... is it true ? What about the initialization order of toplevel declarations ?
+            // TODO consider the declaration order of top-levels inside a compilation unit as a structural change ?
+            // TODO extend this question to the order of declaration inside the initialization section :
+            //      we should check that the initialization section of a class is not changed
+            // TODO more generally : where is the order of declaration important ? and when an order change can trigger compilation errors ?
+            
+        }
+        
+        getChildren(Ast.SpecifierStatement astNode) => [];
+    }
+
     abstract class DeclarationDeltaBuilder(Ast.Declaration oldNode, Ast.Declaration? newNode, NodeComparisonListener? nodeComparisonListener)
             of TopLevelDeclarationDeltaBuilder | NestedDeclarationDeltaBuilder
-            extends DeltaBuilder(oldNode, newNode) {
-
-        shared variable MutableList<NestedDeclarationDelta> childrenDeltas = ArrayList<NestedDeclarationDelta>();
+            extends DeltaBuilder<Ast.Declaration, Ast.Statement>(oldNode, newNode) {
+        
+        shared variable MutableList<NestedDeclarationDelta|SpecifierDelta> childrenDeltas = ArrayList<NestedDeclarationDelta|SpecifierDelta>();
+        shared formal void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change);
+        
         shared formal {ImpactingChange*} changes;
 
-        shared actual void manageChildDelta(AstNode oldChild, AstNode? newChild) {
-            assert(is Ast.Declaration oldChild,
-                is Ast.Declaration? newChild,
-                ! oldChild.declarationModel.toplevel);
-            value builder = NestedDeclarationDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+        shared actual void manageChildDelta(Ast.Statement oldChild, Ast.Statement? newChild) {
+            NestedDeclarationDeltaBuilder | SpecifierDeltaBuilder builder;
+            switch(oldChild)
+            case (is Ast.Declaration) {
+                assert(! oldChild.declarationModel.toplevel,
+                        is Ast.Declaration? newChild);
+                builder = NestedDeclarationDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+            }
+            case (is Ast.SpecifierStatement) {
+                assert(is Ast.SpecifierStatement? newChild);
+                builder = SpecifierDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+            }
+            else {
+                return;
+            }
+            
             value delta = builder.buildDelta();
             if (delta.changes.empty && delta.childrenDeltas.empty) {
                 return;
@@ -532,15 +575,18 @@ shared class DeltaBuilderFactory(
             childrenDeltas.add(delta);
         }
 
-        shared actual Ast.Declaration[] getChildren(AstNode astNode) {
-            value children = ArrayList<Ast.Declaration>(5);
+        shared actual Ast.Statement[] getChildren(Ast.Declaration astNode) {
+            ArrayList<Ast.Statement> children = ArrayList<Ast.Statement>(5);
             object visitor extends Visitor() {
-                shared actual void visitAny(AstAbstractNode? node) {
+                shared actual void visitAny(AstAbstractNode node) {
                     if (is Ast.Declaration declaration = node) {
                         assert(!declaration.declarationModel.toplevel);
                         if (declaration.declarationModel.shared) {
                             children.add(declaration);
                         }
+                    } else if (is Ast.SpecifierStatement specifier = node,
+                                specifier.refinement) {
+                        children.add(specifier);
                     } else {
                         super.visitAny(node);
                     }
@@ -549,6 +595,20 @@ shared class DeltaBuilderFactory(
             astNode.visitChildren(visitor);
             return children.sequence();
         }
+
+        shared actual void registerMemberAddedChange(Ast.Statement newChild) {
+            addChange(DeclarationMemberAdded {
+                name = switch(newChild)
+                case(is Ast.Declaration) newChild.declarationModel.nameAsString
+                case(is Ast.SpecifierStatement) newChild.declaration.nameAsString
+                else "<unknown>";
+            });
+        }
+        
+        shared actual void registerRemovedChange() {
+            addChange(removed);
+        }
+        
 
         shared Boolean hasStructuralChanges(Ast.Declaration oldAstDeclaration, Ast.Declaration newAstDeclaration, NodeComparisonListener? listener) {
 
@@ -863,25 +923,20 @@ shared class DeltaBuilderFactory(
 
         variable value _changes = ArrayList<TopLevelDeclarationDelta.PossibleChange>();
         shared actual {TopLevelDeclarationDelta.PossibleChange*} changes => _changes;
-
+        
+        shared actual void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change) {
+            _changes.add(change);
+        }
+        
         shared actual TopLevelDeclarationDelta buildDelta() {
             recurse();
             object delta satisfies TopLevelDeclarationDelta {
                 changedElement => oldNode.declarationModel;
                 shared actual {TopLevelDeclarationDelta.PossibleChange*} changes => outer.changes;
-                shared actual {NestedDeclarationDelta*} childrenDeltas => outer.childrenDeltas;
+                shared actual {<NestedDeclarationDelta|SpecifierDelta>*} childrenDeltas => outer.childrenDeltas;
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
             }
             return delta;
-        }
-
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(is Ast.Declaration newChild);
-            _changes.add(DeclarationMemberAdded(newChild.declarationModel.nameAsString));
-        }
-
-        shared actual void registerRemovedChange() {
-            _changes.add(removed);
         }
 
         shared actual void calculateLocalChanges() {
@@ -904,30 +959,27 @@ shared class DeltaBuilderFactory(
 
 
     class NestedDeclarationDeltaBuilder(Ast.Declaration oldNode, Ast.Declaration? newNode, NodeComparisonListener? nodeComparisonListener)
-            extends DeclarationDeltaBuilder(oldNode, newNode, nodeComparisonListener) {
+            extends DeclarationDeltaBuilder(oldNode, newNode, nodeComparisonListener)
+            satisfies MemberDeltaBuider {
 
         variable value _changes = ArrayList<NestedDeclarationDelta.PossibleChange>();
         shared actual {NestedDeclarationDelta.PossibleChange*} changes => _changes;
-
+        
+        shared actual void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change) {
+            assert(is NestedDeclarationDelta.PossibleChange change);
+            _changes.add(change);
+        }
+        
         shared actual NestedDeclarationDelta buildDelta() {
             recurse();
             object delta satisfies NestedDeclarationDelta {
                 changedElement => oldNode.declarationModel;
                 shared actual {NestedDeclarationDelta.PossibleChange*} changes => outer.changes;
-                shared actual {NestedDeclarationDelta*} childrenDeltas => outer.childrenDeltas;
+                shared actual {<NestedDeclarationDelta|SpecifierDelta>*} childrenDeltas => outer.childrenDeltas;
                 shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
 
             }
             return delta;
-        }
-
-        shared actual void registerMemberAddedChange(AstNode newChild) {
-            assert(is Ast.Declaration newChild);
-            _changes.add(DeclarationMemberAdded(newChild.declarationModel.nameAsString));
-        }
-
-        shared actual void registerRemovedChange() {
-            _changes.add(removed);
         }
 
         shared actual void calculateLocalChanges() {

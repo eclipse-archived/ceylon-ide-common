@@ -1,64 +1,129 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    DeleteEdit,
+    ReplaceEdit
+}
 import com.redhat.ceylon.model.typechecker.model {
-    ModelUtil,
-    Declaration
+    ModelUtil
 }
 
-import java.util {
-    HashSet
-}
-
-shared interface VerboseRefinementQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object verboseRefinementQuickFix {
     
-    shared void addVerboseRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addVerboseRefinementProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.SpecifierStatement ss = statement,
             ss.refinement, 
             exists e = ss.specifierExpression.expression,
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             
-            value change = newTextChange("Convert to Verbose Refinement", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Convert to Verbose Refinement";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             
             value unit = ss.unit;
-            value t = unit.denotableType(e.typeModel);
-            value decs = HashSet<Declaration>();
-            importProposals.importType(decs, t, data.rootNode);
-            importProposals.applyImports(change, decs, data.rootNode, getDocumentForChange(change));
-            value type = t.asSourceCodeString(unit);
+            value type = unit.denotableType(e.typeModel);
+            value importProposals 
+                    = CommonImportProposals {
+                        document = data.document;
+                        rootNode = data.rootNode;
+                    };
+            importProposals.importType(type);
+            importProposals.apply(change);
             
-            addEditToChange(change, newInsertEdit(ss.startIndex.intValue(), "shared actual " + type + " "));
+            change.addEdit(InsertEdit {
+                start = ss.startIndex.intValue();
+                text = "shared actual ``type.asSourceCodeString(unit)`` ";
+            });
             
-            newProposal(data, "Convert to verbose refinement", change);
+            data.addQuickFix {
+                description = "Convert to verbose refinement";
+                change = change;
+            };
         }
     }
 
-    shared void addShortcutRefinementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addShortcutRefinementProposal(QuickFixData data, 
+        Tree.Statement? statement) {
         if (is Tree.TypedDeclaration statement,
             exists model = statement.declarationModel,
             model.actual, 
-            exists spec = 
-                    switch (statement) 
-                    case (is Tree.AttributeDeclaration) 
-                        statement.specifierOrInitializerExpression
-                    case (is Tree.MethodDeclaration) 
-                        statement.specifierExpression
-                    else null,
-            exists e = spec.expression,
-            !ModelUtil.isTypeUnknown(e.typeModel)) {
+            if (is Tree.AnyMethod statement)
+                then !statement.typeParameterList exists 
+                else true) {
             
-            value change = newTextChange("Convert to Shortcut Refinement", file);
-            initMultiEditChange(change);
+            value body = 
+                switch (statement) 
+                case (is Tree.AttributeDeclaration) 
+                    statement.specifierOrInitializerExpression
+                case (is Tree.MethodDeclaration) 
+                    statement.specifierExpression
+                case (is Tree.AttributeGetterDefinition)
+                    statement.block
+                case (is Tree.MethodDefinition) 
+                    statement.block
+                else null;
             
-            value start = statement.startIndex.intValue();
-            value length = statement.identifier.startIndex.intValue() - start;
-            addEditToChange(change, newDeleteEdit(start, length));
+            Tree.Expression? expr;
+            switch (body)
+            case (null) {
+                return;
+            }
+            case (is Tree.SpecifierOrInitializerExpression) {
+                expr = body.expression;
+            }
+            case (is Tree.Block) {
+                if (is Tree.Return ret = body.statements[0]) {
+                    expr = ret.expression;
+                }
+                else {
+                    return;
+                }
+            }
             
-            newProposal(data, "Convert to shortcut refinement", change);
+            if (exists expr,
+                !ModelUtil.isTypeUnknown(expr.typeModel)) {
+            
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Convert to Shortcut Refinement";
+                    input = data.phasedUnit;
+                };
+                change.initMultiEdit();
+                
+                value start = statement.startIndex.intValue();
+                value length = statement.identifier.startIndex.intValue() - start;
+                change.addEdit(DeleteEdit {
+                    start = start;
+                    length = length;
+                });
+                
+                if (is Tree.Block body) {
+                    change.addEdit(ReplaceEdit {
+                        start = body.startIndex.intValue();
+                        length = expr.startIndex.intValue() 
+                               - body.startIndex.intValue();
+                        text = "=> ";
+                    });
+                    change.addEdit(ReplaceEdit {
+                        start = expr.endIndex.intValue();
+                        length = body.endIndex.intValue() 
+                               - expr.endIndex.intValue();
+                        text = ";";
+                    });
+                }
+                
+                data.addQuickFix {
+                    description = "Convert to shortcut refinement";
+                    change = change;
+                };
+            }
         }
     }
 }

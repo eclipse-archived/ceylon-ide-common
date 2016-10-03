@@ -1,41 +1,40 @@
 import com.redhat.ceylon.model.loader.mirror {
     TypeParameterMirror,
-    VariableMirror,
-    TypeMirror
+    VariableMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value
 }
 
 import java.util {
-    List,
     Collections
 }
 
-shared class JGetterMirror(Value decl) extends AbstractMethodMirror(decl) {
+shared class JGetterMirror(Value decl)
+        extends AbstractMethodMirror(decl) {
     
-    shared actual Boolean constructor => false;
+    constructor => false;
     
-    shared actual Boolean declaredVoid => false;
+    declaredVoid => false;
     
-    shared actual Boolean final => true;
+    final => true;
     
-    shared actual String name => "get" + capitalize(decl.name);
+    name => "get" + capitalize(decl.name);
     
-    shared actual List<VariableMirror> parameters
+    parameters
             => Collections.emptyList<VariableMirror>();
     
-    shared actual TypeMirror returnType => ceylonToJavaMapper.mapType(decl.type);
+    returnType => ceylonToJavaMapper.mapType(decl.type);
     
-    shared actual List<TypeParameterMirror> typeParameters
+    typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
-    shared actual Boolean variadic => false;
+    variadic => false;
     
     String capitalize(String str) {
         return (str.first?.uppercased?.string else "") + str.rest;
     }
     
-    shared actual Boolean defaultMethod => false;
+    defaultMethod => false;
     
 }

@@ -1,8 +1,13 @@
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -11,88 +16,110 @@ import com.redhat.ceylon.model.typechecker.model {
     Function
 }
 
-shared interface ConvertToDefaultConstructorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object convertToDefaultConstructorQuickFix {
     
-    shared void addConvertToDefaultConstructorProposal(Data data, IFile file, Tree.Statement? statement) {
-        if (is Tree.ClassDefinition cd = statement,
-            exists pl = cd.parameterList) {
+    shared void addConvertToDefaultConstructorProposal(QuickFixData data, 
+        Tree.Statement? statement) {
+        if (is Tree.ClassDefinition statement,
+            exists pl = statement.parameterList) {
             
-            value change = newTextChange("Convert to Class with Default Constructor", file);
-            initMultiEditChange(change);
-            value doc = getDocumentForChange(change);
-            value indent = indents.getIndent(statement, doc);
-            value delim = indents.getDefaultLineDelimiter(doc);
-            value defIndent = indents.defaultIndent;
-            variable value insertLoc = cd.classBody.startIndex.intValue() + 1;
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Convert to Class with Default Constructor";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            value doc = change.document;
+            value indent = doc.getIndent(statement);
+            value delim = doc.defaultLineDelimiter;
+            value defIndent = platformServices.document.defaultIndent;
             value declarations = StringBuilder();
             value assignments = StringBuilder();
             value params = StringBuilder();
             String extend;
             
-            if (exists et = cd.extendedType) {
-                value text = getDocContent(doc, et.startIndex.intValue(), et.distance.intValue());
+            if (exists et = statement.extendedType) {
+                value text = doc.getText {
+                    offset = et.startIndex.intValue();
+                    length = et.distance.intValue();
+                };
                 extend = delim + indent + defIndent + defIndent + defIndent + text;
                 
-                if (exists pal = et.invocationExpression.positionalArgumentList) {
-                    addEditToChange(change, 
-                        newDeleteEdit(pal.startIndex.intValue(), pal.distance.intValue()));
+                if (exists pal = et.invocationExpression?.positionalArgumentList) {
+                    change.addEdit(DeleteEdit {
+                        start = pal.startIndex.intValue();
+                        length = pal.distance.intValue();
+                    });
                 }
-            } else {
+            }
+            else {
                 extend = "";
             }
             
+            variable Integer insertLoc 
+                    = statement.classBody.startIndex.intValue() + 1;
             for (p in pl.parameters) {
-                if (is Tree.InitializerParameter p) {
-                    value pdn = nodes.findReferencedNode(data.rootNode, 
-                        p.parameterModel.model);
-                    
-                    if (exists pdn) {
-                        //the constructor has to come
-                        //after the declarations of the
-                        //parameters
-                        value index = pdn.endIndex.intValue();
-                        if (index > insertLoc) {
-                            insertLoc = index;
-                        }
+                if (is Tree.InitializerParameter p, 
+                    exists pdn = nodes.findReferencedNode {
+                        cu = data.rootNode;
+                        model = p.parameterModel.model;
+                    }) {
+                    //the constructor has to come
+                    //after the declarations of the
+                    //parameters
+                    value index = pdn.endIndex.intValue();
+                    if (index > insertLoc) {
+                        insertLoc = index;
                     }
                 }
                 
                 value model = p.parameterModel;
                 value paramDef = StringBuilder();
-                value pname = model.name;
-                value unit = cd.unit;
-                variable value end = p.endIndex.intValue();
+                String? pname = model.name;
+                if (!exists pname) {
+                    return;
+                }
+                value unit = statement.unit;
+                Integer end;
                 value start = p.startIndex.intValue();
-
-                if (is Tree.ParameterDeclaration p) {
+                
+                switch (p)
+                case (is Tree.ParameterDeclaration) {
                     value pd = p;
                     value td = pd.typedDeclaration;
                     value t = td.type;
-                    value text = getDocContent(doc, t.startIndex.intValue(), 
-                        p.endIndex.intValue() - t.startIndex.intValue());
+                    value text = doc.getText {
+                        offset = t.startIndex.intValue();
+                        length = p.endIndex.intValue() 
+                                - t.startIndex.intValue();
+                    };
                     paramDef.append(text);
                     
-                    value tdn = pd.typedDeclaration;
-                    Tree.SpecifierOrInitializerExpression? se;
-                    
-                    if (is Tree.AttributeDeclaration tdn) {
+                    Tree.SpecifierOrInitializerExpression? se;                    
+                    switch (tdn = pd.typedDeclaration)
+                    case (is Tree.AttributeDeclaration) {
                         se = tdn.specifierOrInitializerExpression;
-                    } else if (is Tree.MethodDeclaration tdn) {
+                    }
+                    case (is Tree.MethodDeclaration) {
                         se = tdn.specifierExpression;
-                    } else {
+                    }
+                    else {
                         se = null;
                     }
                     
                     if (exists se) {
                         end = se.startIndex.intValue();
                     }
-                } else if (is Tree.InitializerParameter p) {
+                    else {
+                        end = p.endIndex.intValue();
+                    }
+                }
+                case (is Tree.InitializerParameter) {
                     value ip = p;
                     value pt = model.type;
-                    paramDef.append(pt.asString(unit)).append(" ").append(pname);
+                    paramDef.append(pt.asString(unit))
+                            .append(" ")
+                            .append(pname);
                     value dec = model.model;
                     if (is Function dec) {
                         value run = dec;
@@ -107,7 +134,9 @@ shared interface ConvertToDefaultConstructorQuickFix<IFile,IDocument,InsertEdit,
                                 }
                                 
                                 value npt = np.type;
-                                paramDef.append(npt.asString(unit)).append(" ").append(np.name);
+                                paramDef.append(npt.asString(unit))
+                                        .append(" ")
+                                        .append(np.name);
                             }
                             
                             paramDef.append(")");
@@ -115,20 +144,23 @@ shared interface ConvertToDefaultConstructorQuickFix<IFile,IDocument,InsertEdit,
                     }
                     
                     if (exists se = ip.specifierExpression) {
-                        value text = getDocContent(doc, 
-                            se.startIndex.intValue(), se.distance.intValue());
+                        value text = doc.getText {
+                            offset = se.startIndex.intValue();
+                            length = se.distance.intValue();
+                        };
                         paramDef.append(text);
-                        
                         end = se.startIndex.intValue();
+                    }
+                    else {
+                        end = p.endIndex.intValue();
                     }
                 } else {
                     //impossible
                     return;
                 }
-                
-                value attDef = getDocContent(doc, start, end - start).trimmed;
-                
+                                
                 if (is Tree.ParameterDeclaration p) {
+                    value attDef = doc.getText(start, end-start).trimmed;
                     declarations.append(indent)
                             .append(defIndent)
                             .append(attDef)
@@ -153,20 +185,22 @@ shared interface ConvertToDefaultConstructorQuickFix<IFile,IDocument,InsertEdit,
                 params.append(paramDef.string);
             }
             
-            value text = delim + declarations.string + indent + defIndent 
-                    + "shared new (" + params.string + ")" + extend + " {"
-                    + delim + assignments.string + indent + defIndent + "}"
-                    + delim;
-            
-            addEditToChange(change, newDeleteEdit(pl.startIndex.intValue(), 
+            change.addEdit(DeleteEdit(pl.startIndex.intValue(), 
                 pl.distance.intValue()));
             
-            addEditToChange(change, newInsertEdit(insertLoc, text));
+            change.addEdit(InsertEdit {
+                start = insertLoc;
+                text 
+                    = delim + declarations.string + indent + defIndent
+                    + "shared new (``params``)``extend`` {``delim````assignments````indent+defIndent``}"
+                    + delim;
+            });
             
-            value name = cd.declarationModel.name;
-            
-            newProposal(data, "Convert '" + name + "' to class with default constructor", 
-                change, DefaultRegion(cd.startIndex.intValue(), 0));
+            data.addQuickFix {
+                description = "Convert '``statement.declarationModel.name``' to class with default constructor";
+                change = change;
+                selection = DefaultRegion(statement.startIndex.intValue());
+            };
         }
     }
 }

@@ -1,6 +1,3 @@
-import ceylon.collection {
-    MutableList
-}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -9,64 +6,98 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor
 }
+
 import org.antlr.runtime {
     CommonToken
 }
 
-class ImportVisitor<IdeComponent,CompletionResult,Document>(String prefix, CommonToken token, Integer offset, Node node,
-    IdeComponent cpc, MutableList<CompletionResult> result, BaseProgressMonitor monitor,
-    IdeCompletionManager<IdeComponent,CompletionResult,Document> completionManager)
-        extends Visitor()
-        given IdeComponent satisfies LocalAnalysisResult<Document> {
+class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
+    CompletionContext ctx, BaseProgressMonitor monitor)
+        extends Visitor() {
     
     shared actual void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
-            completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
+            completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
     shared actual void visit(Tree.PackageDescriptor that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             value text = fullPath(offset, prefix, that.importPath) + prefix;
-            completionManager.addCurrentPackageNameCompletion(cpc, offset, text, result);
+            completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
     shared actual void visit(Tree.Import that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result,
-                nextTokenType(cpc, token) != CeylonLexer.\iLBRACE, monitor);
+            completionManager.addPackageCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = nextTokenType(ctx, token) != CeylonLexer.lbrace;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.PackageLiteral that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addPackageCompletions(cpc, offset, prefix, node, node, result, false, monitor);
+            completionManager.addPackageCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = false;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.ImportModule that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
-            value withBody = nextTokenType(cpc, token) != CeylonLexer.\iSTRING_LITERAL;
-            completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, withBody, monitor);
+            value withBody = nextTokenType(ctx, token) != CeylonLexer.stringLiteral;
+            completionManager.addModuleCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = withBody;
+                monitor = monitor;
+            };
         }
     }
     shared actual void visit(Tree.ModuleLiteral that) {
         super.visit(that);
-        if (that.importPath == node) {
+        if (exists path = that.importPath,
+            path == node) {
             assert (is Tree.ImportPath node);
-            completionManager.addModuleCompletions(cpc, offset, prefix, node, node, result, false, monitor);
+            completionManager.addModuleCompletions {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                path = node;
+                node = node;
+                withBody = false;
+                monitor = monitor;
+                addNamespaceProposals = false;
+            };
         }
     }
 }

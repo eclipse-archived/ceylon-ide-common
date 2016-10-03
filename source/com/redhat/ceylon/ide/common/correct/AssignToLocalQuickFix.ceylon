@@ -1,44 +1,52 @@
+import ceylon.collection {
+    ArrayList
+}
+import ceylon.interop.java {
+    CeylonList
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+    ProposalsHolder
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    TextChange,
+    InsertEdit,
+    LinkedMode
 }
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Type,
     ModelUtil
 }
-import ceylon.interop.java {
-    CeylonList
-}
-import ceylon.collection {
-    ArrayList
-}
 
-shared interface AssignToLocalQuickFix<IFile,Project,Data>
-        satisfies LocalQuickFix<IFile,Project,Data>
-        given Data satisfies QuickFixData<Project> {
+shared object assignToLocalQuickFix satisfies LocalQuickFix<QuickFixData> {
 
     desc => "Assign expression to new local";
-
+    
+    newProposal(QuickFixData data, String desc) => data.addAssignToLocalProposal(desc);
 }
 
-shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
-        satisfies AbstractLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult,LinkedMode>
-                & LinkedModeSupport<LinkedMode,IDocument,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared interface AssignToLocalProposal
+        satisfies AbstractLocalProposal {
 
-    shared actual TextChange createChange(IFile file, Node expanse, Integer endIndex) {
-        value change = newTextChange("Assign to Local", file);
-        initMultiEditChange(change);
+    shared actual TextChange createChange(QuickFixData data, Node expanse, Integer endIndex) {
+        value change =
+                platformServices.document
+                    .createTextChange("Assign to Local", data.phasedUnit);
+        change.initMultiEdit();
         value name = names.first else "<unknown>";
-        addEditToChange(change, newInsertEdit(offset, "value " + name + " = "));
+        change.addEdit(InsertEdit {
+            start = offset;
+            text = "value ``name`` = ";
+        });
         value terminal = expanse.endToken.text;
         
         if (!terminal.equals(";")) {
-            addEditToChange(change, newInsertEdit(endIndex, ";"));
+            change.addEdit(InsertEdit(endIndex, ";"));
             exitPos = endIndex + 1;
         } else {
             exitPos = endIndex;
@@ -47,24 +55,24 @@ shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
         return change;
     }
     
-    shared actual LinkedMode? addLinkedPositions(IDocument doc, Unit unit) {
-        value lm = newLinkedMode();
+    shared actual void addLinkedPositions(LinkedMode lm, Unit unit) {
+        assert (exists initialName = names.first);
         
-        assert(exists initialName = names.first);
-        
-        value namez = toNameProposals(names.coalesced.sequence(), offset, unit, 1);
-        addEditableRegion(lm, doc, offset+6, initialName.size, 0, namez);
+        value namez = platformServices.completion.createProposalsHolder();
+        toNameProposals(names.coalesced.sequence(), namez, offset, unit, 1);
+        lm.addEditableRegion(offset+6, initialName.size, 0, namez);
         
         value superTypes = getSupertypes(offset, unit, type, true, "value");
-        addEditableRegion(lm, doc, offset, 5, 1, toProposals(superTypes, offset, unit));
-        
-        return lm;
+        value superTypesProposals = platformServices.completion.createProposalsHolder();
+        toProposals(superTypes, superTypesProposals, offset, unit);
+        lm.addEditableRegion(offset, 5, 1, superTypesProposals);
     }
 
-    shared formal CompletionResult[] toNameProposals(String[] names,
+    // TODO move to CompletionServices
+    shared formal void toNameProposals(String[] names, ProposalsHolder proposals,
         Integer offset, Unit unit, Integer seq);
     
-    shared formal CompletionResult[] toProposals(<String|Type>[] types,
+    shared formal void toProposals(<String|Type>[] types, ProposalsHolder proposals,
         Integer offset, Unit unit);
 
     // Adapted from LinkedModeCompletionProposal.getSupertypeProposals()
@@ -72,7 +80,7 @@ shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
         Boolean includeValue, String kind) {
         
         if (!exists type) {
-            return empty;
+            return [];
         }
         
         value typeProposals = ArrayList<String|Type>();
@@ -85,19 +93,20 @@ shared interface AssignToLocalProposal<IFile,IDocument,InsertEdit,TextEdit,TextC
         }
 
         value td = type.declaration;
-        value supertypes = if (ModelUtil.isTypeUnknown(type) || type.typeConstructor)
-                           then empty
-                           else CeylonList(td.supertypeDeclarations)
-                                .sequence()
-                                .sort((x, y) {
-                                    if (x.inherits(y)) {
-                                        return larger;
-                                    }
-                                    if (y.inherits(x)) {
-                                        return smaller;
-                                    }
-                                    return y.name.compare(x.name);
-                                });
+        value supertypes
+                = ModelUtil.isTypeUnknown(type) || type.typeConstructor
+                then []
+                else CeylonList(td.supertypeDeclarations)
+                    .sequence()
+                    .sort((x, y) {
+                        if (x.inherits(y)) {
+                            return larger;
+                        }
+                        if (y.inherits(x)) {
+                            return smaller;
+                        }
+                        return y.name<=>x.name;
+                    });
         
         typeProposals.addAll(supertypes.reversed.map((td) => type.getSupertype(td)));
         

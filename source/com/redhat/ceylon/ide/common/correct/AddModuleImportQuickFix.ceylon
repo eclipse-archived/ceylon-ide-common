@@ -1,3 +1,6 @@
+import com.redhat.ceylon.cmr.api {
+    ModuleVersionDetails
+}
 import com.redhat.ceylon.common {
     Versions
 }
@@ -8,14 +11,17 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     TreeUtil
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
 import com.redhat.ceylon.ide.common.imports {
-    AbstractModuleImportUtil
+    moduleImportUtil
+}
+import com.redhat.ceylon.ide.common.util {
+    moduleQueries
 }
 import com.redhat.ceylon.model.cmr {
     JDKUtils
-}
-import com.redhat.ceylon.model.typechecker.model {
-    Unit
 }
 
 import java.lang {
@@ -24,74 +30,119 @@ import java.lang {
     Long
 }
 import java.util {
-    TreeSet
-}
-import com.redhat.ceylon.ide.common.util {
-    moduleQueries
+    TreeSet,
+    Collections
 }
 
-shared interface AddModuleImportQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addModuleImportQuickFix {
     
-    shared formal void newProposal(Data data, String desc, Unit unit,
-        String name, String version);
-    
-    shared formal AbstractModuleImportUtil<IFile,Project,IDocument,InsertEdit,TextEdit,TextChange> importUtil;
-    
-    shared void applyChanges(Project project, Unit unit, String name, String version) {
-        importUtil.addModuleImport(project, 
-            unit.\ipackage.\imodule, 
-            name, version);
+    function packageName(Tree.ImportPath|Tree.Import node) {
+        value ip = switch (node)
+                case (is Tree.ImportPath) node
+                case (is Tree.Import) node.importPath;
+        return TreeUtil.formatPath(ip.identifiers);
     }
     
-    shared void addModuleImportProposals(Data data, TypeChecker typeChecker) {
-        variable value node = data.node;
-        value unit = node.unit;
-        
-        if (unit.\ipackage.\imodule.default) {
-            return;
+    shared void addModuleImportProposals(QuickFixData data, TypeChecker typeChecker) {
+        if (is Tree.ImportPath|Tree.Import node = data.node, 
+            !data.node.unit.\ipackage.\imodule.defaultModule) {
+            value name = packageName(node);
+            if (data.useLazyFixes) {
+                value description = "Import module containing '``name``'...";
+                data.addQuickFix {
+                    description = description;
+                    change() => findCandidateModules {
+                        data = data;
+                        typeChecker = typeChecker;
+                        packageName = name;
+                        allVersions = true;
+                    };
+                    kind = QuickFixKind.addModuleImport;
+                    asynchronous = true;
+                    hint = description;
+                    qualifiedNameIsPath = true;
+                };
+            } else {
+                findCandidateModules {
+                    data = data;
+                    typeChecker = typeChecker;
+                    packageName = name;
+                    allVersions = false;
+                };
+            }
         }
+    }
+
+    void findCandidateModules(QuickFixData data, TypeChecker typeChecker,
+            String packageName, Boolean allVersions) {
+        value unit = data.node.unit;
         
-        if (is Tree.Import i = node) {
-            node = i.importPath;
-        }
-        
-        assert (is Tree.ImportPath ip = node);
-        value ids = ip.identifiers;
-        value pkg = TreeUtil.formatPath(ids);
-        if (JDKUtils.isJDKAnyPackage(pkg)) {
+        //We have no reason to do these lazily, except for
+        //consistency of user experience
+        if (JDKUtils.isJDKAnyPackage(packageName)) {
             value moduleNames = TreeSet<JString>(JDKUtils.jdkModuleNames);
             for (mod in moduleNames) {
-                if (JDKUtils.isJDKPackage(mod.string, pkg)) {
-                    value desc = "Add 'import " + mod.string + " \"" + JDKUtils.jdk.version + "\"' to module descriptor";
+                if (JDKUtils.isJDKPackage(mod.string, packageName)) {
                     
-                    newProposal(data, desc, unit, mod.string, JDKUtils.jdk.version);
+                    value version = JDKUtils.jdk.version;
+                    data.addQuickFix {
+                        description = "Add 'import ``mod`` \"``version``\"' to module descriptor";
+                        image = Icons.imports;
+                        qualifiedNameIsPath = true;
+                        kind = QuickFixKind.addModuleImport;
+                        change()
+                            => moduleImportUtil.addModuleImport {
+                                target = unit.\ipackage.\imodule;
+                                moduleName = mod.string;
+                                moduleVersion = version;
+                            };
+                        declaration = ModuleVersionDetails(mod.string, version);
+                        affectsOtherUnits = true;
+                    };
+                    
                     return;
                 }
             }
         }
         
-        value \imodule = unit.\ipackage.\imodule;
-        value query = moduleQueries.getModuleQuery("", \imodule, data.ceylonProject);
-        query.memberName = pkg;
+        value containingModule = unit.\ipackage.\imodule;
+        value query = moduleQueries.getModuleQuery {
+            prefix = "";
+            mod = containingModule;
+            project = data.ceylonProject;
+        };
+        query.memberName = packageName;
         query.memberSearchPackageOnly = true;
         query.memberSearchExact = true;
         query.count = Long(10);
-        query.jvmBinaryMajor = JInteger(Versions.\iJVM_BINARY_MAJOR_VERSION);
-        query.jvmBinaryMinor = JInteger(Versions.\iJVM_BINARY_MINOR_VERSION);
-        query.jsBinaryMajor = JInteger(Versions.\iJS_BINARY_MAJOR_VERSION);
-        query.jsBinaryMinor = JInteger(Versions.\iJS_BINARY_MINOR_VERSION);
+        query.jvmBinaryMajor = JInteger(Versions.jvmBinaryMajorVersion);
+        query.jvmBinaryMinor = JInteger(Versions.jvmBinaryMinorVersion);
+        query.jsBinaryMajor = JInteger(Versions.jsBinaryMajorVersion);
+        query.jsBinaryMinor = JInteger(Versions.jsBinaryMinorVersion);
         value msr = typeChecker.context.repositoryManager.searchModules(query);
         
         for (md in msr.results) {
-            value name = md.name;
-            value version = md.lastVersion.version;
-            value desc = "Add 'import " + name + " \"" + version + "\"' to module descriptor";
-            
-            newProposal(data, desc, unit, name, version);
+            value moduleName = md.name;
+            value versions = allVersions
+                then md.versions
+                else Collections.singleton(md.lastVersion);
+            for (version in versions) {
+                value moduleVersion = version.version;
+                data.addQuickFix {
+                    description = "Add 'import ``moduleName`` \"``moduleVersion``\"' to module descriptor";
+                    image = Icons.imports;
+                    qualifiedNameIsPath = true;
+                    kind = QuickFixKind.addModuleImport;
+                    change()
+                        => moduleImportUtil.addModuleImport {
+                            target = containingModule;
+                            moduleName = moduleName;
+                            moduleVersion = moduleVersion;
+                        };
+                     declaration = version;
+                    affectsOtherUnits = true;
+                };
+            }
         }
     }
 }

@@ -6,39 +6,61 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Node
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    DeleteEdit,
+    InsertEdit,
+    ReplaceEdit
+}
 
 import org.antlr.runtime {
     CommonToken
 }
 
-shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object operatorQuickFix {
  
-    shared void addSwapBinaryOperandsProposal(Data data, IFile file, Tree.BinaryOperatorExpression? boe) {
+    shared void addSwapBinaryOperandsProposal(QuickFixData data, 
+            Tree.BinaryOperatorExpression? boe) {
         if (exists boe,
             exists lt = boe.leftTerm,
             exists rt = boe.rightTerm) {
             
-            value change = newTextChange("Swap Operands", file);
-            initMultiEditChange(change);
+            value change = platformServices.document.createTextChange {
+                name = "Swap Operands";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             value lto = lt.startIndex.intValue();
             value ltl = lt.distance.intValue();
             value rto = rt.startIndex.intValue();
             value rtl = rt.distance.intValue();
-            value doc = getDocumentForChange(change);
+            value doc = change.document;
             
-            addEditToChange(change, newReplaceEdit(lto, ltl, getDocContent(doc, rto, rtl)));
-            addEditToChange(change, newReplaceEdit(rto, rtl, getDocContent(doc, lto, ltl)));
-            newProposal(data, "Swap operands of " + boe.mainToken.text + " expression", change);
+            change.addEdit(ReplaceEdit {
+                start = lto;
+                length = ltl;
+                text = doc.getText(rto, rtl);
+            });
+            change.addEdit(ReplaceEdit {
+                start = rto;
+                length = rtl;
+                text = doc.getText(lto, ltl);
+            });
+            data.addQuickFix {
+                description = "Swap operands of ``boe.mainToken.text`` expression";
+                change = change;
+            };
         }
     }
     
-    shared void addReverseOperatorProposal(Data data, IFile file, Tree.BinaryOperatorExpression? boe) {
+    shared void addReverseOperatorProposal(QuickFixData data, 
+            Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp boe) {
-            value change = newTextChange("Reverse Operator", file);
-            initMultiEditChange(change);
+            value change = platformServices.document.createTextChange {
+                name = "Reverse Operator";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
 
             if (exists lt = boe.leftTerm,
                 exists rt = boe.rightTerm) {
@@ -50,21 +72,40 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
                 assert (is CommonToken op = boe.mainToken);
                 value ot = op.text;
                 value iot = reversed(ot);
-                addEditToChange(change, newReplaceEdit(op.startIndex, ot.size, iot));
+                change.addEdit(ReplaceEdit {
+                    start = op.startIndex;
+                    length = ot.size;
+                    text = iot;
+                });
 
-                value document = getDocumentForChange(change);
-                addEditToChange(change, newReplaceEdit(lto, ltl, getDocContent(document, rto, rtl)));
-                addEditToChange(change, newReplaceEdit(rto, rtl, getDocContent(document, lto, ltl)));
+                value document = change.document;
+                change.addEdit(ReplaceEdit {
+                    start = lto;
+                    length = ltl;
+                    text = document.getText(rto, rtl);
+                });
+                change.addEdit(ReplaceEdit {
+                    start = rto;
+                    length = rtl;
+                    text = document.getText(lto, ltl);
+                });
                 
-                newProposal(data, "Convert " + ot + " to " + iot, change);
+                data.addQuickFix {
+                    description = "Convert ``ot`` to ``iot``";
+                    change = change;
+                };
             }
         }
     }
     
-    shared void addInvertOperatorProposal(Data data, IFile file, Tree.BinaryOperatorExpression? boe) {
+    shared void addInvertOperatorProposal(QuickFixData data, 
+            Tree.BinaryOperatorExpression? boe) {
         if (is Tree.ComparisonOp|Tree.LogicalOp boe) {
-            value change = newTextChange("Invert Operator", file);
-            initMultiEditChange(change);
+            value change = platformServices.document.createTextChange {
+                name = "Invert Operator";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
 
             if (exists lt = boe.leftTerm,
                 exists rt = boe.rightTerm) {
@@ -72,9 +113,19 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
                 assert (is CommonToken op = boe.mainToken);
                 value ot = op.text;
                 value iot = inverted(ot);
-                addEditToChange(change, newReplaceEdit(op.startIndex, ot.size, iot));
-                addEditToChange(change, newInsertEdit(boe.startIndex.intValue(), "!("));
-                addEditToChange(change, newInsertEdit(boe.endIndex.intValue(), ")"));
+                change.addEdit(ReplaceEdit {
+                    start = op.startIndex;
+                    length = ot.size;
+                    text = iot;
+                });
+                change.addEdit(InsertEdit {
+                    start = boe.startIndex.intValue();
+                    text = "!(";
+                });
+                change.addEdit(InsertEdit {
+                    start = boe.endIndex.intValue();
+                    text = ")";
+                });
                 
                 if (is Tree.LogicalOp boe) {
                     // TODO !!!!
@@ -82,7 +133,10 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
                     //invertTerm(boe.rightTerm, change);
                 }
                 
-                newProposal(data, "Convert " + ot + " to " + iot, change);
+                data.addQuickFix {
+                    description = "Convert ``ot`` to ``iot``";
+                    change = change;
+                };
             }
         }
     }
@@ -131,7 +185,8 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
         }
     }
     
-    shared void addParenthesesProposals(Data data, IFile file, Tree.OperatorExpression? oe) {
+    shared void addParenthesesProposals(QuickFixData data, 
+            Tree.OperatorExpression? oe) {
         Node? node;
         if (is Tree.ArgumentList argList = data.node) {
             object findInvocationVisitor extends Visitor() {
@@ -159,9 +214,9 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
         else {
             object ignoreLeftSideVisitor extends Visitor() {
                 variable shared Node? result = null;
-                shared actual void visit(Tree.SpecifierStatement specifierStatement) {
+                shared actual void visit(Tree.SpecifierStatement that) {
                     //ignore LHSs of assignments
-                    if (exists rhs = specifierStatement.specifierExpression) {
+                    if (exists rhs = that.specifierExpression) {
                         rhs.visit(this);
                     }
                 }
@@ -178,52 +233,85 @@ shared interface OperatorQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange
             node = ignoreLeftSideVisitor.result;
         }
         
-        if (is Tree.Expression n = node) {
-            addRemoveParenthesesProposal(data, file, n);
-        } else if (is Tree.Term n = node) {
-            addAddParenthesesProposal(data, file, n);
-            if (exists oe, oe != n) {
-                addAddParenthesesProposal(data, file, oe);
+        if (is Tree.Expression node) {
+            addRemoveParenthesesProposal(data, node);
+        }
+        else if (is Tree.Term node) {
+            addAddParenthesesProposal(data, node);
+            if (exists oe, oe != node) {
+                addAddParenthesesProposal(data, oe);
             }
         }
     }
     
-    void addAddParenthesesProposal(Data data, IFile file, Node node) {
-        variable String desc;
-        if (is Tree.OperatorExpression node) {
-            desc = node.mainToken.text + " expression";
-        } else if (is Tree.QualifiedMemberOrTypeExpression node) {
-            desc = "member reference";
-        } else if (is Tree.BaseMemberOrTypeExpression node) {
-            desc = "base reference";
-        } else if (is Tree.Literal node) {
-            desc = "literal";
-        } else if (is Tree.InvocationExpression node) {
-            desc = "invocation";
-        } else {
-            desc = "expression";
+    function termDescription(Node node) {
+        switch (node)
+        case (is Tree.OperatorExpression) {
+            return node.mainToken.text + " expression";
         }
+        case (is Tree.QualifiedMemberOrTypeExpression) {
+            return "member reference";
+        }
+        case (is Tree.BaseMemberOrTypeExpression) {
+            return "base reference";
+        }
+        case (is Tree.Literal) {
+            return "literal";
+        }
+        case (is Tree.InvocationExpression) {
+            return "invocation";
+        }
+        else {
+            return "expression";
+        }
+    }
+
+    void addAddParenthesesProposal(QuickFixData data, Node node) {
         
-        value change = newTextChange("Add Parentheses", file);
-        initMultiEditChange(change);
-        addEditToChange(change, newInsertEdit(node.startIndex.intValue(), "("));
-        addEditToChange(change, newInsertEdit(node.endIndex.intValue(), ")"));
+        value change = platformServices.document.createTextChange {
+            name = "Add Parentheses";
+            input = data.phasedUnit;
+        };
+        change.initMultiEdit();
+        change.addEdit(InsertEdit {
+            start = node.startIndex.intValue();
+            text = "(";
+        });
+        change.addEdit(InsertEdit {
+            start = node.endIndex.intValue();
+            text = ")";
+        });
         
-        newProposal(data, "Parenthesize " + desc, change);
+        data.addQuickFix {
+            description = "Parenthesize " + termDescription(node);
+            change = change;
+        };
     }
     
-    void addRemoveParenthesesProposal(Data data, IFile file, Node node) {
+    void addRemoveParenthesesProposal(QuickFixData data, Node node) {
         if (exists token = node.token,
             exists endToken = node.endToken,
-            token.type == CeylonLexer.\iLPAREN,
-            endToken.type == CeylonLexer.\iRPAREN) {
+            token.type == CeylonLexer.lparen,
+            endToken.type == CeylonLexer.rparen) {
             
-            value change = newTextChange("Remove Parentheses", file);
-            initMultiEditChange(change);
-            addEditToChange(change, newDeleteEdit(node.startIndex.intValue(), 1));
-            addEditToChange(change, newDeleteEdit(node.endIndex.intValue() - 1, 1));
+            value change = platformServices.document.createTextChange {
+                name = "Remove Parentheses";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
+            change.addEdit(DeleteEdit {
+                start = node.startIndex.intValue();
+                length = 1;
+            });
+            change.addEdit(DeleteEdit {
+                start = node.endIndex.intValue() - 1;
+                length = 1;
+            });
             
-            newProposal(data, "Remove parentheses", change);
+            data.addQuickFix {
+                description = "Remove parentheses";
+                change = change;
+            };
         }
     }
 }

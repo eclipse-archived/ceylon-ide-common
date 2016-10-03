@@ -2,19 +2,20 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
     Tree
 }
-import com.redhat.ceylon.model.typechecker.util {
-    TypePrinter
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
 }
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+import com.redhat.ceylon.model.typechecker.util {
+    TypePrinter
+}
 
-shared interface ExpandTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object expandTypeQuickFix {
 
-    shared void addExpandTypeProposal(Data data, IFile file, Tree.Statement? node,
+    shared void addExpandTypeProposal(QuickFixData data, Tree.Statement? node,
         Integer selectionStart, Integer selectionStop) {
         
         if (!exists node) {
@@ -37,20 +38,34 @@ shared interface ExpandTypeQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChan
         });
         
         if (exists res = result) {
-            value type = res.typeModel;
             value start = res.startIndex.intValue();
             value len = res.distance.intValue();
-            value change = newTextChange("Expand Type", file);
-            value doc = getDocumentForChange(change);
-            value text = getDocContent(doc, start, len);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Expand Type";
+                input = data.phasedUnit;
+            };
+            value text = change.document.getText(start, len);
             
-            value unabbreviated = TypePrinter(false).print(type, node.unit);
+            value unabbreviated 
+                    = TypePrinter(false)
+                        .print(res.typeModel, node.unit);
             
             if (unabbreviated != text) {
-                addEditToChange(change, newReplaceEdit(start, len, unabbreviated));
+                change.addEdit(ReplaceEdit {
+                    start = start;
+                    length = len;
+                    text = unabbreviated;
+                });
                 
-                newProposal(data, "Expand type abbreviation", change, 
-                    DefaultRegion(start, unabbreviated.size));
+                data.addQuickFix {
+                    description = "Expand type abbreviation";
+                    change = change;
+                    selection = DefaultRegion {
+                        start = start;
+                        length = unabbreviated.size;
+                    };
+                };
             }
         }
     }

@@ -4,28 +4,31 @@ import com.redhat.ceylon.compiler.typechecker.parser {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+
 import org.antlr.runtime {
     CommonToken
 }
 
-shared interface ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object changeDeclarationQuickFix {
 
-    shared formal void newProposal(Data data, String keyword, String desc, Integer position, TextChange change);
-    
-    shared void addChangeDeclarationProposal(Data data, IFile file) {
-        assert (is Tree.Declaration decNode = data.node);
-        if (exists token = decNode.mainToken) {
+    shared void addChangeDeclarationProposal(QuickFixData data) {
+        if (is Tree.Declaration decNode = data.node,
+            is CommonToken token = decNode.mainToken) {
+
             String keyword;
             switch (decNode)
             case (is Tree.AnyClass) {
                 keyword = "interface";
             }
             case (is Tree.AnyMethod) {
-                if (token.type==CeylonLexer.\iVOID_MODIFIER) {
+                if (token.type==CeylonLexer.voidModifier) {
                     return;
                 }
                 keyword = "value";
@@ -33,14 +36,25 @@ shared interface ChangeDeclarationQuickFix<IFile,IDocument,InsertEdit,TextEdit,T
             else {
                 return;
             }
-            
-            assert (is CommonToken token);
-            
-            value change = newTextChange("Change Declaration", file);
-            addEditToChange(change, newReplaceEdit(token.startIndex, token.text.size, keyword));
-            
-            value desc = "Change declaration to '" + keyword + "'";
-            newProposal(data, keyword, desc, token.startIndex, change);
+                        
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Change Declaration";
+                input = data.phasedUnit;
+            };
+            change.addEdit(ReplaceEdit {
+                start = token.startIndex;
+                length = token.text.size;
+                text = keyword;
+            });
+            data.addQuickFix {
+                description = "Change declaration to '``keyword``'";
+                change = change;
+                selection = DefaultRegion {
+                    start = token.startIndex;
+                    length = keyword.size;
+                };
+            };
         }
     }
 }

@@ -9,7 +9,8 @@ import java.util {
     List
 }
 import org.antlr.runtime {
-    CommonToken
+    CommonToken,
+    Token
 }
 
 "Finds the smallest (most specific) node where a given selection
@@ -44,16 +45,16 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
     
     Boolean inBounds(Node? left, Node? right = left) {
         function shouldReplacePreviousNode(Boolean isInBounds) {
-            if (isInBounds == false) {
+            if (!isInBounds) {
                 return false;
             }
             if (startOffset != endOffset) {
-                return isInBounds;
+                return true;
             }
-            if (exists previousNode=node,
-                exists previousNodeEnd=previousNode.endIndex?.intValue(),
-                exists leftNodeStart=left?.startIndex?.intValue(),
-                previousNodeEnd<=leftNodeStart) {
+            if (exists previousNode = node,
+                exists previousNodeEnd = previousNode.endIndex?.intValue(),
+                exists leftNodeStart = left?.startIndex?.intValue(),
+                previousNodeEnd <= leftNodeStart) {
                 return false;
             }
             return true;
@@ -73,7 +74,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                         // if the tokens between startOffset and startToken were only hidden ones
                         for (index in (startToken.tokenIndex-1)..0) {
                             value token = tokens.get(index);
-                            if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+                            if (token.channel != Token.hiddenChannel) {
                                 return false;
                             }
                             if (token.startIndex <= startOffset) {
@@ -91,7 +92,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                         // if the tokens between endToken and endOffset were only hidden ones
                         for (index in (endToken.tokenIndex+1)..(tokens.size()-1)) {
                             value token = tokens.get(index);
-                            if (token.channel != CommonToken.\iHIDDEN_CHANNEL) {
+                            if (token.channel != Token.hiddenChannel) {
                                 return false;
                             }
                             if (token.stopIndex+1 >= endOffset) {
@@ -107,7 +108,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
                 if (exists startTokenOffset = left?.startIndex?.intValue(),
                     exists endTokenOffset = right?.endIndex?.intValue()) {
                     return shouldReplacePreviousNode {
-                                isInBounds = startTokenOffset <= startOffset
+                                isInBounds
+                                        = startTokenOffset <= startOffset
                                         && endOffset <= endTokenOffset;
                             };
                 } else {

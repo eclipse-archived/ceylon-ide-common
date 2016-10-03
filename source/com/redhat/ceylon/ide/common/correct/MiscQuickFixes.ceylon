@@ -4,25 +4,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 
 // TODO rename to something like BlockQuickFix?
-shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object miscQuickFixes {
     
-    shared formal ConvertToBlockQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToBlockQuickFix;
-    
-    shared formal ConvertToSpecifierQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToSpecifierQuickFix;
-    
-    shared formal ConvertToGetterQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> convertToGetterQuickFix;
-    
-    shared formal FillInArgumentNameQuickFix<IFile,IDocument,InsertEdit,TextEdit,
-    TextChange,Region,Project,Data,CompletionResult> fillInQuickFix;
-
-    shared void addAnonymousFunctionProposals(Data data, IFile file) {
+    shared void addAnonymousFunctionProposals(QuickFixData data) {
         variable value currentOffset = data.node.startIndex.intValue();
         
         class FindAnonFunctionVisitor() extends Visitor() {
@@ -31,10 +15,8 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
             shared actual void visit(Tree.FunctionArgument that) {
                 if (currentOffset >= that.startIndex.intValue(),
                     currentOffset <= that.endIndex.intValue()) {
-                    
                     result = that;
                 }
-                
                 super.visit(that);
             }
         }
@@ -44,16 +26,16 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
         
         if (exists fun = v.result) {
             if (fun.expression exists) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, fun);
+                convertToBlockQuickFix.addConvertToBlockProposal(data, fun);
             }
             
             if (fun.block exists) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, fun.block, true);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, fun.block, true);
             }
         }
     }
 
-    shared void addDeclarationProposals(Data data, IFile file, Tree.Declaration? decNode, Integer currentOffset) {
+    shared void addDeclarationProposals(QuickFixData data, Tree.Declaration? decNode, Integer currentOffset) {
         if (!exists decNode) {
             return;
         }
@@ -76,71 +58,69 @@ shared interface MiscQuickFixes<IFile,IDocument,InsertEdit,TextEdit,TextChange,R
         switch (decNode)
         case(is Tree.AttributeDeclaration) {
             if (is Tree.LazySpecifierExpression se = decNode.specifierOrInitializerExpression) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, decNode);
+                convertToBlockQuickFix.addConvertToBlockProposal(data, decNode);
             } else {
-                convertToGetterQuickFix.addConvertToGetterProposal(data, file, decNode);
+                convertToGetterQuickFix.addConvertToGetterProposal(data, decNode);
             }
         }
         case (is Tree.MethodDeclaration) {
             if (is Tree.LazySpecifierExpression se = decNode.specifierExpression) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, decNode);
+                convertToBlockQuickFix.addConvertToBlockProposal(data, decNode);
             }
         }
         case (is Tree.AttributeSetterDefinition) {
             if (is Tree.LazySpecifierExpression se = decNode.specifierExpression) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, decNode);
+                convertToBlockQuickFix.addConvertToBlockProposal(data, decNode);
             }
             
             if (exists b = decNode.block) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, b);
             }
         }
         case (is Tree.AttributeGetterDefinition) {
             if (exists b = decNode.block) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, b);
             }
         }
         case (is Tree.MethodDefinition) {
             if (exists b = decNode.block) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, b);
             }
         }
         else {
         }
     }
     
-    shared void addArgumentProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
-        addArgumentBlockProposals(data, file, node);
-        addArgumentFillInProposals(data, file, node);
+    shared void addArgumentProposals(QuickFixData data, Tree.StatementOrArgument? node) {
+        addArgumentBlockProposals(data, node);
+        addArgumentFillInProposals(data, node);
     }
 
-    shared void addArgumentBlockProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
+    shared void addArgumentBlockProposals(QuickFixData data, Tree.StatementOrArgument? node) {
         if (is Tree.MethodArgument node) {
-            value se = node.specifierExpression;
-            if (is Tree.LazySpecifierExpression se) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
+            if (is Tree.LazySpecifierExpression se = node.specifierExpression) {
+                convertToBlockQuickFix.addConvertToBlockProposal(data, node);
             }
             
             if (exists b = node.block) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, b);
             }
         }
         
         if (is Tree.AttributeArgument node) {
-            value se = node.specifierExpression;
-            if (is Tree.LazySpecifierExpression se) {
-                convertToBlockQuickFix.addConvertToBlockProposal(data, file, node);
+            if (is Tree.LazySpecifierExpression se = node.specifierExpression) {
+                convertToBlockQuickFix.addConvertToBlockProposal(data, node);
             }
             
             if (exists b = node.block) {
-                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, file, b);
+                convertToSpecifierQuickFix.addConvertToSpecifierProposal(data, b);
             }
         }
     }
     
-    shared void addArgumentFillInProposals(Data data, IFile file, Tree.StatementOrArgument? node) {
+    shared void addArgumentFillInProposals(QuickFixData data, Tree.StatementOrArgument? node) {
         if (is Tree.SpecifiedArgument node) {
-            fillInQuickFix.addFillInArgumentNameProposal(data, file, node);
+            fillInArgumentNameQuickFix.addFillInArgumentNameProposal(data, node);
         }
     }
 }

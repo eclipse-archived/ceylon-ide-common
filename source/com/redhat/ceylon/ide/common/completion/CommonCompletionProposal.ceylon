@@ -1,27 +1,25 @@
-import java.lang {
-    Character
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument
 }
-shared interface CommonCompletionProposal<Document,Region> {
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+
+shared interface CommonCompletionProposal {
     
-    shared formal String withoutDupeSemi(Document document);
+    shared formal String withoutDupeSemi(CommonDocument document);
     
-    shared formal Integer start();
-    
-    shared formal Region getSelectionInternal(Document document);
+    shared formal DefaultRegion getSelectionInternal(CommonDocument document);
     
     shared formal String completionMode;
 
     shared formal String prefix;
     shared formal Integer offset;
+    shared Integer start => offset - prefix.size;
+
     shared formal String description;
     shared formal String text;
     shared formal variable Integer length;
     
-    shared formal void replaceInDoc(Document doc, Integer start, Integer length, String newText);
-    shared formal Integer getDocLength(Document doc);
-    shared formal Character getDocChar(Document doc, Integer offset);
-    shared formal String getDocSpan(Document doc, Integer start, Integer length);
-    shared formal Region newRegion(Integer start, Integer length);
-    shared formal Integer getRegionStart(Region region);
-    shared formal Integer getRegionLength(Region region);
+    shared formal void replaceInDoc(CommonDocument doc, Integer start, Integer length, String newText);
 }

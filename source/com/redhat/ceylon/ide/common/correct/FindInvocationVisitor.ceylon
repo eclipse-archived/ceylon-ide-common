@@ -8,7 +8,7 @@ import com.redhat.ceylon.model.typechecker.model {
     TypedDeclaration
 }
 
-class FindInvocationVisitor(Node node) extends Visitor() {
+shared class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared variable Tree.InvocationExpression? result = null;
     variable Tree.InvocationExpression? current = null;
@@ -16,7 +16,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.ListedArgument that) {
         Tree.Expression? e = that.expression;
-        if (exists e, node == e.term) {
+        if (exists e,
+            exists term = e.term,
+            node == term) {
             result = current;
             Parameter? p = that.parameter;
             if (exists p) {
@@ -28,7 +30,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.SpreadArgument that) {
         Tree.Expression? e = that.expression;
-        if (exists e, node == e.term) {
+        if (exists e,
+            exists term = e.term,
+            node == term) {
             result = current;
             Parameter? p = that.parameter;
             if (exists p) {
@@ -51,7 +55,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.Return that) {
         Tree.Expression? e = that.expression;
-        if (exists e, node == e.term) {
+        if (exists e,
+            exists term = e.term,
+            node == term) {
             //result=current;
             assert(is TypedDeclaration decl = that.declaration);
             parameter = decl;
@@ -60,12 +66,13 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     }
     
     shared actual void visit(Tree.AssignOp that) {
-        if (node == that.rightTerm) {
+        if (exists rightTerm = that.rightTerm,
+            node == rightTerm) {
             //result=current;
-            value lt = that.leftTerm;
-            if (is Tree.BaseMemberExpression lt) {
-                value d = (lt).declaration;
-                if (is TypedDeclaration d) {
+            if (is Tree.BaseMemberExpression lt =
+                    that.leftTerm) {
+                if (is TypedDeclaration d =
+                        lt.declaration) {
                     parameter = d;
                 }
             }
@@ -75,10 +82,12 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.SpecifierStatement that) {
         Tree.Expression? e = that.specifierExpression.expression;
-        if (exists e, node == e.term) {
+        if (exists e,
+            exists term = e.term,
+            node == term) {
             value bme = that.baseMemberExpression;
             if (is Tree.BaseMemberExpression bme) {
-                value d = (bme).declaration;
+                value d = bme.declaration;
                 if (is TypedDeclaration d) {
                     parameter = d;
                 }
@@ -89,7 +98,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.AttributeDeclaration that) {
         if (exists sie= that.specifierOrInitializerExpression) {
-            if (exists e = sie.expression, node == e.term) {
+            if (exists e = sie.expression,
+                exists term = e.term,
+                node == term) {
                 parameter = that.declarationModel;
             }
         }
@@ -98,7 +109,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.MethodDeclaration that) {
         if (exists sie = that.specifierExpression) {
-            if (exists e = sie.expression, node == e.term) {
+            if (exists e = sie.expression,
+                exists term = e.term,
+                node == term) {
                 parameter = that.declarationModel;
             }
         }
@@ -107,7 +120,9 @@ class FindInvocationVisitor(Node node) extends Visitor() {
     
     shared actual void visit(Tree.InitializerParameter that) {
         if (exists se = that.specifierExpression) {
-            if (exists e = se.expression, node == e.term) {
+            if (exists e = se.expression,
+                exists term = e.term,
+                node == term) {
                 parameter = that.parameterModel.model;
             }
         }

@@ -35,32 +35,28 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
         MutableList<Declaration> proposals, String name) {
         
         for (p in proposals) {
-            if (p.name.equals(name)) {
+            if (p.name==name) {
                 return;
             }
         }
         
-        value possibles = ArrayList<Declaration>();
-        value mod = cu.unit.\ipackage.\imodule;
-        for (p in mod.allVisiblePackages) {
-            if (exists d = p.getMember(name, null, false),  //TODO: pass sig
-                d.toplevel, d.shared, !d.anonymous) {
-                
-                possibles.add(d);
+        if (exists mod = cu.unit?.\ipackage?.\imodule) { //can be null in IntelliJ for some reason!
+            value possibles = ArrayList<Declaration>();
+            
+            for (p in mod.allVisiblePackages) {
+                if (exists d = p.getMember(name, null, false),  //TODO: pass sig
+                    d.toplevel, d.shared, !d.anonymous) {
+                    
+                    possibles.add(d);
+                }
             }
-        }
-        
-        Declaration? prop;
-        if (possibles.empty) {
-            prop = null;
-        } else if (possibles.size == 1) {
-            prop = possibles.get(0);
-        } else {
-            prop = chooseDeclaration(possibles);
-        }
-        
-        if (exists prop) {
-            proposals.add(prop);
+            
+            if (exists proposal
+                    = if (possibles.size > 1)
+                    then chooseDeclaration(possibles)
+                    else possibles[0]) {
+                proposals.add(proposal);
+            }
         }
     }
 }

@@ -1,38 +1,73 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    ReplaceEdit,
+    platformUtils,
+    Status
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-shared interface AddPunctuationQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addPunctuationQuickFix {
     
-    shared formal void newProposal(Data data, Integer offset, Integer length,
-        String desc, TextChange change);
-    
-    shared void addEmptyParameterListProposal(Data data, IFile file) {
-        assert (is Tree.Declaration decNode = data.node);
-        value n = correctionUtil.getBeforeParenthesisNode(decNode);
-        
-        value dec = decNode.declarationModel;
-        value change = newTextChange("Add Empty Parameter List", file);
-        value offset = n.endIndex.intValue();
-        addEditToChange(change, newInsertEdit(offset, "()"));
-        
-        newProposal(data, offset + 1, 0, "Add '()' empty parameter list to " 
-            + correctionUtil.getDescription(dec), change);
+    shared void addEmptyParameterListProposal(QuickFixData data) {
+        if (is Tree.Declaration decNode = data.node) {
+
+            value dec = decNode.declarationModel;
+            value change
+                    = platformServices.document.createTextChange {
+                name = "Add Empty Parameter List";
+                input = data.phasedUnit;
+            };
+            value offset
+                    = correctionUtil.getBeforeParenthesisNode(decNode)
+                .endIndex
+                .intValue();
+            change.addEdit(InsertEdit {
+                start = offset;
+                text = "()";
+            });
+
+            data.addQuickFix {
+                description
+                        = "Add '()' empty parameter list to "
+                        + correctionUtil.getDescription(dec);
+                change = change;
+                selection = DefaultRegion(offset + 1, 0);
+            };
+        } else {
+            platformUtils.log(Status._WARNING,
+                "data.node (``
+                data.node.nodeType else "<null>"
+                ``) is not a Tree.Declaration");
+        }
     }
 
-    shared void addImportWildcardProposal(Data data, IFile file) {
+    shared void addImportWildcardProposal(QuickFixData data) {
         if (is Tree.ImportMemberOrTypeList node = data.node) {
             value imtl = node;
-            value change = newTextChange("Add Import Wildcard", file);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Add Import Wildcard";
+                input = data.phasedUnit;
+            };
             value offset = imtl.startIndex.intValue();
             value length = imtl.distance.intValue();
-            addEditToChange(change, newReplaceEdit(offset, length, "{ ... }"));
+            change.addEdit(ReplaceEdit {
+                start = offset;
+                length = length;
+                text = "{ ... }";
+            });
             
-            newProposal(data, offset + 2, 3, "Add '...' import wildcard", change);
+            data.addQuickFix {
+                description = "Add '...' import wildcard";
+                change = change;
+                selection = DefaultRegion(offset + 2, 3);
+            };
         }
     }
 

@@ -11,7 +11,7 @@ import ceylon.interop.java {
 
 shared alias DifferencedModelElement => Module | ModuleImport | Package | Unit | Declaration;
 
-shared interface AbstractDelta of CompilationUnitDelta | ModuleImportDelta | DeclarationDelta {
+shared interface AbstractDelta of CompilationUnitDelta | ModuleImportDelta | DeclarationRelatedDelta {
     "Element for which the delta has been calculated"
     shared formal DifferencedModelElement? changedElement;
 
@@ -90,7 +90,8 @@ shared class InvalidPackageDescriptorDelta() satisfies PackageDescriptorDelta {
     shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
 }
 
-shared interface DeclarationDelta of TopLevelDeclarationDelta | NestedDeclarationDelta satisfies AbstractDelta {
+shared interface DeclarationRelatedDelta of DeclarationDelta | SpecifierDelta
+        satisfies AbstractDelta {
     shared formal actual Declaration? changedElement;
     shared default actual String changedElementString {
         if (exists declaration=changedElement) {
@@ -98,7 +99,17 @@ shared interface DeclarationDelta of TopLevelDeclarationDelta | NestedDeclaratio
         }
         return "<unknown>";
     }
-    shared formal actual {NestedDeclarationDelta*} childrenDeltas;
+}
+
+shared interface DeclarationDelta of TopLevelDeclarationDelta | NestedDeclarationDelta 
+        satisfies DeclarationRelatedDelta {
+    shared formal actual {NestedDeclarationDelta|SpecifierDelta*} childrenDeltas;
+}
+
+shared interface SpecifierDelta satisfies DeclarationRelatedDelta {
+    shared alias PossibleChange => <StructuralChange | Removed>;
+    shared formal actual {PossibleChange*} changes;
+    shared actual [] childrenDeltas => [];
 }
 
 shared interface TopLevelDeclarationDelta satisfies DeclarationDelta {
@@ -108,7 +119,7 @@ shared interface TopLevelDeclarationDelta satisfies DeclarationDelta {
 
 shared interface NestedDeclarationDelta satisfies DeclarationDelta {
     shared alias PossibleChange => <StructuralChange | Removed | DeclarationMemberAdded>;
-    shared formal actual {<StructuralChange | Removed | DeclarationMemberAdded>*} changes;
+    shared formal actual {PossibleChange*} changes;
 }
 
 shared interface RegularCompilationUnitDelta satisfies CompilationUnitDelta {

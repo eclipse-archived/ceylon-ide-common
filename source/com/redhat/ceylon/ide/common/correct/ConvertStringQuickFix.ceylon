@@ -1,67 +1,90 @@
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree,
-    Visitor
-}
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
-}
-import ceylon.interop.java {
-    javaString
-}
 import ceylon.collection {
     MutableList,
     ArrayList
 }
+            
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    Visitor
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    ReplaceEdit,
+    CommonDocument,
+    InsertEdit,
+    DeleteEdit
+}
 
-shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, TextChange, Region, Project, Data, CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+shared object convertStringQuickFix {
     
-    shared void addConvertToVerbatimProposal(Data data, IFile file) {
+    shared void addConvertToVerbatimProposal(QuickFixData data) {
         if (is Tree.StringLiteral literal = data.node) {
             value token = literal.token;
-            if (token.type==CeylonLexer.\iASTRING_LITERAL
-                        || token.type==CeylonLexer.\iSTRING_LITERAL) {
+            if (token.type==CeylonLexer.astringLiteral || 
+                token.type==CeylonLexer.stringLiteral) {
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Convert to Verbatim String";
+                    input = data.phasedUnit;
+                };
+                change.addEdit(ReplaceEdit {
+                    start = literal.startIndex.intValue();
+                    length = literal.distance.intValue();
+                    text = getConvertedText {
+                        text = "\"\"\"``literal.text``\"\"\"";
+                        indentation = token.charPositionInLine + 3;
+                        doc = change.document;
+                    };
+                });
                 
-                value text = "\"\"\"" + literal.text + "\"\"\"";
-                value offset = literal.startIndex.intValue();
-                value length = literal.distance.intValue();
-                value change = newTextChange("Convert to Verbatim String", file);
-                value doc = getDocumentForChange(change);
-                value reindented = getConvertedText(text, token.charPositionInLine + 3, doc);
-                addEditToChange(change, newReplaceEdit(offset, length, reindented));
-                
-                newProposal(data, "Convert to verbatim string", change);
+                data.addQuickFix("Convert to verbatim string", change);
             }
         }
     }
     
-    shared void addConvertFromVerbatimProposal(Data data, IFile file) {
+    shared void addConvertFromVerbatimProposal(QuickFixData data) {
         if (is Tree.StringLiteral literal = data.node) {
             value token = literal.token;
-            if (token.type==CeylonLexer.\iAVERBATIM_STRING || token.type==CeylonLexer.\iVERBATIM_STRING) {
-                value text = "\"" + literal.text.replace("\\", "\\\\").replace("\"", "\\\"").replace("`", "\\`") + "\"";
-                value offset = literal.startIndex.intValue();
-                value length = literal.distance.intValue();
-                value change = newTextChange("Convert to Ordinary String", file);
-                value doc = getDocumentForChange(change);
-                value reindented = getConvertedText(text, token.charPositionInLine + 1, doc);
-                addEditToChange(change, newReplaceEdit(offset, length, reindented));
+            if (token.type==CeylonLexer.averbatimString || 
+                token.type==CeylonLexer.verbatimString) {
+                value change 
+                        = platformServices.document.createTextChange {
+                    name = "Convert to Ordinary String";
+                    input = data.phasedUnit;
+                };
+                value escaped 
+                        = literal.text
+                            .replace("\\", "\\\\")
+                            .replace("\"", "\\\"")
+                            .replace("`", "\\`");
+                change.addEdit(ReplaceEdit {
+                    start = literal.startIndex.intValue();
+                    length = literal.distance.intValue();
+                    text = getConvertedText {
+                        text = "\"``escaped``\"";
+                        indentation = token.charPositionInLine + 1;
+                        doc = change.document;
+                    };
+                });
                 
-                newProposal(data, "Convert to ordinary string", change);
+                data.addQuickFix("Convert to ordinary string", change);
             }
         }
     }
     
-    shared void addConvertToConcatenationProposal(Data data, IFile file) {
+    shared void addConvertToConcatenationProposal(QuickFixData data) {
         variable Tree.StringTemplate? result = null;
         value node = data.node;
         
         object extends Visitor() {
             shared actual void visit(Tree.StringTemplate that) {
-                if (that.startIndex.intValue() <= node.startIndex.intValue(),
-                    that.endIndex.intValue() >= node.endIndex.intValue()) {
+                if (that.startIndex.intValue() 
+                        <= node.startIndex.intValue(),
+                    that.endIndex.intValue() 
+                        >= node.endIndex.intValue()) {
                     result = that;
                 }
                 
@@ -70,8 +93,12 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
         }.visit(data.rootNode);
         
         if (exists template = result) {
-            value change = newTextChange("Convert to Concatenation", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Convert to Concatenation";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             value st = node.unit.stringType;
             value literals = template.stringLiterals;
             value expressions = template.expressions;
@@ -81,50 +108,74 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
                 value s = literals.get(i);
                 if (s.text.empty) {
                     if (i > 0, i < literals.size() - 1) {
-                        addEditToChange(change, newReplaceEdit(s.startIndex.intValue(),
-                                s.distance.intValue(), " + "));
+                        change.addEdit(ReplaceEdit {
+                            start = s.startIndex.intValue();
+                            length = s.distance.intValue();
+                            text = " + ";
+                        });
                     } else {
-                        addEditToChange(change, newDeleteEdit(s.startIndex.intValue(),
-                                s.distance.intValue()));
+                        change.addEdit(DeleteEdit {
+                            start = s.startIndex.intValue();
+                            length = s.distance.intValue();
+                        });
                     }
                 } else {
-                    value stt = s.token.type;
-                    if (stt in [CeylonLexer.\iSTRING_END, CeylonLexer.\iSTRING_MID]) {
-                        addEditToChange(change, newReplaceEdit(s.startIndex.intValue(), 2, " + \""));
+                    Integer? stt = s.token.type;
+                    if (exists stt, stt in [CeylonLexer.stringEnd, CeylonLexer.stringMid]) {
+                        change.addEdit(ReplaceEdit {
+                            start = s.startIndex.intValue();
+                            length = 2;
+                            text = " + \"";
+                        });
                     }
                     
-                    if (stt in [CeylonLexer.\iSTRING_START, CeylonLexer.\iSTRING_MID]) {
-                        addEditToChange(change, newReplaceEdit(s.endIndex.intValue() - 2, 2, "\" + "));
+                    if (exists stt, stt in [CeylonLexer.stringStart, CeylonLexer.stringMid]) {
+                        change.addEdit(ReplaceEdit {
+                            start = s.endIndex.intValue() - 2;
+                            length = 2;
+                            text = "\" + ";
+                        });
                     }
                 }
                 
                 if (i < expressions.size()) {
                     value e = expressions.get(i);
                     if (e.term is Tree.OperatorExpression) {
-                        addEditToChange(change, newInsertEdit(e.startIndex.intValue(), "("));
-                        addEditToChange(change, newInsertEdit(e.endIndex.intValue(), ")"));
+                        change.addEdit(InsertEdit {
+                            start = e.startIndex.intValue();
+                            text = "(";
+                        });
+                        change.addEdit(InsertEdit {
+                            start = e.endIndex.intValue();
+                            text = ")";
+                        });
                     }
                     
                     if (!e.typeModel.isSubtypeOf(st)) {
-                        addEditToChange(change, newInsertEdit(e.endIndex.intValue(), ".string"));
+                        change.addEdit(InsertEdit {
+                            start = e.endIndex.intValue();
+                            text = ".string";
+                        });
                     }
                 }
                 
                 i++;
             }
             
-            newProposal(data, "Convert to string concatenation", change);
+            data.addQuickFix("Convert to string concatenation", change);
         }
     }
     
-    shared void addConvertToInterpolationProposal(Data data, IFile file) {
+    shared void addConvertToInterpolationProposal(QuickFixData data) {
         variable Tree.SumOp? result = null;
         value node = data.node;
         
         object extends Visitor() {
             shared actual void visit(Tree.SumOp that) {
-                if (that.startIndex.intValue() <= node.startIndex.intValue(),
-                    that.endIndex.intValue() >= node.endIndex.intValue(),
+                if (that.startIndex.intValue() 
+                        <= node.startIndex.intValue(),
+                    that.endIndex.intValue() 
+                        >= node.endIndex.intValue(),
                     exists model = that.typeModel,
                     model.isString()) {
                     
@@ -136,15 +187,23 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
         }.visit(data.rootNode);
         
         if (exists sum = result) {
-            value change = newTextChange("Convert to Interpolation", file);
-            initMultiEditChange(change);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Convert to Interpolation";
+                input = data.phasedUnit;
+            };
+            change.initMultiEdit();
             value terms = flatten(sum);
             value lt = terms.get(0);
             value rt = terms.get(terms.size - 1);
-            variable Boolean expectingLiteral = lt is Tree.StringLiteral || lt is Tree.StringTemplate;
+            variable Boolean expectingLiteral 
+                    = lt is Tree.StringLiteral|Tree.StringTemplate;
             
             if (exists lt, !expectingLiteral) {
-                addEditToChange(change, newInsertEdit(lt.startIndex.intValue(), """"``"""));
+                change.addEdit(InsertEdit {
+                    start = lt.startIndex.intValue();
+                    text = """"``""";
+                });
             }
 
             variable Integer i = 0;
@@ -153,27 +212,39 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
                     assert(exists previous = terms.get(i - 1));
                     value from = previous.endIndex.intValue();
                     value to = term.startIndex.intValue();
-                    addEditToChange(change, newDeleteEdit(from, to - from));
+                    change.addEdit(DeleteEdit(from, to - from));
                 }
-                if (expectingLiteral, !(term is Tree.StringLiteral || term is Tree.StringTemplate)) {
-                    addEditToChange(change, newInsertEdit(term.startIndex.intValue(), """````"""));
+                if (expectingLiteral, 
+                    !term is Tree.StringLiteral|Tree.StringTemplate) {
+                    change.addEdit(InsertEdit {
+                        start = term.startIndex.intValue();
+                        text = """````""";
+                    });
                     expectingLiteral = false;
                 }
                 if (expectingLiteral) {
                     if (i > 0) {
-                        addEditToChange(change, newReplaceEdit(term.startIndex.intValue(), 1, """``"""));
+                        change.addEdit(ReplaceEdit {
+                            start = term.startIndex.intValue();
+                            length = 1;
+                            text = """``""";
+                        });
                     }
                     
                     if (i < terms.size - 1) {
-                        addEditToChange(change, newReplaceEdit(term.endIndex.intValue() - 1, 1, """``"""));
+                        change.addEdit(ReplaceEdit {
+                            start = term.endIndex.intValue() - 1;
+                            length = 1;
+                            text = """``""";
+                        });
                     }
                     expectingLiteral = false;
                 } else {
-                    if (is Tree.QualifiedMemberExpression lrt = term,
-                           lrt.declaration.name == "string") {
-                        value from = lrt.memberOperator.startIndex.intValue();
-                        value to = lrt.identifier.endIndex.intValue();
-                        addEditToChange(change, newDeleteEdit(from, to - from));
+                    if (is Tree.QualifiedMemberExpression term,
+                           term.declaration.name == "string") {
+                        value from = term.memberOperator.startIndex.intValue();
+                        value to = term.identifier.endIndex.intValue();
+                        change.addEdit(DeleteEdit(from, to - from));
                     }
                     expectingLiteral = true;
                 }
@@ -181,9 +252,12 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
             }
             
             if (expectingLiteral, exists rt) {
-                addEditToChange(change, newInsertEdit(rt.endIndex.intValue(), """``""""));
+                change.addEdit(InsertEdit {
+                    start = rt.endIndex.intValue();
+                    text = """``"""";
+                });
             }
-            newProposal(data, "Convert to string interpolation", change);
+            data.addQuickFix("Convert to string interpolation", change);
         }
     }
     
@@ -204,24 +278,23 @@ shared interface ConvertStringQuickFix<IFile, IDocument, InsertEdit, TextEdit, T
         return result;
     }
 
-    String getConvertedText(String text, Integer indentation, IDocument doc) {
+    String getConvertedText(String text, Integer indentation, 
+            CommonDocument doc) {
         value result = StringBuilder();
-        for (line in javaString(text).split("\n|\r\n?").iterable.coalesced) {
+        for (line in text.lines) {
             if (result.size == 0) {
                 result.append(line.string);
-            } else {
+            }
+            else {
                 variable Integer i = 0;
                 while (i < indentation) {
                     result.append(" ");
                     i++;
                 }
-                
                 result.append(line.string);
             }
-            
-            result.append(indents.getDefaultLineDelimiter(doc));
+            result.append(doc.defaultLineDelimiter);
         }
-        
         result.deleteTerminal(1);
         return result.string;
     }

@@ -1,5 +1,6 @@
 import java.util {
-    List
+    List,
+    Collections
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
@@ -26,7 +27,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Package
 }
 import java.lang {
-    IllegalAccessError
+    IllegalAccessError,
+    JString=String
 }
 import ceylon.interop.java {
     javaString
@@ -47,6 +49,8 @@ shared class SourceClass satisfies ClassMirror {
         throw IllegalAccessError("Don't use a Source Class Mirror !");
     }
     
+    annotationNames => Collections.emptySet<JString>();
+    
     shared actual Boolean public =>
             modelDeclaration.shared;
     
@@ -63,7 +67,7 @@ shared class SourceClass satisfies ClassMirror {
     
     shared actual Boolean defaultAccess => false;
     
-    shared actual Boolean static => false;
+    shared actual Boolean static => modelDeclaration.staticallyImportable;
     
     shared actual Boolean enum => false;
     

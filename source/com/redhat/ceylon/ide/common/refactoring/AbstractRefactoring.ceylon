@@ -46,6 +46,7 @@ shared interface AbstractRefactoring<RefactoringData>
     shared formal EditorData editorData;
 
     shared formal List<PhasedUnit> getAllUnits();
+    shared formal PhasedUnit editorPhasedUnit;
     shared formal Boolean searchInFile(PhasedUnit pu);
     shared formal Boolean searchInEditor();
     shared formal Boolean inSameProject(Declaration decl);
@@ -58,14 +59,18 @@ shared interface AbstractRefactoring<RefactoringData>
         return term;
     }
     
+    shared formal Boolean affectsOtherFiles;
+    
     shared default Integer countDeclarationOccurrences() {
         variable Integer count = 0;
-        for (pu in getAllUnits()) {
-            if (searchInFile(pu)) {
-                count += countReferences(pu.compilationUnit);
+        if (affectsOtherFiles) {
+            for (pu in getAllUnits()) {
+                if (searchInFile(pu)) {
+                    count += countReferences(pu.compilationUnit);
+                }
             }
         }
-        if (searchInEditor()) {
+        if (!affectsOtherFiles || searchInEditor()) {
             count += countReferences(rootNode);
         }
         return count;

@@ -1,6 +1,11 @@
+import ceylon.collection {
+    HashSet,
+    MutableSet
+}
 import ceylon.interop.java {
     javaString,
-    CeylonIterable
+    CeylonIterable,
+    JavaIterable
 }
 
 import com.redhat.ceylon.common {
@@ -17,7 +22,6 @@ import com.redhat.ceylon.ide.common.typechecker {
     TypecheckerAliases
 }
 import com.redhat.ceylon.ide.common.util {
-    toJavaStringList,
     Path,
     unsafeCast
 }
@@ -37,21 +41,25 @@ import com.redhat.ceylon.model.typechecker.model {
     ModuleImport
 }
 
+import java.io {
+    JFile=File
+}
 import java.lang {
     JString=String,
     JIterable=Iterable
 }
 import java.util {
     Collections,
-    JList=List
+    JList=List,
+    Arrays
 }
-import ceylon.collection {
-    HashSet,
-    MutableSet
-}
-shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject) 
+
+shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects model, BaseCeylonProject? theCeylonProject) 
         extends LazyModuleManager() 
         satisfies LazyModuleManagerEx {
+
+    value languageModuleName = Arrays.asList(*Module.languageModuleName.split('.'.equals).map(javaString));
+    value defaultModuleName = Collections.singletonList(javaString(Module.defaultModuleName));
 
     shared default BaseCeylonProject? ceylonProject = theCeylonProject;
 
@@ -72,7 +80,7 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     }
     sourceModules = HashSet<String>();
     if (!loadDependenciesFromModelLoaderFirst) {
-        sourceModules.add(Module.\iLANGUAGE_MODULE_NAME);
+        sourceModules.add(Module.languageModuleName);
     }
 
     shared actual default BaseIdeModelLoader modelLoader {
@@ -100,20 +108,18 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
     shared actual void initCoreModules(variable Modules modules) {
         setModules(modules);
         if (!exists m = modules.languageModule) {
-            value defaultModuleName = Collections.singletonList(javaString(Module.\iDEFAULT_MODULE_NAME));
             BaseIdeModule defaultModule = createModule(defaultModuleName, "unversioned");
-            defaultModule.default = true;
+            //defaultModule.default = true;
             defaultModule.available = true;
             defaultModule.isProjectModule=true;
             modules.listOfModules.add(defaultModule);
             modules.defaultModule = defaultModule;
-            JList<JString> languageName = toJavaStringList {"ceylon", "language"};
-            variable Module languageModule = createModule(languageName, TypeChecker.\iLANGUAGE_MODULE_VERSION);
+            variable Module languageModule = createModule(languageModuleName, TypeChecker.languageModuleVersion);
             languageModule.languageModule = languageModule;
             languageModule.available = false;
             modules.languageModule = languageModule;
             modules.listOfModules.add(languageModule);
-            defaultModule.addImport(ModuleImport(languageModule, false, false));
+            defaultModule.addImport(ModuleImport(null, languageModule, false, false));
             defaultModule.languageModule = languageModule;
             createPackage("", defaultModule);
         }
@@ -152,7 +158,17 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         return false;
     }
     
-    
+    shared BaseCeylonProject? searchForOriginalProject(JFile moduleArtifact) =>
+            let (existingArtifactAbsolutePath = moduleArtifact.absolutePath)
+            ceylonProject?.referencedCeylonProjects
+            ?.filter(BaseCeylonProject.nativeProjectIsAccessible)
+            ?.find((refProject) 
+                => refProject.ceylonModulesOutputDirectory.absolutePath in existingArtifactAbsolutePath);
+
+    shared BaseIdeModule? searchForOriginalModule(String moduleName, JFile moduleArtifact) =>
+            searchForOriginalProject(moduleArtifact)?.modules
+            ?.find((m) => m.nameAsString == moduleName && m.isProjectModule);
+            
     shared actual BaseIdeModule createModule(JList<JString> moduleName, String version) {
         String moduleNameString = Util.getName(moduleName);
         value theModule = newModule(moduleNameString, version);
@@ -166,15 +182,13 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
             modelLoader.loadStandardModules();
     
     shared actual JIterable<JString> searchedArtifactExtensions =>
-            let(extensions = 
-        if (loadDependenciesFromModelLoaderFirst)
-    then {"car", "jar", "src"}
-    else {"jar", "src", "car"})
-    toJavaStringList(extensions);
+            let (extensions = loadDependenciesFromModelLoaderFirst
+                    then {"car", "jar", "src", "js"}
+                    else {"jar", "src", "car", "js"})
+            JavaIterable(extensions.map(javaString));
     
-    shared Boolean isLoadDependenciesFromModelLoaderFirst() {
-        return loadDependenciesFromModelLoaderFirst;
-    }
+    shared Boolean isLoadDependenciesFromModelLoaderFirst() =>
+            loadDependenciesFromModelLoaderFirst;
 
     shared default BaseIdeModule? getArchiveModuleFromSourcePath(String|Path sourceUnitPath) {
         String sourceUnitPathString = switch(sourceUnitPath)
@@ -212,13 +226,13 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
         // manager even for the JS backend.
         // TODO At some point we'll need an actual module manager for the
         // JS backend and an IDE that can somehow merge the two when needed
-        variable value backends = Backends.\iANY;
+        variable value backends = Backends.any;
         if (exists theProject = ceylonProject) {
             if (theProject.compileToJava) {
-                backends = backends.merged(Backend.\iJava);
+                backends = backends.merged(Backend.java);
             }
             if (theProject.compileToJs) {
-                backends = backends.merged(Backend.\iJavaScript);
+                backends = backends.merged(Backend.javaScript);
             }
         }
         return backends;
@@ -226,8 +240,9 @@ shared abstract class BaseIdeModuleManager(BaseCeylonProject? theCeylonProject)
 }
 
 shared abstract class IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>(
+    shared actual CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile> model,
     CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? theCeylonProject)
-        extends BaseIdeModuleManager(theCeylonProject)
+        extends BaseIdeModuleManager(model, theCeylonProject)
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>

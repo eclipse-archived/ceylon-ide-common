@@ -8,6 +8,9 @@ import ceylon.collection {
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
+import com.redhat.ceylon.compiler.typechecker.io {
+    VirtualFile
+}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -17,8 +20,15 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    DocumentChanges
+    CommonImportProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    TextChange,
+    InsertEdit,
+    ReplaceEdit,
+    CompositeChange,
+    CommonDocument
 }
 import com.redhat.ceylon.ide.common.util {
     nodes,
@@ -39,9 +49,7 @@ import com.redhat.ceylon.model.typechecker.model {
 
 import java.util {
     JList=List,
-    JHashSet=HashSet,
-    JArrayList=ArrayList,
-    JSet=Set
+    JArrayList=ArrayList
 }
 
 import org.antlr.runtime {
@@ -49,43 +57,184 @@ import org.antlr.runtime {
     Token
 }
 
-shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, Change, IRegion=DefaultRegion>
-        satisfies ExtractInferrableTypedRefactoring<TextChange>
-        & NewNameRefactoring
-        & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        & ExtractLinkedModeEnabled<IRegion>
-        given InsertEdit satisfies TextEdit {
+shared ExtractFunctionRefactoring?
+createExtractFunctionRefactoring(
+    CommonDocument doc,
+    Integer selectionStart,
+    Integer selectionEnd,
+    Tree.CompilationUnit rootNode,
+    JList<CommonToken> tokens,
+    Tree.Declaration? target,
+    {PhasedUnit*} moduleUnits,
+    VirtualFile vfile,
+    String? functionName = null) 
+        => if (exists node 
+                = nodes.findNode {
+                    node = rootNode;
+                    tokens = tokens;
+                    startOffset = selectionStart;
+                    endOffset = selectionEnd;
+                }) 
+        then ExtractFunctionRefactoring {
+            document = doc;
+            newName = 
+                    functionName 
+                    else nodes.nameProposals(if (is Tree.Term node) then node else null).first;
+            rootNode = rootNode;
+            tokens = tokens;
+            selection = [selectionStart, selectionEnd];
+            node = node;
+            target = target;
+            moduleUnits = moduleUnits;
+            sourceVirtualFile = vfile;
+        }
+        else null;
 
-    shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-    value indents => importProposals.indents;
+shared class NewAbstractRefactoring(affectsOtherFiles, explicitType) {
+    shared Tree.Term unparenthesize(Tree.Term term) 
+            => if (is Tree.Expression term, 
+                  !is Tree.Tuple t = term.term) 
+            then unparenthesize(term.term) 
+            else term;
     
-    initialNewName => nameProposals[0];
+    shared variable Type? type = null;
+    shared variable Boolean canBeInferred = false;
+    shared Boolean affectsOtherFiles;
+    shared Boolean explicitType;
+}
+
+shared class ExtractFunctionRefactoring(
+    CommonDocument document, 
+    shared variable String newName,
+    shared Tree.CompilationUnit rootNode, 
+    JList<CommonToken> tokens, 
+    Integer[2] selection,
+    shared Node node,
+    Tree.Declaration? target,
+    {PhasedUnit*} moduleUnits,
+    VirtualFile sourceVirtualFile)
+        extends NewAbstractRefactoring(false, false) {
     
-    shared formal List<Tree.Statement> statements;
-    shared formal Tree.Declaration? target;
-    shared formal List<Node->TypedDeclaration> results;
-    shared formal List<Tree.Return> returns;
-    shared formal Tree.Body? body;
-    shared formal variable actual Type? type;
-    shared formal actual variable Boolean canBeInferred;
+    function selected(Node node)
+            => node.startIndex.intValue() >= selection[0]
+            && node.endIndex.intValue() <= selection[1];
     
-    shared formal JList<IRegion> dupeRegions;    
+    function getBody(Tree.Statement statement, 
+                     Tree.CompilationUnit rootNode) {
+        value fbv = FindBodyVisitor(statement);
+        fbv.visit(rootNode);
+        value body = fbv.body;
+        return body;
+    }
     
-    shared class CheckStatementsVisitor(Tree.Body scope, 
-        Collection<Tree.Statement> statements) 
+    function bodyAndStatements(Node node, 
+            Tree.CompilationUnit rootNode) {
+        switch (node)
+        case (is Tree.Term) {
+            //we're extracting a single expression
+        }
+        case (is Tree.Body) {        
+            //we're extracting multiple statements
+            return [node, 
+                [ for (s in node.statements)
+                  if (selected(s)) s ]];
+        }
+        case (is Tree.Statement) {
+            //we're extracting a single statement
+            if (exists found = getBody(node, rootNode)) {
+                return [found, [node]];
+            }
+        }
+        else {
+            value statement
+                    = nodes.findStatement(rootNode, node);
+            if (exists statement) {
+                //we're extracting a single statement
+                if (exists found = getBody(statement, rootNode)) {
+                    return [found, [statement]];
+                }
+            }
+        }
+        return [null, []];
+    }
+    
+    function resultsAndReturns(Tree.Body? body, 
+            {Tree.Statement*} statements) {
+        if (exists body) {
+            
+            value resultsVisitor 
+                    = FindResultVisitor {
+                scope = body;
+                statements = statements;
+            };
+            value returnsVisitor 
+                    = FindReturnsVisitor();
+            
+            for (s in statements) {
+                s.visit(resultsVisitor);
+                s.visit(returnsVisitor);
+            }
+            
+            return [resultsVisitor.results, 
+                    returnsVisitor.returns];
+        }
+        else {
+            return [[], []];       
+        }
+    }
+    
+    //additional initialization for extraction of statements
+    //as opposed to extraction of an expression
+    
+    value [body, statements]
+            = bodyAndStatements {
+        node = node;
+        rootNode = rootNode;
+    };
+    
+    value [results, returns]
+            = resultsAndReturns {
+        body = body;
+        statements = statements;
+    };
+    
+    value importProposals 
+            = CommonImportProposals(document, rootNode);
+    
+    shared variable DefaultRegion? typeRegion = null;
+    shared variable DefaultRegion? decRegion = null;
+    shared variable DefaultRegion? refRegion = null;
+    
+    value dupeRegionList = ArrayList<DefaultRegion>();
+    shared List<DefaultRegion> dupeRegions => dupeRegionList;
+    
+    class CheckExpressionVisitor() extends Visitor() {
+        shared variable String? problem = null;
+        
+        shared actual void visit(Tree.Body that) {}
+        
+        shared actual void visit(Tree.AssignmentOp that) {
+            super.visit(that);
+            problem = "an assignment";
+        }
+    }
+
+    shared class CheckStatementsVisitor(Tree.Body scope,
+        Collection<Tree.Statement> statements)
             extends Visitor() {
         
         variable shared String? problem = null;
+        
         shared actual void visit(Tree.Body that) {
-            if (that==scope) {
+            if (that == scope) {
                 super.visit(that);
             }
         }
         
-        function notResult(Node that) 
+        function notResult(Node that)
                 => !that in results.map(Entry.key);
         
-        function notResultRef(Declaration d) 
+        function notResultRef(Declaration d)
                 => !d in results.map(Entry.item);
         
         shared actual void visit(Tree.Declaration that) {
@@ -94,8 +243,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 value d = that.declarationModel;
                 if (d.shared) {
                     problem = "a shared declaration";
-                }
-                else if (hasOuterRefs(d, scope, statements)) {
+                } else if (hasOuterRefs(d, scope, statements)) {
                     problem = "a declaration used elsewhere";
                 }
             }
@@ -103,28 +251,25 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         shared actual void visit(Tree.SpecifierStatement that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term 
-                    = that.baseMemberExpression) {
-                    if (exists d = term.declaration, 
-                        notResultRef(d), 
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "a specification statement for a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term
+                    = that.baseMemberExpression, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "a specification statement for a declaration used or defined elsewhere";
             }
         }
         
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
-            if (notResult(that)) {
-                if (is Tree.MemberOrTypeExpression term = that.leftTerm) {
-                    if (exists d = term.declaration,
-                        notResultRef(d), 
-                        hasOuterRefs(d, scope, statements)) {
-                        problem = "an assignment to a declaration used or defined elsewhere";
-                    }
-                }
+            if (notResult(that), 
+                is Tree.MemberOrTypeExpression term 
+                    = that.leftTerm, 
+                exists d = term.declaration,
+                notResultRef(d),
+                hasOuterRefs(d, scope, statements)) {
+                problem = "an assignment to a declaration used or defined elsewhere";
             }
         }
         
@@ -134,42 +279,63 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    shared actual void build(TextChange tfc) {
-        value node = editorData.node;
+    shared CompositeChange|TextChange build() {
+        "The changes applied to the current editor"
+        value tfc = platformServices.document.createTextChange(name, document);
+        
         if (is Tree.Term node) {
-            extractExpression(tfc, node);
+            if (exists tn = getTargetNode {
+                    term = node;
+                    target = target;
+                    rootNode = rootNode;
+                }, 
+                tn.declarationModel.toplevel) {
+                
+                value cc = platformServices.document.createCompositeChange(name);
+    
+                //if we're extracting a toplevel function, look for
+                //replacements in other files in the same package
+                extractExpression(tfc, node, cc);
+                
+                if (cc.hasChildren) {
+                    cc.addTextChange(tfc);
+                    return cc;
+                }
+            } else {
+                extractExpression(tfc, node);
+            }
+        } else {
+            extractStatements(tfc);
         }
-        else if (is Tree.Body|Tree.Statement node) {
-            extractStatements(tfc, node);
-        }
+        
+        return tfc;
     }
     
     function typeParameters(
-        ArrayList<TypeDeclaration> localTypes, 
-        String extraIndent, Unit unit, 
-        JSet<Declaration> imports) {
+        ArrayList<TypeDeclaration> localTypes,
+        String extraIndent, 
+        Unit unit) {
         value typeParams = StringBuilder();
         value constraints = StringBuilder();
         if (!localTypes.empty) {
             typeParams.appendCharacter('<');
             for (t in localTypes) {
-                if (typeParams.size>1) {
+                if (typeParams.size > 1) {
                     typeParams.append(", ");
                 }
                 typeParams.append(t.name);
                 value sts = t.satisfiedTypes;
                 if (!sts.empty) {
                     constraints
-                            .append(extraIndent)
-                            .append("given ") 
-                            .append(t.name)
-                            .append(" satisfies ");
+                        .append(extraIndent)
+                        .append("given ")
+                        .append(t.name)
+                        .append(" satisfies ");
                     for (boundType in sts) {
-                        importProposals.importType(imports, boundType, rootNode);
-                        value bound = boundType.asSourceCodeString(unit);
+                        importProposals.importType(boundType);
                         constraints
-                                .append(bound)
-                                .appendCharacter('&');
+                            .append(boundType.asSourceCodeString(unit))
+                            .appendCharacter('&');
                     }
                     constraints.deleteTerminal(1);
                 }
@@ -180,36 +346,37 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
     }
     
     function asArgList(
-        List<Tree.Term> localRefs, 
-        List<Tree.Term> localThisRefs, 
+        List<Tree.Term> localRefs,
+        List<Tree.Term> localThisRefs,
         JList<CommonToken> tokens) {
-        value args 
+        value args
                 = localThisRefs.take(1).chain(localRefs)
-                    .map((term) => nodes.text(term, tokens));
+                    .map((term) => nodes.text(tokens, term));
         return ", ".join(args);
     }
     
     function fakeToken(Tree.This tr) {
-        value tok = CommonToken(CeylonLexer.\iLIDENTIFIER, "that");
+        value tok = CommonToken(CeylonLexer.lidentifier, "that");
         tok.startIndex = tr.startIndex.intValue();
         tok.stopIndex = tr.stopIndex.intValue();
         tok.tokenIndex = tr.token.tokenIndex;
         return tok;
     }
     
-    shared void extractExpression(TextChange tfc, Tree.Term term, 
-            Change? change = null) {
-        initMultiEditChange(tfc);
-        value doc = getDocumentForChange(tfc);
+    void extractExpression(TextChange tfc, Tree.Term term,
+        CompositeChange? cc = null) {
+        tfc.initMultiEdit();
         value unit = term.unit;
-        value tokens = editorData.tokens;
-        value rootNode = editorData.rootNode;
         
         value start = term.startIndex.intValue();
         value length = term.distance.intValue();
         value core = unparenthesize(term);
         
-        value decNode = getTargetNode(term, target, rootNode);
+        value decNode = getTargetNode {
+            term = term;
+            target = target;
+            rootNode = rootNode;
+        };
         if (!exists decNode) {
             return;
         }
@@ -233,8 +400,6 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             };
         }
         
-        value imports = JHashSet<Declaration>();
-        
         value params = StringBuilder();
         for (tr in localThisRefs) {
             params.append(tr.typeModel.asSourceCodeString(unit))
@@ -246,13 +411,13 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 params.append(", ");
             }
             
-            if (is TypedDeclaration pdec = bme.declaration, 
+            if (is TypedDeclaration pdec = bme.declaration,
                 pdec.dynamicallyTyped) {
                 params.append("dynamic");
-            }
-            else {
-                value paramType = unit.denotableType(bme.typeModel);
-                importProposals.importType(imports, paramType, rootNode);
+            } else {
+                value paramType 
+                        = unit.denotableType(bme.typeModel);
+                importProposals.importType(paramType);
                 params.append(paramType.asSourceCodeString(unit));
             }
             
@@ -265,26 +430,24 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             tokens = tokens;
         };
         
-        value indent = 
-                indents.getDefaultLineDelimiter(doc) + 
-                indents.getIndent(decNode, doc);
-        value extraIndent = 
-                indent + 
-                indents.defaultIndent + 
-                indents.defaultIndent;
+        value indent 
+                = document.defaultLineDelimiter 
+                + document.getIndent(decNode);
+        value extraIndent 
+                = indent 
+                + platformServices.document.defaultIndent 
+                + platformServices.document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                    imports = imports;
                 };
         
-        value specifier = extraIndent + "=> ";
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisRefs) {
-            fixedTokens.set(tokens.indexOf(tr.token), 
-                fakeToken(tr));
+            fixedTokens[tokens.indexOf(tr.token)]
+                = fakeToken(tr);
         }
         String body;
         if (is Tree.FunctionArgument core) {
@@ -293,32 +456,34 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 type = unit.denotableType(core.type.typeModel);
             }
             if (exists block = core.block) {
-                body = nodes.text(block, fixedTokens);
+                body = " " + nodes.text(fixedTokens, block);
             }
             else if (exists expression = core.expression) {
-                body = specifier + nodes.text(expression, fixedTokens) + ";";
+                body = extraIndent 
+                        + "=> ``nodes.text(fixedTokens, expression)``;";
             }
             else {
-                body = specifier + ";";
+                body = " => ;";
             }
         }
         else {
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            body = specifier + nodes.text(core, fixedTokens) + ";";
+            body = extraIndent
+                    + "=> ``nodes.text(fixedTokens, core)``;";
         }
         
         String typeOrKeyword;
-        if (exists returnType = this.type, 
+        if (exists returnType = this.type,
             !returnType.unknown) {
-            value voidModifier = returnType.anything;
-            if (voidModifier) {
+            if (returnType.anything) {
                 typeOrKeyword = "void";
             }
             else if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
-                importProposals.importType(imports, returnType, rootNode);
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
+                importProposals.importType(returnType);
             }
             else {
                 typeOrKeyword = "function";
@@ -329,13 +494,9 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             typeOrKeyword = "dynamic";
         }
         
-        value definition = 
-                typeOrKeyword + " " + newName + 
-                typeParams.string + 
-                "(" + params.string + ")" + 
-                constraints.string + " " + 
-                body + 
-                indent + indent;
+        value definition 
+            = "``typeOrKeyword`` ``newName````typeParams``(``params``)``constraints````body``" 
+            + indent + indent;
         
         String invocation;
         Integer refStart;
@@ -346,30 +507,31 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 refStart = start;
             }
             else {
-                value header = nodes.text(cpl, tokens) + " => ";
-                invocation = header + newName + "(" + argList.string + ")";
-                refStart = start + header.size;
+                value pl = nodes.text(tokens, cpl);
+                invocation = "``pl`` => ``newName``(``argList``)";
+                refStart = start + pl.size + 4;
             }
-        }
-        else {
-            invocation = newName + "(" + argList.string + ")";
+        } else {
+            invocation = "``newName``(``argList``)";
             refStart = start;
         }
         
-        value shift 
-                = importProposals.applyImports {
-            change = tfc;
-            declarations = imports;
-            cu = rootNode;
-            doc = doc;
-        };
+        value shift = importProposals.apply(tfc);
         
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, definition));
-        addEditToChange(tfc, newReplaceEdit(start, length, invocation));
-        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = newRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
-        refRegion = newRegion(refStart + shift + definition.size, newName.size);
+        tfc.addEdit(InsertEdit {
+            start = decStart;
+            text = definition;
+        });
+        tfc.addEdit(ReplaceEdit {
+            start = start;
+            length = length;
+            text = invocation;
+        });
+        
+        typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
+        decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
+        refRegion = DefaultRegion(refStart + shift + definition.size, newName.size);
         
         object extends Visitor() {
             variable value backshift = length - invocation.size;
@@ -379,42 +541,38 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 value args = ArrayList<Tree.Term>();
                 if (exists tstart, exists tlength,
                     ModelUtil.contains(decNode.scope.container, t.scope)
-                    && tstart > start + length //TODO: make it work for earlier expressions in the file
-                    && t!=term 
-                    && !different {
+                            && tstart > start+length //TODO: make it work for earlier expressions in the file
+                            && t!=term
+                            && !different {
                         term = term;
                         expression = t;
                         localRefs = localRefs;
                         arguments = args;
                     }) {
-                    value invocation = 
-                            newName + 
-                            "(" + 
-                            asArgList(args, localThisRefs, tokens) + 
-                            ")";
-                    addEditToChange(tfc, 
-                        newReplaceEdit {
+                    value invocation =
+                        "``newName``(``asArgList(args, localThisRefs, tokens)``)";
+                    tfc.addEdit(ReplaceEdit {
                             start = tstart;
                             length = tlength;
                             text = invocation;
-                        });
-                    dupeRegions.add(newRegion {
-                        start = tstart + shift + definition.size - backshift;
-                        length = newName.size;
                     });
-                    backshift += tlength - invocation.size;
-                }
-                else {
+                    dupeRegionList.add(DefaultRegion {
+                            start = tstart + shift + definition.size - backshift;
+                            length = newName.size;
+                        });
+                    backshift += tlength-invocation.size;
+                } else {
                     super.visit(t);
                 }
             }
         }.visit(rootNode);
         
-        if (exists change) {
-            for (pu in getAllUnits()) {
+        if (exists cc, dec.toplevel) {
+            for (pu in moduleUnits) {
+                //TODO: check that there is no open dirty editor for this unit
                 if (pu.unit.\ipackage==unit.\ipackage && pu.unit!=unit) {
-                    value tc = newFileChange(pu);
-                    initMultiEditChange(tc);
+                    value tc = platformServices.document.createTextChange(name, pu);
+                    tc.initMultiEdit();
                     variable value found = false;
                     object extends Visitor() {
                         shared actual void visit(Tree.Term t) {
@@ -428,92 +586,80 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                                     localRefs = localRefs;
                                     arguments = args;
                                 }) {
-                                value invocation = 
-                                        newName + 
-                                        "(" + 
-                                        asArgList(args, localThisRefs, pu.tokens) +
-                                        ")";
-                                addEditToChange(tc, 
-                                    newReplaceEdit {
-                                        start = tstart;
-                                        length = tlength;
-                                        text = invocation;
-                                    });
+                                value invocation =
+                                    "``newName``(``asArgList(args, localThisRefs, pu.tokens)``)";
+                                tc.addEdit(ReplaceEdit {
+                                    start = tstart;
+                                    length = tlength;
+                                    text = invocation;
+                                });
                                 found = true;
-                            }
-                            else {
+                            } else {
                                 super.visit(t);
                             }
                         }
                     }.visit(pu.compilationUnit);
+                    
                     if (found) {
-                        addChangeToChange(change, tc);
+                        cc.addTextChange(tc);
                     }
                 }
             }
         }
     }
     
-    shared formal TextChange newFileChange(PhasedUnit pu);
-    shared formal void addChangeToChange(Change change, TextChange tc);
-    
-    function targetDeclaration(Tree.Body body, 
+    function targetDeclaration(Tree.Body body,
         Tree.CompilationUnit rootNode) {
-        if (exists target = this.target) {
+        if (exists target = target) {
             return target;
-        }
-        else {
+        } else {
             value fsv = FindContainerVisitor(body);
             rootNode.visit(fsv);
             return fsv.declaration;
         }
     }
     
-    function resultModifiers(Node result, 
-        TypedDeclaration rdec, 
-        Unit unit, 
-        JSet<Declaration> imports) {
+    function resultModifiers(Node result,
+        TypedDeclaration rdec, Unit unit) {
         if (result is Tree.AttributeDeclaration) {
             if (rdec.shared, exists type = rdec.type) {
-                importProposals.importType(imports, type, rootNode);
-                return "shared " + type.asSourceCodeString(unit) + " ";
-            }
-            else {
+                importProposals.importType(type);
+                return "shared ``type.asSourceCodeString(unit)`` ";
+            } else {
                 return "value ";
             }
-        }
-        else {
+        } else {
             return "";
         }
     }
     
-    function appendComments([Tree.Statement+] ss, 
-        StringBuilder definition, 
-        String bodyIndent, 
+    function appendComments([Tree.Statement+] ss,
+        StringBuilder definition,
+        String bodyIndent,
         JList<CommonToken> tokens) {
         value end = ss.last.endIndex.intValue();
         variable value endOfComments = end;
         for (s in statements) {
             definition
-                    .append(bodyIndent)
-                    .append(nodes.text(s, tokens));
+                .append(bodyIndent)
+                .append(nodes.text(tokens, s));
             variable Integer i = s.endToken.tokenIndex;
             variable CommonToken tok;
-            while ((tok = tokens.get(++i)).channel == Token.\iHIDDEN_CHANNEL) {
+            while ((tok = tokens.get(++i)).channel == Token.hiddenChannel) {
                 value text = tok.text;
-                if (tok.type == CeylonLexer.\iLINE_COMMENT) {
+                if (tok.type == CeylonLexer.lineComment) {
                     definition
-                            .append(" ")
-                            .append(text.trimmed);
+                        .append(" ")
+                        .append(text.trimmed);
                     if (s == ss.last) {
                         endOfComments = tok.stopIndex + 1;
                     }
                 }
                 
-                if (tok.type == CeylonLexer.\iMULTI_COMMENT) {
+                if (tok.type == CeylonLexer.multiComment) {
                     definition
-                            .append(" ")
-                            .append(text);
+                        .append(" ")
+                        .append(text);
                     if (s == ss.last) {
                         endOfComments = tok.stopIndex + 1;
                     }
@@ -523,13 +669,10 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         return endOfComments;
     }
     
-    void extractStatements(TextChange tfc, Tree.Body|Tree.Statement node) {
-        assert (exists body = this.body);
-        initMultiEditChange(tfc);
-        value doc = getDocumentForChange(tfc);
+    void extractStatements(TextChange tfc) {
+        assert (exists body = body);
+        tfc.initMultiEdit();
         value unit = body.unit;
-        value tokens = editorData.tokens;
-        value rootNode = editorData.rootNode;        
         
         assert (exists decNode = targetDeclaration(body, rootNode));
         assert (nonempty ss = statements.sequence());
@@ -575,13 +718,11 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         
         value movingDecs = HashSet<Declaration>();
         for (s in statements) {
-            if (is Tree.Declaration s) {
-                value d = s;
-                movingDecs.add(d.declarationModel);
-            }
+            s.visit(object extends Visitor() {
+                visit(Tree.Declaration that)
+                    => movingDecs.add(that.declarationModel);
+            });
         }
-        
-        value imports = JHashSet<Declaration>();
         
         value params = StringBuilder();
         value args = StringBuilder();
@@ -593,16 +734,16 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                 args.append(", ");
             }
             params.append(tr.typeModel.asSourceCodeString(unit))
-                    .append(" that");
+                .append(" that");
             args.append(tr.text);
             break;
         }
         for (bme in localReferences) {
             value bmed = bme.declaration;
-            value variable = 
-                    if (is Value bmed) 
-                    then bmed.variable //TODO: wrong condition, check if initialized! 
-                    else false;
+            value variable =
+                if (is Value bmed)
+                then bmed.variable //TODO: wrong condition, check if initialized! 
+                else false;
             value result = bmed in results.map(Entry.item);
             //ignore it if it is a result of the function 
             //and is not a variable
@@ -617,13 +758,13 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         params.append("variable ");
                     }
                     
-                    if (is TypedDeclaration bmed, 
+                    if (is TypedDeclaration bmed,
                         bmed.dynamicallyTyped) {
                         params.append("dynamic");
-                    }
-                    else {
-                        value paramType = unit.denotableType(bme.typeModel);
-                        importProposals.importType(imports, paramType, rootNode);
+                    } else {
+                        value paramType 
+                                = unit.denotableType(bme.typeModel);
+                        importProposals.importType(paramType);
                         params.append(paramType.asSourceCodeString(unit));
                     }
                     
@@ -634,37 +775,34 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             }
         }
         
-        value indent = 
-                indents.getDefaultLineDelimiter(doc) + 
-                indents.getIndent(decNode, doc);
-        value extraIndent = 
-                indent + 
-                indents.defaultIndent + 
-                indents.defaultIndent;
+        value indent =
+                document.defaultLineDelimiter +
+                document.getIndent(decNode);
+        value extraIndent =
+                indent +
+                platformServices.document.defaultIndent +
+                platformServices.document.defaultIndent;
         value [typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                    imports = imports;
                 };
         
-        if (results.size==1) {
-            assert (exists _ -> rdec = results.first);
+        if (results.size == 1) {
+            assert (exists _->rdec = results.first);
             if (!type exists) {
                 type = unit.denotableType(rdec.type);
             }
-        }
-        else if (!results.empty) {
+        } else if (!results.empty) {
             value types = JArrayList<Type>();
-            for (_ -> rdec in results) {
+            for (_->rdec in results) {
                 types.add(rdec.type);
             }
             if (!type exists) {
                 type = unit.getTupleType(types, null, -1);
             }
-        }
-        else if (!returns.empty) {
+        } else if (!returns.empty) {
             value ut = UnionType(unit);
             value list = JArrayList<Type>();
             for (ret in returns) {
@@ -676,8 +814,7 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             if (!type exists) {
                 type = ut.type;
             }
-        }
-        else {
+        } else {
             type = null;
         }
         
@@ -686,50 +823,48 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             //we're not assigning the result to anything,
             //so make a void function
             typeOrKeyword = "void";
-        }
-        else if (exists returnType = this.type,
-                !returnType.unknown) {
+        } else if (exists returnType = this.type,
+            !returnType.unknown) {
             //we need to return a value
             if (explicitType || dec.toplevel) {
-                typeOrKeyword = returnType.asSourceCodeString(unit);
-                importProposals.importType(imports, returnType, rootNode);
-            }
-            else {
+                typeOrKeyword 
+                        = returnType.asSourceCodeString(unit);
+                importProposals.importType(returnType);
+            } else {
                 typeOrKeyword = "function";
             }
-        }
-        else {
+        } else {
             typeOrKeyword = "dynamic";
         }
         
-        value bodyIndent = indent + indents.defaultIndent;
+        value bodyIndent = indent + platformServices.document.defaultIndent;
         value definition = StringBuilder();
         definition
-                .append(typeOrKeyword)
-                .append(" ")
-                .append(newName)
-                .append(typeParams.string)
-                .append("(").append(params.string).append(")")
-                .append(constraints.string)
-                .append(" {");
-        for (result -> rdec in results) { 
+            .append(typeOrKeyword)
+            .append(" ")
+            .append(newName)
+            .append(typeParams.string)
+            .append("(").append(params.string).append(")")
+            .append(constraints.string)
+            .append(" {");
+        for (result->rdec in results) {
             if (!result is Tree.Declaration &&
-                !rdec.variable) {  //TODO: wrong condition, check if initialized!
+                        !rdec.variable) { //TODO: wrong condition, check if initialized!
                 value resultType = rdec.type;
-                importProposals.importType(imports, resultType, rootNode);
+                importProposals.importType(resultType);
                 definition
-                        .append(bodyIndent)
-                        .append(resultType.asSourceCodeString(unit))
-                        .append(" ")
-                        .append(rdec.name)
-                        .append(";");
+                    .append(bodyIndent)
+                    .append(resultType.asSourceCodeString(unit))
+                    .append(" ")
+                    .append(rdec.name)
+                    .append(";");
             }
         }
         
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisReferences) {
-            fixedTokens.set(tokens.indexOf(tr.token), 
-                fakeToken(tr));
+            fixedTokens[tokens.indexOf(tr.token)]
+                = fakeToken(tr);
         }
         value start = ss.first.startIndex.intValue();
         value end = appendComments {
@@ -740,110 +875,111 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         };
         value length = end - start;
         
-        if (results.size==1) {
-            assert (exists result -> rdec = results.first);
+        if (results.size == 1) {
+            assert (exists result->rdec = results.first);
             definition
-                    .append(bodyIndent)
-                    .append("return ")
-                    .append(rdec.name)
-                    .append(";");
-        }
-        else if (!results.empty) {
+                .append(bodyIndent)
+                .append("return ")
+                .append(rdec.name)
+                .append(";");
+        } else if (!results.empty) {
             definition
-                    .append(bodyIndent)
-                    .append("return [")
-                    .append(", ".join { for (_ -> rdec in results) rdec.name })
-                    .append("];");
+                .append(bodyIndent)
+                .append("return [")
+                .append(", ".join { for (_->rdec in results) rdec.name })
+                .append("];");
         }
         
         definition
-                .append(indent)
-                .append("}")
-                .append(indent)
-                .append(indent);
+            .append(indent)
+            .append("}")
+            .append(indent)
+            .append(indent);
         
-        value call = newName + "(" + args.string + ");";
+        value call = "``newName``(``args``);";
         value invocation = StringBuilder();
-        if (results.size==1) {
+        if (results.size == 1) {
             //we're assigning the result of the extracted 
             //function to something
-            assert (exists result -> rdec = results.first);
+            assert (exists result->rdec = results.first);
             invocation
-                    .append(resultModifiers {
-                        result = result;
-                        rdec = rdec;
-                        unit = unit;
-                        imports = imports;
-                    })
-                    .append(rdec.name)
-                    .append(" = ")
-                    .append(call);
-        }
-        else if (!results.empty) {
+                .append(resultModifiers {
+                    result = result;
+                    rdec = rdec;
+                    unit = unit;
+                })
+                .append(rdec.name)
+                .append(" = ")
+                .append(call);
+        } else if (!results.empty) {
             //we're assigning the result tuple of the extracted 
             //function to various things
-            if (results.every((e)=>e.key is Tree.AttributeDeclaration && !e.item.shared)) {
+            if (results.every((e) 
+                    => e.key is Tree.AttributeDeclaration 
+                    && !e.item.shared)) {
                 invocation
-                        .append("value [")
-                        .append(", ".join { for (_ -> rdec in results) rdec.name })
-                        .append("] = ")
-                        .append(call);
-            }
-            else {
+                    .append("value [")
+                    .append(", ".join { for (_->rdec in results) rdec.name })
+                    .append("] = ")
+                    .append(call);
+            } else {
                 invocation
-                        .append("value tuple = ")
-                        .append(call);
+                    .append("value tuple = ")
+                    .append(call);
                 value ind =
-                        indents.getDefaultLineDelimiter(doc) + 
-                        indents.getIndent(ss.last, doc);
+                        document.defaultLineDelimiter +
+                        document.getIndent(ss.last);
                 variable value i = 0;
-                for (result -> rdec in results) {
+                for (result->rdec in results) {
                     invocation
-                            .append(ind)
-                            .append(resultModifiers {
-                                result = result;
-                                rdec = rdec;
-                                unit = unit;
-                                imports = imports;
-                            })
-                            .append(rdec.name)
-                            .append(" = tuple[")
-                            .append(i.string)
-                            .append("];");
+                        .append(ind)
+                        .append(resultModifiers {
+                            result = result;
+                            rdec = rdec;
+                            unit = unit;
+                        })
+                        .append(rdec.name)
+                        .append(" = tuple[")
+                        .append(i.string)
+                        .append("];");
                     i++;
                 }
             }
-        } 
-        else if (!returns.empty) {
+        } else if (!returns.empty) {
             //we're returning the result of the extracted function
-            invocation.append("return ").append(call);
-        }
-        else {
+            invocation
+                    .append("return ")
+                    .append(call);
+        } else {
             //we're just calling the extracted function
-            invocation.append(call);
+            invocation
+                    .append(call);
         }
         
-        value shift 
-                = importProposals.applyImports {
-            change = tfc;
-            declarations = imports;
-            cu = rootNode;
-            doc = doc;
-        };
-                
+        value shift = importProposals.apply(tfc);
+        
         value decStart = decNode.startIndex.intValue();
-        addEditToChange(tfc, newInsertEdit(decStart, definition.string));
-        addEditToChange(tfc, newReplaceEdit(start, length, invocation.string));
-        typeRegion = newRegion(decStart + shift, typeOrKeyword.size);
-        decRegion = newRegion(decStart + shift + typeOrKeyword.size+1, newName.size);
+        tfc.addEdit(InsertEdit {
+            start = decStart;
+            text = definition.string;
+        });
+        tfc.addEdit(ReplaceEdit {
+            start = start;
+            length = length;
+            text = invocation.string;
+        });
+        
+        typeRegion = DefaultRegion(decStart + shift, typeOrKeyword.size);
+        decRegion = DefaultRegion(decStart + shift + typeOrKeyword.size + 1, newName.size);
         value callLoc = invocation.string.firstInclusion(call) else 0;
-        refRegion = newRegion(start + definition.size + shift + callLoc, newName.size);
+        refRegion = DefaultRegion(start + definition.size + shift + callLoc, newName.size);
     }
     
-    void addLocalType(Scope scope, Scope targetScope, Type type, 
-        MutableList<TypeDeclaration> localTypes, 
+    void addLocalType(Scope scope, Scope targetScope, Type type,
+        MutableList<TypeDeclaration> localTypes,
         MutableList<Type> visited) {
-        if (!type.unknown, exists typeDec = type.declaration) {
+        if (!type.unknown, 
+            exists typeDec = type.declaration) {
             switch (typeDec)
             case (is UnionType) {
                 for (ct in type.caseTypes) {
@@ -870,8 +1006,8 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
             else if (!type in visited) {
                 visited.add(type);
                 
-                if (isLocalReference(typeDec, scope, targetScope) &&
-                    !typeDec in localTypes) {
+                if (isLocalReference(typeDec, scope, targetScope) 
+                        && !typeDec in localTypes) {
                     localTypes.add(typeDec);
                 }
                 
@@ -899,12 +1035,33 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
         }
     }
     
-    shared actual Boolean forceWizardMode {
-        value node = editorData.node;
+    shared String? checkInitialConditions() {
+        switch (node)
+        case (is Tree.Body) {
+            value body = node;
+            for (s in statements) {
+                value v = CheckStatementsVisitor(body, statements);
+                s.visit(v);
+                if (exists prob = v.problem) {
+                    return "Selected statements contain ``prob`` at  ``s.location``";
+                }
+            }
+        } 
+        case (is Tree.Term) {
+            value v = CheckExpressionVisitor();
+            node.visit(v);
+            if (exists prob = v.problem) {
+                return "Selected expression contains ``prob``";
+            }
+        }
+        else {}
+        return null;
+    }
 
+    shared Boolean forceWizardMode {
         if (exists scope = node.scope) {
-            if (is Tree.Body|Tree.Statement node, 
-                exists body = this.body) {
+            if (is Tree.Body|Tree.Statement node,
+                exists body = body) {
                 for (s in statements) {
                     value v = CheckStatementsVisitor(body, statements);
                     s.visit(v);
@@ -912,81 +1069,81 @@ shared interface ExtractFunctionRefactoring<IFile, ICompletionProposal, IDocumen
                         return true;
                     }
                 }
-            }
-            else if (is Tree.Term node) {
+            } else if (is Tree.Term node) {
                 variable value problem = false;
                 node.visit(object extends Visitor() {
-                    shared actual void visit(Tree.Body that) {}
-                    shared actual void visit(Tree.AssignmentOp that) {
-                        problem = true;
-                        super.visit(that);
-                    }
-                });
+                        shared actual void visit(Tree.Body that) {}
+                        shared actual void visit(Tree.AssignmentOp that) {
+                            problem = true;
+                            super.visit(that);
+                        }
+                    });
                 if (problem) {
                     return true;
                 }
             }
             return scope.getMemberOrParameter(node.unit, newName, null, false) exists;
-        }
-        else {
+        } else {
             return false;
         }
     }
     
-    enabled => if (exists sourceFile = editorData.sourceVirtualFile)
-               then editable(editorData.rootNode.unit) &&
-                   !descriptor(sourceFile) &&
-                   (editorData.node is Tree.Term|Tree.Body|Tree.Statement &&
-                        !statements.empty &&
-                        !statements.any((statement) 
-                            => statement is Tree.Constructor))
-               else false;
+    shared Boolean enabled
+            => editable(rootNode.unit) &&
+            !descriptor(sourceVirtualFile) &&
+            (node is Tree.Term ||
+                !statements.empty &&
+                !statements.any((statement) 
+                    => statement is Tree.Constructor));
     
-    shared actual [String+] nameProposals {
+    shared [String+] nameProposals {
         value proposals = nodes.nameProposals {
-            node = editorData.node;
-            rootNode = editorData.rootNode;
-        }.collect((n) => n=="it" then "do" else n);
+            node = if (is Tree.Term node) then node else null;
+            rootNode = rootNode;
+        }.collect((n) => n == "it" then "do" else n);
         
         if (!results.empty) {
-            value name =
-                    "get" + 
-                    "And".join { 
-                        for (_ -> rdec in results) 
-                        rdec.name[0..0].uppercased + 
-                                rdec.name[1...] };
+            value name 
+                    = "get" 
+                    + "And".join {
+                        for (_->rdec in results)
+                            rdec.name[0..0].uppercased 
+                                + rdec.name[1...] 
+                    };
             return proposals.withLeading(name);
-        }
-        else {
+        } else {
             return proposals;
         }
     }
     
-    name => "Extract Function";
+    shared String name => "Extract Function";
 }
 
-shared class FindBodyVisitor(Node node) extends Visitor() {
+shared class FindBodyVisitor(Tree.Statement node) 
+        extends Visitor() {
     shared variable Tree.Body? body = null;
     shared actual void visit(Tree.Body that) {
         super.visit(that);
-        if (that.statements.contains(node)) {
+        if (node in that.statements) {
             body = that;
         }
     }
 }
 
-shared class FindResultVisitor(Tree.Body scope, 
-    Collection<Tree.Statement> statements) 
+shared class FindResultVisitor(Tree.Body scope,
+    {Tree.Statement*} statements)
         extends Visitor() {
     
     value resultsList = ArrayList<Node->TypedDeclaration>();
-    shared List<Node->TypedDeclaration> results => resultsList;
+    shared <Node->TypedDeclaration>[] results 
+            => resultsList.sequence();
     
     value possibles = HashMap<TypedDeclaration,Node>();
     value all = HashSet<TypedDeclaration>();
     
-    function isDefinedLocally(Declaration dec) 
-            => !ModelUtil.contains(dec.scope, scope.scope.container);
+    function isDefinedLocally(Declaration dec)
+            => !ModelUtil.contains(dec.scope, 
+                    scope.scope.container);
     
     shared actual void visit(Tree.Body that) {
         if (that is Tree.Block) {
@@ -997,23 +1154,22 @@ shared class FindResultVisitor(Tree.Body scope,
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         value dec = that.declarationModel;
-        if (that.specifierOrInitializerExpression exists) {
-            if (hasOuterRefs(dec, scope, statements)) {
-                resultsList.add(that->dec);
-                all.add(dec);
-            }
+        if (that.specifierOrInitializerExpression exists, 
+            hasOuterRefs(dec, scope, statements)) {
+            resultsList.add(that->dec);
+            all.add(dec);
         }
-        possibles.put(dec, that);
+        possibles[dec] = that;
     }
     
     //TODO: Tree.AnyMethod!!!!
     
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
-        if (is Tree.StaticMemberOrTypeExpression leftTerm 
-                = that.leftTerm, 
+        if (is Tree.StaticMemberOrTypeExpression leftTerm
+                    = that.leftTerm,
             is TypedDeclaration dec = leftTerm.declaration,
-            hasOuterRefs(dec, scope, statements) 
+            hasOuterRefs(dec, scope, statements)
                     && isDefinedLocally(dec)) {
             resultsList.add(possibles.getOrDefault(dec, that) -> dec);
             all.add(dec);
@@ -1022,51 +1178,49 @@ shared class FindResultVisitor(Tree.Body scope,
     
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
-        if (is Tree.StaticMemberOrTypeExpression term 
-                = that.baseMemberExpression, 
+        if (is Tree.StaticMemberOrTypeExpression term
+                    = that.baseMemberExpression,
             is TypedDeclaration dec = term.declaration,
-            hasOuterRefs(dec, scope, statements) 
+            hasOuterRefs(dec, scope, statements)
                     && isDefinedLocally(dec) &&
                     !dec in all) {
             resultsList.add(possibles.getOrDefault(dec, that) -> dec);
             all.add(dec);
         }
     }
-    
 }
 
-Boolean hasOuterRefs(Declaration d, Tree.Body? scope, 
-    Collection<Tree.Statement> statements) {
+Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
+    {Tree.Statement*} statements) {
     if (!exists scope) {
         return false;
     }
     
     variable Integer refs = 0;
     for (s in scope.statements) {
-        if (!statements.contains(s)) {
+        if (!s in statements) {
             s.visit(object extends Visitor() {
                 shared actual void visit(Tree.MemberOrTypeExpression that) {
                     super.visit(that);
-                    if (exists dec = that.declaration, 
-                        d==dec) {
+                    if (exists dec = that.declaration,
+                        d == dec) {
                         refs++;
                     }
                 }
                 shared actual void visit(Tree.Declaration that) {
                     super.visit(that);
-                    if (exists dec = that.declarationModel, 
-                        d==dec) {
+                    if (exists dec = that.declarationModel,
+                        d == dec) {
                         refs++;
                     }
                 }
                 shared actual void visit(Tree.Type that) {
                     super.visit(that);
-                    if (exists type = that.typeModel, 
-                        type.classOrInterface) {
-                        if (exists td = type.declaration, 
-                            d==td) {
-                            refs++;
-                        }
+                    if (exists type = that.typeModel,
+                        type.classOrInterface, 
+                        exists td = type.declaration,
+                        d == td) {
+                        refs++;
                     }
                 }
             });
@@ -1075,10 +1229,11 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
     return refs > 0;
 }
 
-shared class FindReturnsVisitor() 
+shared class FindReturnsVisitor()
         extends Visitor() {
     value returnsList = ArrayList<Tree.Return>();
-    shared List<Tree.Return> returns => returnsList;
+    shared Tree.Return[] returns 
+            => returnsList.sequence();
     shared actual void visit(Tree.Declaration that) {}
     shared actual void visit(Tree.Return that) {
         super.visit(that);
@@ -1091,14 +1246,14 @@ shared class FindReturnsVisitor()
 "Is the given [[declaration|currentDec]] in scope in the
  first given [[scope]], but out of scope in the second
  given [[target scope|targetScope]]?"
-Boolean isLocalReference(Declaration currentDec, 
-    Scope scope, Scope targetScope) 
-        => (currentDec.isDefinedInScope(scope) 
-            || scope.isInherited(currentDec)) &&
-           !(currentDec.isDefinedInScope(targetScope) 
-            || targetScope.isInherited(currentDec));
+Boolean isLocalReference(Declaration currentDec,
+    Scope scope, Scope targetScope)
+        => (currentDec.isDefinedInScope(scope)
+                || scope.isInherited(currentDec)) &&
+            !(currentDec.isDefinedInScope(targetScope)
+                || targetScope.isInherited(currentDec));
 
-class FindLocalReferencesVisitor(Scope scope, Scope targetScope) 
+class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
         extends Visitor() {
     
     value results = ArrayList<Tree.BaseMemberExpression>();
@@ -1116,51 +1271,48 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
     
     shared actual void visit(Tree.BaseMemberExpression that) {
         super.visit(that);
-        value currentDec = that.declaration;
-        for (bme in results) {
-            if (exists dec = bme.declaration) {
-                if (dec==currentDec) {
-                    return;
-                }
-                if (is TypedDeclaration currentDec, 
-                    exists od = currentDec.originalDeclaration, 
-                    od==dec) {
-                    return;
+        if (exists currentDec = that.declaration) {
+            for (bme in results) {
+                if (exists dec = bme.declaration) {
+                    if (dec == currentDec) {
+                        return;
+                    }
+                    if (is TypedDeclaration currentDec,
+                        exists od = currentDec.originalDeclaration,
+                        od == dec) {
+                        return;
+                    }
                 }
             }
-        }
-        
-        if (isLocalReference(currentDec, scope, targetScope)) {
-            results.add(that);
+            
+            if (isLocalReference(currentDec, scope, targetScope)) {
+                results.add(that);
+            }
         }
     }
 }
 
 shared Tree.Declaration? getTargetNode(Tree.Term term,
-    Tree.Declaration? target, 
+    Tree.Declaration? target,
     Tree.CompilationUnit rootNode) {
     if (exists target) {
         return target;
-    }
-    else {
+    } else {
         value fsv = FindContainerVisitor(term);
         rootNode.visit(fsv);
         if (exists dec = fsv.declaration) {
             if (is Tree.AttributeDeclaration dec) {
-                if (exists container 
-                    = nodes.getContainer(rootNode, 
-                    dec.declarationModel)) {
+                if (exists container
+                            = nodes.getContainer(rootNode,
+                                dec.declarationModel)) {
                     return container;
-                }
-                else {
+                } else {
                     return dec;
                 }
-            }
-            else {
+            } else {
                 return dec;
             }
-        }
-        else {
+        } else {
             return null;
         }
     }

@@ -1,28 +1,23 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Visitor,
-    Tree {
-        Identifier
+    Tree,
+    TreeUtil {
+        formatPath
     }
-}
-import ceylon.interop.java {
-    CeylonIterable
 }
 
 shared class FindImportNodeVisitor(String packageName) extends Visitor() {
 
     shared variable Tree.Import? result = null;
-    value packageNameComponents = packageName.split('.'.equals);
-    
+
     shared actual void visit(Tree.Import that) {
-        if (exists r = result) {
+        if (result exists) {
             return;
         }
-        
-        if (identifiersEqual(CeylonIterable(that.importPath.identifiers), packageNameComponents)) {
+        value path = formatPath(that.importPath.identifiers);
+        if (path == packageName) {
             result = that;
         }
     }
-    
-    Boolean identifiersEqual({Tree.Identifier*} identifiers, {String+} components)
-            => corresponding(identifiers.map(Tree.Identifier.text), components);
+
 }

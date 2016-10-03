@@ -8,19 +8,17 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.model {
     BaseIdeModule,
-    ModelAliases,
     CeylonProject
 }
 import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit,
-    TypecheckerAliases
+    ProjectPhasedUnit
 }
 import com.redhat.ceylon.ide.common.util {
     BaseProgressMonitor
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
-    VfsAliases
+    FileVirtualFile
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
@@ -39,8 +37,6 @@ import org.antlr.runtime {
     CommonToken
 }
 
-
-
 shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeFile>(
             CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile> ceylonProject,
             FolderVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> srcDir,
@@ -50,16 +46,13 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 srcDir,
                 progress
             )
-        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
     
     shared actual ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> parser(
-        FileVirtualFileAlias moduleFile) =>
+        FileVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> moduleFile) =>
             object extends ProjectSourceParser<NativeProject, NativeResource, NativeFolder, NativeFile> (
             outer.ceylonProject,
             moduleFile,
@@ -78,8 +71,8 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 moduleManager.moduleSourceMapper,
                 moduleManager.typeChecker,
                 theTokens) {
-            
-            shared actual Boolean isAllowedToChangeModel(Declaration? declaration) => false;
+            isAllowedToChangeModel(Declaration? declaration) 
+                    => false;
         };
     };
     
@@ -88,23 +81,23 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
         progress.worked(1);
         if (is NativeFolder resource,
             resource == nativeRootDir) {
-            value moduleFile = vfs.findFile(resource, ModuleManager.\iMODULE_FILE);
+            value moduleFile = vfsServices.findFile(resource, ModuleManager.moduleFile);
             if (exists moduleFile) {
                 moduleSourceMapper.addTopLevelModuleError();
             }
             return true;
         }
 
-        if (exists parent = vfs.getParent(resource),
+        if (exists parent = vfsServices.getParent(resource),
             parent == nativeRootDir) {
             // We've come back to a source directory child :
             //  => reset the current Module to default and set the package to emptyPackage
             currentModule = defaultModule;
         }
 
-        if (vfs.isFolder(resource)) {
+        if (vfsServices.isFolder(resource)) {
             assert(is NativeFolder resource);
-            value pkgName = vfs.toPackageName(resource, nativeRootDir);
+            value pkgName = vfsServices.toPackageName(resource, nativeRootDir);
             value pkgNameAsString = ".".join(pkgName);
 
             if ( currentModule != defaultModule ) {
@@ -114,7 +107,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 }
             }
 
-            value moduleFile = vfs.findFile(resource, ModuleManager.\iMODULE_FILE);
+            value moduleFile = vfsServices.findFile(resource, ModuleManager.moduleFile);
             if (exists moduleFile) {
                 // First create the package with the default module and we'll change the package
                 // after since the module doesn't exist for the moment and the package is necessary
@@ -127,7 +120,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 pkg.name = JavaList(pkgName.map((String s)=> javaString(s)).sequence());
 
                 try {
-                    value moduleVirtualFile = ceylonProject.model.vfs.createVirtualFile(moduleFile, ceylonProject.ideArtifact);
+                    value moduleVirtualFile = vfsServices.createVirtualFile(moduleFile, ceylonProject.ideArtifact);
                     value tempPhasedUnit = parser(moduleVirtualFile).parseFileToPhasedUnit(moduleManager, typeChecker, moduleVirtualFile, srcDir, pkg);
 
                     Module? m = tempPhasedUnit.visitSrcModulePhase();

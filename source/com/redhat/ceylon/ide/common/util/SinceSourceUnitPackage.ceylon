@@ -35,42 +35,34 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     shared actual variable JList<JString> name = modelPackage.name;
     shared actual variable Boolean shared = modelPackage.shared;
     
-    Boolean mustSearchUnitInSourceFile(Unit? modelUnit) {
-        if (is CeylonUnit modelUnit) {
-            value fullPathOfModelSourceUnit = modelUnit.ceylonSourceFullPath;
-            if (exists fullPathOfModelSourceUnit, 
-                fullPathOfModelSourceUnit.string == fullPathOfSourceUnitToTypecheck) {
-                return true;
-            }
-        }
-        return false;
-    }
+    Boolean mustSearchUnitInSourceFile(Unit? modelUnit) =>
+            if (is CeylonUnit modelUnit,
+                exists fullPathOfModelSourceUnit = modelUnit.ceylonSourceFullPath)
+            then fullPathOfModelSourceUnit == fullPathOfSourceUnitToTypecheck
+            else false;
     
-    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration) {
-        if (!exists modelDeclaration) {
-            return true;
-        }
-        Unit? unit = modelDeclaration.unit;
-        return mustSearchUnitInSourceFile(unit);
-    }
+    Boolean mustSearchDeclarationInSourceFile(Declaration? modelDeclaration) =>
+            if (exists modelDeclaration)
+            then mustSearchUnitInSourceFile(modelDeclaration.unit)
+            else true;
     
     shared actual Declaration? getDirectMember(String name,
         JList<Type> signature, Boolean ellipsis) =>
-            let(Declaration? modelMember = modelPackage.getDirectMember(name, signature, ellipsis)) 
+            let (Declaration? modelMember = modelPackage.getDirectMember(name, signature, ellipsis))
             if (mustSearchDeclarationInSourceFile(modelMember)) 
             then super.getDirectMember(name, signature, ellipsis) 
             else modelMember;
     
     shared actual Declaration? getMember(String name,
         JList<Type> signature, Boolean ellipsis) =>
-            let(Declaration? modelMember = modelPackage.getMember(name, signature, ellipsis)) 
+            let (Declaration? modelMember = modelPackage.getMember(name, signature, ellipsis))
             if (mustSearchDeclarationInSourceFile(modelMember)) 
             then super.getMember(name, signature, ellipsis) 
             else modelMember;
     
     shared actual JList<Declaration> members {
         JLinkedList<Declaration> ret = JLinkedList<Declaration>();
-        for (Declaration modelDeclaration in modelPackage.members) {
+        for (modelDeclaration in modelPackage.members) {
             if (! mustSearchDeclarationInSourceFile(modelDeclaration)) {
                 ret.add(modelDeclaration);
             }
@@ -82,7 +74,7 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     shared actual JIterable<Unit> units {
         JLinkedList<Unit> units = JLinkedList<Unit>();
         for (modelUnit in modelPackage.units) {
-            if (! mustSearchUnitInSourceFile(modelUnit)) {
+            if (!mustSearchUnitInSourceFile(modelUnit)) {
                 units.add(modelUnit);
             }
         }
@@ -104,8 +96,8 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
             else modelPackage.getDeclaringType(modelDeclaration);
     
     shared actual JMap<JString, DeclarationWithProximity> getImportableDeclarations(Unit modelUnit, 
-        String startingWith, JList<Import> imports, Integer proximity) =>
-            modelPackage.getImportableDeclarations(modelUnit, startingWith, imports, proximity);
+        String startingWith, JList<Import> imports, Integer proximity, Cancellable cancellable) =>
+            modelPackage.getImportableDeclarations(modelUnit, startingWith, imports, proximity, cancellable);
     
     shared actual TypeDeclaration? getInheritingDeclaration(Declaration d) =>
             modelPackage.getInheritingDeclaration(d);
@@ -116,7 +108,7 @@ shared class SingleSourceUnitPackage(modelPackage, fullPathOfSourceUnitToTypeche
     
     shared actual Declaration? getMemberOrParameter(Unit modelUnit, String name,
         JList<Type> signature, Boolean ellipsis) =>
-            let(Declaration? modelMember = modelPackage.getMemberOrParameter(modelUnit, name, signature, ellipsis)) 
+            let (Declaration? modelMember = modelPackage.getMemberOrParameter(modelUnit, name, signature, ellipsis))
             if (mustSearchDeclarationInSourceFile(modelMember)) 
             then super.getMemberOrParameter(modelUnit, name, signature, ellipsis) 
             else modelMember;

@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    JavaList
-}
-
 import java.io {
     File,
     InputStream,
@@ -10,14 +6,10 @@ import java.io {
     FilenameFilter
 }
 import java.lang {
-    RuntimeException,
-    ObjectArray
+    RuntimeException
 }
 import java.util {
-    Collections
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonProjects
+    Arrays
 }
 
 alias LocalResourceVirtualFileAlias => ResourceVirtualFile<Nothing,File, File, File>;
@@ -74,14 +66,6 @@ shared class LocalFileVirtualFile(file)
     
     hash => (super of FileVirtualFile<Nothing,File,File,File>).hash;
 
-    string => StringBuilder()
-                .append("FileSystemVirtualFile")
-                .append("{name='")
-                .append( file.name )
-                .appendCharacter('\'')
-                .appendCharacter('}')
-                .string;
-    
     charset => null;
 
     nativeResource => file;
@@ -92,8 +76,6 @@ shared class LocalFileVirtualFile(file)
     shared actual Nothing ceylonProject => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual CeylonProjects<Nothing,File,File,File>.VirtualFileSystem vfs => nothing;
 }
 
 shared class LocalFolderVirtualFile(file) 
@@ -108,42 +90,27 @@ shared class LocalFolderVirtualFile(file)
     parent => (super of FileSystemVirtualFile).parent;
     
     
-    children 
-        => let(ObjectArray<File>? theChildren = file.listFiles())
-                if (exists folderChildren = theChildren)
-                    then JavaList(folderChildren.array.coalesced
-                                .map {
-                                    LocalResourceVirtualFileAlias collecting(File f) 
-                                            => if (f.directory)
-                                                then LocalFolderVirtualFile(f)
-                                                else LocalFileVirtualFile(f);
-                                }.sequence())
-                    else Collections.emptyList<ResourceVirtualFile<Nothing,File, File, File>>();
+    children => Arrays.asList(
+            if (exists folderChildren = file.listFiles())
+            for (f in folderChildren)
+            if (f.directory)
+            then LocalFolderVirtualFile(f)
+            else LocalFileVirtualFile(f));
 
     equals(Object that) => (super of FolderVirtualFile<Nothing,File,File,File>).equals(that);
     
     hash => (super of FolderVirtualFile<Nothing,File,File,File>).hash;
     
-    string => StringBuilder()
-                .append("FileSystemVirtualFile")
-                .append("{name='")
-                .append( file.name )
-                .appendCharacter('\'')
-                .appendCharacter('}')
-                .string;
-    
-    findFile(String fileName)
-        => file.listFiles(
-                object satisfies FilenameFilter {
-                    accept(File dir, String name)
-                        => name == fileName;
-                }
-            ).iterable.coalesced.map {
-                    collecting(File? file) 
-                        => if (exists file, file.directory)
-                            then LocalFileVirtualFile(file) 
-                            else null;
-                    }.first;
+    shared actual LocalFileVirtualFile? findFile(String fileName) {
+        value result
+                = file.listFiles(object satisfies FilenameFilter {
+                    accept(File dir, String name) => name == fileName;
+                })[0];
+        return
+            if (exists result, !result.directory)
+            then LocalFileVirtualFile(result)
+            else null;
+    }
     
     nativeResource => file;
     
@@ -172,6 +139,4 @@ shared class LocalFolderVirtualFile(file)
     shared actual Nothing rootFolder => nothing;
     suppressWarnings("expressionTypeNothing")
     shared actual Nothing nativeProject => nothing;
-    suppressWarnings("expressionTypeNothing")
-    shared actual Nothing vfs => nothing;
 }

@@ -1,28 +1,53 @@
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 import com.redhat.ceylon.model.typechecker.model {
     Unit,
-    Type
-}
-import ceylon.collection {
-    MutableList
+    Type,
+    Parameter
 }
 
-shared interface AnonFunctionCompletion<CompletionResult> {
-    shared formal CompletionResult newAnonFunctionProposal(Integer offset, Type? requiredType,
-        Unit unit, String text, String header, Boolean isVoid,
-        Integer selectionStart, Integer selectionLength);
-    
-    shared void addAnonFunctionProposal(Integer offset, Type? requiredType, MutableList<CompletionResult> result, Unit unit){
-        value text = anonFunctionHeader(requiredType, unit);
-        value funtext = text + " => nothing";
+shared interface AnonFunctionCompletion {
+
+    shared void addAnonFunctionProposal(CompletionContext ctx, Integer offset,
+        Type? requiredType, Parameter? parameter, Unit unit) {
+
+        value header = anonFunctionHeader {
+            requiredType = requiredType;
+            unit = unit;
+            param = parameter;
+        };
         
-        result.add(newAnonFunctionProposal(offset, requiredType, unit, funtext,
-            text, false, offset + (funtext.firstInclusion("nothing") else 0), 7));
+        platformServices.completion.addProposal {
+            ctx = ctx;
+            offset = offset;
+            description = header + " => nothing";
+            prefix = "";
+            icon = Icons.correction;
+            selection = DefaultRegion {
+                start = offset + header.size + 4;
+                length = 7;
+            };
+        };
         
-        if (unit.getCallableReturnType(requiredType).anything){
-            value voidtext = "void " + text + " {}";
-            result.add(newAnonFunctionProposal(offset, requiredType, unit, voidtext,
-                    text, true, offset + funtext.size - 1, 0));
+        if (exists parameter, parameter.declaredVoid) {
+            platformServices.completion.addProposal {
+                ctx = ctx;
+                offset = offset;
+                description = header + " {}";
+                prefix = "";
+                icon = Icons.correction;
+                selection = DefaultRegion {
+                    start = offset + header.size + 2;
+                    length = 0;
+                };
+            };
         }
     }
-
 }

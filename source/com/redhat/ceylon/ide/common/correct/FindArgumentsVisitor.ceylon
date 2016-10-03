@@ -54,7 +54,7 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitAttributeDeclaration(Tree.AttributeDeclaration that) {
-        currentType = that.type.typeModel;
+        currentType = that.type?.typeModel;
         super.visitAttributeDeclaration(that);
         currentType = null;
     }
@@ -73,9 +73,8 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitExistsCondition(Tree.ExistsCondition that) {
-        value st = that.variable;
-        if (is Tree.Variable st) {
-            value varType = (st).type.typeModel;
+        if (is Tree.Variable st = that.variable) {
+            value varType = st.type?.typeModel;
             currentType = that.unit.getOptionalType(varType);
         }
         super.visitExistsCondition(that);
@@ -83,9 +82,8 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitNonemptyCondition(Tree.NonemptyCondition that) {
-        value st = that.variable;
-        if (is Tree.Variable st) {
-            value varType = (st).type.typeModel;
+        if (is Tree.Variable st = that.variable) {
+            value varType = st.type?.typeModel;
             currentType = that.unit.getEmptyType(varType);
         }
         super.visitNonemptyCondition(that);
@@ -115,7 +113,7 @@ class FindArgumentsVisitor(Tree.MemberOrTypeExpression smte) extends VisitorAdap
     }
     
     shared actual void visitValueIterator(Tree.ValueIterator that) {
-        value varType = that.variable.type.typeModel;
+        value varType = that.variable.type?.typeModel;
         currentType = that.unit.getIterableType(varType);
         super.visitValueIterator(that);
         currentType = null;

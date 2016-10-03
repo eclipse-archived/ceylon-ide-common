@@ -1,13 +1,20 @@
-import com.redhat.ceylon.ide.common.util {
-    nodes,
-    types
+import ceylon.interop.java {
+    javaString
 }
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node
 }
-import org.antlr.runtime {
-    CommonToken
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    types
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value,
@@ -15,40 +22,53 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     TypedDeclaration
 }
+
 import java.util {
     Collections
 }
 
-shared interface AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+import org.antlr.runtime {
+    CommonToken
+}
+
+shared object appendMemberReferenceQuickFix {
     
     value noTypes => Collections.emptyList<Type>();
             
-    shared formal void newProposal(Data data, String desc, TextChange change,
-           Integer offset, Integer length);
+    shared void addAppendMemberReferenceProposals(QuickFixData data) {
+        value node
+                = switch (node = data.node) 
+                case (is Tree.SpecifierExpression) 
+                    node.expression.term
+                //case (is Tree.Expression) 
+                //    node.term
+                else node;
+        if (is Tree.Primary node, //TODO: if it's not a primary, just add parens!
+            exists type = node.typeModel) {
+            value token = 
+                    if (is Tree.StaticMemberOrTypeExpression node, 
+                        is CommonToken token = node.identifier.token)
+                    then token else null;
 
-    shared void addAppendMemberReferenceProposals(Data data, IFile file) {
-        value node = data.node;
-        if (exists id = nodes.getIdentifyingNode(node),
-            is Tree.StaticMemberOrTypeExpression node,
-            exists t = node.typeModel) {
-            
-            assert (is CommonToken token = id.token);
-            value required = types.getRequiredType(data.rootNode, node, token);
-
-            if (exists requiredType = required.type) {
-                value type = t.declaration;
-                value dwps = type.getMatchingMemberDeclarations(node.unit, node.scope, "", 0).values();
-                for (dwp in dwps) {
-                    if (is Value val = dwp.declaration) {
-                        value vt = val.appliedReference(t, noTypes).type;
-                        if (!ModelUtil.isTypeUnknown(vt),
-                            vt.isSubtypeOf(requiredType)) {
-                            
-                            addAppendMemberReferenceProposal(id, data, file, val, t);
+            if (exists requiredType 
+                    = types.getRequiredType(data.rootNode, node, token)
+                          .type) {
+                value proposals 
+                        = type.declaration
+                              .getMatchingMemberDeclarations(
+                                    node.unit, node.scope, "", 0, null);
+                for (dwp in proposals.values()) {
+                    if (is Value val = dwp.declaration,
+                        !javaString(dwp.name) in val.aliases) {
+                        value vt = val.appliedReference(type, noTypes).type;
+                        if (!ModelUtil.isTypeUnknown(vt) 
+                            && vt.isSubtypeOf(requiredType)) {
+                            addAppendMemberReferenceProposal {
+                                node = node;
+                                data = data;
+                                dec = val;
+                                type = type;
+                            };
                         }
                     }
                 }
@@ -56,13 +76,26 @@ shared interface AppendMemberReferenceQuickFix<IFile,IDocument,InsertEdit,TextEd
         }
     }
 
-    void addAppendMemberReferenceProposal(Node node, Data data, IFile file, TypedDeclaration dec, Type type) {
-        value change = newTextChange("Append Member Reference", file);
-        value problemOffset = node.endIndex.intValue();
-        value name = dec.name;
-        value desc = "Append reference to member '``name``' of type '``type``'";
-
-        addEditToChange(change, newInsertEdit(problemOffset, "." + name));
-        newProposal(data, desc, change, problemOffset, name.size + 1);
+    void addAppendMemberReferenceProposal(Node node, QuickFixData data, 
+        TypedDeclaration dec, Type type) {
+        value change 
+                = platformServices.document.createTextChange {
+            name = "Append Member Reference";
+            input = data.phasedUnit;
+        };
+        
+        change.addEdit(InsertEdit {
+            start = node.endIndex.intValue();
+            text = "." + dec.name;
+        });
+        
+        data.addQuickFix {
+            description = "Append reference to member '``dec.name``' of type '``type.asString(node.unit)``'";
+            change = change;
+            selection = DefaultRegion {
+                start = node.endIndex.intValue();
+                length = dec.name.size + 1;
+            };
+        };
     }
 }

@@ -1,12 +1,12 @@
-import java.io {
-    JFile = File
-}
-
 import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
     javaString
+}
+
+import java.io {
+    JFile=File
 }
 
 
@@ -187,8 +187,7 @@ shared final class Path satisfies List<String> {
         }
         variable value count = 1;
         variable value prev = -1;
-        while (exists sepItem = path.indexed.skip(prev + 1).find((elt)=>elt.item == _SEPARATOR)) {
-            value i = sepItem.key;
+        while (exists i = path.firstOccurrence(_SEPARATOR, prev + 1)) {
             if (i != prev + 1 && i != len) {
                 ++count;
             }
@@ -226,20 +225,20 @@ shared final class Path satisfies List<String> {
         // the number of slashes plus 1, ignoring any leading
         // and trailing slashes
         variable value next = firstPosition;
-        return Array(
-            { *(0:segmentCount) }.map {
-                String collecting(Integer i) {
-                    value start = next;
-                    value end = path.indexed.skip(next).find((i)=> i.item == _SEPARATOR)?.key;
-                    if (! exists end) {
-                        return path.span(start, lastPosition);
-                    } else {
-                        next=end+1;
-                        return path.span(start, end-1);
-                    }
-                }
-            }
-        );
+
+        return Array { for (i in 0:segmentCount)
+                    let (buildPart = (Integer i) {
+                        value start = next;
+                        value end = path.firstOccurrence(_SEPARATOR, next);
+                        if (! exists end) {
+                            return path.span(start, lastPosition);
+                        } else {
+                            next=end+1;
+                            return path.span(start, end-1);
+                        }
+                    })
+                    buildPart(i)
+        };
     }
 
     """
@@ -247,7 +246,7 @@ shared final class Path satisfies List<String> {
        """
     void collapseParentReferences() {
         value segmentCount = _segments.size;
-        ArrayList<String> stack = ArrayList<String>(segmentCount);
+        value stack = ArrayList<String>(segmentCount);
         for (segment in _segments) {
             if (segment == "..") {
                 if (stack.empty) {
@@ -507,7 +506,7 @@ shared final class Path satisfies List<String> {
             value myLen = _segments.size;
             value newSegments = Array.ofSize(myLen+1, "");
             _segments.copyTo(newSegments, 0, 0, myLen);
-            newSegments.set(myLen, tail);
+            newSegments[myLen] = tail;
             return internalConstructor(_device, newSegments, separators.and(_HAS_TRAILING.not));
         }
         //go with easy implementation
@@ -524,7 +523,6 @@ shared final class Path satisfies List<String> {
        are removed from the path except at the beginning
        where the path is considered to be UNC.
        """
-    suppressWarnings("expressionTypeNothing")
     shared Path appendPath(
         "the path to concatenate"
         Path? tail) {
@@ -547,10 +545,11 @@ shared final class Path satisfies List<String> {
 
         value myLen = segments.size;
         value tailLen = tail.segmentCount;
-        Array<String> newSegments = Array.ofSize(myLen + tailLen, "");
+        value newSegments = Array.ofSize(myLen + tailLen, "");
         _segments.copyTo(newSegments, 0, 0, myLen);
         for (i in 0:tailLen) {
-            newSegments.set(myLen + i, tail.segment(i) else nothing);
+            assert (exists seg = tail.segment(i));
+            newSegments[myLen + i] = seg;
         }
 
         //use my leading separators and the tail's trailing separator

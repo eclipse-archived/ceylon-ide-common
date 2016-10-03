@@ -13,19 +13,17 @@ import com.redhat.ceylon.ide.common.model {
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,ICompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+shared object createEnumQuickFix {
     
-    shared formal void consumeNewQuickFix(String desc, Icons image,
-        Integer offset, TextChange change, Data data);
-    
-    shared formal Integer getDocLength(Document doc);
-    
-    shared void addCreateEnumProposal(Project project, Data data) {
+    shared void addCreateEnumProposal(QuickFixData data) {
         value node = data.node;
         value rootNode = data.rootNode;
         value idn = nodes.getIdentifyingNode(node);
@@ -42,7 +40,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
             value cd = dec;
             if (exists c = cd.caseTypes) {
                 if (cd.caseTypes.types.contains(node)) {
-                    addCreateEnumProposalInternal(project,
+                    addCreateEnumProposalInternal(
                         "class " + brokenName + parameters(cd.typeParameterList)
                                 + parameters2(cd.parameterList) + " extends "
                                 + cd.declarationModel.name + parameters(cd.typeParameterList)
@@ -52,7 +50,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
                         Icons.classes, rootNode, cd, data);
                 }
                 if (cd.caseTypes.baseMemberExpressions.contains(node)) {
-                    addCreateEnumProposalInternal(project,
+                    addCreateEnumProposalInternal(
                         "object " + brokenName + " extends " + cd.declarationModel.name
                                 + parameters(cd.typeParameterList) + arguments(cd.parameterList)
                                 + " {}", "object '" + brokenName + "'",
@@ -64,7 +62,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
             value cd = dec;
             if (exists c = cd.caseTypes) {
                 if (cd.caseTypes.types.contains(node)) {
-                    addCreateEnumProposalInternal(project,
+                    addCreateEnumProposalInternal(
                         "interface " + brokenName + parameters(cd.typeParameterList)
                                 + " satisfies " + cd.declarationModel.name
                                 + parameters(cd.typeParameterList) + " {}",
@@ -72,7 +70,7 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
                         Icons.interfaces, rootNode, cd, data);
                 }
                 if (cd.caseTypes.baseMemberExpressions.contains(node)) {
-                    addCreateEnumProposalInternal(project, 
+                    addCreateEnumProposalInternal( 
                         "object " + brokenName + " satisfies "
                                 + cd.declarationModel.name + parameters(cd.typeParameterList)
                                 + " {}", "object '" + brokenName + "'",
@@ -82,8 +80,8 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
         }
     }
     
-    void addCreateEnumProposalInternal(Project project, String def, String desc, Icons image,
-        Tree.CompilationUnit cu, Tree.TypeDeclaration cd, Data data) {
+    void addCreateEnumProposalInternal(String def, String desc, Icons image,
+        Tree.CompilationUnit cu, Tree.TypeDeclaration cd, QuickFixData data) {
         
         if (is AnyModifiableSourceFile unit = cu.unit, 
             exists phasedUnit = unit.phasedUnit) {
@@ -92,24 +90,28 @@ shared interface CreateEnumQuickFix<IFile,Document,InsertEdit,TextEdit,TextChang
     }
     
     void addCreateEnumProposalInternal2(String def, String desc, Icons image,
-        PhasedUnit unit, Tree.Statement statement, Data data) {
+        PhasedUnit unit, Tree.Statement statement, QuickFixData data) {
         
-        value change = newTextChange("Create Enumerated", unit);
-        value doc = getDocumentForChange(change);
-        value indent = indents.getIndent(statement, doc);
-        variable value s = indent + def + indents.getDefaultLineDelimiter(doc);
+        value change = platformServices.document.createTextChange("Create Enumerated", unit);
+        value doc = change.document;
+        value indent = doc.getIndent(statement);
+        variable value s = indent + def + doc.defaultLineDelimiter;
         variable value offset = statement.endIndex.intValue() + 1;
         
-        if (offset > getDocLength(doc)) {
-            offset = getDocLength(doc);
-            s = indents.getDefaultLineDelimiter(doc) + s;
+        if (offset > doc.size) {
+            offset = doc.size;
+            s = doc.defaultLineDelimiter + s;
         }
         
-        initMultiEditChange(change);
-        addEditToChange(change, newInsertEdit(offset, s));
+        change.initMultiEdit();
+        change.addEdit(InsertEdit(offset, s));
         
-        consumeNewQuickFix("Create enumerated " + desc, image,
-            offset + (def.firstInclusion("{}") else -1) + 1, change, data);
+        data.addQuickFix { 
+            description = "Create enumerated " + desc;
+            change = change;
+            selection = DefaultRegion(offset + (def.firstInclusion("{}") else -1) + 1, 0);
+            image = image;
+        };
     }
     
     String parameters(Tree.TypeParameterList? tpl) {

@@ -9,13 +9,20 @@ import ceylon.collection {
 import ceylon.interop.java {
     createJavaObjectArray,
     CeylonIterable,
-    javaString
+    javaString,
+    JavaRunnable
 }
 
+import com.redhat.ceylon.common {
+    JVMModuleUtil
+}
 import com.redhat.ceylon.compiler.java.loader {
     TypeFactory,
     AnnotationLoader,
     SourceDeclarationVisitor
+}
+import com.redhat.ceylon.compiler.java.util {
+    Util
 }
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit,
@@ -29,15 +36,22 @@ import com.redhat.ceylon.ide.common.model.mirror {
     SourceClass,
     IdeClassMirror
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status,
+    JavaModelServicesConsumer
+}
 import com.redhat.ceylon.ide.common.util {
     unsafeCast,
-    synchronize,
-    equalsWithNulls,
-    toJavaString
+    equalsWithNulls
+}
+import com.redhat.ceylon.model.cmr {
+    ArtifactResult
 }
 import com.redhat.ceylon.model.loader {
     TypeParser,
-    Timer
+    Timer,
+    NamingBase
 }
 import com.redhat.ceylon.model.loader.mirror {
     ClassMirror,
@@ -79,21 +93,8 @@ import java.util {
     JArrayList=ArrayList,
     Collections
 }
-import com.redhat.ceylon.common {
-    JVMModuleUtil
-}
-import com.redhat.ceylon.model.cmr {
-    ArtifactResult
-}
-import com.redhat.ceylon.compiler.java.util {
-    Util
-}
-import com.redhat.ceylon.compiler.java.codegen {
-    Naming
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
+import java.util.concurrent {
+    JCallable=Callable
 }
 
 shared abstract class BaseIdeModelLoader(
@@ -122,6 +123,17 @@ shared abstract class BaseIdeModelLoader(
    
     shared Map<String, SourceDeclarationHolder> sourceDeclarations => _sourceDeclarations;
 
+    shared void runWithLock(void action()) {
+        synchronizedRun(JavaRunnable(action));
+    }
+
+    shared T callWithLock<T>(T fun())
+    {
+        return synchronizedCall(object satisfies JCallable<T&Object> {
+            call() => fun() else null;
+        });
+    }
+    
     shared class GlobalTypeFactory(Context context) 
            extends TypeFactory(context) {
        
@@ -129,10 +141,10 @@ shared abstract class BaseIdeModelLoader(
                 let (do = () {
                     if(! super.\ipackage exists){
                         super.\ipackage = modules.languageModule
-                            .getDirectPackage(Module.\iLANGUAGE_MODULE_NAME);
+                            .getDirectPackage(Module.languageModuleName);
                     }
                     return super.\ipackage;
-                }) synchronize(lock, do); 
+                }) callWithLock(do); 
             
        assign \ipackage {
            super.\ipackage = \ipackage;
@@ -148,9 +160,8 @@ shared abstract class BaseIdeModelLoader(
    
    
    shared void resetJavaModelSourceIfNecessary(Runnable resetAction) {
-       synchronize {
-           on = lock;
-           void do() {
+       callWithLock {
+           void fun() {
                if (mustResetLookupEnvironment) {
                    resetAction.run();
                    mustResetLookupEnvironment = false;
@@ -179,13 +190,13 @@ shared abstract class BaseIdeModelLoader(
                }
            }
            return pkg;
-       }) synchronize(lock, do);
+       }) callWithLock(do);
        
    shared actual Module loadLanguageModuleAndPackage() {
        value lm = languageModule;
        if (moduleManager.loadDependenciesFromModelLoaderFirst
            && !isBootstrap) {
-           findOrCreatePackage(lm, \iCEYLON_LANGUAGE);
+           findOrCreatePackage(lm, ceylonLanguage);
        }
        return lm;
    }
@@ -207,8 +218,8 @@ shared abstract class BaseIdeModelLoader(
    
    shared actual void removeDeclarations(JList<Declaration> declarations) {
        void do() {
-           JList<Declaration> allDeclarations = JArrayList<Declaration>(declarations.size());
-           MutableSet<Package> changedPackages = HashSet<Package>();
+           value allDeclarations = JArrayList<Declaration>(declarations.size());
+           value changedPackages = HashSet<Package>();
            
            allDeclarations.addAll(declarations);
            
@@ -230,7 +241,7 @@ shared abstract class BaseIdeModelLoader(
            }
            mustResetLookupEnvironment = true;
        }
-       synchronize(lock, do);
+       runWithLock(do);
    }
    
    void retrieveInnerDeclarations(Declaration declaration,
@@ -270,24 +281,24 @@ shared abstract class BaseIdeModelLoader(
            packageExistence.remove(packageCacheKey);
            mustResetLookupEnvironment = true;
        }
-       synchronize(lock, do);
+       runWithLock(do);
    }
    
    shared void clearClassMirrorCacheForClass(BaseIdeModule mod, String classNameToRemove) {
-       synchronize(lock, () {
+       runWithLock(() {
            classMirrorCache.remove(cacheKeyByModule(mod, classNameToRemove));        
            mustResetLookupEnvironment = true;
        });
    }
    
    shared actual void setupSourceFileObjects(JList<out Object> treeHolders) {
-       synchronize (lock, () {
+       runWithLock(() {
            addSourcePhasedUnits(treeHolders, true);
        });
    }
    
     shared void addSourcePhasedUnits(JList<out Object> treeHolders, Boolean isSourceToCompile) {
-       synchronize (lock, () {
+       runWithLock(() {
            for (Object treeHolder in treeHolders) {
                if (is PhasedUnit treeHolder) {
                    value pkgName = treeHolder.\ipackage.qualifiedNameString;
@@ -296,7 +307,8 @@ shared abstract class BaseIdeModelLoader(
                            if (exists id=decl.identifier) {
                                String fqn = getToplevelQualifiedName(pkgName, id.text);
                                if (! _sourceDeclarations.defines(fqn)) {
-                                   _sourceDeclarations.put(fqn, SourceDeclarationHolder(treeHolder, decl, isSourceToCompile));
+                                   _sourceDeclarations[fqn]
+                                        = SourceDeclarationHolder(treeHolder, decl, isSourceToCompile);
                                }
                            }
                        }
@@ -335,7 +347,7 @@ shared abstract class BaseIdeModelLoader(
             then unsafeCast<LazyInterface>(classMirror.modelDeclaration) 
             else super.makeLazyInterface(classMirror, isNativeHeader);
    
-    shared actual Module findModuleForClassMirror(ClassMirror classMirror) => 
+    shared actual Module? findModuleForClassMirror(ClassMirror classMirror) => 
             lookupModuleByPackageName(
                getPackageNameForQualifiedClassName(classMirror));
    
@@ -343,7 +355,7 @@ shared abstract class BaseIdeModelLoader(
             super.loadJDKModules();
    
     shared actual LazyPackage findOrCreateModulelessPackage(String pkgName) =>
-            synchronize(lock, () => unsafeCast<LazyPackage>(findPackage(pkgName)));
+            callWithLock(() => unsafeCast<LazyPackage>(findPackage(pkgName)));
    
     shared actual Boolean isModuleInClassPath(Module mod) {
        if (mod.signature in modulesInClassPath) {
@@ -495,14 +507,14 @@ shared abstract class BaseIdeModelLoader(
            try {
                result = super.convertToDeclaration(ideModule, typeName, declarationType);
            } catch(RuntimeException e) {
-               // FIXME: pretty sure this is plain wrong as it ignores problems and especially ModelResolutionException and just plain hides them
+               platformUtils.log(Status._ERROR, "Cannot convert type name \"``typeName``\" to a Declaration", e);
            }
            if (exists foundSourceDeclaration, 
                ! (result exists)) {
                result = foundSourceDeclaration.modelDeclaration;
            }
            return result;
-       }) synchronize (lock, do);
+       }) callWithLock(do);
    }
    
    shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
@@ -552,7 +564,7 @@ shared abstract class BaseIdeModelLoader(
                return null;
            }
            
-       }) synchronize(lock, do);
+       }) callWithLock(do);
    }
    
    shared formal void addModuleToClasspathInternal(ArtifactResult? artifact);
@@ -600,7 +612,7 @@ shared abstract class BaseIdeModelLoader(
            } else {
                value newUnit = newPackageTypeFactory(pkg);
                newUnit.\ipackage = pkg;
-               unitsByPackage.put(key, newUnit);
+               unitsByPackage[key] = newUnit;
                return newUnit;
            }
        }
@@ -615,36 +627,33 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared actual default void logVerbose(String message) {
-       platformUtils.log(Status._INFO, message);
+       platformUtils.log(Status._DEBUG, message);
    }
    
    shared void setModuleAndPackageUnits() {
        for (ideModule in moduleManager.modules.listOfModules) {
-           if (is BaseIdeModule ideModule) {
-               if (ideModule.isCeylonBinaryArchive) {
-                   for (p in ideModule.packages) {
-                       if (! p.unit exists) {
-                           variable ClassMirror? packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME);
-                           if (! packageClassMirror exists) {
-                               packageClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iPACKAGE_DESCRIPTOR_CLASS_NAME.rest);
-                           }
-                           // some modules do not declare their main package, because they don't have any declaration to share
-                           // there, for example, so this can be null
-                           if(is IdeClassMirror pcm=packageClassMirror) {
-                               assert(is LazyPackage p);
-                               p.unit = newCompiledUnit(p, pcm);
-                           }
+           if (is BaseIdeModule ideModule, 
+               ideModule.isCeylonBinaryArchive) {
+               for (p in ideModule.packages) {
+                   if (! p.unit exists) {
+                       ClassMirror? packageClassMirror 
+                               = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName)
+                            else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName.rest);
+                       // some modules do not declare their main package, because they don't have any declaration to share
+                       // there, for example, so this can be null
+                       if (is IdeClassMirror pcm = packageClassMirror) {
+                           assert (is LazyPackage p);
+                           p.unit = newCompiledUnit(p, pcm);
                        }
-                       if (p.nameAsString == ideModule.nameAsString) {
-                           if (! ideModule.unit exists) {
-                               variable ClassMirror? moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iMODULE_DESCRIPTOR_CLASS_NAME);
-                               if (! moduleClassMirror exists) {
-                                   moduleClassMirror = lookupClassMirror(ideModule, p.qualifiedNameString + "." + Naming.\iOLD_MODULE_DESCRIPTOR_CLASS_NAME);
-                               }
-                               if (is IdeClassMirror mcm=moduleClassMirror) {
-                                   assert(is LazyPackage p);
-                                   ideModule.unit = newCompiledUnit(p, mcm);
-                               }
+                   }
+                   if (p.nameAsString == ideModule.nameAsString) {
+                       if (! ideModule.unit exists) {
+                           ClassMirror? moduleClassMirror 
+                                   = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.moduleDescriptorClassName)
+                                else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.oldModuleDescriptorClassName);
+                           if (is IdeClassMirror mcm = moduleClassMirror) {
+                               assert (is LazyPackage p);
+                               ideModule.unit = newCompiledUnit(p, mcm);
                            }
                        }
                    }
@@ -654,7 +663,13 @@ shared abstract class BaseIdeModelLoader(
    }
 }
 
-shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot, JavaClassOrInterface> extends BaseIdeModelLoader {
+shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder, NativeFile, JavaClassRoot, JavaClassOrInterface> extends BaseIdeModelLoader 
+        satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & JavaModelServicesConsumer<JavaClassRoot> 
+        given NativeProject satisfies Object 
+        given NativeResource satisfies Object 
+        given NativeFolder satisfies NativeResource 
+        given NativeFile satisfies NativeResource {
     shared new (
         IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager,
         IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper,
@@ -662,22 +677,15 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
     ) extends BaseIdeModelLoader(moduleManager, moduleSourceMapper, modules){
     }
     
-    shared actual default IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile> moduleManager => 
-            unsafeCast<IdeModuleManager<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleManager);
+    shared actual default IdeModuleManagerAlias moduleManager => 
+            unsafeCast<IdeModuleManagerAlias>(super.moduleManager);
     
-    shared actual default IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper => 
-            unsafeCast<IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile>>(super.moduleSourceMapper);
-
-    shared formal JavaClassRoot? getJavaClassRoot(ClassMirror classMirror);
-
-    shared formal Unit newCrossProjectBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newJavaCompilationUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newCeylonBinaryUnit(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
-    shared formal Unit newJavaClassFile(JavaClassRoot typeRoot, String relativePath, String fileName, String fullPath, LazyPackage pkg);
+    shared actual default IdeModuleSourceMapperAlias moduleSourceMapper => 
+            unsafeCast<IdeModuleSourceMapperAlias>(super.moduleSourceMapper);
 
     shared actual Unit? newCompiledUnit(LazyPackage pkg, IdeClassMirror classMirror) {
         Unit unit;
-        JavaClassRoot? typeRoot = getJavaClassRoot(classMirror);
+        JavaClassRoot? typeRoot = javaModelServices.getJavaClassRoot(classMirror);
         if (! exists typeRoot) {
             return null;
         }
@@ -690,26 +698,37 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
         String fullPath = classMirror.fullPath;
         
         if (!classMirror.isBinary) {
-            unit = newJavaCompilationUnit(typeRoot, relativePath, fileName,
-                fullPath, pkg);
+            if (is IdeModuleAlias ideModule = pkg.\imodule) {
+                CeylonProjectAlias? originalProject = ideModule.originalProject;
+                if (exists originalProject) {
+                    unit = javaModelServices.newCrossProjectJavaCompilationUnit(originalProject, typeRoot, relativePath,
+                        fileName, fullPath, pkg);
+                } else {
+                    unit = javaModelServices.newJavaCompilationUnit(typeRoot, relativePath, fileName,
+                        fullPath, pkg);
+                }
+            } else {
+                unit = javaModelServices.newJavaCompilationUnit(typeRoot, relativePath, fileName,
+                    fullPath, pkg);
+            }
         }
         else {
             if (classMirror.isCeylon) {
-                if (is IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile> ideModule = pkg.\imodule) {
-                    CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>? originalProject = ideModule.originalProject;
+                if (is IdeModuleAlias ideModule = pkg.\imodule) {
+                    CeylonProjectAlias? originalProject = ideModule.originalProject;
                     if (exists originalProject) {
-                        unit = newCrossProjectBinaryUnit(typeRoot, relativePath,
+                        unit = javaModelServices.newCrossProjectBinaryUnit(typeRoot, relativePath,
                             fileName, fullPath, pkg);
                     } else {
-                        unit = newCeylonBinaryUnit(typeRoot, relativePath,
+                        unit = javaModelServices.newCeylonBinaryUnit(typeRoot, relativePath,
                             fileName, fullPath, pkg);
                     }
                 } else {
-                    unit = newCeylonBinaryUnit(typeRoot, fileName, relativePath, fullPath, pkg);
+                    unit = javaModelServices.newCeylonBinaryUnit(typeRoot, fileName, relativePath, fullPath, pkg);
                 }
             }
             else {
-                unit = newJavaClassFile(typeRoot, relativePath, fileName,
+                unit = javaModelServices.newJavaClassFile(typeRoot, relativePath, fileName,
                     fullPath, pkg);
             }
         }
@@ -766,7 +785,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             packageLoader.preLoadPackage(packageName);
             if (!loadDeclarations) {
                 value itExists = packageLoader.packageExists(packageName);
-                packageExistence.put(cacheKey, itExists);
+                packageExistence[cacheKey] = itExists;
                 return itExists;
             }
             
@@ -793,7 +812,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
                             }
                         });
 
-                if(mod.nameAsString == \iJAVA_BASE_MODULE_NAME
+                if(mod.nameAsString == javaBaseModuleName
                     && packageName == "java.lang") {
                     loadJavaBaseArrays();
                 }
@@ -802,7 +821,6 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             } else {
                 return false;
             }
-        }) synchronize(lock, do);
-        
+        }) callWithLock(do);
     }
 }

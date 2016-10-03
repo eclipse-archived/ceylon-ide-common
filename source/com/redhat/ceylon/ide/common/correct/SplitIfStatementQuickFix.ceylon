@@ -1,16 +1,21 @@
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit,
+    ReplaceEdit,
+    CommonDocument,
+    TextChange
+}
 
-shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies GenericQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object splitIfStatementQuickFix {
  
-    shared void addSplitIfStatementProposal(Data data, IFile file, Tree.Statement? statement) {
+    shared void addSplitIfStatementProposal(QuickFixData data, 
+     Tree.Statement? statement) {
         if (is Tree.IfStatement ifSt = statement) {
             Tree.ElseClause? elseClause = ifSt.elseClause;
             if (!exists elseClause) {
@@ -21,9 +26,13 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                         exists c1 = conditions.get(size - 2),
                         exists c2 = conditions.get(size - 1)) {
                         
-                        value change = newTextChange("Split If Statement", file);
-                        value doc = getDocumentForChange(change);
-                        initMultiEditChange(change);
+                        value doc = data.document;
+                        value change 
+                                = platformServices.document.createTextChange {
+                            name = "Split If Statement";
+                            input = data.phasedUnit;
+                        };
+                        change.initMultiEdit();
                         String ws;
                         String indent;
                         
@@ -31,24 +40,40 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                             ws = " ";
                             indent = "";
                         } else {
-                            ws = indents.getDefaultLineDelimiter(doc)
-                                    + indents.getIndent(ifSt, doc);
-                            indent = indents.defaultIndent;
+                            ws = doc.defaultLineDelimiter
+                                    + doc.getIndent(ifSt);
+                            indent = platformServices.document.defaultIndent;
                         }
                         
                         value start = c1.endIndex.intValue();
                         value stop = c2.startIndex.intValue();
-                        addEditToChange(change, newReplaceEdit(start, stop - start,
-                             ") {" + ws + indent + "if ("));
-                        value end = ifSt.endIndex.intValue();
-                        addEditToChange(change, newInsertEdit(end, ws + "}"));
-                        incrementIndent(doc, ifSt, cl, change, indent);
+                        change.addEdit( 
+                            ReplaceEdit {
+                                start = start;
+                                length = stop - start;
+                                text = ") {" + ws + indent + "if (";
+                            });
+                        change.addEdit( 
+                            InsertEdit {
+                                start = ifSt.endIndex.intValue();
+                                text = ws + "}";
+                            });
+                        incrementIndent {
+                            doc = doc;
+                            ifSt = ifSt;
+                            cl = cl;
+                            change = change;
+                            indent = indent;
+                        };
                         
-                        newProposal(data, "Split 'if' statement at condition", change);
+                        data.addQuickFix {
+                            description = "Split 'if' statement at condition";
+                            change = change;
+                        };
                     }
                 }
             } else if (exists block = elseClause.block,
-                       block.token.type == CeylonLexer.\iIF_CLAUSE) {
+                       block.token.type == CeylonLexer.ifClause) {
                 value statements = block.statements;
 
                 if (statements.size() == 1) {
@@ -56,32 +81,56 @@ shared interface SplitIfStatementQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
                     if (is Tree.IfStatement st) {
                         value inner = st;
                         value icl = inner.ifClause.conditionList;
-                        value change = newTextChange("Split If Statement", file);
-                        value doc = getDocumentForChange(change);
-                        initMultiEditChange(change);
-                        value ws = indents.getDefaultLineDelimiter(doc)
-                                + indents.getIndent(ifSt, doc);
-                        value indent = indents.defaultIndent;
+                        value doc = data.document;
+                        value change 
+                                = platformServices.document.createTextChange(
+                                    "Split If Statement", doc);
+                        change.initMultiEdit();
+                        value ws 
+                                = doc.defaultLineDelimiter
+                                + doc.getIndent(ifSt);
+                        value indent = platformServices.document.defaultIndent;
                         value start = block.startIndex.intValue();
-                        addEditToChange(change, newInsertEdit(start, "{" + ws + indent));
-                        value end = ifSt.endIndex.intValue();
-                        addEditToChange(change, newInsertEdit(end, ws + "}"));
-                        incrementIndent(doc, ifSt, icl, change, indent);
+                        change.addEdit( 
+                            InsertEdit {
+                                start = start;
+                                text = "{" + ws + indent;
+                            });
+                        change.addEdit(
+                            InsertEdit {
+                                start = ifSt.endIndex.intValue();
+                                text = ws + "}";
+                            });
+                        incrementIndent {
+                            doc = doc;
+                            ifSt = ifSt;
+                            cl = icl;
+                            change = change;
+                            indent = indent;
+                        };
                         
-                        newProposal(data, "Split 'if' statement at 'else'", change);
+                        data.addQuickFix {
+                            description = "Split 'if' statement at 'else'";
+                            change = change;
+                        };
                     }
                 }
             }
         }
     }
     
-    void incrementIndent(IDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
+    void incrementIndent(CommonDocument doc, Tree.IfStatement ifSt, Tree.ConditionList cl,
         TextChange change, String indent) {
         
         if (!indent.empty) {
-            variable value line = getLineOfOffset(doc, cl.endIndex.intValue() - 1) + 1;
-            while (line <= getLineOfOffset(doc, ifSt.endIndex.intValue() - 1)) {
-                addEditToChange(change, newInsertEdit(getLineStartOffset(doc, line), indent));
+            variable value line 
+                    = doc.getLineOfOffset(cl.endIndex.intValue() - 1) + 1;
+            while (line <= doc.getLineOfOffset(ifSt.endIndex.intValue() - 1)) {
+                change.addEdit( 
+                    InsertEdit {
+                        start = doc.getLineStartOffset(line);
+                        text = indent;
+                    });
                 line++;
             }
         }

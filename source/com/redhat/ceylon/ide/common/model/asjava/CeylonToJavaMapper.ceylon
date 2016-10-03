@@ -1,5 +1,12 @@
 import com.redhat.ceylon.model.loader.mirror {
-    TypeMirror
+    TypeMirror,
+    ClassMirror,
+    MethodMirror
+}
+import com.redhat.ceylon.model.loader.model {
+    LazyClass,
+    LazyInterface,
+    LazyFunction
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -9,51 +16,65 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface
 }
 
-shared alias JavaMirror => JClassMirror|JObjectMirror|JGetterMirror|JSetterMirror|JMethodMirror;
-
 shared object ceylonToJavaMapper {
-    
-    shared JavaMirror[] mapDeclaration(Declaration decl) {
-        return switch (decl)
-        case (is ClassOrInterface) sequence({JClassMirror(decl)})
-        case (is Value) mapValue(decl)
-        case (is Function) sequence({JMethodMirror(decl)})
-        else empty; 
+
+    function mapFunction(Function func) {
+        if (is LazyFunction func) {
+            return [func.methodMirror];
+        }
+        else {
+            return func.toplevel
+                then [JToplevelFunctionMirror(func)]
+                else [JMethodMirror(func)];
+        }
     }
+
+    function mapValue(Value decl) {
+        if (decl.toplevel) { //TODO: can this possibly be correct??! decl.anonymous, no?
+            return [JObjectMirror(decl)];
+        }
+        else if (decl.shared) {
+            return decl.variable
+                then [JGetterMirror(decl), JSetterMirror(decl)]
+                else [JGetterMirror(decl)];
+        }
+        else {
+            return [];
+        }
+    }
+    function mapClassOrInterface(ClassOrInterface decl)
+            => switch (decl)
+            case (is LazyClass) [decl.classMirror]
+            case (is LazyInterface) [decl.classMirror]
+            else [JClassMirror(decl)];
+
+    shared <ClassMirror|MethodMirror>[] mapDeclaration(Declaration decl)
+            => switch (decl)
+            case (is ClassOrInterface) mapClassOrInterface(decl)
+            case (is Value) mapValue(decl)
+            case (is Function) mapFunction(decl)
+            else [];
     
     shared TypeMirror mapType(Type type) {
-        if (type.integer) {
-            return longMirror;
-        } else if (type.float) {
-            return doubleMirror;
-        } else if (type.boolean) {
-            return booleanMirror;
-        } else if (type.character) {
-            return intMirror;
-        } else if (type.byte) {
-            return byteMirror;
-        } else if (type.isString()) {
-            return stringMirror;
-        }
-        
-        return JTypeMirror(type);
-    }
-    
-    <JGetterMirror|JSetterMirror|JObjectMirror>[] mapValue(Value decl) {
-        value mirrors = Array<JGetterMirror|JSetterMirror|JObjectMirror|Null>.ofSize(2, null);
-        
-        if (decl.shared) {
-            if (decl.toplevel) {
-                mirrors.set(0, JObjectMirror(decl));
-            } else {
-                mirrors.set(0, JGetterMirror(decl));
-                
-                if (decl.variable) {
-                    mirrors.set(1, JSetterMirror(decl));
-                }
+        if (type.union) {
+            value unit = type.declaration.unit;
+            if (unit.isOptionalType(type)) {
+                // Return the non-null type
+                return mapType(unit.getDefiniteType(type));
             }
         }
-        
-        return mirrors.coalesced.sequence();
+        else {
+            return objectMirror;
+        }
+
+        return if (type.integer) then longMirror
+          else if (type.float) then doubleMirror
+          else if (type.boolean) then booleanMirror
+          else if (type.character) then intMirror
+          else if (type.byte) then byteMirror
+          else if (type.isString()) then stringMirror
+          else JTypeMirror(type);
+
     }
+
 }

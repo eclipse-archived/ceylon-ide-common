@@ -3,51 +3,43 @@ import ceylon.collection {
     HashSet,
     unlinked
 }
+import ceylon.interop.java {
+    CeylonIterator
+}
 
-import com.redhat.ceylon.ide.common.util {
-    Path,
-    unsafeCast
+import com.redhat.ceylon.compiler.typechecker.context {
+    PhasedUnit
+}
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer,
+    VfsServicesConsumer
 }
 import com.redhat.ceylon.ide.common.vfs {
     VfsAliases,
-    LocalFileVirtualFile,
-    LocalFolderVirtualFile,
-    ZipFileVirtualFile
+    VirtualFileSystem
+}
+import com.redhat.ceylon.model.typechecker.context {
+    TypeCache
 }
 
 import java.lang {
     InterruptedException,
     JBoolean=Boolean
 }
+import java.util {
+    JList=List,
+    Arrays
+}
 import java.util.concurrent.locks {
     ReentrantReadWriteLock,
     Lock
 }
-import com.redhat.ceylon.compiler.typechecker.io {
-    VFS,
-    VirtualFile,
-    ClosableVirtualFile
+
+import org.jgrapht {
+    EdgeFactory
 }
-import java.io {
-    File
-}
-import java.util.zip {
-    ZipFile
-}
-import com.redhat.ceylon.model.typechecker.context {
-    TypeCache
-}
-import com.redhat.ceylon.compiler.typechecker.context {
-    PhasedUnit
-}
-import com.redhat.ceylon.ide.common.typechecker {
-    ProjectPhasedUnit,
-    CrossProjectPhasedUnit,
-    EditedPhasedUnit
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
+import org.jgrapht.experimental.dag {
+    DirectedAcyclicGraph
 }
 
 shared abstract class BaseCeylonProjects() {
@@ -55,7 +47,7 @@ shared abstract class BaseCeylonProjects() {
 }
 
 shared T withCeylonModelCaching<T>(T() do) {
-    JBoolean? was = TypeCache.setEnabled(JBoolean.\iTRUE);
+    JBoolean? was = TypeCache.setEnabled(JBoolean.true);
     try {
         return do();
     } finally {
@@ -63,44 +55,34 @@ shared T withCeylonModelCaching<T>(T() do) {
     }
 }
 
-
-
-
 shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProjects()
-        satisfies ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>
+        satisfies ModelListenerDispatcher<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
         given NativeFile satisfies NativeResource {
-    alias ListenerAlias => ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile>;
-    value modelListeners = HashSet<ListenerAlias>(unlinked);
+    value _modelListeners = HashSet<ModelListenerAlias>(unlinked);
     value projectMap = HashMap<NativeProject, CeylonProjectAlias>();
     value lock = ReentrantReadWriteLock(true);
 
+    shared VirtualFileSystem vfs = VirtualFileSystem();
+
     TypeCache.setEnabledByDefault(false);
+
+    shared actual {ModelListenerAlias*} modelListeners => _modelListeners;
     
     shared void addModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
-            modelListeners.add(listener);
+            _modelListeners.add(listener);
     
     shared void removeModelListener(ModelListener<NativeProject, NativeResource, NativeFolder, NativeFile> listener) =>
-            modelListeners.remove(listener);
+            _modelListeners.remove(listener);
 
-    void runListenerFunction(void fun(ListenerAlias listener)) {
-        modelListeners.each((listener) {
-            try {
-                fun(listener);
-            } catch(Exception e) {
-                platformUtils.log(Status._ERROR, "A Ceylon Model listener (``listener``) has triggered the following exception:", e);
-            }
-        });
-    }
-    
-    shared actual void modelParsed(CeylonProject<NativeProject,NativeResource,NativeFolder,NativeFile> project) =>
-            runListenerFunction((listener)=>listener.modelParsed(project));
-            
     T withLocking<T=Anything>(Boolean write, T do(), T() interrupted) {
         Lock l = if (write) then lock.writeLock() else lock.readLock();
         try {
@@ -117,19 +99,32 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
 
     shared formal CeylonProjectAlias newNativeProject(NativeProject nativeProject);
 
+    shared Integer ceylonProjectNumber
+            => withLocking {
+        write=false;
+        do() => projectMap.size;
+        interrupted() => 0;
+    };
+    
     shared {CeylonProjectAlias*} ceylonProjects
         => withLocking {
             write=false;
             do() => projectMap.items.sequence();
             interrupted() => {};
         };
-
+    
+    shared JList<CeylonProjectAlias> ceylonProjectsAsJavaList
+        => Arrays.asList(*ceylonProjects);
+    
     shared {NativeProject*} nativeProjects
             => withLocking {
         write=false;
         do() => projectMap.keys.sequence();
         interrupted() => {};
     };
+    
+    shared JList<NativeProject> nativeProjectsAsJavaList
+            => Arrays.asList(*nativeProjects);
     
     shared CeylonProjectAlias? getProject(NativeProject? nativeProject)
         => withLocking {
@@ -138,87 +133,101 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
             interrupted() => null;
         };
 
-    shared Boolean removeProject(NativeProject nativeProject)
-        => withLocking {
+    shared Boolean removeProject(NativeProject nativeProject) {
+        if (exists existingCeylonProject = withLocking {
             write=true;
-            do() => projectMap.remove(nativeProject) exists;
+            function do() => 
+                projectMap.remove(nativeProject);
+
             function interrupted() {
                 throw InterruptedException();
             }
-        };
+        }) {
+            ceylonProjectRemoved(existingCeylonProject);
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-    shared Boolean addProject(NativeProject nativeProject)
-        => withLocking {
+    shared Boolean addProject(NativeProject nativeProject) {
+        if (exists newCeylonProject = withLocking {
             write=true;
             function do() {
                  if (projectMap[nativeProject] exists) {
-                     return false;
+                     return null;
                  } else {
-                     projectMap.put(nativeProject, newNativeProject(nativeProject));
-                     return true;
+                     value newProject = newNativeProject(nativeProject);
+                     projectMap[nativeProject] = newProject;
+                     return newProject;
                  }
             }
             function interrupted() {
                  throw InterruptedException();
             }
-        };
+        }) {
+            ceylonProjectAdded(newCeylonProject);
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-    shared void clearProjects()
-        => withLocking {
+    shared void clearProjects() {
+        value projects = withLocking {
             write=true;
-            do() => projectMap.clear();
+            function do() {
+                value projects = projectMap.items.sequence();
+                projectMap.clear();
+                return projects;
+            }
             function interrupted() {
                 throw InterruptedException();
             }
         };
+        projects.each(ceylonProjectRemoved);
+    }
 
     shared {PhasedUnit*} parsedUnits
         => ceylonProjects.flatMap((ceylonProject) => ceylonProject.parsedUnits);
-            
-    shared abstract default class VirtualFileSystem() extends VFS()
-            satisfies VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile> {
-
+    
+    "Dispatch the changes to the projects that might be interested
+     (have the corresponding native resource in the project contents)"
+    shared void fileTreeChanged({NativeResourceChange*} changes) {
+        value projectsInModel = ceylonProjects;
         
-        shared ResourceVirtualFileAlias createVirtualResource(NativeResource resource,
-            NativeProject project) {
-            assert (is NativeFolder | NativeFile resource);
-            if (isFolder(resource)) {
-                return createVirtualFolder(unsafeCast<NativeFolder>(resource), project);
-            }
-            else {
-                return createVirtualFile(unsafeCast<NativeFile>(resource), project);
+        for (ceylonProject in projectsInModel) {
+            value changesForProject = changes.filter((nativeChange) => 
+                                            modelServices.isResourceContainedInProject(nativeChange.resource, ceylonProject));
+            if (exists first=changesForProject.first) {
+                ceylonProject.projectFileTreeChanged({first, *changesForProject.rest});
             }
         }
-        
-        shared formal NativeFolder? getParent(NativeResource resource);
-        shared formal NativeFile? findFile(NativeFolder resource, String fileName);
-        shared formal [String*] toPackageName(NativeFolder resource, NativeFolder sourceDir);
-        shared formal Boolean isFolder(NativeResource resource);
-        shared formal Boolean existsOnDisk(NativeResource resource);
-        shared formal String getShortName(NativeResource resource);
-
-        shared formal FileVirtualFileAlias createVirtualFile(NativeFile file, NativeProject project);
-        shared formal FileVirtualFileAlias createVirtualFileFromProject(NativeProject project, Path path);
-        shared formal FolderVirtualFileAlias createVirtualFolder(NativeFolder folder, NativeProject project);
-        shared formal FolderVirtualFileAlias createVirtualFolderFromProject(NativeProject project, Path path);
-        
-        shared actual VirtualFile getFromFile(File file) =>
-                if (file.directory) 
-                then LocalFolderVirtualFile(file) 
-                else LocalFileVirtualFile(file);
-        
-        shared actual VirtualFile getFromZipFile(ZipFile zipFile) =>
-                ZipFileVirtualFile(zipFile);
-        
-        shared actual ClosableVirtualFile getFromZipFile(File zipFile) =>
-                ZipFileVirtualFile(ZipFile(zipFile), true);
-        
-        shared actual ClosableVirtualFile? openAsContainer(VirtualFile virtualFile) =>
-                switch(virtualFile)
-                case(is ZipFileVirtualFile) virtualFile
-                case(is LocalFileVirtualFile) getFromZipFile(virtualFile.file)
-                else null;
     }
     
-    shared formal VirtualFileSystem vfs;
+    shared {CeylonProjectAlias*} ceylonProjectsInTopologicalOrder {
+       value theCeylonProjects = ceylonProjects.sequence();
+       class Dependency(shared CeylonProjectAlias requiring, shared CeylonProjectAlias required) {}
+       value dag = DirectedAcyclicGraph<CeylonProjectAlias, Dependency>(
+            object satisfies EdgeFactory<CeylonProjectAlias, Dependency> {
+               createEdge(CeylonProjectAlias sourceVertex, CeylonProjectAlias targetVertex) =>
+                       Dependency(sourceVertex, targetVertex);
+           }
+       );
+       for (ceylonProject in theCeylonProjects) {
+           dag.addVertex(ceylonProject);
+       }
+       
+       for (ceylonProject in theCeylonProjects) {
+           for (required in ceylonProject.referencedCeylonProjects) {
+               dag.addDagEdge(ceylonProject, required); 
+           }
+           for (requiring in ceylonProject.referencingCeylonProjects) {
+               dag.addDagEdge(requiring, ceylonProject); 
+           }
+       }
+       return object satisfies {CeylonProjectAlias*} {
+           iterator() => CeylonIterator(dag.iterator());
+       };
+    }
 }

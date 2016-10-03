@@ -1,28 +1,34 @@
-import com.redhat.ceylon.model.typechecker.model {
-    Value,
-    Declaration
-}
 import com.redhat.ceylon.compiler.java.codegen {
     CodegenUtil
-}
-import java.util {
-    ArrayList,
-    List,
-    Collections
-}
-import com.redhat.ceylon.model.loader.mirror {
-    MethodMirror,
-    TypeParameterMirror,
-    ClassMirror,
-    VariableMirror,
-    TypeMirror,
-    AnnotationMirror
 }
 import com.redhat.ceylon.model.loader {
     NamingBase
 }
+import com.redhat.ceylon.model.loader.mirror {
+    MethodMirror,
+    TypeParameterMirror,
+    VariableMirror
+}
+import com.redhat.ceylon.model.typechecker.model {
+    Value,
+    Declaration,
+    Type,
+    FunctionOrValue
+}
 
-shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror(decl) {
+import java.lang {
+    JString=String
+}
+import java.util {
+    List,
+    Collections
+}
+
+shared class JObjectMirror(Value decl)
+        extends AbstractClassMirror(decl) {
+
+    shared Type type => decl.type;
+
     abstract => false;
     
     ceylonToplevelAttribute => false;
@@ -31,61 +37,63 @@ shared class JObjectMirror(shared actual Value decl) extends AbstractClassMirror
     
     ceylonToplevelObject => true;
     
-    satisfiedTypes => decl.type.satisfiedTypes;
+    satisfiedTypes => type.satisfiedTypes;
     
-    supertype => decl.type.extendedType;
+    supertype => type.extendedType;
     
     name => super.name + "_";
     
-    shared actual void scanExtraMembers(ArrayList<MethodMirror> methods) { 
-        methods.add(GetMethod(this));
-    }
+    scanExtraMembers(List<MethodMirror> methods)
+            => methods.add(GetMethod(this));
 }
 
-class GetMethod(JObjectMirror obj) satisfies MethodMirror {
-    shared actual Boolean abstract => false;
+shared class GetMethod(JObjectMirror obj)
+        satisfies MethodMirror {
+
+    abstract => false;
     
-    shared actual Boolean constructor => false;
+    constructor => false;
     
-    shared actual Boolean declaredVoid => false;
+    declaredVoid => false;
     
-    shared actual Boolean default => false;
+    default => false;
     
-    shared actual Boolean defaultAccess => false;
+    defaultAccess => false;
     
-    shared actual ClassMirror enclosingClass => obj;
+    enclosingClass => obj;
     
-    shared actual Boolean final => true;
+    final => true;
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual String name => NamingBase.Unfix.get_.string;
+    annotationNames => Collections.emptySet<JString>();
+
+    name => NamingBase.Unfix.get_.string;
     
-    shared actual List<VariableMirror> parameters
+    parameters
             => Collections.emptyList<VariableMirror>();
     
-    shared actual Boolean protected => false;
+    protected => false;
     
-    shared actual Boolean public => true;
+    public => true;
     
-    shared actual TypeMirror returnType => ceylonToJavaMapper.mapType(obj.decl.type);
+    returnType => ceylonToJavaMapper.mapType(obj.type);
     
-    shared actual Boolean static => true;
+    static => true;
     
-    shared actual Boolean staticInit => false;
+    staticInit => false;
     
-    shared actual List<TypeParameterMirror> typeParameters
+    typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
-    shared actual Boolean variadic => false;
+    variadic => false;
     
-    shared actual Boolean defaultMethod => false;
+    defaultMethod => false;
 }
 
-shared String getJavaQualifiedName(Declaration decl) {
-    value fqn = CodegenUtil.getJavaNameOfDeclaration(decl);
-    if (is Value decl) {
-        return fqn.initial(fqn.size - ".get_".size);
-    }
-    return fqn;
-}
+shared String javaQualifiedName(Declaration decl)
+        => let (fqn = CodegenUtil.getJavaNameOfDeclaration(decl))
+        if (decl is FunctionOrValue && decl.toplevel,
+            exists loc = fqn.lastOccurrence('.'))
+        then fqn.initial(loc) //strip off the static method/getter name
+        else fqn;

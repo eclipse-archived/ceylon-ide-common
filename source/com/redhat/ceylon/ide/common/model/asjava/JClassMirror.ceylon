@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.ide.common.model.asjava {
     ceylonToJavaMapper {
         mapDeclaration
@@ -14,37 +10,43 @@ import com.redhat.ceylon.model.loader.mirror {
     ClassMirror,
     TypeParameterMirror,
     FieldMirror,
-    PackageMirror,
     TypeMirror,
-    MethodMirror,
-    AnnotationMirror
+    MethodMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Module,
     ClassOrInterface,
     Interface,
     Declaration,
-    Type
+    Type,
+    Class
 }
 
+import java.lang {
+    JString=String
+}
 import java.util {
     List,
     Collections,
     ArrayList
 }
 
-shared abstract class AbstractClassMirror(shared default Declaration decl) satisfies ClassMirror {
+shared abstract class AbstractClassMirror(shared Declaration decl)
+        satisfies ClassMirror & DeclarationMirror {
+    
     variable Boolean initialized = false;
     
     late List<FieldMirror> fields;
     late List<MethodMirror> methods;
     late List<ClassMirror> innerClasses;
+
+    declaration => decl;
     
-    shared actual Boolean annotationType => decl.annotation;
+    annotationType => decl.annotation;
     
-    shared actual Boolean anonymous => decl.anonymous;
+    anonymous => decl.anonymous;
     
-    shared actual Boolean defaultAccess => !decl.shared;
+    defaultAccess => !decl.shared;
     
     shared actual List<FieldMirror> directFields {
         scanMembers();
@@ -61,56 +63,56 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
         return methods;
     }
     
-    shared actual ClassMirror? enclosingClass => null;
+    enclosingClass => null;
     
-    shared actual MethodMirror? enclosingMethod => null;
+    enclosingMethod => null;
     
-    shared actual Boolean enum => decl.javaEnum;
+    enum => decl.javaEnum;
     
-    shared actual Boolean final => if (is ClassOrInterface d = decl) then d.final else true;
+    final => if (is ClassOrInterface d = decl) then d.final else true;
     
-    shared actual String flatName => qualifiedName.replace("::", ".");
+    flatName => qualifiedName.replace("::", ".");
     
-    shared actual AnnotationMirror? getAnnotation(String? string) => null;
+    getAnnotation(String? string) => null;
     
-    shared actual String? getCacheKey(Module? \imodule) => null;
+    annotationNames => Collections.emptySet<JString>();
     
-    shared actual Boolean innerClass => false;
+    getCacheKey(Module? \imodule) => null;
     
-    shared actual Boolean \iinterface => decl is Interface;
+    innerClass => false;
+    
+    \iinterface => decl is Interface;
     
     shared actual List<TypeMirror> interfaces {
         value types = ArrayList<TypeMirror>();
-        
-        CeylonIterable(satisfiedTypes).each((s) {
+        for (s in satisfiedTypes) {
             types.add(JTypeMirror(s));
-        });
-        
+        }
         return types;
     }
     
-    shared actual Boolean javaSource => false;
+    javaSource => false;
     
-    shared actual Boolean loadedFromSource => false;
+    loadedFromSource => false;
     
-    shared actual Boolean localClass => false;
+    localClass => false;
     
     shared actual default String name => decl.name;
     
-    shared actual PackageMirror? \ipackage => null;
+    \ipackage => null;
     
-    shared actual Boolean protected => false;
+    protected => false;
     
-    shared actual Boolean public => decl.shared;
+    public => decl.shared;
     
-    shared actual String qualifiedName => getJavaQualifiedName(decl);
+    qualifiedName => javaQualifiedName(decl).replace("::", ".");
     
-    shared actual Boolean static => false;
+    static => false;
     
-    shared actual TypeMirror? superclass 
+    superclass 
             => if (exists s = supertype) then JTypeMirror(s) else null;
     
-    shared default actual List<TypeParameterMirror> typeParameters
+    shared actual default List<TypeParameterMirror> typeParameters
             => Collections.emptyList<TypeParameterMirror>();
     
     void scanMembers() {
@@ -119,12 +121,13 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
                 return;
             }
             
-            value members = CeylonIterable(decl.members)
-                    .flatMap((m) => mapDeclaration(m));
+            value members
+                    = { for (m in decl.members)
+                        for (d in mapDeclaration(m))
+                        d };
             
-            value _methods = ArrayList<MethodMirror>();
             innerClasses = ArrayList<ClassMirror>();
-            methods = _methods;
+            methods = ArrayList<MethodMirror>();
 
             members.each((e) {
                 if (is MethodMirror e) {
@@ -134,21 +137,21 @@ shared abstract class AbstractClassMirror(shared default Declaration decl) satis
                 }
             });
             
-            scanExtraMembers(_methods);
+            scanExtraMembers(methods);
             
             initialized = true;            
         });
     }
     
-    shared default void scanExtraMembers(ArrayList<MethodMirror> methods) {
-        
-    }
+    shared default void scanExtraMembers(List<MethodMirror> methods)
+            => noop();
     
     shared formal Type? supertype;
     shared formal List<Type> satisfiedTypes;
 }
 
-shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractClassMirror(decl) {
+shared class JClassMirror(ClassOrInterface decl)
+        extends AbstractClassMirror(decl) {
     
     abstract => decl.abstract;
     
@@ -164,12 +167,20 @@ shared class JClassMirror(shared actual ClassOrInterface decl) extends AbstractC
     
     shared default actual List<TypeParameterMirror> typeParameters {
         value types = ArrayList<TypeParameterMirror>();
-        
         for (t in decl.typeParameters) {
             types.add(JTypeParameterMirror(t));
         }
-        
         return types;
     }
 
+    shared actual void scanExtraMembers(List<MethodMirror> methods) {
+        super.scanExtraMembers(methods);
+
+        if (is Class cl = decl,
+            exists pl = cl.parameterList,
+            !pl.parameters.empty) {
+            
+            methods.add(JConstructorMirror(cl, pl));
+        }
+    }
 }

@@ -1,10 +1,20 @@
+import ceylon.collection {
+    HashSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Visitor
 }
 import com.redhat.ceylon.ide.common.correct {
-    ImportProposals,
-    DocumentChanges
+    importProposals
+}
+import com.redhat.ceylon.ide.common.platform {
+    TextChange,
+    ReplaceEdit,
+    InsertEdit,
+    DeleteEdit,
+    platformServices
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
@@ -19,22 +29,18 @@ import java.lang {
     StringBuilder
 }
 import java.util {
-    HashSet,
     JList=List
 }
 
 
-shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange, IRegion=DefaultRegion>
+shared interface ExtractValueRefactoring<IRegion>
         satisfies ExtractInferrableTypedRefactoring<TextChange>
         & NewNameRefactoring
-        & DocumentChanges<IDocument, InsertEdit, TextEdit, TextChange>
-        & ExtractLinkedModeEnabled<IRegion>
-        given InsertEdit satisfies TextEdit {
+        & ExtractLinkedModeEnabled<IRegion> {
 
-    shared formal ImportProposals<IFile, ICompletionProposal, IDocument, InsertEdit, TextEdit, TextChange> importProposals;
-    value indents => importProposals.indents;
-    
     initialNewName => nameProposals[0];
+    
+    affectsOtherFiles => false;
     
     shared formal actual variable Boolean canBeInferred;
     shared formal actual variable Type? type;
@@ -44,7 +50,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
 
     nameProposals
             => nodes.nameProposals {
-        node = editorData.node;
+        node = if (is Tree.Term node = editorData.node) 
+                then node else null;
         rootNode = editorData.rootNode;
     };
     
@@ -65,8 +72,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         assert (exists sourceFile = editorData.sourceVirtualFile,
                 is Tree.Term term = editorData.node);
         
-        initMultiEditChange(tfc);
-        value doc = getDocumentForChange(tfc);
+        tfc.initMultiEdit();
+        value doc = tfc.document;
         value tokens = editorData.tokens;
         value rootNode = editorData.rootNode;
         value unit = term.unit;
@@ -76,9 +83,12 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         object extends Visitor() {
             shared actual void visit(Tree.FunctionArgument that) {
                 if (that != term &&
-                    that.startIndex.intValue() <= term.startIndex.intValue() &&
-                    that.endIndex.intValue() >= term.endIndex.intValue() &&
-                    that.startIndex.intValue() > statement.startIndex.intValue()) {
+                    that.startIndex.intValue() 
+                        <= term.startIndex.intValue() &&
+                    that.endIndex.intValue() 
+                        >= term.endIndex.intValue() &&
+                    that.startIndex.intValue() 
+                        > statement.startIndex.intValue()) {
                     result = that;
                 }
                 super.visit(that);
@@ -86,8 +96,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
         }.visit(statement);
 
         value indent = 
-                indents.getDefaultLineDelimiter(doc) + 
-                indents.getIndent(statement, doc);     
+                doc.defaultLineDelimiter + 
+                doc.getIndent(statement);     
         Boolean toplevel;
         Integer adjustment;
         Integer start;
@@ -106,8 +116,8 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             value loc = pl.endIndex.intValue();
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
-            addEditToChange(tfc, newReplaceEdit(loc, len, " { "));
-            addEditToChange(tfc, newInsertEdit(end, "; }"));
+            tfc.addEdit(ReplaceEdit(loc, len, " { "));
+            tfc.addEdit(InsertEdit(end, "; }"));
             adjustment = 3-len;
             newLineOrReturn = 
                     if (anon.declarationModel.declaredVoid) 
@@ -130,14 +140,16 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             value len = ex.startIndex.intValue() - loc;
             value end = ex.endIndex.intValue();
             value semi = fun.endIndex.intValue()-1;
-            String starting = " {" + indent + indents.defaultIndent;
+            String starting 
+                    = " {" + indent 
+                    + platformServices.document.defaultIndent;
             String ending = ";" + indent + "}";
-            addEditToChange(tfc, newReplaceEdit(loc, len, starting));
-            addEditToChange(tfc, newInsertEdit(end, ending));
-            addEditToChange(tfc, newDeleteEdit(semi, 1));
+            tfc.addEdit(ReplaceEdit(loc, len, starting));
+            tfc.addEdit(InsertEdit(end, ending));
+            tfc.addEdit(DeleteEdit(semi, 1));
             adjustment = starting.size-len;
             newLineOrReturn = 
-                    indent + indents.defaultIndent +
+                    indent + platformServices.document.defaultIndent +
                     (!fun.declarationModel.declaredVoid then "return " else "");
             toplevel = false;
         }
@@ -146,15 +158,16 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             adjustment = 0;
             newLineOrReturn = indent;
             toplevel 
-                    = if (is Tree.Declaration dec = statement) 
-                    then dec.declarationModel.toplevel 
+                    = if (is Tree.Declaration statement) 
+                    then statement.declarationModel.toplevel 
                     else false;
         }
         
-        String modifiers;
+        String keyword;
         String body;
         value core = unparenthesize(term);
-        if (is Tree.FunctionArgument core) {
+        switch (core)
+        case (is Tree.FunctionArgument) {
             //we're extracting an anonymous function, so
             //actually we're going to create a function
             //instead of a value
@@ -163,80 +176,147 @@ shared interface ExtractValueRefactoring<IFile, ICompletionProposal, IDocument, 
             }
             
             value voidModifier = core.type is Tree.VoidModifier;
-            modifiers = voidModifier then "void" else "function";
+            keyword = voidModifier then "void" else "function";
             
             value bodyWithParams = StringBuilder();
-            nodes.appendParameters(bodyWithParams, core, unit, tokens);
+            nodes.appendParameters {
+                result = bodyWithParams;
+                anonFunction = core;
+                unit = unit;
+                tokens = tokens;
+            };
             if (exists block = core.block) {
-                bodyWithParams.append(" ").append(nodes.text(block, tokens));
+                bodyWithParams
+                        .append(" ")
+                        .append(nodes.text(tokens, block));
             }
             else if (exists expr = core.expression) {
-                bodyWithParams.append(" => ").append(nodes.text(expr, tokens)).append(";");
+                bodyWithParams
+                        .append(" => ")
+                        .append(nodes.text(tokens, expr))
+                        .append(";");
             }
             else {
                 bodyWithParams.append(" => ");
             }
             body = bodyWithParams.string;
         }
-        //TODO: add a special case for object expressions
+        case (is Tree.ObjectExpression) {
+            keyword = "object";
+            body = nodes.text(tokens, core)[6...];
+        }
         else {
             if (!type exists) {
                 type = unit.denotableType(core.typeModel);
             }
-            modifiers = "value";
+            keyword = "value";
             value specifier = getter then " => " else " = ";
-            body = specifier + nodes.text(core, tokens) + ";";
+            body = specifier + nodes.text(tokens, core) + ";";
         }
-
+        
         value imports = HashSet<Declaration>();
         
         String typeDec;
-        if (exists type = this.type, !type.unknown) {
+        if (is Tree.ObjectExpression core) {
+            typeDec = keyword;
+        }
+        else if (exists type = this.type, !type.unknown) {
             if (explicitType || toplevel) {
                 typeDec = type.asSourceCodeString(unit);
-                importProposals.importType(imports, type, rootNode);
+                importProposals.importType {
+                    declarations = imports;
+                    type = type;
+                    rootNode = rootNode;
+                };
             }
             else {
                 canBeInferred = true;
-                typeDec = modifiers;
+                typeDec = keyword;
             }
         }
         else {
             typeDec = "dynamic";
         }
         
+        value isReplacingStatement 
+                = if (is Tree.ExpressionStatement statement) 
+                then let (ex = statement.expression)
+                    ex.startIndex == term.startIndex &&
+                    ex.distance == term.distance
+                else false;
         value definition = 
-                typeDec + " " + newName + 
-                body + 
-                newLineOrReturn;
+                typeDec + " " + newName + body + 
+                (isReplacingStatement then "" 
+                                    else newLineOrReturn);
         
         value shift 
                 = importProposals.applyImports {
             change = tfc;
             declarations = imports;
-            cu = rootNode;
+            rootNode = rootNode;
             doc = doc;
         };
         
         value nstart = term.startIndex.intValue();
         value nlength = term.distance.intValue();
-        addEditToChange(tfc, newInsertEdit(start, definition));
-        addEditToChange(tfc, newReplaceEdit(nstart, nlength, newName));
-        typeRegion = newRegion(start + adjustment + shift, typeDec.size);
-        decRegion = newRegion(start + adjustment + shift + typeDec.size + 1, newName.size);
-        refRegion = newRegion(nstart + adjustment + shift + definition.size, newName.size);
+
+        if (isReplacingStatement) {
+            tfc.addEdit( 
+                ReplaceEdit {
+                    start = statement.startIndex.intValue();
+                    length = statement.distance.intValue();
+                    text = definition;
+                });
+            typeRegion = newRegion {
+                start = start + adjustment + shift;
+                length = typeDec.size;
+            };
+            decRegion = newRegion {
+                start = start + adjustment + shift + typeDec.size + 1;
+                length = newName.size;
+            };
+        } else {
+            tfc.addEdit( 
+                InsertEdit {
+                    start = start;
+                    text = definition;
+                });
+            tfc.addEdit( 
+                ReplaceEdit {
+                    start = nstart;
+                    length = nlength;
+                    text = newName;
+                });
+            typeRegion = newRegion {
+                start = start + adjustment + shift;
+                length = typeDec.size;
+            };
+            decRegion = newRegion {
+                start = start + adjustment + shift + typeDec.size + 1;
+                length = newName.size;
+            };
+            refRegion = newRegion {
+                start = nstart + adjustment + shift + definition.size;
+                length = newName.size;
+            };
+        }
         
         object extends Visitor() {
             variable value backshift = nlength - newName.size;
+            value statementScope = statement.scope;
+            value targetScope = 
+                    statement is Tree.AttributeDeclaration 
+                    then statementScope.container 
+                    else statementScope;
             shared actual void visit(Tree.Term t) {
                 if (exists start = t.startIndex?.intValue(),
                     exists length = t.distance?.intValue(),
-                    ModelUtil.contains(statement.scope, t.scope) 
+                    ModelUtil.contains(targetScope, t.scope) 
                     && start > nstart + nlength
                     && t!=term
                     && !different(term, t)) {
-                    addEditToChange(tfc, 
-                        newReplaceEdit {
+                    tfc.addEdit( 
+                        ReplaceEdit {
                             start = start;
                             length = length;
                             text = newName;

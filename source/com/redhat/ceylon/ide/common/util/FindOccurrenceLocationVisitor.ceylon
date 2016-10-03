@@ -3,8 +3,14 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import com.redhat.ceylon.ide.common.util {
+    OccurrenceLocation {
+        ...
+    }
+}
 
-class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor() {
+class FindOccurrenceLocationVisitor(Integer offset, Node node) 
+        extends Visitor() {
     
     shared variable OccurrenceLocation? occurrence = null;
     variable Boolean inTypeConstraint = false;
@@ -21,7 +27,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.Condition that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         super.visit(that);
     }
@@ -29,20 +35,63 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.ExistsCondition that) {
         super.visit(that);
-        Tree.Statement var = that.variable;
-        value isInBounds = if (is Tree.Variable var) then inBounds(var.identifier) else inBounds(that);
-        if (isInBounds) {
-            occurrence = OccurrenceLocation.\iEXISTS;
+        if (exists var = that.variable) {
+            value isInBounds 
+                    = if (is Tree.Variable var) 
+                    then inBounds(var.identifier) 
+                    else inBounds(that);
+            if (isInBounds) {
+                occurrence = \iEXISTS;
+            }
         }
+    }
+    
+    actual
+    shared void visit(Tree.ConditionList that) {
+        if (inBounds(that)) {
+            value conditions = that.conditions;
+            if (!conditions.empty) {
+                value size = conditions.size();
+                for (i in 1..size) {
+                    value current = conditions.get(i-1);
+                    value next = i<size then conditions.get(i);
+                    if (current.endToken == current.token,
+                        current.endIndex.intValue()<offset,
+                        if (exists next) 
+                        then next.startIndex.intValue()>offset 
+                        else true) {
+                        switch (current)
+                        case (is Tree.ExistsCondition) {
+                            occurrence = \iEXISTS;
+                        }
+                        case (is Tree.NonemptyCondition) {
+                            occurrence = \iNONEMPTY;
+                        }
+                        case (is Tree.IsCondition) {
+                            occurrence = \iIS;
+                        }
+                        else {
+                            continue;
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        super.visit(that);
     }
     
     actual
     shared void visit(Tree.NonemptyCondition that) {
         super.visit(that);
-        Tree.Statement var = that.variable;
-        value isInBounds = if (is Tree.Variable var) then inBounds(var.identifier) else inBounds(that);
-        if (isInBounds) {
-            occurrence = OccurrenceLocation.\iNONEMPTY;
+        if (exists var = that.variable) {
+            value isInBounds 
+                    = if (is Tree.Variable var) 
+                    then inBounds(var.identifier) 
+                    else inBounds(that);
+            if (isInBounds) {
+                occurrence = \iNONEMPTY;
+            }
         }
     }
     
@@ -54,13 +103,14 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
             isInBounds = inBounds(var.identifier);
         }
         else if (exists type = that.type) {
-            isInBounds = inBounds(that) && offset>type.endIndex.intValue();
+            isInBounds = inBounds(that) 
+                    && offset>type.endIndex.intValue();
         }
         else {
             isInBounds = false;
         }
         if (isInBounds) {
-            occurrence = OccurrenceLocation.\iIS;
+            occurrence = \iIS;
         }
     }
     
@@ -72,21 +122,21 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     
     actual shared void visit(Tree.ImportMemberOrTypeList that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iIMPORT;
+            occurrence = \iIMPORT;
         }
         super.visit(that);
     }
     
     actual shared void visit(Tree.ExtendedType that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iEXTENDS;
+            occurrence = \iEXTENDS;
         }
         super.visit(that);
     }
     
     actual shared void visit(Tree.DelegatedConstructor that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iEXTENDS;
+            occurrence = \iEXTENDS;
         }
         super.visit(that);
     }
@@ -94,15 +144,15 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual shared void visit(Tree.SatisfiedTypes that) {
         if (inBounds(that)) {
             occurrence = if (inTypeConstraint) 
-                then OccurrenceLocation.\iUPPER_BOUND 
-                else OccurrenceLocation.\iSATISFIES;
+                then \iUPPER_BOUND 
+                else \iSATISFIES;
         }
         super.visit(that);
     }
     
     actual shared void visit(Tree.CaseTypes that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iOF;
+            occurrence = \iOF;
         }
         super.visit(that);
     }
@@ -110,18 +160,18 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual shared void visit(Tree.CatchClause that) {
         if (inBounds(that) && 
             !inBounds(that.block)) {
-            occurrence = OccurrenceLocation.\iCATCH;
+            occurrence = \iCATCH;
         }
         else {
             super.visit(that);
         }
     }
     
-    actual shared void visit(Tree.CaseClause that) {
-        if (inBounds(that) && 
-            !inBounds(that.block) &&
-                !inBounds(that.expression)) {
-            occurrence = OccurrenceLocation.\iCASE;
+    actual shared void visit(Tree.CaseItem that) {
+        if (inBounds(that),
+            !that.mainEndToken exists ||
+            offset<that.endIndex.intValue()) {
+            occurrence = \iCASE;
         }
         super.visit(that);
     }
@@ -132,7 +182,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
         Tree.Term left = that.leftTerm else that;
         
         if (inBounds(left, right)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         super.visit(that);
     }
@@ -142,7 +192,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
         Tree.Term term = that.term else that;
 
         if (inBounds(that, term) || inBounds(term, that)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         super.visit(that);
     }
@@ -150,7 +200,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.ParameterList that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iPARAMETER_LIST;
+            occurrence = \iPARAMETER_LIST;
         }
         super.visit(that);
     }
@@ -158,7 +208,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.TypeParameterList that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iTYPE_PARAMETER_LIST;
+            occurrence = \iTYPE_PARAMETER_LIST;
         }
         super.visit(that);
     }
@@ -166,7 +216,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.TypeSpecifier that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iTYPE_ALIAS;
+            occurrence = \iTYPE_ALIAS;
         }
         super.visit(that);
     }
@@ -174,7 +224,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.ClassSpecifier that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iCLASS_ALIAS;
+            occurrence = \iCLASS_ALIAS;
         }
         super.visit(that);
     }
@@ -182,7 +232,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.SpecifierOrInitializerExpression that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         super.visit(that);
     }
@@ -190,7 +240,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.ArgumentList that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         super.visit(that);
     }
@@ -198,7 +248,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.TypeArgumentList that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iTYPE_ARGUMENT_LIST;
+            occurrence = \iTYPE_ARGUMENT_LIST;
         }
         super.visit(that);
     }
@@ -206,7 +256,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.QualifiedMemberOrTypeExpression that) {
         if (inBounds(that.memberOperator, that.identifier)) {
-            occurrence = OccurrenceLocation.\iEXPRESSION;
+            occurrence = \iEXPRESSION;
         }
         else {
             super.visit(that);
@@ -216,7 +266,7 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual
     shared void visit(Tree.Declaration that) {
         if (inBounds(that)) {
-            if (exists o = occurrence, o != OccurrenceLocation.\iPARAMETER_LIST) {
+            if (exists o = occurrence, o != \iPARAMETER_LIST) {
                 occurrence=null;
             }
         }
@@ -226,30 +276,30 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node) extends Visitor()
     actual shared void visit(Tree.MetaLiteral that) {
         super.visit(that);
         if (inBounds(that)) {
-            if (exists o = occurrence, o != OccurrenceLocation.\iTYPE_ARGUMENT_LIST) {
+            if (exists o = occurrence, o != \iTYPE_ARGUMENT_LIST) {
                 occurrence = switch (that.nodeType)
-                    case ("ModuleLiteral") OccurrenceLocation.\iMODULE_REF 
-                    case ("PackageLiteral") OccurrenceLocation.\iPACKAGE_REF 
-                    case ("ValueLiteral") OccurrenceLocation.\iVALUE_REF 
-                    case ("FunctionLiteral") OccurrenceLocation.\iFUNCTION_REF 
-                    case ("InterfaceLiteral") OccurrenceLocation.\iINTERFACE_REF 
-                    case ("ClassLiteral") OccurrenceLocation.\iCLASS_REF 
-                    case ("TypeParameterLiteral") OccurrenceLocation.\iTYPE_PARAMETER_REF 
-                    case ("AliasLiteral") OccurrenceLocation.\iALIAS_REF
-                    else OccurrenceLocation.\iMETA;
+                    case ("ModuleLiteral") \iMODULE_REF 
+                    case ("PackageLiteral") \iPACKAGE_REF 
+                    case ("ValueLiteral") \iVALUE_REF 
+                    case ("FunctionLiteral") \iFUNCTION_REF 
+                    case ("InterfaceLiteral") \iINTERFACE_REF 
+                    case ("ClassLiteral") \iCLASS_REF 
+                    case ("TypeParameterLiteral") \iTYPE_PARAMETER_REF 
+                    case ("AliasLiteral") \iALIAS_REF
+                    else \iMETA;
             }
         }
     }
     
     actual shared void visit(Tree.StringLiteral that) {
         if (inBounds(that)) {
-            occurrence = OccurrenceLocation.\iDOCLINK;
+            occurrence = \iDOCLINK;
         }
     }
     
     actual shared void visit(Tree.DocLink that) {
         if (is Tree.DocLink node) {
-            occurrence = OccurrenceLocation.\iDOCLINK;
+            occurrence = \iDOCLINK;
         }
     }
     

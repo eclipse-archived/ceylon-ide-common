@@ -1,3 +1,15 @@
+import ceylon.interop.java {
+    javaStringArray,
+    javaObjectArray,
+    toStringArray,
+    javaClass,
+    CeylonIterable,
+    createJavaObjectArray
+}
+
+import com.redhat.ceylon.common {
+    Constants
+}
 import com.redhat.ceylon.common.config {
     CeylonConfig,
     Repositories {
@@ -6,33 +18,23 @@ import com.redhat.ceylon.common.config {
     CeylonConfigFinder,
     DefaultToolOptions,
     ConfigWriter
- }
+}
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    Warning
+}
+
 import java.io {
     File,
     IOException
 }
-
-import ceylon.interop.java {
-    javaStringArray,
-    javaObjectArray,
-    toStringArray,
-    javaClass,
-    CeylonIterable
-}
 import java.lang {
     ObjectArray,
-    JBoolean = Boolean,
-    JString = String,
+    JBoolean=Boolean,
+    JString=String,
     IllegalArgumentException
-}
-import com.redhat.ceylon.common {
-    Constants
 }
 import java.util {
     EnumSet
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    Warning
 }
 
 /*
@@ -45,10 +47,10 @@ shared class EclipseCeylonProjectConfig(IProject ideArtifact)
 
 
 shared {String*} resourceDirectoriesFromCeylonConfig(CeylonConfig config)
-        => getConfigValuesAsList(config, DefaultToolOptions.\iCOMPILER_RESOURCE, Constants.\iDEFAULT_RESOURCE_DIR);
+        => getConfigValuesAsList(config, DefaultToolOptions.compilerResource, Constants.defaultResourceDir);
 
 shared {String*} sourceDirectoriesFromCeylonConfig(CeylonConfig config)
-        => getConfigValuesAsList(config, DefaultToolOptions.\iCOMPILER_SOURCE, Constants.\iDEFAULT_SOURCE_DIR);
+        => getConfigValuesAsList(config, DefaultToolOptions.compilerSource, Constants.defaultSourceDir);
 
 shared String removeCurrentDirPrefix(String url)
         => if (url.startsWith("./") || url.startsWith(".\\")) then url.spanFrom(2) else url;
@@ -84,11 +86,13 @@ shared class CeylonProjectConfig(project) {
     variable Boolean isOfflineChanged = false;
     variable Boolean isEncodingChanged = false;
     variable Boolean isOverridesChanged = false;
+    variable Boolean isJdkProviderChanged = false;
     variable Boolean isFlatClasspathChanged = false;
     variable Boolean isAutoExportMavenDependenciesChanged = false;
     variable Boolean? transientOffline = null;
     variable String? transientEncoding = null;
     variable String? transientOverrides = null;
+    variable String? transientJdkProvider = null;
     variable Boolean? transientFlatClasspath = null;
     variable Boolean? transientAutoExportMavenDependencies = null;
 
@@ -98,8 +102,9 @@ shared class CeylonProjectConfig(project) {
     variable {String*}? transientSuppressWarnings = null;
     variable Boolean isSuppressWarningsChanged = false;
     
-
-    File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
+    shared String projectRelativePath = ".ceylon/config";
+    
+    shared File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
 
     void initMergedConfig() {
         mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);
@@ -142,27 +147,27 @@ shared class CeylonProjectConfig(project) {
 
     shared {String*} otherRemoteRepos => toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
 
-    shared {String*} projectLocalRepos=> toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.\iREPO_TYPE_LOCAL_LOOKUP));
+    shared {String*} projectLocalRepos=> toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
     assign projectLocalRepos {
         transientProjectLocalRepos = projectLocalRepos;
     }
 
-    shared {String*} projectRemoteRepos => toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.\iREPO_TYPE_REMOTE_LOOKUP));
+    shared {String*} projectRemoteRepos => toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
     assign projectRemoteRepos {
         transientProjectRemoteRepos = projectRemoteRepos;
     }
 
-    shared String? encoding => mergedConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
+    shared String? encoding => mergedConfig.getOption(DefaultToolOptions.defaultsEncoding);
 
-    shared String? projectEncoding => projectConfig.getOption(DefaultToolOptions.\iDEFAULTS_ENCODING);
+    shared String? projectEncoding => projectConfig.getOption(DefaultToolOptions.defaultsEncoding);
     assign projectEncoding {
         isEncodingChanged = true;
         transientEncoding = projectEncoding;
     }
 
-    shared Boolean offline => mergedConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, false);
+    shared Boolean offline => mergedConfig.getBoolOption(DefaultToolOptions.defaultsOffline, false);
 
-    shared Boolean? projectOffline => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE)) option?.booleanValue();
+    shared Boolean? projectOffline => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsOffline)) option?.booleanValue();
     assign projectOffline {
         this.isOfflineChanged = true;
         this.transientOffline = projectOffline;
@@ -176,9 +181,16 @@ shared class CeylonProjectConfig(project) {
         this.transientOverrides = projectOverrides;
     }
 
+    shared String? jdkProvider => DefaultToolOptions.getCompilerJdkProvider(mergedConfig);
+    shared String? projectJdkProvider => DefaultToolOptions.getCompilerJdkProvider(projectConfig);
+    assign projectJdkProvider {
+        this.isJdkProviderChanged = true;
+        this.transientJdkProvider = projectJdkProvider;
+    }
+
     shared Boolean flatClasspath => DefaultToolOptions.getDefaultFlatClasspath(mergedConfig);
 
-    shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH)) option?.booleanValue();
+    shared Boolean? projectFlatClasspath => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsFlatClasspath)) option?.booleanValue();
     assign projectFlatClasspath {
         this.isFlatClasspathChanged = true;
         this.transientFlatClasspath = projectFlatClasspath;
@@ -186,7 +198,7 @@ shared class CeylonProjectConfig(project) {
 
     shared Boolean autoExportMavenDependencies => DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
 
-    shared Boolean? projectAutoExportMavenDependencies => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES)) option?.booleanValue();
+    shared Boolean? projectAutoExportMavenDependencies => let (JBoolean? option = projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)) option?.booleanValue();
     assign projectAutoExportMavenDependencies {
         this.isAutoExportMavenDependenciesChanged = true;
         this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
@@ -208,11 +220,11 @@ shared class CeylonProjectConfig(project) {
     }
 
     shared EnumSet<Warning> suppressWarningsEnum
-        => let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, null))
+        => let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
                 buildSuppressWarningsEnum(suppressWarnings);
 
     shared {String*}? projectSuppressWarnings
-        => getConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, null);
+        => getConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, null);
 
      assign projectSuppressWarnings {
         transientSuppressWarnings = projectSuppressWarnings;
@@ -271,12 +283,14 @@ shared class CeylonProjectConfig(project) {
         isOfflineChanged = false;
         isEncodingChanged = false;
         isOverridesChanged = false;
+        isJdkProviderChanged = false;
         isFlatClasspathChanged = false;
         isAutoExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
         transientEncoding = null;
         transientOffline = null;
         transientOverrides = null;
+        transientJdkProvider = null;
         transientFlatClasspath = null;
         transientAutoExportMavenDependencies = null;
         transientOutputRepo = null;
@@ -322,6 +336,7 @@ shared class CeylonProjectConfig(project) {
                 || isOfflineChanged
                 || isEncodingChanged
                 || isOverridesChanged
+                || isJdkProviderChanged
                 || isFlatClasspathChanged
                 || isAutoExportMavenDependenciesChanged
                 || isSuppressWarningsChanged;
@@ -331,57 +346,60 @@ shared class CeylonProjectConfig(project) {
             try {
                 if (exists changedOutputRepo) {
                     value newOutputRepo = Repositories.SimpleRepository("", transientOutputRepo, null);
-                    projectRepositories.setRepositoriesByType(Repositories.\iREPO_TYPE_OUTPUT, javaObjectArray(Array<Repository?> { newOutputRepo }));
+                    projectRepositories.setRepositoriesByType(Repositories.repoTypeOutput, javaObjectArray(Array<Repository?> { newOutputRepo }));
                 }
                 if (exists changedProjectLocalRepos) {
                     value newLocalRepos = toRepositoriesArray(transientProjectLocalRepos);
-                    projectRepositories.setRepositoriesByType(Repositories.\iREPO_TYPE_LOCAL_LOOKUP, newLocalRepos);
+                    projectRepositories.setRepositoriesByType(Repositories.repoTypeLocalLookup, newLocalRepos);
                 }
                 if (exists changedProjectRemoteRepos) {
                     value newRemoteRepos = toRepositoriesArray(transientProjectRemoteRepos);
-                    projectRepositories.setRepositoriesByType(Repositories.\iREPO_TYPE_REMOTE_LOOKUP, newRemoteRepos);
+                    projectRepositories.setRepositoriesByType(Repositories.repoTypeRemoteLookup, newRemoteRepos);
                 }
                 if (isOfflineChanged) {
                     if (exists nonNullOffline = transientOffline) {
-                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, nonNullOffline);
+                        projectConfig.setBoolOption(DefaultToolOptions.defaultsOffline, nonNullOffline);
                     } else {
-                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OFFLINE, null);
+                        projectConfig.setOption(DefaultToolOptions.defaultsOffline, null);
                     }
 
                 }
                 if (isOverridesChanged) {
-                    projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_OVERRIDES, transientOverrides);
+                    projectConfig.setOption(DefaultToolOptions.defaultsOverrides, transientOverrides);
+                }
+                if (isJdkProviderChanged) {
+                    projectConfig.setOption(DefaultToolOptions.compilerJdkprovider, transientJdkProvider);
                 }
                 if (isFlatClasspathChanged) {
                     if (exists nonNullFlatClasspath = transientFlatClasspath) {
-                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH, nonNullFlatClasspath);
+                        projectConfig.setBoolOption(DefaultToolOptions.defaultsFlatClasspath, nonNullFlatClasspath);
                     } else {
-                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_FLAT_CLASSPATH, null);
+                        projectConfig.setOption(DefaultToolOptions.defaultsFlatClasspath, null);
                     }
                 }
                 if (isAutoExportMavenDependenciesChanged) {
                     if (exists nonNullAutoExportMavenDependencies = transientAutoExportMavenDependencies) {
-                        projectConfig.setBoolOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES, nonNullAutoExportMavenDependencies);
+                        projectConfig.setBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies, nonNullAutoExportMavenDependencies);
                     } else {
-                        projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_AUTO_EPORT_MAVEN_DEPENDENCIES, null);
+                        projectConfig.setOption(DefaultToolOptions.defaultsAutoEportMavenDependencies, null);
                     }
                 }
                 if (isEncodingChanged) {
-                    projectConfig.setOption(DefaultToolOptions.\iDEFAULTS_ENCODING, transientEncoding);
+                    projectConfig.setOption(DefaultToolOptions.defaultsEncoding, transientEncoding);
                 }
                 if (exists changedSourceDirs) {
-                    setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SOURCE, changedSourceDirs);
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSource, changedSourceDirs);
                 }
                 if (exists changedResourceDirs) {
-                    setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_RESOURCE, changedResourceDirs);
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.compilerResource, changedResourceDirs);
                 }
                 if (isSuppressWarningsChanged) {
-                    setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_SUPPRESSWARNING, transientSuppressWarnings);
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, transientSuppressWarnings);
                 }
 
-                ConfigWriter.write(projectConfig, projectConfigFile);
+                ConfigWriter.instance().write(projectConfig, projectConfigFile);
                 refresh();
-                project.refreshConfigFile();
+                project.refreshConfigFile(projectRelativePath);
             } catch (IOException e) {
                 throw Exception("", e);
             }
@@ -391,13 +409,14 @@ shared class CeylonProjectConfig(project) {
 
     {String*} toRepositoriesUrlList(ObjectArray<Repository>? repositories)
         => if (exists repositories)
-                then { for (repository in repositories.iterable.coalesced) repository.url }
-                else empty;
+        then { for (repository in repositories.iterable.coalesced) repository.url }
+        else [];
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
         => if (exists repositoriesUrl)
-            then javaObjectArray(Array<Repository?> {
-                for (url in repositoriesUrl) Repositories.SimpleRepository("", url, null)
-            })
-            else ObjectArray<Repository>(0);
+        then createJavaObjectArray {
+            for (url in repositoriesUrl)
+            Repositories.SimpleRepository("", url, null)
+        }
+        else ObjectArray<Repository>(0);
 }

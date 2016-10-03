@@ -1,9 +1,6 @@
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    ModuleSourceMapper
-}
 import com.redhat.ceylon.compiler.typechecker.context {
     TypecheckerUnit
 }
@@ -12,8 +9,11 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 }
 import com.redhat.ceylon.ide.common.model {
     ModelAliases,
-    EditedSourceFile,
-    isCentralModelDeclaration
+    isCentralModelDeclaration,
+    BaseIdeModuleSourceMapper
+}
+import com.redhat.ceylon.ide.common.platform {
+    ModelServicesConsumer
 }
 import com.redhat.ceylon.ide.common.vfs {
     FolderVirtualFile,
@@ -37,37 +37,23 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
-import com.redhat.ceylon.ide.common.util {
-    unsafeCast
-}
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
 
 
+shared alias AnyEditedPhasedUnit => EditedPhasedUnit<in Nothing, in Nothing, in Nothing, in Nothing>;
 
-shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>
-        satisfies TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        given NativeProject satisfies Object
-        given NativeResource satisfies Object
-        given NativeFolder satisfies NativeResource
-        given NativeFile satisfies NativeResource {
-    
-    WeakReference<ProjectPhasedUnitAlias> savedPhasedUnitRef;
-    
-    shared new (
+shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
             FileVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> unitFile, 
             FolderVirtualFile<NativeProject,NativeResource, NativeFolder, NativeFile> srcDir, 
             Tree.CompilationUnit cu, 
             Package p, 
             ModuleManager moduleManager, 
-            ModuleSourceMapper moduleSourceMapper, 
+            BaseIdeModuleSourceMapper moduleSourceMapper, 
             TypeChecker typeChecker, 
             JList<CommonToken> tokens,
-            ProjectPhasedUnitAlias? savedPhasedUnit)
-                extends ModifiablePhasedUnit<NativeProject,NativeResource,NativeFolder,NativeFile>(
+            ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>? savedPhasedUnit,
+            NativeProject? project,
+            NativeFile file)
+        extends ModifiablePhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>(
             unitFile,
             srcDir,
             cu,
@@ -75,36 +61,38 @@ shared class EditedPhasedUnit<NativeProject, NativeResource, NativeFolder, Nativ
             moduleManager,
             moduleSourceMapper,
             typeChecker,
-            tokens) {
-        
-        savedPhasedUnitRef = WeakReference<ProjectPhasedUnitAlias>(savedPhasedUnit);
+            tokens)
+        satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+        given NativeProject satisfies Object
+        given NativeResource satisfies Object
+        given NativeFolder satisfies NativeResource
+        given NativeFile satisfies NativeResource {
+    
+    value savedPhasedUnitRef = WeakReference(savedPhasedUnit);
 
         // TODO : do this when instanciating the function
         //if (exists savedPhasedUnit) {
         //    savedPhasedUnit.addWorkingCopy(this);
         //}
-    }
+    shared actual TypecheckerUnit createUnit() 
+            => object satisfies ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>{
+            }.modelServices.newEditedSourceFile(this);
     
-    shared actual TypecheckerUnit newUnit() => 
-            platformServices.model<NativeProject, NativeResource, NativeFolder, NativeFile>().newEditedSourceFile(this);
-    
-    shared actual EditedSourceFileAlias? unit =>
-            unsafeCast<EditedSourceFileAlias?>(super.unit);
+    /*shared actual EditedSourceFileAlias? unit =>
+            unsafeCast<EditedSourceFileAlias?>(super.unit);*/
 
-    shared ProjectPhasedUnitAlias? originalPhasedUnit =>
-            savedPhasedUnitRef.get();
+    shared ProjectPhasedUnitAlias? originalPhasedUnit 
+            => savedPhasedUnitRef.get();
     
-    shared actual NativeFile? resourceFile =>
-            originalPhasedUnit?.resourceFile;
+    shared actual NativeProject? resourceProject => project;
+    shared actual NativeFile resourceFile => file;
     
-    shared actual NativeFolder? resourceRootFolder =>
-            originalPhasedUnit?.resourceRootFolder;
-
-    shared actual NativeProject? resourceProject =>
-            originalPhasedUnit?.resourceProject;
+    resourceRootFolder => originalPhasedUnit?.resourceRootFolder;
     
-    shared actual Boolean isAllowedToChangeModel(Declaration declaration) =>
-            !isCentralModelDeclaration(declaration);
+    isAllowedToChangeModel(Declaration declaration) 
+            => !isCentralModelDeclaration(declaration);
 }
 
 

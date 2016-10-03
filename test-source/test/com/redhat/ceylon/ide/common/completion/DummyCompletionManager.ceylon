@@ -13,20 +13,23 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node
 }
 import com.redhat.ceylon.ide.common.completion {
-    IdeCompletionManager
+    CompletionContext,
+    ProposalsHolder,
+    ProposalKind
 }
 import com.redhat.ceylon.ide.common.model {
     BaseCeylonProject
 }
+import com.redhat.ceylon.ide.common.platform {
+    CommonDocument,
+    DefaultDocument,
+    CompletionServices,
+    TextChange
+}
 import com.redhat.ceylon.ide.common.settings {
     CompletionOptions
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    LocalAnalysisResult
-}
 import com.redhat.ceylon.ide.common.util {
-    BaseProgressMonitor,
-    Indents,
     BaseProgressMonitorChild
 }
 import com.redhat.ceylon.model.typechecker.model {
@@ -48,6 +51,15 @@ import java.util.regex {
 import org.antlr.runtime {
     CommonToken
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
+import java.util.concurrent {
+    Future
+}
 
 class Result(shared String kind, shared String insertedText, shared String description = insertedText) {
     shared actual String string => "``kind``[``insertedText``"
@@ -65,24 +77,37 @@ class Result(shared String kind, shared String insertedText, shared String descr
     }
 }
 
-class CompletionData(String code, PhasedUnit pu) satisfies LocalAnalysisResult<String> {
+class CompletionData(String code, PhasedUnit pu) satisfies CompletionContext {
     suppressWarnings("expressionTypeNothing")
     shared actual BaseCeylonProject? ceylonProject => nothing;
-    
-    shared actual String document => code;
     
     shared actual PhasedUnit lastPhasedUnit => pu;
     
     shared actual Tree.CompilationUnit lastCompilationUnit => pu.compilationUnit;
     shared actual Tree.CompilationUnit parsedRootNode => lastCompilationUnit;
-    shared actual Tree.CompilationUnit? typecheckedRootNode => lastCompilationUnit;
+    shared actual PhasedUnit? typecheckedPhasedUnit => pu;
     
-    shared actual JList<CommonToken>? tokens => pu.tokens;
+    shared actual JList<CommonToken> tokens => pu.tokens;
     
     suppressWarnings("expressionTypeNothing")
     shared actual TypeChecker typeChecker => nothing;
     
     shared actual CompletionOptions options = CompletionOptions();
+    
+    shared actual CommonDocument commonDocument => DefaultDocument(code);
+    
+    shared actual MyProposalsHolder proposals = MyProposalsHolder();
+    
+    shared actual List<Pattern> proposalFilters => empty;
+    
+    suppressWarnings("expressionTypeNothing")
+    shared actual Future<out PhasedUnit> phasedUnitWhenTypechecked => nothing;
+    
+    
+}
+
+class MyProposalsHolder() satisfies ProposalsHolder {
+    size => 0;
 }
 
 object dummyMonitor satisfies BaseProgressMonitorChild {
@@ -100,91 +125,75 @@ object dummyMonitor satisfies BaseProgressMonitorChild {
     
 }
 
-object dummyCompletionManager extends IdeCompletionManager<CompletionData,Result,String>() {
-
-    shared actual String getDocumentSubstring(String doc, Integer start, Integer length)
-            => doc.span(start, start + length - 1);
+class MyCompletionService() satisfies CompletionServices {
     
-    shared actual Indents<String> indents = object satisfies Indents<String> {
-        shared actual String getDefaultLineDelimiter(String? document) => "\n";
-        shared actual String getLine(Node node, String doc) => "";
-        shared actual Integer indentSpaces => 0;
-        shared actual Boolean indentWithSpaces => true;
-    };
-    
-    shared actual Result newAnonFunctionProposal(Integer offset, Type? requiredType, Unit unit, 
-        String text, String header, Boolean isVoid, Integer start, Integer len)
-            => Result("newAnonFunctionProposal", text);
-    
-    shared actual Result newBasicCompletionProposal(Integer offset, String prefix, String text,
-        String escapedText, Declaration decl, CompletionData cmp)
-            => Result("newBasicCompletionProposal", escapedText, text);
-    
-    shared actual Result newControlStructureCompletionProposal(Integer offset, String prefix,
-        String desc, String text, Declaration dec, CompletionData cpc, Node? node)
+    shared actual void newControlStructureCompletionProposal(Integer offset, String prefix,
+        String desc, String text, Declaration dec, CompletionContext ctx, Node? node)
             => Result("newControlStructureCompletionProposal", desc, text);
-
-    shared actual Result newCurrentPackageProposal(Integer offset, String prefix, String packageName, CompletionData cmp)
-            => Result("newCurrentPackageProposal", packageName);
     
-    shared actual Result newFunctionCompletionProposal(Integer offset, String prefix, String desc, String text,
-        Declaration dec, Unit unit, CompletionData cmp)
+    shared actual void newFunctionCompletionProposal(Integer offset, String prefix, String desc, String text,
+        Declaration dec, Unit unit, CompletionContext ctx)
             => Result("newFunctionCompletionProposal", text, desc);
     
-    shared actual Result newImportedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
-        Boolean withBody, String fullPackageName, CompletionData controller, Package candidate)
+    shared actual void newImportedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
+        Boolean withBody, String fullPackageName, CompletionContext ctx, Package candidate)
             => Result("newImportedModulePackageProposal", memberPackageSubname, fullPackageName);
     
-    shared actual Result newJDKModuleProposal(Integer offset, String prefix, Integer len, String versioned, String name) 
+    shared actual void newJDKModuleProposal(CompletionContext ctx, Integer offset, String prefix, Integer len, String versioned, String name) 
             => Result("newJDKModuleProposal", versioned);
     
-    shared actual Result newKeywordCompletionProposal(Integer offset, String prefix, String keyword, String text) 
-            => Result("newKeywordCompletionProposal", keyword, text);
-    
-    shared actual Result newMemberNameCompletionProposal(Integer offset, String prefix, String name, String unquotedName)
-            => Result("newMemberNameCompletionProposal", unquotedName, name);
-    
-    shared actual Result newModuleDescriptorProposal(Integer offset, String prefix, String desc, String text,
+    shared actual void newModuleDescriptorProposal(CompletionContext ctx, Integer offset, String prefix, String desc, String text,
         Integer selectionStart, Integer selectionEnd)
             => Result("newModuleDescriptorProposal", text, desc);
     
-    shared actual Result newModuleProposal(Integer offset, String prefix, Integer len, String versioned,
+    shared actual void newModuleProposal(Integer offset, String prefix, Integer len, String versioned,
         ModuleSearchResult.ModuleDetails mod, Boolean withBody, ModuleVersionDetails version, String name,
-        Node node, CompletionData data)
+        Node node, CompletionContext ctx)
             => Result("newModuleProposal", versioned, name);
     
-    shared actual Result newInvocationCompletion(Integer offset, String prefix,
-        String desc, String text, Declaration dec, Reference? pr, Scope scope, CompletionData data,
+    shared actual void newInvocationCompletion(CompletionContext ctx, Integer offset, String prefix,
+        String desc, String text, Declaration dec, Reference()? pr, Scope scope,
         Boolean includeDefaulted, Boolean positionalInvocation, Boolean namedInvocation, 
         Boolean inheritance, Boolean qualified, Declaration? qualifyingDec)
-            => Result("newNamedInvocationCompletion", text, desc);
+    //        => let (name = if (namedInvocation) then "newNamedInvocationCompletion"
+    //        else if (positionalInvocation) then "newPositionalInvocationCompletion"
+    //    else "newReferenceCompletion"
+    //)
+    //Result(name, text, desc); 
+    {}
     
-    shared actual Result newPackageDescriptorProposal(Integer offset, String prefix, String desc, String text)
+    shared actual void newPackageDescriptorProposal(CompletionContext ctx, Integer offset, String prefix, String desc, String text)
             => Result("newPackageDescriptorProposal", text, desc);
     
-    suppressWarnings("expressionTypeNothing")
-    shared actual Result newParameterInfo(Integer offset, Declaration dec, Reference producedReference, Scope scope,
-        CompletionData cpc, Boolean namedInvocation)
-            => nothing; // not supported
+    //suppressWarnings("expressionTypeNothing")
+    shared actual void newParameterInfo(CompletionContext ctx, Integer offset, Declaration dec, Reference producedReference, Scope scope,
+        Boolean namedInvocation)
+    {}
+      //      => nothing; // not supported
     
-    shared actual Result newParametersCompletionProposal(Integer offset, String prefix, String desc, String text,
-        JList<Type> argTypes, Node node, Unit unit)
+    shared actual void newParametersCompletionProposal(CompletionContext ctx, Integer offset, String prefix, String desc, String text,
+        List<Type> argTypes, Node node, Unit unit)
             => Result("newParametersCompletionProposal", text, desc);
     
-    shared actual Result newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
-        Boolean withBody, String fullPackageName, CompletionData controller, ModuleVersionDetails version, Unit unit,
+    shared actual void newQueriedModulePackageProposal(Integer offset, String prefix, String memberPackageSubname,
+        Boolean withBody, String fullPackageName, CompletionContext ctx, ModuleVersionDetails version, Unit unit,
         ModuleSearchResult.ModuleDetails md)
             => Result("newQueriedModulePackageProposal", memberPackageSubname);
     
-    shared actual Result newRefinementCompletionProposal(Integer offset, String prefix, Reference? pr,
-        String desc, String text, CompletionData cmp, Declaration dec, Scope scope,
+    shared actual void newRefinementCompletionProposal(Integer offset, String prefix, Reference? pr,
+        String desc, String text, CompletionContext ctx, Declaration dec, Scope scope,
         Boolean fullType, Boolean explicitReturnType)
             => Result("newRefinementCompletionProposal", text, desc);
     
-    shared actual List<Pattern> proposalFilters => empty;
-    
-    shared actual Result newTypeProposal(Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
+    shared actual void newTypeProposal(ProposalsHolder data, Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
             => Result("newTypeProposal", text, desc);
     
-        
+    shared actual ProposalsHolder createProposalsHolder() => MyProposalsHolder();
+    
+    shared actual void addNestedProposal(ProposalsHolder proposals, Icons|Declaration icon,
+        String description, DefaultRegion region, String text) {}
+    shared actual void addProposal(CompletionContext ctx, Integer offset, String prefix, Icons|Declaration icon, String description, String text, ProposalKind kind, TextChange? additionalChange, DefaultRegion? selection) {}
+    
+    
+    
 }

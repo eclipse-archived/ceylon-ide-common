@@ -1,3 +1,11 @@
+import ceylon.collection {
+    HashSet,
+    SetMutator
+}
+import ceylon.interop.java {
+    JavaSet
+}
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     TreeUtil {
         formatPath
@@ -9,6 +17,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
         GuardedVariable
     }
 }
+import com.redhat.ceylon.ide.common.util {
+    finder=nodes
+}
 import com.redhat.ceylon.model.typechecker.model {
     Constructor,
     Declaration,
@@ -17,69 +28,84 @@ import com.redhat.ceylon.model.typechecker.model {
     Parameter,
     Referenceable,
     Setter,
-    TypedDeclaration
+    Value
 }
 
 import java.util {
-    HashSet,
-    Set
+    JSet=Set
 }
 
-shared class FindReferencesVisitor(shared variable Referenceable declaration) extends Visitor() {
-    value _nodes = HashSet<Node>();
+shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
+    value nodes = HashSet<Node>();
     
-    shared Set<Node> nodeSet => _nodes;
+    shared Set<Node> referenceNodes => nodes;
+    shared JSet<Node> referenceNodeSet => JavaSet(nodes);
     
-    if (is TypedDeclaration _d = declaration) {
-        variable TypedDeclaration? od = _d;
-        
-        while (exists _od = od, _od != declaration) {
-            declaration = _od;
-            od = _od.originalDeclaration;
+    shared SetMutator<Node> nodesMutator => nodes;
+    
+    function originalDeclaration(Value val) {
+        variable value result = val;
+        while (is Value original = result.originalDeclaration, 
+            original!=result && original!=val) {
+            result = original;
         }
+        return result;
     }
     
-    if (is Declaration dec = declaration) {
-        if (is Setter setter = dec.container) {
-            value member = setter.getDirectMember(setter.name, null, false);
-            if (member.equals(declaration)) {
-                declaration = setter;
+    function initialDeclaration(Referenceable declaration) {
+        switch (declaration)
+        case (is Value) {
+            value original = originalDeclaration(declaration);
+            if (exists param = original.initializerParameter,
+                is Setter setter = param.declaration) {
+                return setter.getter else setter;
+            }
+            else {
+                return original;
             }
         }
+        case (is Setter) {
+            return declaration.getter else declaration;
+        }
+        case (is Constructor) {
+            if (!declaration.name exists,
+                exists extended = declaration.extendedType) {
+                return extended.declaration;
+            }
+            else {
+                return declaration;
+            }
+        }    
+        else {
+            return declaration;
+        }
     }
     
-    if (is Setter setter = declaration) {
-        declaration = setter.getter;
-    }
+    shared variable Referenceable declaration 
+            = initialDeclaration(dec);
     
-    if (is Constructor constructor = declaration,
-        !declaration.nameAsString exists,
-        exists extended = constructor.extendedType) {
-        
-        declaration = extended.declaration;
-    }
-    
-    Boolean isReference(Parameter|Declaration? param) {
+    shared default Boolean isReference(Parameter|Declaration? param) {
         if (is Parameter param) {
             return isReference(param.model);
         } else if (is Declaration ref = param) {
-            return isRefinedDeclarationReference(ref) || isSetterParameterReference(ref);
+            return isRefinedDeclarationReference(ref)
+                || isSetterParameterReference(ref);
         }
-        return false;
-    }
-    
-    Boolean isRefinedDeclarationReference(Declaration ref) {
-        if (is Declaration dec = declaration) {
-            return dec.refines(ref);
-        } else {
+        else {
             return false;
         }
     }
     
-    Boolean isSetterParameterReference(Declaration ref) {
-        if (is Setter setter = ref.container) {
-            value member = setter.getDirectMember(setter.name, null, false);
-            return member.equals(ref) && isReference(setter.getter);
+    shared default Boolean isRefinedDeclarationReference(Declaration ref) 
+            => if (is Declaration dec = declaration) 
+            then dec.refines(ref) else false;
+    
+    shared default Boolean isSetterParameterReference(Declaration ref) {
+        if (is Value ref, 
+            exists param = ref.initializerParameter,
+            is Setter setter = param.declaration) {
+            return isReference(setter)
+                || isReference(setter.getter);
         } else {
             return false;
         }
@@ -105,16 +131,16 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
             
             value vd = var.declarationModel;
             if (exists od = vd.originalDeclaration,
-                od.equals(declaration)) {
+                od==declaration) {
                 
                 value d = declaration;
                 declaration = vd;
-                if (that.block exists) {
-                    that.block.visit(this);
+                if (exists b = that.block) {
+                    b.visit(this);
                 }
                 
-                if (that.expression exists) {
-                    that.expression.visit(this);
+                if (exists e = that.expression) {
+                    e.visit(this);
                 }
                 
                 declaration = d;
@@ -126,109 +152,112 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     }
     
     shared actual void visit(Tree.WhileClause that) {
-        value cl = that.conditionList;
-        value conditions = cl.conditions;
-        variable value i = 0;
-        while (i < conditions.size()) {
-            value c = conditions.get(i);
-            value var = getConditionVariable(c);
-            if (exists var,
-                var.type is Tree.SyntheticVariable) {
-                
-                value vd = var.declarationModel;
-                if (exists od = vd.originalDeclaration,
-                    od.equals(declaration)) {
+        if (exists cl = that.conditionList) {
+            value conditions = cl.conditions;
+            variable value i = 0;
+            while (i < conditions.size()) {
+                value c = conditions.get(i);
+                value var = getConditionVariable(c);
+                if (exists var,
+                    var.type is Tree.SyntheticVariable) {
                     
-                    variable value j = 0;
-                    while (j <= i) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
+                    value vd = var.declarationModel;
+                    if (exists od = vd.originalDeclaration,
+                        od==declaration) {
+                        
+                        variable value j = 0;
+                        while (j <= i) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        value d = declaration;
+                        declaration = vd;
+                        that.block.visit(this);
+                        j = i;
+                        while (j < conditions.size()) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        declaration = d;
+                        return;
                     }
-                    
-                    value d = declaration;
-                    declaration = vd;
-                    that.block.visit(this);
-                    j = i;
-                    while (j < conditions.size()) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    declaration = d;
-                    return;
                 }
+                
+                i++;
             }
-            
-            i++;
         }
-        
+
         super.visit(that);
     }
     
     shared actual void visit(Tree.IfClause that) {
-        value cl = that.conditionList;
-        value conditions = cl.conditions;
-        variable value i = 0;
-        
-        while (i < conditions.size()) {
-            value c = conditions.get(i);
-            value var = getConditionVariable(c);
-            if (exists var,
-                var.type is Tree.SyntheticVariable) {
-                
-                value vd = var.declarationModel;
-                if (exists od = vd.originalDeclaration,
-                    od.equals(declaration)) {
-                    
-                    variable value j = 0;
-                    while (j <= i) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    value d = declaration;
-                    declaration = vd;
-                    if (that.block exists) {
-                        that.block.visit(this);
-                    }
-                    
-                    if (that.expression exists) {
-                        that.expression.visit(this);
-                    }
-                    
-                    j = i + 1;
-                    while (j < conditions.size()) {
-                        value oc = conditions.get(j);
-                        oc.visit(this);
-                        j++;
-                    }
-                    
-                    declaration = d;
-                    return;
-                }
-            }
+        if (exists cl = that.conditionList) {
+            value conditions = cl.conditions;
             
-            i++;
+            variable value i = 0;
+            while (i < conditions.size()) {
+                value c = conditions.get(i);
+                value var = getConditionVariable(c);
+                if (exists var,
+                    var.type is Tree.SyntheticVariable) {
+                    
+                    value vd = var.declarationModel;
+                    if (exists od = vd.originalDeclaration,
+                        od==declaration) {
+                        
+                        variable value j = 0;
+                        while (j <= i) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        value d = declaration;
+                        declaration = vd;
+                        if (exists b = that.block) {
+                            b.visit(this);
+                        }
+                        
+                        if (exists e = that.expression) {
+                            e.visit(this);
+                        }
+                        
+                        j = i + 1;
+                        while (j < conditions.size()) {
+                            value oc = conditions.get(j);
+                            oc.visit(this);
+                            j++;
+                        }
+                        
+                        declaration = d;
+                        return;
+                    }
+                }
+                
+                i++;
+            }
         }
-        
+
         super.visit(that);
     }
     
     shared actual void visit(Tree.ElseClause that) {
         if (exists var = that.variable) {
             value vd = var.declarationModel;
-            if (exists od = vd.originalDeclaration, od.equals(declaration)) {
+            if (exists od = vd.originalDeclaration, 
+                od==declaration) {
                 value d = declaration;
                 declaration = vd;
-                if (that.block exists) {
-                    that.block.visit(this);
+                if (exists b = that.block) {
+                    b.visit(this);
                 }
                 
-                if (that.expression exists) {
-                    that.expression.visit(this);
+                if (exists e = that.expression) {
+                    e.visit(this);
                 }
                 
                 declaration = d;
@@ -243,7 +272,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
         if (is GuardedVariable that) {
             value d = that.declarationModel;
             if (exists od = d.originalDeclaration,
-                od.equals(declaration)) {
+                od==declaration) {
                 
                 declaration = d;
             }
@@ -264,7 +293,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
                         
                         value vd = var.declarationModel;
                         if (exists od = vd.originalDeclaration,
-                            od.equals(declaration)) {
+                            od==declaration) {
                             
                             c.visit(this);
                             declaration = vd;
@@ -285,7 +314,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         if (isReference(that.declaration)) {
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -293,7 +322,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     
     shared actual void visit(Tree.MemberLiteral that) {
         if (isReference(that.declaration)) {
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -301,7 +330,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     
     shared actual void visit(Tree.TypedArgument that) {
         if (isReference(that.parameter)) {
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -312,7 +341,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
             that.identifier.token exists, 
             isReference(that.parameter)) {
             
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -322,7 +351,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
         if (exists type = that.typeModel,
             isReference(type.declaration)) {
             
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -330,7 +359,7 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     
     shared actual void visit(Tree.ImportMemberOrType that) {
         if (isReference(that.declarationModel)) {
-            _nodes.add(that);
+            nodes.add(that);
         }
         
         super.visit(that);
@@ -339,8 +368,9 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     shared actual void visit(Tree.Import that) {
         super.visit(that);
         if (is Package pkg = declaration) {
-            if (formatPath(that.importPath.identifiers).equals(pkg.nameAsString)) {
-                _nodes.add(that);
+            value path = formatPath(that.importPath.identifiers);
+            if (path==pkg.nameAsString) {
+                nodes.add(that);
             }
         }
     }
@@ -349,16 +379,16 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
         super.visit(that);
         
         if (is Module mod = declaration,
-            exists path = nodes.getImportedModuleName(that),
-            path.equals(declaration.nameAsString)) {
+            exists path = finder.getImportedModuleName(that),
+            path==declaration.nameAsString) {
             
-            _nodes.add(that);
+            nodes.add(that);
         }
     }
     
-    shared actual void visit(Tree.InitializerParameter that) {
+    shared actual default void visit(Tree.InitializerParameter that) {
         if (isReference(that.parameterModel)) {
-            _nodes.add(that);
+            nodes.add(that);
         } else {
             super.visit(that);
         }
@@ -366,9 +396,13 @@ shared class FindReferencesVisitor(shared variable Referenceable declaration) ex
     
     shared actual void visit(Tree.TypeConstraint that) {
         if (isReference(that.declarationModel)) {
-            _nodes.add(that);
+            nodes.add(that);
         } else {
             super.visit(that);
         }
     }
 }
+
+
+
+

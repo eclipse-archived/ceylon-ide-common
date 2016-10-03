@@ -1,24 +1,29 @@
-import com.redhat.ceylon.ide.common.refactoring {
-    DefaultRegion
+import ceylon.interop.java {
+    javaString
 }
+
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
-shared interface AddNamedArgumentQuickFix<IFile,IDocument,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-        satisfies AbstractQuickFix<IFile,IDocument,InsertEdit,TextEdit, TextChange, Region, Project,Data,CompletionResult>
-                & DocumentChanges<IDocument,InsertEdit,TextEdit,TextChange>
-        given InsertEdit satisfies TextEdit 
-        given Data satisfies QuickFixData<Project> {
+shared object addNamedArgumentQuickFix {
     
-    shared formal void newProposal(Data data, String desc, TextChange change,
-        DefaultRegion region);
-    
-    shared void addNamedArgumentsProposal(Data data, IFile file) {
+    shared void addNamedArgumentsProposal(QuickFixData data) {
         if (is Tree.NamedArgumentList node = data.node) {
-            value tfc = newTextChange("Add Named Arguments", file);
-            value doc = getDocumentForChange(tfc);
-            initMultiEditChange(tfc);
+            value change 
+                    = platformServices.document.createTextChange {
+                name = "Add Named Arguments";
+                input = data.phasedUnit;
+            };
+            value doc = change.document;
+            change.initMultiEdit();
             
             value nal = node;
             value args = nal.namedArgumentList;
@@ -31,35 +36,43 @@ shared interface AddNamedArgumentQuickFix<IFile,IDocument,InsertEdit,TextEdit,Te
             if (!nas.empty) {
                 value last = nas.get(nas.size() - 1);
                 loc = last.endIndex.intValue();
-                value firstLine = getLineOfOffset(doc, start);
-                value lastLine = getLineOfOffset(doc, stop);
+                value firstLine = doc.getLineOfOffset(start);
+                value lastLine = doc.getLineOfOffset(stop);
                 
                 if (firstLine != lastLine) {
-                    sep = indents.getDefaultLineDelimiter(doc) 
-                            + indents.getIndent(last, doc);
+                    sep = doc.defaultLineDelimiter 
+                            + doc.getIndent(last);
                 }
             }
-            
-            value params = args.parameterList;
             variable String? result = null;
             variable value multipleResults = false;
-            for (param in params.parameters) {
-                if (!param.defaulted, !args.argumentNames.contains(param.name)) {
+            for (param in args.parameterList.parameters) {
+                if (!param.defaulted, 
+                    !javaString(param.name) in args.argumentNames) {
                     multipleResults = result exists;
                     result = param.name;
-                    addEditToChange(tfc, newInsertEdit(loc, sep + param.name + " = nothing;"));
+                    change.addEdit(InsertEdit {
+                        start = loc;
+                        text = sep + param.name + " = nothing;";
+                    });
                 }
             }
             
             if (loc == stop) {
-                addEditToChange(tfc, newInsertEdit(stop, " "));
+                change.addEdit(InsertEdit {
+                    start = stop;
+                    text = " ";
+                });
             }
             
-            value name = if (multipleResults)
-                         then "Fill in missing named arguments"
-                         else "Fill in missing named argument '" + (result else "") + "'";
-            
-            newProposal(data, name, tfc, DefaultRegion(loc, 0));
+            data.addQuickFix {
+                description 
+                    = if (exists name = result, !multipleResults)
+                    then "Fill in missing named argument '``name``'"
+                    else "Fill in missing named arguments";
+                change = change;
+                selection = DefaultRegion(loc);
+            };
         }
     }
 }

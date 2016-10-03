@@ -1,5 +1,9 @@
-import java.util {
-    Stack
+import com.redhat.ceylon.ide.common.typechecker {
+    ExternalPhasedUnit
+}
+import com.redhat.ceylon.ide.common.util {
+    SingleSourceUnitPackage,
+    equalsWithNulls
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
@@ -7,13 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     Value
 }
-import com.redhat.ceylon.ide.common.typechecker {
-    ExternalPhasedUnit
-}
-import com.redhat.ceylon.ide.common.util {
-    SingleSourceUnitPackage,
-    equalsWithNulls,
-    unsafeCast
+
+import java.util {
+    Stack
 }
 "
  Used when the external declarations come from a source archive
@@ -21,12 +21,17 @@ import com.redhat.ceylon.ide.common.util {
 shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit) 
         extends SourceFile(thePhasedUnit) {
         
-        shared actual default ExternalPhasedUnit phasedUnit =>
-                unsafeCast<ExternalPhasedUnit>(super.phasedUnit);
+        modifiable => false;
         
-        shared Boolean binaryDeclarationSource {
-            return ceylonModule.isCeylonBinaryArchive && (ceylonPackage is SingleSourceUnitPackage);
+        shared actual default ExternalPhasedUnit? phasedUnit {
+            assert (is ExternalPhasedUnit? phasedUnit 
+                        = super.phasedUnit);
+            return phasedUnit;
         }
+        
+        shared Boolean binaryDeclarationSource 
+                => ceylonModule.isCeylonBinaryArchive && 
+                ceylonPackage is SingleSourceUnitPackage;
         
         // TODO : check this method !!!
         shared Declaration? retrieveBinaryDeclaration(Declaration sourceDeclaration) {
@@ -37,29 +42,32 @@ shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit)
             if (binaryDeclarationSource) {
                 assert(is SingleSourceUnitPackage sourceUnitPackage = \ipackage);
                 Package binaryPackage = sourceUnitPackage.modelPackage;
-                Stack<Declaration> ancestors = Stack<Declaration>();
+                value ancestors = Stack<Declaration>();
                 variable Scope container = sourceDeclaration.container;
-                while (container is Declaration) {
-                    assert(is Declaration ancestor = container);
+                while (is Declaration ancestor = container) {
                     ancestors.push(ancestor);
-                    container = (ancestor of Declaration).container;
+                    container = ancestor.container;
                 }
-                if (container.equals(sourceUnitPackage)) {
-                    variable Scope? curentBinaryScope = binaryPackage;
+                if (container==sourceUnitPackage) {
+                    variable Scope? currentBinaryScope = binaryPackage;
                     while (!ancestors.empty()) {
-                        variable Declaration? binaryAncestor = curentBinaryScope?.getDirectMember(ancestors.pop().name, null, false);
-                        if (is Value valueAncestor=binaryAncestor) {
+                        variable Declaration? binaryAncestor 
+                                = currentBinaryScope?.getDirectMember(
+                                    ancestors.pop().name, null, false);
+                        if (is Value valueAncestor = binaryAncestor) {
                             binaryAncestor = valueAncestor.typeDeclaration;
                         }
-                        if (is Scope scopeAncestor=binaryAncestor) {
-                            curentBinaryScope = scopeAncestor;
+                        if (is Scope scopeAncestor = binaryAncestor) {
+                            currentBinaryScope = scopeAncestor;
                         }
                         else {
                             break;
                         }
                     }
-                    if (exists foundBinaryScope=curentBinaryScope) {
-                        binaryDeclaration = foundBinaryScope.getDirectMember(sourceDeclaration.name, null, false);
+                    if (exists foundBinaryScope = currentBinaryScope) {
+                        binaryDeclaration = 
+                                foundBinaryScope.getDirectMember(
+                                    sourceDeclaration.name, null, false);
                     }
                 }
             }

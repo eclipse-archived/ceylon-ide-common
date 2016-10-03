@@ -1,10 +1,3 @@
-import ceylon.collection {
-    HashSet,
-    linked,
-    Hashtable,
-    MutableList
-}
-
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
 }
@@ -12,63 +5,103 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
 import com.redhat.ceylon.ide.common.util {
     OccurrenceLocation,
     escaping
 }
+import com.redhat.ceylon.ide.common.doc {
+    Icons
+}
+import com.redhat.ceylon.ide.common.refactoring {
+    DefaultRegion
+}
 
 // see KeywordCompletionProposal
-shared interface KeywordCompletion<CompletionResult> {
+shared interface KeywordCompletion {
     
-    Set<String> postfixKeywords => HashSet(linked, Hashtable(), {"of", "in", "else", "exists", "nonempty", "then"});
-
-    Set<String> expressionKeywords => HashSet(linked, Hashtable(), {"object", "value", "void", "function", 
-                    "this", "outer", "super", 
-                    "of", "in", "else", "for", "if", "is", 
-                    "exists", "nonempty", "then", "let"});
+    value postfixKeywords => [
+        "of", "in", "else", "exists", "nonempty", "then"
+    ];
     
-    value conditionKeywords => ["assert", "let", "while", "for", "if", "switch", "case", "catch"];
+    value expressionKeywords => [
+        "object", "value", "void", "function",
+        "this", "outer", "super",
+        "of", "in", "else", "for", "if", "is",
+        "exists", "nonempty", "then", "let"
+    ];
     
-    shared formal CompletionResult newKeywordCompletionProposal(Integer offset, String prefix, String keyword, String text);
+    value conditionKeywords => [
+        "assert", "let", "while", "for", "if", "switch", "case", "catch"
+    ];
     
     // see KeywordCompletionProposal.addKeywordProposals(...)
-    shared void addKeywordProposals(Tree.CompilationUnit cu, Integer offset, String prefix, MutableList<CompletionResult> result,
-            Node node, OccurrenceLocation? ol, Boolean postfix, Integer previousTokenType) {
+    shared void addKeywordProposals(CompletionContext ctx, Tree.CompilationUnit cu,
+        Integer offset, String prefix, Node node, OccurrenceLocation? ol,
+        Boolean postfix, Integer previousTokenType) {
         
-        if (isModuleDescriptor(cu), !isLocation(ol, OccurrenceLocation.\iMETA), !(ol?.reference else false)){
+        if (isModuleDescriptor(cu),
+            !isLocation(ol, OccurrenceLocation.meta),
+            !(ol?.reference else false)) {
             //outside of backtick quotes, the only keyword allowed
             //in a module descriptor is "import"
             if ("import".startsWith(prefix)) {
-                addKeywordProposal(offset, prefix, result, "import");
+                addKeywordProposal(ctx, offset, prefix, "import");
             }
-        } else if (!prefix.empty, !isLocation(ol, OccurrenceLocation.\iCATCH), !isLocation(ol, OccurrenceLocation.\iCASE)) {
+        } else if (!prefix.empty,
+            !isLocation(ol, OccurrenceLocation.\icatch),
+            !isLocation(ol, OccurrenceLocation.\icase)) {
+            
             //TODO: this filters out satisfies/extends in an object named arg
-            value keywords = if (isLocation(ol, OccurrenceLocation.\iEXPRESSION))
-                             then if (postfix) then postfixKeywords else expressionKeywords
-                             else escaping.keywords;
-
-            for (keyword in keywords) {
-                if (keyword.startsWith(prefix)) {
-                    addKeywordProposal(offset, prefix, result, keyword);
-                }
+            value keywords = 
+                    if (isLocation(ol, OccurrenceLocation.expression))
+                    then (postfix then postfixKeywords else expressionKeywords)
+                    else escaping.keywords;
+            
+            keywords.filter((kw) => kw.startsWith(prefix)).each(
+                (kw) => addKeywordProposal(ctx, offset, prefix, kw)
+            );
+        } else if (isLocation(ol, OccurrenceLocation.\icase),
+            previousTokenType == CeylonLexer.lparen) {
+            
+            addKeywordProposal(ctx, offset, prefix, "is");
+        } else if (!prefix.empty,
+            isLocation(ol, OccurrenceLocation.\icase)) {
+            
+            if ("case".startsWith(prefix)) {
+                addKeywordProposal(ctx, offset, prefix, "case");
             }
-        } else if (isLocation(ol, OccurrenceLocation.\iCASE), previousTokenType == CeylonLexer.\iLPAREN) {
-            addKeywordProposal(offset, prefix, result, "is");
-        } else if (!prefix.empty, isLocation(ol, OccurrenceLocation.\iCASE)) {
-            if ("case".startsWith (prefix)) {
-                addKeywordProposal (offset, prefix, result, "case");
-            }
-        } else if (!exists ol, is Tree.ConditionList node, previousTokenType == CeylonLexer.\iLPAREN) {
-            addKeywordProposal (offset, prefix, result, "exists");
-            addKeywordProposal (offset, prefix, result, "nonempty");
-        } else if (isLocation(ol, OccurrenceLocation.\iEXTENDS)) {
-            addKeywordProposal (offset, prefix, result, "package");
-            addKeywordProposal (offset, prefix, result, "super");
+        } else if (!exists ol,
+            is Tree.ConditionList node,
+            previousTokenType == CeylonLexer.lparen) {
+            
+            addKeywordProposal(ctx, offset, prefix, "exists");
+            addKeywordProposal(ctx, offset, prefix, "nonempty");
+        } else if (isLocation(ol, OccurrenceLocation.\iextends)) {
+            addKeywordProposal(ctx, offset, prefix, "package");
+            addKeywordProposal(ctx, offset, prefix, "super");
         }
     }
     
-    void addKeywordProposal(Integer offset, String prefix, MutableList<CompletionResult> result, String keyword) {
-        value text = keyword in conditionKeywords then "``keyword`` ()" else keyword;
-        result.add(newKeywordCompletionProposal(offset, prefix, keyword, text));
+    void addKeywordProposal(CompletionContext ctx, Integer offset,
+        String prefix, String kw) {
+        
+        value text = kw in conditionKeywords then "``kw`` ()" else kw;
+        value selection = if (exists close = text.firstOccurrence(')'))
+        then DefaultRegion(offset + close - prefix.size, 0)
+        else null;
+        
+        platformServices.completion.addProposal {
+            ctx = ctx;
+            offset = offset;
+            prefix = prefix;
+            description = kw;
+            text = text;
+            icon = Icons.ceylonLiteral;
+            selection = selection;
+            kind = keyword;
+        };
     }
 }

@@ -1,51 +1,57 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.ide.common.completion {
-    LinkedModeSupport
+import com.redhat.ceylon.ide.common.platform {
+    platformServices,
+    InsertEdit
 }
 import com.redhat.ceylon.ide.common.util {
     nodes
 }
 
-shared interface DeclareLocalQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,LinkedMode,CompletionResult,Project,Data,Region>
-        satisfies DocumentChanges<Document,InsertEdit,TextEdit,TextChange>
-                & AbstractQuickFix<IFile,Document,InsertEdit,TextEdit,TextChange,Region,Project,Data,CompletionResult>
-                & LinkedModeSupport<LinkedMode, Document, CompletionResult>
-        given InsertEdit satisfies TextEdit
-        given Data satisfies QuickFixData<Project> {
+shared object declareLocalQuickFix {
     
-    shared void enableLinkedMode(Data data, Tree.Term term, TextChange change) {
+    shared void enableLinkedMode(QuickFixData data, Tree.Term term) {
+        
         if (exists type = term.typeModel) {
-            value lm = newLinkedMode();
-            value doc = getDocumentForChange(change);
-            value proposals = completionManager.getTypeProposals(doc, data.node.startIndex.intValue(), 5, type, data.rootNode, "value");
-            addEditableRegion(lm, doc, data.node.startIndex.intValue(), 5, 0, proposals);
-            installLinkedMode(doc, lm, this, -1, -1);
+            value lm = platformServices.createLinkedMode(data.document);
+            value proposals = typeCompletion.getTypeProposals {
+                rootNode = data.rootNode;
+                offset = data.node.startIndex.intValue();
+                length = 5;
+                infType = type;
+                kind = "value";
+            };
+            lm.addEditableRegion(data.node.startIndex.intValue(), 5, 0, proposals);
+            lm.install(this, -1, -1);
         }
     }
     
-    shared formal void newDeclareLocalQuickFix(Data data, String desc, TextChange change, 
-        Tree.Term term, Tree.BaseMemberExpression bme);
-    
-    shared void addDeclareLocalProposal(Data data, IFile file) {
+    shared void addDeclareLocalProposal(QuickFixData data) {
         value node = data.node;
         value st = nodes.findStatement(data.rootNode, node);
         
-        if (is Tree.SpecifierStatement st) {
-            value sst = st;
+        if (is Tree.SpecifierStatement sst = st) {
             value se = sst.specifierExpression;
             value bme = sst.baseMemberExpression;
-            if (bme == node, is Tree.BaseMemberExpression bme) {
-                if (exists e = se.expression, exists term = e.term) {
-                    
-                    value change = newTextChange("Declare Local Value", file);
-                    initMultiEditChange(change);
-                    addEditToChange(change, newInsertEdit(node.startIndex.intValue(), "value "));
-                    value desc = "Declare local value '``bme.identifier.text``'";
-                    
-                    newDeclareLocalQuickFix(data, desc, change, term, bme);
-                }
+            if (bme == node,
+                is Tree.BaseMemberExpression bme,
+                exists e = se.expression,
+                exists term = e.term) {
+                
+                value change
+                        = platformServices.document
+                            .createTextChange("Declare Local Value", data.phasedUnit);
+                change.initMultiEdit();
+                change.addEdit(InsertEdit(node.startIndex.intValue(), "value "));
+
+                data.addQuickFix {
+                    description = "Declare local value '``bme.identifier.text``'";
+                    void change() {
+                        change.apply();
+                        enableLinkedMode(data, term);
+                    }
+                };
             }
         }
     }

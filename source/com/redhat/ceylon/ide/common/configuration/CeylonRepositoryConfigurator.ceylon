@@ -25,8 +25,16 @@ shared abstract class CeylonRepositoryConfigurator() {
     shared void addOtherRemoteRepo(String repo) => otherRemoteRepos.add(repo);
 
     shared Boolean isFixedRepoIndex(Integer index) {
-        if (!globalLookupRepos.empty && index>=projectLocalRepos.size && index < projectLocalRepos.size+globalLookupRepos.size) { return true; }
-        if (!otherRemoteRepos.empty && index >= projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size && index < projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size+otherRemoteRepos.size) { return true; }
+        if (!globalLookupRepos.empty && 
+            index>=projectLocalRepos.size && 
+                index < projectLocalRepos.size+globalLookupRepos.size) { 
+            return true; 
+        }
+        if (!otherRemoteRepos.empty && 
+            index >= projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size && 
+            index < projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size+otherRemoteRepos.size) { 
+            return true; 
+        }
         return false;
     }
 
@@ -83,14 +91,14 @@ shared abstract class CeylonRepositoryConfigurator() {
         addAllRepositoriesToList(createJavaStringArray(otherRemoteRepos));
     }
 
-    shared Boolean isRepoConfigurationModified(CeylonProjectConfig config) {
-        return !(projectLocalRepos.equals(config.projectLocalRepos) && projectRemoteRepos.equals(config.projectRemoteRepos));
-    }
+    shared Boolean isRepoConfigurationModified(CeylonProjectConfig config) 
+            => projectLocalRepos!=config.projectLocalRepos 
+            || projectRemoteRepos!=config.projectRemoteRepos;
 
     shared void removeSelectedRepo() {
         value sortedSelection = sort(selection.iterable);
 
-        for (Integer i in 0:sortedSelection.size) {
+        for (i in 0:sortedSelection.size) {
             value index = sortedSelection[i];
 
             if (exists index, !isFixedRepoIndex(index)) {
@@ -103,9 +111,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void moveSelectedReposUp() {
-        value index = selection.iterable.first;
-
-        if (exists index) {
+        if (exists index = selection.iterable.first) {
             String repo = removeRepositoryFromList(index);
 
             if (index>0 && index<=projectLocalRepos.size) {
@@ -124,9 +130,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void moveSelectedReposDown() {
-        value index = selection.iterable.first;
-
-        if (exists index) {
+        if (exists index = selection.iterable.first) {
             String repo = removeRepositoryFromList(index);
 
             if (index < projectLocalRepos.size-1 && !projectLocalRepos.empty) {
@@ -137,7 +141,8 @@ shared abstract class CeylonRepositoryConfigurator() {
                 projectLocalRepos.remove(repo);
                 addProjectRepo(repo, projectLocalRepos.size + globalLookupRepos.size, false);
             }
-            if (index >= projectLocalRepos.size+globalLookupRepos.size && index < projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size-1) {
+            if (index >= projectLocalRepos.size+globalLookupRepos.size  && 
+                index < projectLocalRepos.size+globalLookupRepos.size+projectRemoteRepos.size-1) {
                 projectRemoteRepos.remove(repo);
                 addProjectRepo(repo, index + 1, false);
             }
@@ -145,7 +150,7 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     void updateRemoveRepoButtonState() {
-        for (value index in selection.iterable) {
+        for (index in selection.iterable) {
             if (!isFixedRepoIndex(index)) {
                 enableRemoveButton(true);
                 return;
@@ -160,13 +165,14 @@ shared abstract class CeylonRepositoryConfigurator() {
         value selectionIndices = selection.iterable;
 
         if (selectionIndices.size == 1) {
-            value index = selection.iterable.first;
-
-            if (exists index) {
+            if (exists index = selection.iterable.first) {
                 if (index>0 && !isFixedRepoIndex(index)) {
                     isUpEnabled = true;
                 }
-                value maxIndex = projectLocalRepos.size + globalLookupRepos.size + projectRemoteRepos.size - 1;
+                value maxIndex 
+                        = projectLocalRepos.size 
+                        + globalLookupRepos.size 
+                        + projectRemoteRepos.size - 1;
                 if (index<maxIndex && !isFixedRepoIndex(index)) {
                     isDownEnabled = true;
                 }
@@ -186,7 +192,10 @@ shared abstract class CeylonRepositoryConfigurator() {
         if (isLocalRepo) {
             projectLocalRepos.insert(index, repo);
         } else {
-            value remoteIndex = index - projectLocalRepos.size - globalLookupRepos.size;
+            value remoteIndex 
+                    = index 
+                    - projectLocalRepos.size 
+                    - globalLookupRepos.size;
             projectRemoteRepos.insert(remoteIndex, repo);
         }
         addRepositoryToList(index, repo);

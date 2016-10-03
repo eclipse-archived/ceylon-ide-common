@@ -1,36 +1,32 @@
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
-}
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
 }
-import java.util {
-    List
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
 }
-import org.antlr.runtime {
-    CommonToken
-}
-import com.redhat.ceylon.compiler.typechecker {
-    TypeChecker
-}
-import com.redhat.ceylon.ide.common.model {
-    BaseCeylonProject
-}
-import com.redhat.ceylon.ide.common.settings {
-    CompletionOptions
-}
+
 
 "The result of the local typechecking of a CompilationUnit.
  For example, this can be used when a file is being modified,
  but the resulting PhasedUnit should not be added to the global model."
-shared interface LocalAnalysisResult<Document> {
-    shared formal Tree.CompilationUnit lastCompilationUnit;
-    shared formal Tree.CompilationUnit parsedRootNode;
-    shared formal Tree.CompilationUnit? typecheckedRootNode;
-    shared formal PhasedUnit lastPhasedUnit;
-    shared formal Document document;
-    shared formal List<CommonToken>? tokens;
-    shared formal TypeChecker typeChecker;
-    shared formal BaseCeylonProject? ceylonProject;
-    shared formal CompletionOptions options;
+shared interface LocalAnalysisResult satisfies AnalysisResult {
+
+    "The last typechecked [[PhasedUnit]].
+     
+     The associated AST might be different from the most 
+     recently parsed AST,
+     and thus inconsistent with the source code.
+     
+     It can be [[null]] if not typechecking ever occured
+     on this document."
+    shared formal PhasedUnit? lastPhasedUnit;
+    
+    "The last fully-typechecked AST.
+     It might be different from the most recently parsed AST,
+     and thus inconsistent with the source code
+     
+     It can be [[null]] if not typechecking ever occured
+     on this document."
+    shared default Tree.CompilationUnit? lastCompilationUnit =>
+            lastPhasedUnit?.compilationUnit;
 }

@@ -7,7 +7,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     TypeDeclaration,
     TypedDeclaration,
-    ModelUtil
+    ModelUtil,
+    Parameter
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
@@ -20,25 +21,27 @@ import java.util {
 shared interface RequiredType {
     shared formal Type? type;
     shared formal String? parameterName;
+    shared formal Parameter? parameter;
 }
 
 shared object types {
     
     shared Type? getResultType(Declaration? d) {
-        if (is TypeDeclaration d) {
+        switch (d)
+        case (is TypeDeclaration) {
             if (is Class d, !d.abstract) {
-                return (d).type;
+                return d.type;
             }
             return null;
-        } else if (is TypedDeclaration d) {
-            return (d).type;
+        } case (is TypedDeclaration) {
+            return d.type;
         } else {
             return null;
         }
     }
         
-    shared RequiredType getRequiredType(variable Tree.CompilationUnit rootNode, variable Node node, variable CommonToken token) {
-        RequiredTypeVisitor rtv = RequiredTypeVisitor(node, token);
+    shared RequiredType getRequiredType(Tree.CompilationUnit rootNode, Node node, CommonToken? token) {
+        value rtv = RequiredTypeVisitor(node, token);
         rtv.visit(rootNode);
         return rtv;
     }
