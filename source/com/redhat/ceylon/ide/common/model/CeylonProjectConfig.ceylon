@@ -37,15 +37,6 @@ import java.util {
     EnumSet
 }
 
-/*
-shared class EclipseCeylonProjectConfig(IProject ideArtifact)
-    extends CeylonProjectConfig<IProject>(EclipseProject(ideArtifact)) {
-    IPath outputRepoPath => ideArtifact.getFullPath().append(outputRepoProjectRelativePath);
-}
-
-*/
-
-
 shared {String*} resourceDirectoriesFromCeylonConfig(CeylonConfig config)
         => getConfigValuesAsList(config, DefaultToolOptions.compilerResource, Constants.defaultResourceDir);
 
@@ -101,7 +92,10 @@ shared class CeylonProjectConfig(project) {
 
     variable {String*}? transientSuppressWarnings = null;
     variable Boolean isSuppressWarningsChanged = false;
-    
+
+    variable {String*}? transientJavacOptions = null;
+    variable Boolean isJavacOptionsChanged = false;
+
     shared String projectRelativePath = ".ceylon/config";
     
     shared File projectConfigFile => File(File(project.rootDirectory, ".ceylon"), "config");
@@ -272,9 +266,12 @@ shared class CeylonProjectConfig(project) {
         }
     }
 
-
-
-
+    shared {String*}? javacOptions
+            => getConfigValuesAsList(mergedConfig, DefaultToolOptions.\iCOMPILER_JAVAC, null);
+    assign javacOptions {
+        this.isJavacOptionsChanged = true;
+        this.transientJavacOptions = javacOptions;
+    }
 
     shared void refresh() {
 
@@ -287,6 +284,8 @@ shared class CeylonProjectConfig(project) {
         isFlatClasspathChanged = false;
         isAutoExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
+        isJavacOptionsChanged = false;
+
         transientEncoding = null;
         transientOffline = null;
         transientOverrides = null;
@@ -299,6 +298,7 @@ shared class CeylonProjectConfig(project) {
         transientSourceDirectories = null;
         transientResourceDirectories = null;
         transientSuppressWarnings = null;
+        transientJavacOptions = null;
     }
 
     shared void save() {
@@ -339,7 +339,8 @@ shared class CeylonProjectConfig(project) {
                 || isJdkProviderChanged
                 || isFlatClasspathChanged
                 || isAutoExportMavenDependenciesChanged
-                || isSuppressWarningsChanged;
+                || isSuppressWarningsChanged
+                || isJavacOptionsChanged;
 
         if (! project.hasConfigFile ||
             someSettingsChanged) {
@@ -395,6 +396,9 @@ shared class CeylonProjectConfig(project) {
                 }
                 if (isSuppressWarningsChanged) {
                     setConfigValuesAsList(projectConfig, DefaultToolOptions.compilerSuppresswarning, transientSuppressWarnings);
+                }
+                if (isJavacOptionsChanged) {
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_JAVAC, transientJavacOptions);
                 }
 
                 ConfigWriter.instance().write(projectConfig, projectConfigFile);

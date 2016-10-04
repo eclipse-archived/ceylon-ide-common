@@ -88,6 +88,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientSystemRepository = systemRepository;
     }
 
+    deprecated("Use [[CeylonProjectConfig.javacOptions]] instead.")
     shared {String*}? javacOptions => getConfigValuesAsList(ideConfig, "project.javac", null);
     assign javacOptions {
         this.isJavacOptionsChanged = true;
