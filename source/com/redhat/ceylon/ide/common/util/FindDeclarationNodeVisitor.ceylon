@@ -15,7 +15,7 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
     
     Boolean isDeclaration(Declaration? dec) 
             => if (exists dec) then dec==declaration else false;
-    
+
     shared actual void visit(Tree.Declaration that) {
         if (isDeclaration(that.declarationModel)) {
             declarationNode = that;
@@ -54,6 +54,13 @@ shared class FindDeclarationNodeVisitor(Referenceable declaration) extends Visit
 
     shared actual void visit(Tree.SpecifierStatement that) {
         if (isDeclaration(that.declaration)) {
+            declarationNode = that;
+        }
+        super.visit(that);
+    }
+
+    shared actual void visit(Tree.Constructor that) {
+        if (isDeclaration(that.constructor)) {
             declarationNode = that;
         }
         super.visit(that);
