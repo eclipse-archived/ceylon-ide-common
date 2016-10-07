@@ -82,7 +82,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientCompileToJs = compileToJs;
     }
 
-    shared String? systemRepository => ideConfig.get("project.system-repository");
+    shared String? systemRepository => CeylonConfig.get("project.system-repository");
     assign systemRepository {
         this.isSystemRepositoryChanged = true;
         this.transientSystemRepository = systemRepository;
