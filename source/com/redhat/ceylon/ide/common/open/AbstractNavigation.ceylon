@@ -53,13 +53,23 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         return null;
     }
         
-    shared Node? getTarget(Tree.CompilationUnit rootNode, 
+    function original(variable Declaration dec) {
+        //look for the "original" declaration,
+        //ignoring narrowing synthetic declarations
+        while (is TypedDeclaration d = dec,
+               exists od = d.originalDeclaration) {
+            dec = od;
+        }
+        return dec;
+    }
+
+    shared Node? getTarget(Tree.CompilationUnit rootNode,
         Node? node, Backends supportedBackends = Backends.any) {
         
         if (!exists node) {
             return null;
         }
-        
+
         switch (node)
         case (is Tree.Declaration) {
             if (node.declarationModel.nativeBackends == supportedBackends) {
@@ -68,47 +78,39 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             }
         }
         case (is Tree.ImportPath) {
-            value packageDescriptors = rootNode.packageDescriptors;
-            value moduleDescriptors = rootNode.moduleDescriptors;
-
-            if (!packageDescriptors.empty
-                    && packageDescriptors.get(0).importPath == node
-                || !moduleDescriptors.empty
-                    && moduleDescriptors.get(0).importPath == node) {
-                //we're already at the descriptor for
-                //the module or package
+            if (exists pd = rootNode.packageDescriptors[0],
+                pd.importPath == node) {
+                //we're already at the descriptor for the package
+                return null;
+            }
+            if (exists md = rootNode.moduleDescriptors[0],
+                md.importPath == node) {
+                //we're already at the descriptor for the module
                 return null;
             }
         }
         else {}
         
-        variable value referenceable = nodes.getReferencedModel(node);
-        switch (ref = referenceable)
-        case (is Null) {
+        value referenceable = nodes.getReferencedModel(node);
+        Referenceable? result;
+        switch (referenceable)
+        case (null) {
             return null;
         }
         case (is Declaration) {
-            variable value dec = ref;
-            //look for the "original" declaration,
-            //ignoring narrowing synthetic declarations
-            if (is TypedDeclaration ref) {
-                variable TypedDeclaration? od = ref;
-                while (exists _od = od) {
-                    referenceable = dec = _od;
-                    od = _od.originalDeclaration;
-                }
-            }
+            value dec = original(referenceable);
             if (dec.native) {
                 //for native declarations, each subclass of
                 //this hyperlink detector resolves to a
                 //different native header or impl
-                referenceable = resolveNative(dec, supportedBackends);
+                result = resolveNative(dec, supportedBackends);
             } else {
                 //for other declarations, the subclasses of
                 //this hyperlink detector are disabled
                 if (!supportedBackends.none()) {
                     return null;
                 }
+                result = dec;
             }
         }
         else {
@@ -118,9 +120,10 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
             if (!supportedBackends.none()) {
                 return null;
             }
+            result = referenceable;
         }
 
-        return nodes.getReferencedNode(referenceable);
+        return nodes.getReferencedNode(result);
     }
 
     function same(Boolean isCeylon, Declaration sourceDecl, Declaration dec)
