@@ -321,18 +321,19 @@ shared interface DocGenerator {
     
     void appendIntegerInfo(Tree.NaturalLiteral term, StringBuilder builder) {
         value text = term.text.replace("_", "");
-        value int = 
-                switch (text.first)
-                case ('#') parseInteger(text[1...], 16)
-                case ('$') parseInteger(text[1...], 2)
-                else parseInteger(text);
-        builder.append("<br/>");
-        builder.append(color(int, Colors.numbers));
+        if (is Integer int
+                = switch (text.first)
+                case ('#') Integer.parse(text[1...], 16)
+                case ('$') Integer.parse(text[1...], 2)
+                else Integer.parse(text)) {
+            builder.append("<br/>");
+            builder.append(color(int, Colors.numbers));
+        }
     }
     
     void appendFloatInfo(Tree.FloatLiteral term, StringBuilder builder) {
         value text = term.text.replace("_", "");
-        value float = parseFloat(text);
+        value float = Float.parse(text);
         builder.append("<br/>");
         builder.append(color(float, Colors.numbers));
     }
@@ -348,7 +349,7 @@ shared interface DocGenerator {
                 .append(JCharacter.getName(codepoint))
                 .append("</code>");
         builder.append("<br/>Codepoint: <code>U+")
-                .append(formatInteger(codepoint, 16)
+                .append(Integer.format(codepoint, 16)
                         .uppercased.padLeading(4, '0'))
                 .append("</code>");
         builder.append("<br/>General Category: <code>")
