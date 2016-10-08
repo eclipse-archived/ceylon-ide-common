@@ -1391,33 +1391,43 @@ shared object completionManager
 
     Boolean isProposable(DeclarationWithProximity dwp, OL? ol, Scope scope, Unit unit, Type? requiredType, Integer previousTokenType) {
         value dec = dwp.declaration;
-        variable Boolean isProp = !isLocation(ol, OL.\iextends);
-        isProp ||= if (is Class dec) then !dec.final else false;
-        isProp ||= ModelUtil.isConstructor(dec) && (if (is Class c = dec.container) then !c.final else false);
+        variable value isCorrectLocation = true;
+        isCorrectLocation &&= !isLocation(ol, OL.\iextends)
+                            || (if (is Class dec) then !dec.final || dec.hasStaticMembers() else false) //TODO: should be hasStaticClasses()
+                            || ModelUtil.isConstructor(dec)
+                                && (if (is Class c = dec.container) then !c.final || c.hasStaticMembers() else false); //TODO: should be hasStaticClasses()
 
-        variable Boolean isCorrectLocation = !isLocation(ol, OL.classAlias) || dec is Class;
-        isCorrectLocation &&= !isLocation(ol, OL.\isatisfies) || dec is Interface;
-        isCorrectLocation &&= !isLocation(ol, OL.\iof) || dec is Class || isAnonymousClassValue(dec);
+        isCorrectLocation &&= !isLocation(ol, OL.classAlias)
+                            || dec is Class;
+        isCorrectLocation &&= !isLocation(ol, OL.\isatisfies)
+                            || dec is Interface
+                            || (if (is Class dec) then dec.hasStaticMembers() else false); //TODO: should be hasStaticInterfaces()
+        isCorrectLocation &&= !isLocation(ol, OL.\iof)
+                            || dec is Class
+                            || isAnonymousClassValue(dec);
         isCorrectLocation &&= (!isLocation(ol, OL.typeArgumentList)
-                                && !isLocation(ol, OL.upperBound)
-                                && !isLocation(ol, OL.typeAlias)
-                                && !isLocation(ol, OL.\icatch)
-                              ) || dec is TypeDeclaration;
-        isCorrectLocation &&= !isLocation(ol, OL.\icatch) || isExceptionType(unit, dec);
+                            && !isLocation(ol, OL.upperBound)
+                            && !isLocation(ol, OL.typeAlias)
+                            && !isLocation(ol, OL.\icatch)
+                              )
+                            || dec is TypeDeclaration;
+        isCorrectLocation &&= !isLocation(ol, OL.\icatch)
+                            || isExceptionType(unit, dec);
         isCorrectLocation &&= !isLocation(ol, OL.parameterList)
-                                || dec is TypeDeclaration
-                                || dec is Function && dec.annotation //i.e. an annotation
-                                || dec is Value && dec.container == scope; //a parameter ref
-        isCorrectLocation &&= !isLocation(ol, OL.\iimport) || !dwp.unimported;
-        isCorrectLocation &&= !isLocation(ol, OL.\icase) || isCaseOfSwitch(requiredType, dec);//, previousTokenType);
+                            || dec is TypeDeclaration
+                            || dec is Function && dec.annotation //i.e. an annotation
+                            || dec is Value && dec.container == scope; //a parameter ref
+        isCorrectLocation &&= !isLocation(ol, OL.\iimport)
+                            || !dwp.unimported;
+        isCorrectLocation &&= !isLocation(ol, OL.\icase)
+                            || isCaseOfSwitch(requiredType, dec);//, previousTokenType);
         isCorrectLocation &&= previousTokenType != Lexer.isOp
                            && (previousTokenType != Lexer.caseTypes || isLocation(ol, OL.\iof))
                            || dec is TypeDeclaration;
         isCorrectLocation &&= !isLocation(ol, OL.typeParameterList);
         isCorrectLocation &&= !dwp.namedArgumentList exists;
 
-        isProp &&= isCorrectLocation;
-        return isProp;
+        return isCorrectLocation;
     }
 
     Boolean isProposableBis(Node node, OL? ol, Declaration dec) {
