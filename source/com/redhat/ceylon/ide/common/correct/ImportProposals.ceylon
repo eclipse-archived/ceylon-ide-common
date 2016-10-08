@@ -413,7 +413,7 @@ shared object importProposals {
                         && p!=pack
                         && p.nameAsString!=Module.languageModuleName
                         && (!declaration.classOrInterfaceMember 
-                            || declaration.staticallyImportable)) {
+                            || declaration.static)) {
                 if (!isImported(declaration, rootNode)) {
                     declarations.add(declaration);
                 }

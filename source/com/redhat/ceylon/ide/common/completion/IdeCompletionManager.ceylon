@@ -916,7 +916,7 @@ shared object completionManager
                     },
                     !isQualifiedType(node) 
                             || ModelUtil.isConstructor(dec) 
-                            || dec.staticallyImportable,
+                            || dec.static,
                     if (is Constructor scope)
                         then !isLocation(ol, OL.\iextends) 
                             || isDelegatableConstructor(scope, dec)

@@ -714,7 +714,7 @@ shared interface DocGenerator {
         if (decl.shared) {
             annotationsBuilder.append("shared&nbsp;");
         }
-        if (decl.staticallyImportable) {
+        if (decl.static) {
             annotationsBuilder.append("static&nbsp;");
         }
         if (decl.actual) {
@@ -1013,15 +1013,15 @@ shared interface DocGenerator {
                     then "Constructor of"
                     else "Default constructor of"
                 case (is Value)
-                    if (decl.staticallyImportable)
+                    if (decl.static)
                     then "Static attribute of"
                     else "Attribute of"
                 case (is Function)
-                    if (decl.staticallyImportable)
+                    if (decl.static)
                     then "Static method of"
                     else "Method of"
                 else
-                    if (decl.staticallyImportable)
+                    if (decl.static)
                     then "Static member of"
                     else "Member of";
             

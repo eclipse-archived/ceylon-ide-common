@@ -187,7 +187,7 @@ shared interface InvocationCompletion {
                               && ModelUtil.isConstructor(member)
                               //Java static members
                            || member is FunctionOrValue|Class
-                              && member.staticallyImportable)
+                              && member.static)
                           member };
 
             for (member in members.sort(byIncreasing(Declaration.name))) {
