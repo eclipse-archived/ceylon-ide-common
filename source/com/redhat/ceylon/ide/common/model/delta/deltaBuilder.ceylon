@@ -237,24 +237,24 @@ shared class DeltaBuilderFactory(
                         for (child in children) {
                             String childKey;
                             switch (child)
-                            case(is Ast.Declaration) {
+                            case (is Ast.Declaration) {
                                 value model = child.declarationModel;
                                 childKey = "``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
                             }
-                            case(is Ast.SpecifierStatement) {
+                            case (is Ast.SpecifierStatement) {
                                 value model = child.declaration;
                                 childKey = "=>``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
                             }
-                            case(is Ast.ModuleDescriptor) {
+                            case (is Ast.ModuleDescriptor) {
                                 childKey = child.unit.fullPath;
                             }
-                            case(is Ast.PackageDescriptor) {
+                            case (is Ast.PackageDescriptor) {
                                 childKey = child.unit.fullPath;
                             }
-                            case(is Ast.CompilationUnit) {
+                            case (is Ast.CompilationUnit) {
                                 childKey = child.unit.fullPath;
                             }
-                            case(is Ast.ImportModule) {
+                            case (is Ast.ImportModule) {
                                 childKey = importedModuleName(child) + "/"
                                          + (child.version?.text?.trim('"'.equals) else "<unknown>");
                             } else {
@@ -658,8 +658,8 @@ shared class DeltaBuilderFactory(
         registerMemberAddedChange(Ast.Statement newChild)
                 => addChange(DeclarationMemberAdded {
                     name = switch(newChild)
-                    case(is Ast.Declaration) newChild.declarationModel.nameAsString
-                    case(is Ast.SpecifierStatement) newChild.declaration.nameAsString
+                    case (is Ast.Declaration) newChild.declarationModel.nameAsString
+                    case (is Ast.SpecifierStatement) newChild.declaration.nameAsString
                     else "<unknown>";
                 });
         
