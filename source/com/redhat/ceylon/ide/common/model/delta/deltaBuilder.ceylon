@@ -833,8 +833,8 @@ shared class DeltaBuilderFactory(
                         !errorListsEquals(oldNode.errors, newNode.errors),
                         lookForChanges {
                             checkedType=`Ast.Constructor`;
-                            function between(Ast.Constructor oldConstructor,
-                                             Ast.Constructor newConstructor)
+                            between(Ast.Constructor oldConstructor,
+                                    Ast.Constructor newConstructor)
                                 => any {
                                     nodesDiffer(oldConstructor.delegatedConstructor, newConstructor.delegatedConstructor, "delegatedConstructor"),
                                     nodesDiffer(oldConstructor.parameterList, newConstructor.parameterList, "parameterList")
@@ -842,22 +842,20 @@ shared class DeltaBuilderFactory(
                         },
                         lookForChanges {
                             checkedType=`Ast.Enumerated`;
-                            function between(Ast.Enumerated oldEnumerated,
-                                             Ast.Enumerated newEnumerated)
-                                => any {
-                                    nodesDiffer(oldEnumerated.delegatedConstructor, newEnumerated.delegatedConstructor, "delegatedConstructor")
-                                };
+                            between(Ast.Enumerated oldEnumerated,
+                                    Ast.Enumerated newEnumerated)
+                                => nodesDiffer(oldEnumerated.delegatedConstructor, newEnumerated.delegatedConstructor, "delegatedConstructor");
                         },
                         lookForChanges {
                             checkedType=`Ast.TypedDeclaration`;
-                            function between(Ast.TypedDeclaration oldTyped,
-                                             Ast.TypedDeclaration newTyped)
+                            between(Ast.TypedDeclaration oldTyped,
+                                    Ast.TypedDeclaration newTyped)
                                 => any {
                                     nodesDiffer(oldTyped.type, newTyped.type, "type"),
                                     lookForChanges {
                                         checkedType=`Ast.AnyMethod`;
-                                        function between(Ast.AnyMethod oldMethod,
-                                                         Ast.AnyMethod newMethod)
+                                        between(Ast.AnyMethod oldMethod,
+                                                Ast.AnyMethod newMethod)
                                             => any {
                                                 nodesDiffer(oldMethod.typeConstraintList, newMethod.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldMethod.typeParameterList, newMethod.typeParameterList, "typeParameterList"),
@@ -865,15 +863,16 @@ shared class DeltaBuilderFactory(
                                                 anyPair {
                                                     firstIterable => CeylonIterable(oldMethod.parameterLists);
                                                     secondIterable => CeylonIterable(newMethod.parameterLists);
-                                                    selecting(Ast.ParameterList oldParamList, Ast.ParameterList newParamlist)
+                                                    selecting(Ast.ParameterList oldParamList,
+                                                              Ast.ParameterList newParamlist)
                                                             => nodesDiffer(oldParamList, newParamlist, "parameterLists");
                                                 }
                                             };
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.ObjectDefinition`;
-                                        function between(Ast.ObjectDefinition oldObject,
-                                                         Ast.ObjectDefinition newObject)
+                                        between(Ast.ObjectDefinition oldObject,
+                                                Ast.ObjectDefinition newObject)
                                             => any {
                                                 nodesDiffer(oldObject.extendedType, newObject.extendedType, "extendedType"),
                                                 nodesDiffer(oldObject.satisfiedTypes, newObject.satisfiedTypes, "satisfiedTypes")
@@ -881,8 +880,8 @@ shared class DeltaBuilderFactory(
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.Variable`;
-                                        function between(Ast.Variable oldVariable,
-                                                         Ast.Variable newVariable)
+                                        between(Ast.Variable oldVariable,
+                                                Ast.Variable newVariable)
                                             => any {
                                                 oldVariable.parameterLists.size() != oldVariable.parameterLists.size(),
                                                 anyPair {
@@ -904,13 +903,13 @@ shared class DeltaBuilderFactory(
                                     nodesDiffer(oldType.typeParameterList, newType.typeParameterList, "typeParameterList"),
                                     lookForChanges {
                                         checkedType=`Ast.ClassOrInterface`;
-                                        function between(Ast.ClassOrInterface oldClassOrInterface,
-                                                         Ast.ClassOrInterface newClassOrInterface)
+                                        between(Ast.ClassOrInterface oldClassOrInterface,
+                                                Ast.ClassOrInterface newClassOrInterface)
                                             => any {
                                                 lookForChanges {
                                                     checkedType=`Ast.AnyClass`;
-                                                    function between(Ast.AnyClass oldClass,
-                                                                     Ast.AnyClass newClass)
+                                                    between(Ast.AnyClass oldClass,
+                                                            Ast.AnyClass newClass)
                                                         => any {
                                                             nodesDiffer(oldClass.typeConstraintList, newClass.typeConstraintList, "typeConstraintList"),
                                                             nodesDiffer(oldClass.extendedType, newClass.extendedType, "extendedType"),
@@ -919,29 +918,25 @@ shared class DeltaBuilderFactory(
                                                             nodesDiffer(oldClass.parameterList, newClass.parameterList, "parameterList"),
                                                             lookForChanges {
                                                                 checkedType=`Ast.ClassDeclaration`;
-                                                                function between(Ast.ClassDeclaration oldClassDecl,
-                                                                                 Ast.ClassDeclaration newClassDecl)
-                                                                    => any {
-                                                                        nodesDiffer(oldClassDecl.classSpecifier, newClassDecl.classSpecifier, "classSpecifier")
-                                                                    };
+                                                                between(Ast.ClassDeclaration oldClassDecl,
+                                                                        Ast.ClassDeclaration newClassDecl)
+                                                                    => nodesDiffer(oldClassDecl.classSpecifier, newClassDecl.classSpecifier, "classSpecifier");
                                                             }
                                                         };
                                                 },
                                                 lookForChanges {
                                                     checkedType=`Ast.AnyInterface`;
-                                                    function between(Ast.AnyInterface oldInterface,
-                                                                     Ast.AnyInterface newInterface)
+                                                    between(Ast.AnyInterface oldInterface,
+                                                            Ast.AnyInterface newInterface)
                                                         => any {
                                                             nodesDiffer(oldInterface.typeConstraintList, newInterface.typeConstraintList, "typeConstraintList"),
                                                             nodesDiffer(oldInterface.caseTypes, newInterface.caseTypes, "caseTypes"),
                                                             nodesDiffer(oldInterface.satisfiedTypes, newInterface.satisfiedTypes, "satisfiedTypes"),
                                                             lookForChanges {
                                                                 checkedType=`Ast.InterfaceDeclaration`;
-                                                                function between(Ast.InterfaceDeclaration oldInterfaceDecl,
-                                                                                 Ast.InterfaceDeclaration newInterfaceDecl)
-                                                                    => any {
-                                                                        nodesDiffer(oldInterfaceDecl.typeSpecifier, newInterfaceDecl.typeSpecifier, "typeSpecifier")
-                                                                    };
+                                                                between(Ast.InterfaceDeclaration oldInterfaceDecl,
+                                                                        Ast.InterfaceDeclaration newInterfaceDecl)
+                                                                    => nodesDiffer(oldInterfaceDecl.typeSpecifier, newInterfaceDecl.typeSpecifier, "typeSpecifier");
                                                             },
                                                             lookForChanges {
                                                                 checkedType=`Ast.InterfaceDefinition`;
@@ -962,8 +957,8 @@ shared class DeltaBuilderFactory(
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.TypeAliasDeclaration`;
-                                        function between(Ast.TypeAliasDeclaration oldTypeAliasDeclaration,
-                                                         Ast.TypeAliasDeclaration newTypeAliasDeclaration)
+                                        between(Ast.TypeAliasDeclaration oldTypeAliasDeclaration,
+                                                Ast.TypeAliasDeclaration newTypeAliasDeclaration)
                                             => any {
                                                 nodesDiffer(oldTypeAliasDeclaration.typeConstraintList, newTypeAliasDeclaration.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldTypeAliasDeclaration.typeSpecifier, newTypeAliasDeclaration.typeSpecifier, "typeSpecifier")
@@ -971,8 +966,8 @@ shared class DeltaBuilderFactory(
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.TypeConstraint`;
-                                        function between(Ast.TypeConstraint oldTypeConstraint,
-                                                         Ast.TypeConstraint newTypeConstraint)
+                                        between(Ast.TypeConstraint oldTypeConstraint,
+                                                Ast.TypeConstraint newTypeConstraint)
                                             => any {
                                                 nodesDiffer(oldTypeConstraint.caseTypes, newTypeConstraint.caseTypes, "caseTypes"),
                                                 nodesDiffer(oldTypeConstraint.satisfiedTypes, newTypeConstraint.satisfiedTypes, "satisfiedTypes"),
@@ -983,8 +978,8 @@ shared class DeltaBuilderFactory(
                         },
                         lookForChanges {
                             checkedType=`Ast.TypeParameterDeclaration`;
-                            function between(Ast.TypeParameterDeclaration oldTypeParameter,
-                                             Ast.TypeParameterDeclaration newTypeParameter)
+                            between(Ast.TypeParameterDeclaration oldTypeParameter,
+                                    Ast.TypeParameterDeclaration newTypeParameter)
                                 => any {
                                     nodesDiffer(oldTypeParameter.typeSpecifier, newTypeParameter.typeSpecifier, "typeSpecifier"),
                                     nodesDiffer(oldTypeParameter.typeVariance, newTypeParameter.typeVariance, "typeVariance")
