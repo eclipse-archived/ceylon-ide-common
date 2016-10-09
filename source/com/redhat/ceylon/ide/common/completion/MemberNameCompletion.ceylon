@@ -83,8 +83,10 @@ shared interface MemberNameCompletion {
             shared variable Node result = previousNode;
 
             shared actual void visit(Tree.Type that) {
-                if (exists thatStart = that.startIndex, exists prevStart = previousNode.startIndex,
-                    exists thatEnd = that.endIndex, exists prevEnd = previousNode.endIndex,
+                if (exists thatStart = that.startIndex,
+                    exists prevStart = previousNode.startIndex,
+                    exists thatEnd = that.endIndex,
+                    exists prevEnd = previousNode.endIndex,
                     thatStart.intValue() <= prevStart.intValue() && 
                     thatEnd.intValue() >= prevEnd.intValue()) {
                     result = that;
