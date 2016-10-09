@@ -14,9 +14,6 @@ import ceylon.language.meta.model {
     ClassOrInterface
 }
 
-import com.redhat.ceylon.common {
-    Backends
-}
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     AnalysisError
 }
@@ -62,10 +59,7 @@ shared interface NodeComparisonListener {
 shared class DeltaBuilderFactory(
     Boolean compareAnalysisErrors = false) {
 
-    object producedTypeNamePrinter extends TypePrinter(true, true, true, true, false) {
-        printQualifier() => true;
-        printFullyQualified() => true;
-    }
+    value producedTypeNamePrinter = TypePrinter(true, true, true, true, false, true, true);
 
     "Builds a [[model delta|AbstractDelta]] that describes the model differences
      between a [[reference PhasedUnit|buildDeltas.referencePhasedUnit]]
@@ -85,36 +79,66 @@ shared class DeltaBuilderFactory(
 
         assert (exists unitFile = referencePhasedUnit.unitFile);
         if (unitFile.name == moduleDescriptorFileName) {
-            return buildModuleDescriptorDeltas(referencePhasedUnit, changedPhasedUnit, nodeComparisonListener);
+            return buildModuleDescriptorDeltas {
+                referencePhasedUnit = referencePhasedUnit;
+                changedPhasedUnit = changedPhasedUnit;
+                nodeComparisonListener = nodeComparisonListener;
+            };
         }
 
         if (unitFile.name == packageDescriptorFileName) {
-            return buildPackageDescriptorDeltas(referencePhasedUnit, changedPhasedUnit, nodeComparisonListener);
+            return buildPackageDescriptorDeltas {
+                referencePhasedUnit = referencePhasedUnit;
+                changedPhasedUnit = changedPhasedUnit;
+                nodeComparisonListener = nodeComparisonListener;
+            };
         }
 
-        return buildCompilationUnitDeltas(referencePhasedUnit, changedPhasedUnit, nodeComparisonListener);
+        return buildCompilationUnitDeltas {
+            referencePhasedUnit = referencePhasedUnit;
+            changedPhasedUnit = changedPhasedUnit;
+            nodeComparisonListener = nodeComparisonListener;
+        };
     }
 
-    ModuleDescriptorDelta buildModuleDescriptorDeltas(PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit, NodeComparisonListener? nodeComparisonListener) {
-        if(exists oldDescriptor = referencePhasedUnit.compilationUnit?.moduleDescriptors?.get(0)) {
-            value builder = ModuleDescriptorDeltaBuilder(oldDescriptor, changedPhasedUnit.compilationUnit?.moduleDescriptors?.get(0), nodeComparisonListener);
+    ModuleDescriptorDelta buildModuleDescriptorDeltas(
+            PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit,
+            NodeComparisonListener? nodeComparisonListener) {
+        if (exists oldDescriptor = referencePhasedUnit.compilationUnit?.moduleDescriptors?.get(0)) {
+            value builder = ModuleDescriptorDeltaBuilder {
+                oldNode = oldDescriptor;
+                newNode = changedPhasedUnit.compilationUnit?.moduleDescriptors?.get(0);
+                nodeComparisonListener = nodeComparisonListener;
+            };
             return builder.buildDelta();
         } else {
             return InvalidModuleDescriptorDelta();
         }
     }
 
-    PackageDescriptorDelta buildPackageDescriptorDeltas(PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit, NodeComparisonListener? nodeComparisonListener) {
+    PackageDescriptorDelta buildPackageDescriptorDeltas(
+            PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit,
+            NodeComparisonListener? nodeComparisonListener) {
         if (exists oldDescriptor = referencePhasedUnit.compilationUnit?.packageDescriptors?.get(0)) {
-            value builder = PackageDescriptorDeltaBuilder(oldDescriptor, changedPhasedUnit.compilationUnit?.packageDescriptors?.get(0), nodeComparisonListener);
+            value builder = PackageDescriptorDeltaBuilder {
+                oldNode = oldDescriptor;
+                newNode = changedPhasedUnit.compilationUnit?.packageDescriptors?.get(0);
+                nodeComparisonListener = nodeComparisonListener;
+            };
             return builder.buildDelta();
         } else {
             return InvalidPackageDescriptorDelta();
         }
     }
 
-    RegularCompilationUnitDelta buildCompilationUnitDeltas(PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit, NodeComparisonListener? nodeComparisonListener) {
-        value builder = RegularCompilationUnitDeltaBuilder(referencePhasedUnit.compilationUnit, changedPhasedUnit.compilationUnit, nodeComparisonListener);
+    RegularCompilationUnitDelta buildCompilationUnitDeltas(
+            PhasedUnit referencePhasedUnit, PhasedUnit changedPhasedUnit,
+            NodeComparisonListener? nodeComparisonListener) {
+        value builder = RegularCompilationUnitDeltaBuilder {
+            oldNode = referencePhasedUnit.compilationUnit;
+            newNode = changedPhasedUnit.compilationUnit;
+            nodeComparisonListener = nodeComparisonListener;
+        };
         return builder.buildDelta();
     }
 
@@ -145,11 +169,22 @@ shared class DeltaBuilderFactory(
 
      (This method isn't useless, though: It ignores other kinds of messages.)"
     Boolean errorListsEquals(JList<Message> these, JList<Message> those)
-        => let (theseAnalysisErrors = TreeSet(byIncreasing(Message.message), CeylonIterable(these).filter((element) => element is AnalysisError)),
-                        thoseAnalysisErrors = TreeSet(byIncreasing(Message.message), CeylonIterable(those).filter((element) => element is AnalysisError)))
-                    if (compareAnalysisErrors)
-                        then theseAnalysisErrors == thoseAnalysisErrors
-                        else theseAnalysisErrors.size == 0 && thoseAnalysisErrors.size == 0;
+        => let (theseAnalysisErrors
+                    = TreeSet {
+                        byIncreasing(Message.message);
+                        for (element in these)
+                        if (element is AnalysisError) element
+                    },
+                thoseAnalysisErrors
+                    = TreeSet {
+                        byIncreasing(Message.message);
+                        for (element in those)
+                        if (element is AnalysisError) element
+                    })
+            if (compareAnalysisErrors)
+                then theseAnalysisErrors == thoseAnalysisErrors
+                else theseAnalysisErrors.empty
+                  && thoseAnalysisErrors.empty;
 
     interface AbstractDeltaBuilder {
         shared formal AbstractDelta buildDelta();
@@ -157,8 +192,17 @@ shared class DeltaBuilderFactory(
     
     abstract class DeltaBuilder<ParentNode, ChildNode>(ParentNode oldNode, ParentNode? newNode)
             satisfies AbstractDeltaBuilder
-            given ParentNode of Ast.Declaration  | Ast.SpecifierStatement | Ast.CompilationUnit | Ast.ModuleDescriptor | Ast.ImportModule | Ast.PackageDescriptor
-            given ChildNode of Ast.Statement  | Ast.CompilationUnit | Ast.ModuleDescriptor | Ast.ImportModule | Ast.PackageDescriptor {
+            given ParentNode of Ast.Declaration
+                              | Ast.SpecifierStatement
+                              | Ast.CompilationUnit
+                              | Ast.ModuleDescriptor
+                              | Ast.ImportModule
+                              | Ast.PackageDescriptor
+            given ChildNode of Ast.Statement
+                             | Ast.CompilationUnit
+                             | Ast.ModuleDescriptor
+                             | Ast.ImportModule
+                             | Ast.PackageDescriptor {
 
 //        shared alias ParentNode => ParentNodeType;// & AstAbstractNode;
 //        shared alias ChildNode => ChildNodeType;// & AstAbstractNode;
@@ -175,12 +219,12 @@ shared class DeltaBuilderFactory(
                 registerRemovedChange();
                 return;
             }
-            assert(exists newNode);
+            assert (exists newNode);
 
             calculateLocalChanges();
 
-            [ChildNode*] oldChildren = getChildren(oldNode);
-            [ChildNode*] newChildren = getChildren(newNode);
+            value oldChildren = getChildren(oldNode);
+            value newChildren = getChildren(newNode);
 
             if (newChildren nonempty || oldChildren nonempty) {
                 value allChildrenSet = HashSet<String>();
@@ -211,7 +255,8 @@ shared class DeltaBuilderFactory(
                                 childKey = child.unit.fullPath;
                             }
                             case(is Ast.ImportModule) {
-                                childKey = importedModuleName(child) + "/" + (child.version?.text?.trim('"'.equals) else "<unknown>");
+                                childKey = importedModuleName(child) + "/"
+                                         + (child.version?.text?.trim('"'.equals) else "<unknown>");
                             } else {
                                 continue;
                             }
@@ -225,16 +270,16 @@ shared class DeltaBuilderFactory(
                     return childrenSet;
                 }
 
-                MutableMap<String,ChildNode>? oldChildrenSet = toMap(oldChildren);
-                MutableMap<String,ChildNode>? newChildrenSet = toMap(newChildren);
+                value oldChildrenSet = toMap(oldChildren);
+                value newChildrenSet = toMap(newChildren);
 
                 for (keyChild in allChildrenSet) {
-                    value oldChild = oldChildrenSet?.get(keyChild) else null;
-                    value newChild = newChildrenSet?.get(keyChild) else null;
+                    value oldChild = oldChildrenSet?.get(keyChild);
+                    value newChild = newChildrenSet?.get(keyChild);
                     if (exists oldChild) {
                         manageChildDelta(oldChild, newChild);
                     } else {
-                        assert(exists newChild);
+                        assert (exists newChild);
                         registerMemberAddedChange(newChild);
                     }
                 }
@@ -242,24 +287,19 @@ shared class DeltaBuilderFactory(
         }
     }
 
-    class PackageDescriptorDeltaBuilder(Ast.PackageDescriptor oldNode, Ast.PackageDescriptor? newNode, NodeComparisonListener? nodeComparisonListener)
+    class PackageDescriptorDeltaBuilder(Ast.PackageDescriptor oldNode,
+                                        Ast.PackageDescriptor? newNode,
+                                        NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder<Ast.PackageDescriptor, Nothing>(oldNode, newNode) {
         variable PackageDescriptorDelta.PossibleChange? change = null;
 
         shared actual PackageDescriptorDelta buildDelta() {
             recurse();
-            object delta satisfies PackageDescriptorDelta {
+            return object satisfies PackageDescriptorDelta {
                 changedElement => oldNode.unit.\ipackage;
-                shared actual [PackageDescriptorDelta.PossibleChange]|[] changes {
-                    if (exists existingChange = change) {
-                        return [existingChange];
-                    } else {
-                        return [];
-                    }
-                }
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-            }
-            return delta;
+                changes => if (exists existingChange = change) then [existingChange] else [];
+                equals(Object that) => (super of AbstractDelta).equals(that);
+            };
         }
 
         manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
@@ -269,8 +309,9 @@ shared class DeltaBuilderFactory(
         registerRemovedChange() => noop();
 
         shared actual void calculateLocalChanges() {
-            assert(exists newNode);
-            if (formatPath(oldNode.importPath.identifiers) != formatPath(newNode.importPath.identifiers)) {
+            assert (exists newNode);
+            if (formatPath(oldNode.importPath.identifiers)
+                != formatPath(newNode.importPath.identifiers)) {
                 change = structuralChange;
                 return;
             }
@@ -294,8 +335,8 @@ shared class DeltaBuilderFactory(
 
     function sameBackend([Ast.AnnotationList, Unit?] oldNode, 
                          [Ast.AnnotationList, Unit?] newNode)
-            => let (Backends oldNative = getNativeBackend(*oldNode),
-                    Backends newNative = getNativeBackend(*newNode))
+            => let (oldNative = getNativeBackend(*oldNode),
+                    newNative = getNativeBackend(*newNode))
                         oldNative == newNative;
 
     class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, 
@@ -304,28 +345,29 @@ shared class DeltaBuilderFactory(
             extends DeltaBuilder<Ast.ModuleDescriptor, Ast.ImportModule>(oldNode, newNode) {
         variable value changes = ArrayList<ModuleDescriptorDelta.PossibleChange>();
         variable value childrenDeltas = ArrayList<ModuleImportDelta>();
-        Module? oldModule;
-        if (is Module model = oldNode.importPath?.model) {
-            oldModule = model;
-        } else {
-            oldModule = null;
-        }
+        value oldModule
+                = if (is Module model = oldNode.importPath?.model)
+                then model else null;
 
         shared actual ModuleDescriptorDelta buildDelta() {
             recurse();
-            object delta satisfies ModuleDescriptorDelta {
+            return object satisfies ModuleDescriptorDelta {
                 changedElement => oldModule;
-                shared actual {ModuleDescriptorDelta.PossibleChange*} changes => outer.changes;
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-                shared actual {ModuleImportDelta*} childrenDeltas => outer.childrenDeltas;
-
-            }
-            return delta;
+                changes => outer.changes;
+                equals(Object that) => (super of AbstractDelta).equals(that);
+                childrenDeltas => outer.childrenDeltas;
+            };
         }
 
-        shared actual void manageChildDelta(Ast.ImportModule oldChild, Ast.ImportModule? newChild) {
-            assert(exists oldModule);
-            value builder = ModuleImportDeclarationDeltaBuilder(oldChild, newChild, oldModule, nodeComparisonListener);
+        shared actual void manageChildDelta(Ast.ImportModule oldChild,
+                                            Ast.ImportModule? newChild) {
+            assert (exists oldModule);
+            value builder = ModuleImportDeclarationDeltaBuilder {
+                oldNode = oldChild;
+                newNode = newChild;
+                oldParentModule = oldModule;
+                nodeComparisonListener = nodeComparisonListener;
+            };
             value delta = builder.buildDelta();
             if (delta.changes.empty && delta.childrenDeltas.empty) {
                 return;
@@ -333,24 +375,24 @@ shared class DeltaBuilderFactory(
             childrenDeltas.add(delta);
         }
 
-        shared actual void registerMemberAddedChange(Ast.ImportModule newChild) {
-            changes.add(ModuleImportAdded(
-                importedModuleName(newChild),
-                newChild.version.text.trim('"'.equals),
-                hasAnnotation(newChild.annotationList, "shared", newChild.unit)
-                then visibleOutside else invisibleOutside
-            ));
-        }
+        registerMemberAddedChange(Ast.ImportModule newChild)
+                => changes.add(ModuleImportAdded(
+                    importedModuleName(newChild),
+                    newChild.version.text.trim('"'.equals),
+                    hasAnnotation(newChild.annotationList, "shared", newChild.unit)
+                    then visibleOutside else invisibleOutside
+                ));
 
         shared actual void registerRemovedChange() {
-            assert(false);  // TODO: this will change when we fully support module descriptor incremental build
+            assert (false);  // TODO: this will change when we fully support module descriptor incremental build
         }
 
         shared actual void calculateLocalChanges() {
-            assert(exists newNode);
+            assert (exists newNode);
             if (any {
                 oldNode.version.text != newNode.version.text,
-                formatPath(oldNode.importPath.identifiers) != formatPath(newNode.importPath.identifiers),
+                formatPath(oldNode.importPath.identifiers)
+                != formatPath(newNode.importPath.identifiers),
                 !sameBackend(
                     [oldNode.annotationList, oldNode.unit],
                     [newNode.annotationList, newNode.unit])
@@ -360,22 +402,23 @@ shared class DeltaBuilderFactory(
             }
         }
 
-        shared actual Ast.ImportModule[] getChildren(Ast.ModuleDescriptor astNode) {
-            if (structuralChange in changes) {
-                return [];
-            }
-            return CeylonIterable(astNode.importModuleList.importModules).sequence();
-        }
+        getChildren(Ast.ModuleDescriptor astNode)
+                => [ if (structuralChange in changes)
+                     for (im in astNode.importModuleList.importModules)
+                     im ];
     }
 
-    class ModuleImportDeclarationDeltaBuilder(Ast.ImportModule oldNode, Ast.ImportModule? newNode, Module oldParentModule, NodeComparisonListener? nodeComparisonListener)
+    class ModuleImportDeclarationDeltaBuilder(Ast.ImportModule oldNode,
+                                              Ast.ImportModule? newNode,
+                                              Module oldParentModule,
+                                              NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder<Ast.ImportModule, Nothing>(oldNode, newNode) {
 
         variable ModuleImportDelta.PossibleChange? change = null;
 
         shared actual ModuleImportDelta buildDelta() {
             recurse();
-            object delta satisfies ModuleImportDelta {
+            return object satisfies ModuleImportDelta {
                 shared actual ModuleImport changedElement {
                     value moduleImport = CeylonIterable(oldParentModule.imports).find {
                         Boolean selecting(ModuleImport element) {
@@ -384,23 +427,21 @@ shared class DeltaBuilderFactory(
                             value astName = importedModuleName(oldNode);
                             value astVersion = oldNode.version.text.trim('"'.equals);
 
-                            return  modelName == astName &&
-                                    modelVersion == astVersion;
+                            return modelName == astName
+                                && modelVersion == astVersion;
                         }
                     };
                     assert (exists moduleImport);
                     return moduleImport;
                 }
-                shared actual [ModuleImportDelta.PossibleChange]|[] changes
-                        => if (exists existingChange = change) then [existingChange] else [];
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-                shared actual String changedElementString => "ModuleImport[``changedElement.\imodule.nameAsString``, ``changedElement.\imodule.version``]";
-            }
-            return delta;
+                changes => if (exists existingChange = change) then [existingChange] else [];
+                equals(Object that) => (super of AbstractDelta).equals(that);
+                changedElementString => "ModuleImport[``changedElement.\imodule.nameAsString``, ``changedElement.\imodule.version``]";
+            };
         }
 
         shared actual void calculateLocalChanges() {
-            assert(exists newNode);
+            assert (exists newNode);
 
             function isOptional(Ast.ImportModule descriptor)
                     => hasAnnotation(descriptor.annotationList, "optional", descriptor.unit);
@@ -436,7 +477,9 @@ shared class DeltaBuilderFactory(
         getChildren(Ast.ImportModule astNode) => [];
     }
 
-    class RegularCompilationUnitDeltaBuilder(Ast.CompilationUnit oldNode, Ast.CompilationUnit newNode, NodeComparisonListener? nodeComparisonListener)
+    class RegularCompilationUnitDeltaBuilder(Ast.CompilationUnit oldNode,
+                                             Ast.CompilationUnit newNode,
+                                             NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder<Ast.CompilationUnit, Ast.Declaration>(oldNode, newNode) {
 
         variable value changes = ArrayList<RegularCompilationUnitDelta.PossibleChange>();
@@ -444,36 +487,39 @@ shared class DeltaBuilderFactory(
 
         shared actual RegularCompilationUnitDelta buildDelta() {
             recurse();
-            object delta satisfies RegularCompilationUnitDelta {
+            return object satisfies RegularCompilationUnitDelta {
                 changedElement => oldNode.unit;
-                shared actual {RegularCompilationUnitDelta.PossibleChange*} changes => outer.changes;
-                shared actual {TopLevelDeclarationDelta*} childrenDeltas => outer.childrenDeltas;
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-            }
-            return delta;
+                changes => outer.changes;
+                childrenDeltas => outer.childrenDeltas;
+                equals(Object that) => (super of AbstractDelta).equals(that);
+            };
         }
 
-        shared actual void manageChildDelta(Ast.Declaration oldChild, Ast.Declaration? newChild) {
-            assert(oldChild.declarationModel.toplevel);
-            value builder = TopLevelDeclarationDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+        shared actual void manageChildDelta(Ast.Declaration oldChild,
+                                            Ast.Declaration? newChild) {
+            assert (oldChild.declarationModel.toplevel);
+            value builder = TopLevelDeclarationDeltaBuilder {
+                oldNode = oldChild;
+                newNode = newChild;
+                nodeComparisonListener = nodeComparisonListener;
+            };
             value delta = builder.buildDelta();
-            if (delta.changes.empty && delta.childrenDeltas.empty) {
-                return;
+            if (!delta.changes.empty || !delta.childrenDeltas.empty) {
+                childrenDeltas.add(delta);
             }
-            childrenDeltas.add(delta);
         }
 
         shared actual void registerMemberAddedChange(Ast.Declaration newChild) {
-            assert(newChild.declarationModel.toplevel);
-            changes.add(TopLevelDeclarationAdded(
-                newChild.declarationModel.nameAsString,
-                newChild.declarationModel.shared
-                then visibleOutside else invisibleOutside));
+            assert (newChild.declarationModel.toplevel);
+            changes.add(TopLevelDeclarationAdded {
+                name = newChild.declarationModel.nameAsString;
+                visibility = newChild.declarationModel.shared then visibleOutside else invisibleOutside;
+            });
         }
 
         shared actual void registerRemovedChange() {
             "A compilation unit cannot be removed from a PhasedUnit"
-            assert(false);
+            assert (false);
         }
 
         shared actual void calculateLocalChanges() {
@@ -491,7 +537,7 @@ shared class DeltaBuilderFactory(
             object visitor extends Visitor() {
                 shared actual void visitAny(AstAbstractNode? node) {
                     if (is Ast.Declaration declaration = node) {
-                        assert(declaration.declarationModel.toplevel);
+                        assert (declaration.declarationModel.toplevel);
                         children.add(declaration);
                     } else {
                         super.visitAny(node);
@@ -507,7 +553,9 @@ shared class DeltaBuilderFactory(
         shared actual formal NestedDeclarationDelta | SpecifierDelta buildDelta();
     }
     
-    class SpecifierDeltaBuilder(Ast.SpecifierStatement oldNode, Ast.SpecifierStatement? newNode, NodeComparisonListener? nodeComparisonListener)
+    class SpecifierDeltaBuilder(Ast.SpecifierStatement oldNode,
+                                Ast.SpecifierStatement? newNode,
+                                NodeComparisonListener? nodeComparisonListener)
             extends DeltaBuilder<Ast.SpecifierStatement, Nothing>(oldNode, newNode)
             satisfies MemberDeltaBuider {
         
@@ -515,12 +563,11 @@ shared class DeltaBuilderFactory(
         
         shared actual SpecifierDelta buildDelta() {
             recurse();
-            object delta satisfies SpecifierDelta {
+            return object satisfies SpecifierDelta {
                 changedElement => oldNode.declaration;
-                shared actual {SpecifierDelta.PossibleChange*} changes => outer.changes;
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-            }
-            return delta;
+                changes => outer.changes;
+                equals(Object that) => (super of AbstractDelta).equals(that);
+            };
         }
         
         manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
@@ -543,26 +590,38 @@ shared class DeltaBuilderFactory(
         getChildren(Ast.SpecifierStatement astNode) => [];
     }
 
-    abstract class DeclarationDeltaBuilder(Ast.Declaration oldNode, Ast.Declaration? newNode, NodeComparisonListener? nodeComparisonListener)
+    abstract class DeclarationDeltaBuilder(Ast.Declaration oldNode,
+                                           Ast.Declaration? newNode,
+                                           NodeComparisonListener? nodeComparisonListener)
             of TopLevelDeclarationDeltaBuilder | NestedDeclarationDeltaBuilder
             extends DeltaBuilder<Ast.Declaration, Ast.Statement>(oldNode, newNode) {
         
-        shared variable MutableList<NestedDeclarationDelta|SpecifierDelta> childrenDeltas = ArrayList<NestedDeclarationDelta|SpecifierDelta>();
-        shared formal void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change);
+        shared variable MutableList<NestedDeclarationDelta|SpecifierDelta> childrenDeltas
+                = ArrayList<NestedDeclarationDelta|SpecifierDelta>();
+        shared formal void addChange(NestedDeclarationDelta.PossibleChange|TopLevelDeclarationDelta.PossibleChange change);
         
         shared formal {ImpactingChange*} changes;
 
-        shared actual void manageChildDelta(Ast.Statement oldChild, Ast.Statement? newChild) {
+        shared actual void manageChildDelta(Ast.Statement oldChild,
+                                            Ast.Statement? newChild) {
             NestedDeclarationDeltaBuilder | SpecifierDeltaBuilder builder;
             switch(oldChild)
             case (is Ast.Declaration) {
-                assert(! oldChild.declarationModel.toplevel,
+                assert (! oldChild.declarationModel.toplevel,
                         is Ast.Declaration? newChild);
-                builder = NestedDeclarationDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+                builder = NestedDeclarationDeltaBuilder {
+                    oldNode = oldChild;
+                    newNode = newChild;
+                    nodeComparisonListener = nodeComparisonListener;
+                };
             }
             case (is Ast.SpecifierStatement) {
-                assert(is Ast.SpecifierStatement? newChild);
-                builder = SpecifierDeltaBuilder(oldChild, newChild, nodeComparisonListener);
+                assert (is Ast.SpecifierStatement? newChild);
+                builder = SpecifierDeltaBuilder {
+                    oldNode = oldChild;
+                    newNode = newChild;
+                    nodeComparisonListener = nodeComparisonListener;
+                };
             }
             else {
                 return;
@@ -580,7 +639,7 @@ shared class DeltaBuilderFactory(
             object visitor extends Visitor() {
                 shared actual void visitAny(AstAbstractNode node) {
                     if (is Ast.Declaration declaration = node) {
-                        assert(!declaration.declarationModel.toplevel);
+                        assert (!declaration.declarationModel.toplevel);
                         if (declaration.declarationModel.shared) {
                             children.add(declaration);
                         }
@@ -596,21 +655,19 @@ shared class DeltaBuilderFactory(
             return children.sequence();
         }
 
-        shared actual void registerMemberAddedChange(Ast.Statement newChild) {
-            addChange(DeclarationMemberAdded {
-                name = switch(newChild)
-                case(is Ast.Declaration) newChild.declarationModel.nameAsString
-                case(is Ast.SpecifierStatement) newChild.declaration.nameAsString
-                else "<unknown>";
-            });
-        }
+        registerMemberAddedChange(Ast.Statement newChild)
+                => addChange(DeclarationMemberAdded {
+                    name = switch(newChild)
+                    case(is Ast.Declaration) newChild.declarationModel.nameAsString
+                    case(is Ast.SpecifierStatement) newChild.declaration.nameAsString
+                    else "<unknown>";
+                });
         
-        shared actual void registerRemovedChange() {
-            addChange(removed);
-        }
-        
+        registerRemovedChange() => addChange(removed);
 
-        shared Boolean hasStructuralChanges(Ast.Declaration oldAstDeclaration, Ast.Declaration newAstDeclaration, NodeComparisonListener? listener) {
+        shared Boolean hasStructuralChanges(Ast.Declaration oldAstDeclaration,
+                                            Ast.Declaration newAstDeclaration,
+                                            NodeComparisonListener? listener) {
 
             ModelDeclaration? identifierToDeclaration(Ast.Identifier id)
                     => id.unit?.getImport(TreeUtil.name(id))?.declaration;
@@ -634,7 +691,7 @@ shared class DeltaBuilderFactory(
 
                 shared actual void visitType(Ast.Type node) {
                     enclose {
-                        title => (node is Ast.StaticType) then "Type" else node.nodeType;
+                        title => node is Ast.StaticType then "Type" else node.nodeType;
                         void action() {
                             if (exists type = node.typeModel) {
                                 builder.append(producedTypeNamePrinter.print(type, node.unit));
@@ -697,40 +754,53 @@ shared class DeltaBuilderFactory(
                 return TreeUtil.name(identifier);
             }
 
-            Set<String> annotationsAsStringSet(Ast.AnnotationList annotationList) {
-                return TreeSet {
-                    compare = (String x, String y) => x.compare(y);
-                    for (annotation in CeylonIterable(annotationList.annotations))
-                    if (!annotationName(annotation) in ["shared", "license", "by", "see", "doc"]) 
-                    nodeSigner.sign(annotation)
-                };
-            }
+            Set<String> annotationsAsStringSet(Ast.AnnotationList annotationList)
+                    => TreeSet {
+                        compare = (String x, String y) => x<=>y;
+                        for (annotation in annotationList.annotations)
+                        if (!annotationName(annotation) in ["shared", "license", "by", "see", "doc"])
+                        nodeSigner.sign(annotation)
+                    };
 
-            Boolean nodesDiffer(AstAbstractNode? oldNode, AstAbstractNode? newNode, String declarationMemberName) {
+            Boolean nodesDiffer(AstAbstractNode? oldNode,
+                                AstAbstractNode? newNode,
+                                String declarationMemberName) {
                 Boolean changed;
-                if(exists oldNode, exists newNode) {
-                    String oldSignature = nodeSigner.sign(oldNode);
-                    String newSignature = nodeSigner.sign(newNode);
-                    listener?.comparedNodes(oldSignature, newSignature, oldAstDeclaration, declarationMemberName);
-                    changed = oldSignature != newSignature || !errorListsEquals(oldNode.errors, newNode.errors);
+                if (exists oldNode, exists newNode) {
+                    value oldSignature = nodeSigner.sign(oldNode);
+                    value newSignature = nodeSigner.sign(newNode);
+                    listener?.comparedNodes {
+                        oldNode = oldSignature;
+                        newNode = newSignature;
+                        declaration = oldAstDeclaration;
+                        attribute = declarationMemberName;
+                    };
+                    changed = oldSignature != newSignature
+                            || !errorListsEquals(oldNode.errors, newNode.errors);
                 } else {
-                    changed = !(oldNode is Null && newNode is Null);
+                    changed = oldNode exists || newNode exists;
                     if (exists listener) {
-                        variable String? oldSignature = null;
-                        variable String? newSignature = null;
-                        if (exists oldNode) {
-                            oldSignature = nodeSigner.sign(oldNode);
-                        }
-                        if (exists newNode) {
-                            newSignature = nodeSigner.sign(newNode);
-                        }
-                        listener.comparedNodes(oldSignature, newSignature, oldAstDeclaration, declarationMemberName);
+                        value oldSignature
+                                = if (exists oldNode)
+                                then nodeSigner.sign(oldNode)
+                                else null;
+                        value newSignature
+                                = if (exists newNode)
+                                then nodeSigner.sign(newNode)
+                                else null;
+                        listener.comparedNodes {
+                            oldNode = oldSignature;
+                            newNode = newSignature;
+                            declaration = oldAstDeclaration;
+                            attribute = declarationMemberName;
+                        };
                     }
                 }
                 return changed;
             }
 
-            function lookForChanges<NodeType>(ClassOrInterface<NodeType> checkedType, Boolean between(NodeType oldNode, NodeType newNode))
+            function lookForChanges<NodeType>(ClassOrInterface<NodeType> checkedType,
+                        Boolean between(NodeType oldNode, NodeType newNode))
                     given NodeType satisfies Ast.Declaration {
                 if (is NodeType oldAstDeclaration) {
                     if (is NodeType newAstDeclaration) {
@@ -746,94 +816,102 @@ shared class DeltaBuilderFactory(
 
             Boolean hasChanges = lookForChanges {
                 checkedType = `Ast.Declaration`;
-                function between(Ast.Declaration oldNode, Ast.Declaration newNode) {
-                    assert(exists oldDeclaration = oldNode.declarationModel);
-                    assert(exists newDeclaration = newNode.declarationModel);
+                function between(Ast.Declaration oldNode,
+                                 Ast.Declaration newNode) {
+                    assert (exists oldDeclaration = oldNode.declarationModel);
+                    assert (exists newDeclaration = newNode.declarationModel);
                     value oldAnnotations = annotationsAsStringSet(oldNode.annotationList);
                     value newAnnotations = annotationsAsStringSet(newNode.annotationList);
-                    listener?.comparedNodes(oldAnnotations.string, newAnnotations.string, oldNode, "annotationList");
+                    listener?.comparedNodes {
+                        oldNode = oldAnnotations.string;
+                        newNode = newAnnotations.string;
+                        declaration = oldNode;
+                        attribute = "annotationList";
+                    };
                     return any {
                         oldAnnotations != newAnnotations,
                         !errorListsEquals(oldNode.errors, newNode.errors),
                         lookForChanges {
                             checkedType=`Ast.Constructor`;
-                            function between(Ast.Constructor oldConstructor, Ast.Constructor newConstructor) {
-                                return any {
+                            function between(Ast.Constructor oldConstructor,
+                                             Ast.Constructor newConstructor)
+                                => any {
                                     nodesDiffer(oldConstructor.delegatedConstructor, newConstructor.delegatedConstructor, "delegatedConstructor"),
                                     nodesDiffer(oldConstructor.parameterList, newConstructor.parameterList, "parameterList")
                                 };
-                            }
                         },
                         lookForChanges {
                             checkedType=`Ast.Enumerated`;
-                            function between(Ast.Enumerated oldEnumerated, Ast.Enumerated newEnumerated) {
-                                return any {
+                            function between(Ast.Enumerated oldEnumerated,
+                                             Ast.Enumerated newEnumerated)
+                                => any {
                                     nodesDiffer(oldEnumerated.delegatedConstructor, newEnumerated.delegatedConstructor, "delegatedConstructor")
                                 };
-                            }
                         },
                         lookForChanges {
                             checkedType=`Ast.TypedDeclaration`;
-                            function between(Ast.TypedDeclaration oldTyped, Ast.TypedDeclaration newTyped) {
-                                return any {
+                            function between(Ast.TypedDeclaration oldTyped,
+                                             Ast.TypedDeclaration newTyped)
+                                => any {
                                     nodesDiffer(oldTyped.type, newTyped.type, "type"),
                                     lookForChanges {
                                         checkedType=`Ast.AnyMethod`;
-                                        function between(Ast.AnyMethod oldMethod, Ast.AnyMethod newMethod) {
-                                            return any {
+                                        function between(Ast.AnyMethod oldMethod,
+                                                         Ast.AnyMethod newMethod)
+                                            => any {
                                                 nodesDiffer(oldMethod.typeConstraintList, newMethod.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldMethod.typeParameterList, newMethod.typeParameterList, "typeParameterList"),
                                                 oldMethod.parameterLists.size() != newMethod.parameterLists.size(),
                                                 anyPair {
                                                     firstIterable => CeylonIterable(oldMethod.parameterLists);
                                                     secondIterable => CeylonIterable(newMethod.parameterLists);
-                                                    Boolean selecting(Ast.ParameterList oldParamList, Ast.ParameterList newParamlist) {
-                                                        return nodesDiffer(oldParamList, newParamlist, "parameterLists");
-                                                    }
+                                                    selecting(Ast.ParameterList oldParamList, Ast.ParameterList newParamlist)
+                                                            => nodesDiffer(oldParamList, newParamlist, "parameterLists");
                                                 }
                                             };
-                                        }
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.ObjectDefinition`;
-                                        function between(Ast.ObjectDefinition oldObject, Ast.ObjectDefinition newObject) {
-                                            return any {
+                                        function between(Ast.ObjectDefinition oldObject,
+                                                         Ast.ObjectDefinition newObject)
+                                            => any {
                                                 nodesDiffer(oldObject.extendedType, newObject.extendedType, "extendedType"),
                                                 nodesDiffer(oldObject.satisfiedTypes, newObject.satisfiedTypes, "satisfiedTypes")
                                             };
-                                        }
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.Variable`;
-                                        function between(Ast.Variable oldVariable, Ast.Variable newVariable) {
-                                            return any {
+                                        function between(Ast.Variable oldVariable,
+                                                         Ast.Variable newVariable)
+                                            => any {
                                                 oldVariable.parameterLists.size() != oldVariable.parameterLists.size(),
                                                 anyPair {
                                                     firstIterable => CeylonIterable(oldVariable.parameterLists);
                                                     secondIterable => CeylonIterable(newVariable.parameterLists);
-                                                    Boolean selecting(Ast.ParameterList oldParamList, Ast.ParameterList newParamlist) {
-                                                        return nodesDiffer(oldParamList, newParamlist,"parameterLists");
-                                                    }
+                                                    selecting(Ast.ParameterList oldParamList,
+                                                              Ast.ParameterList newParamlist)
+                                                            => nodesDiffer(oldParamList, newParamlist,"parameterLists");
                                                 }
                                             };
-                                        }
                                     }
                                 };
-                            }
                         },
                         lookForChanges {
                             checkedType=`Ast.TypeDeclaration`;
-                            function between(Ast.TypeDeclaration oldType, Ast.TypeDeclaration newType) {
-                                return any {
+                            function between(Ast.TypeDeclaration oldType,
+                                             Ast.TypeDeclaration newType)
+                                => any {
                                     nodesDiffer(oldType.typeParameterList, newType.typeParameterList, "typeParameterList"),
                                     lookForChanges {
                                         checkedType=`Ast.ClassOrInterface`;
-                                        function between(Ast.ClassOrInterface oldClassOrInterface, Ast.ClassOrInterface newClassOrInterface) {
-                                            return any {
+                                        function between(Ast.ClassOrInterface oldClassOrInterface,
+                                                         Ast.ClassOrInterface newClassOrInterface)
+                                            => any {
                                                 lookForChanges {
                                                     checkedType=`Ast.AnyClass`;
-                                                    function between(Ast.AnyClass oldClass, Ast.AnyClass newClass) {
-                                                        return any {
+                                                    function between(Ast.AnyClass oldClass,
+                                                                     Ast.AnyClass newClass)
+                                                        => any {
                                                             nodesDiffer(oldClass.typeConstraintList, newClass.typeConstraintList, "typeConstraintList"),
                                                             nodesDiffer(oldClass.extendedType, newClass.extendedType, "extendedType"),
                                                             nodesDiffer(oldClass.caseTypes, newClass.caseTypes, "caseTypes"),
@@ -841,73 +919,76 @@ shared class DeltaBuilderFactory(
                                                             nodesDiffer(oldClass.parameterList, newClass.parameterList, "parameterList"),
                                                             lookForChanges {
                                                                 checkedType=`Ast.ClassDeclaration`;
-                                                                function between(Ast.ClassDeclaration oldClassDecl, Ast.ClassDeclaration newClassDecl) {
-                                                                    return any {
+                                                                function between(Ast.ClassDeclaration oldClassDecl,
+                                                                                 Ast.ClassDeclaration newClassDecl)
+                                                                    => any {
                                                                         nodesDiffer(oldClassDecl.classSpecifier, newClassDecl.classSpecifier, "classSpecifier")
                                                                     };
-                                                                }
                                                             }
                                                         };
-                                                    }
                                                 },
                                                 lookForChanges {
                                                     checkedType=`Ast.AnyInterface`;
-                                                    function between(Ast.AnyInterface oldInterface, Ast.AnyInterface newInterface) {
-                                                        return any {
+                                                    function between(Ast.AnyInterface oldInterface,
+                                                                     Ast.AnyInterface newInterface)
+                                                        => any {
                                                             nodesDiffer(oldInterface.typeConstraintList, newInterface.typeConstraintList, "typeConstraintList"),
                                                             nodesDiffer(oldInterface.caseTypes, newInterface.caseTypes, "caseTypes"),
                                                             nodesDiffer(oldInterface.satisfiedTypes, newInterface.satisfiedTypes, "satisfiedTypes"),
                                                             lookForChanges {
                                                                 checkedType=`Ast.InterfaceDeclaration`;
-                                                                function between(Ast.InterfaceDeclaration oldInterfaceDecl, Ast.InterfaceDeclaration newInterfaceDecl) {
-                                                                    return any {
+                                                                function between(Ast.InterfaceDeclaration oldInterfaceDecl,
+                                                                                 Ast.InterfaceDeclaration newInterfaceDecl)
+                                                                    => any {
                                                                         nodesDiffer(oldInterfaceDecl.typeSpecifier, newInterfaceDecl.typeSpecifier, "typeSpecifier")
                                                                     };
-                                                                }
                                                             },
                                                             lookForChanges {
                                                                 checkedType=`Ast.InterfaceDefinition`;
-                                                                function between(Ast.InterfaceDefinition oldInterface, Ast.InterfaceDefinition newInterface) {
-                                                                    listener?.comparedNodes(oldInterface.\idynamic.string, newInterface.\idynamic.string, oldNode, "dynamic");
+                                                                function between(Ast.InterfaceDefinition oldInterface,
+                                                                                 Ast.InterfaceDefinition newInterface) {
+                                                                    listener?.comparedNodes {
+                                                                        oldNode = oldInterface.\idynamic.string;
+                                                                        newNode = newInterface.\idynamic.string;
+                                                                        declaration = oldNode;
+                                                                        attribute = "dynamic";
+                                                                    };
                                                                     return oldInterface.\idynamic != newInterface.\idynamic;
                                                                 }
                                                             }
                                                         };
-                                                    }
                                                 }
                                             };
-                                        }
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.TypeAliasDeclaration`;
-                                        function between(Ast.TypeAliasDeclaration oldTypeAliasDeclaration, Ast.TypeAliasDeclaration newTypeAliasDeclaration) {
-                                            return any {
+                                        function between(Ast.TypeAliasDeclaration oldTypeAliasDeclaration,
+                                                         Ast.TypeAliasDeclaration newTypeAliasDeclaration)
+                                            => any {
                                                 nodesDiffer(oldTypeAliasDeclaration.typeConstraintList, newTypeAliasDeclaration.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldTypeAliasDeclaration.typeSpecifier, newTypeAliasDeclaration.typeSpecifier, "typeSpecifier")
                                             };
-                                        }
                                     },
                                     lookForChanges {
                                         checkedType=`Ast.TypeConstraint`;
-                                        function between(Ast.TypeConstraint oldTypeConstraint, Ast.TypeConstraint newTypeConstraint) {
-                                            return any {
+                                        function between(Ast.TypeConstraint oldTypeConstraint,
+                                                         Ast.TypeConstraint newTypeConstraint)
+                                            => any {
                                                 nodesDiffer(oldTypeConstraint.caseTypes, newTypeConstraint.caseTypes, "caseTypes"),
                                                 nodesDiffer(oldTypeConstraint.satisfiedTypes, newTypeConstraint.satisfiedTypes, "satisfiedTypes"),
                                                 nodesDiffer(oldTypeConstraint.abstractedType, newTypeConstraint.abstractedType, "abstractedType")
                                             };
-                                        }
                                     }
                                 };
-                            }
                         },
                         lookForChanges {
                             checkedType=`Ast.TypeParameterDeclaration`;
-                            function between(Ast.TypeParameterDeclaration oldTypeParameter, Ast.TypeParameterDeclaration newTypeParameter) {
-                                return any {
+                            function between(Ast.TypeParameterDeclaration oldTypeParameter,
+                                             Ast.TypeParameterDeclaration newTypeParameter)
+                                => any {
                                     nodesDiffer(oldTypeParameter.typeSpecifier, newTypeParameter.typeSpecifier, "typeSpecifier"),
                                     nodesDiffer(oldTypeParameter.typeVariance, newTypeParameter.typeVariance, "typeVariance")
                                 };
-                            }
                         }
                     };
                 }
@@ -918,32 +999,34 @@ shared class DeltaBuilderFactory(
         }
     }
 
-    class TopLevelDeclarationDeltaBuilder(Ast.Declaration oldNode, Ast.Declaration? newNode, NodeComparisonListener? nodeComparisonListener)
+    class TopLevelDeclarationDeltaBuilder(Ast.Declaration oldNode,
+                                          Ast.Declaration? newNode,
+                                          NodeComparisonListener? nodeComparisonListener)
             extends DeclarationDeltaBuilder(oldNode, newNode, nodeComparisonListener) {
 
         variable value _changes = ArrayList<TopLevelDeclarationDelta.PossibleChange>();
         shared actual {TopLevelDeclarationDelta.PossibleChange*} changes => _changes;
         
-        shared actual void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change) {
+        shared actual void addChange(change) {
+            NestedDeclarationDelta.PossibleChange|TopLevelDeclarationDelta.PossibleChange change;
             _changes.add(change);
         }
         
         shared actual TopLevelDeclarationDelta buildDelta() {
             recurse();
-            object delta satisfies TopLevelDeclarationDelta {
+            return object satisfies TopLevelDeclarationDelta {
                 changedElement => oldNode.declarationModel;
-                shared actual {TopLevelDeclarationDelta.PossibleChange*} changes => outer.changes;
-                shared actual {<NestedDeclarationDelta|SpecifierDelta>*} childrenDeltas => outer.childrenDeltas;
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
-            }
-            return delta;
+                changes => outer._changes;
+                childrenDeltas => outer.childrenDeltas;
+                equals(Object that) => (super of AbstractDelta).equals(that);
+            };
         }
 
         shared actual void calculateLocalChanges() {
-            assert(exists newNode);
+            assert (exists newNode);
 
-            assert(exists oldDeclaration = oldNode.declarationModel);
-            assert(exists newDeclaration = newNode.declarationModel);
+            assert (exists oldDeclaration = oldNode.declarationModel);
+            assert (exists newDeclaration = newNode.declarationModel);
             if (oldDeclaration.shared && !newDeclaration.shared) {
                 _changes.add(madeInvisibleOutsideScope);
             }
@@ -958,32 +1041,34 @@ shared class DeltaBuilderFactory(
     }
 
 
-    class NestedDeclarationDeltaBuilder(Ast.Declaration oldNode, Ast.Declaration? newNode, NodeComparisonListener? nodeComparisonListener)
+    class NestedDeclarationDeltaBuilder(Ast.Declaration oldNode,
+                                        Ast.Declaration? newNode,
+                                        NodeComparisonListener? nodeComparisonListener)
             extends DeclarationDeltaBuilder(oldNode, newNode, nodeComparisonListener)
             satisfies MemberDeltaBuider {
 
         variable value _changes = ArrayList<NestedDeclarationDelta.PossibleChange>();
         shared actual {NestedDeclarationDelta.PossibleChange*} changes => _changes;
         
-        shared actual void addChange(<NestedDeclarationDelta.PossibleChange | TopLevelDeclarationDelta.PossibleChange> change) {
-            assert(is NestedDeclarationDelta.PossibleChange change);
+        shared actual void addChange(change) {
+            NestedDeclarationDelta.PossibleChange|TopLevelDeclarationDelta.PossibleChange change;
+            assert (is NestedDeclarationDelta.PossibleChange change);
             _changes.add(change);
         }
         
         shared actual NestedDeclarationDelta buildDelta() {
             recurse();
-            object delta satisfies NestedDeclarationDelta {
+            return object satisfies NestedDeclarationDelta {
                 changedElement => oldNode.declarationModel;
-                shared actual {NestedDeclarationDelta.PossibleChange*} changes => outer.changes;
-                shared actual {<NestedDeclarationDelta|SpecifierDelta>*} childrenDeltas => outer.childrenDeltas;
-                shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
+                changes => outer._changes;
+                childrenDeltas => outer.childrenDeltas;
+                equals(Object that) => (super of AbstractDelta).equals(that);
 
-            }
-            return delta;
+            };
         }
 
         shared actual void calculateLocalChanges() {
-            assert(exists newNode);
+            assert (exists newNode);
             if (hasStructuralChanges(oldNode, newNode, nodeComparisonListener)) {
                 _changes.add(structuralChange);
             }
