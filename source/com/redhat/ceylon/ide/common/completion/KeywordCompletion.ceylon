@@ -5,18 +5,18 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformServices
-}
-import com.redhat.ceylon.ide.common.util {
-    OccurrenceLocation,
-    escaping
-}
 import com.redhat.ceylon.ide.common.doc {
     Icons
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformServices
+}
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
+}
+import com.redhat.ceylon.ide.common.util {
+    OL=OccurrenceLocation,
+    escaping
 }
 
 // see KeywordCompletionProposal
@@ -39,11 +39,11 @@ shared interface KeywordCompletion {
     
     // see KeywordCompletionProposal.addKeywordProposals(...)
     shared void addKeywordProposals(CompletionContext ctx, Tree.CompilationUnit cu,
-        Integer offset, String prefix, Node node, OccurrenceLocation? ol,
+        Integer offset, String prefix, Node node, OL? ol,
         Boolean postfix, Integer previousTokenType) {
-        
+
         if (isModuleDescriptor(cu),
-            !isLocation(ol, OccurrenceLocation.meta),
+            !isLocation(ol, OL.meta),
             !(ol?.reference else false)) {
             //outside of backtick quotes, the only keyword allowed
             //in a module descriptor is "import"
@@ -51,24 +51,24 @@ shared interface KeywordCompletion {
                 addKeywordProposal(ctx, offset, prefix, "import");
             }
         } else if (!prefix.empty,
-            !isLocation(ol, OccurrenceLocation.\icatch),
-            !isLocation(ol, OccurrenceLocation.\icase)) {
+            !isLocation(ol, OL.\icatch),
+            !isLocation(ol, OL.\icase)) {
             
             //TODO: this filters out satisfies/extends in an object named arg
             value keywords = 
-                    if (isLocation(ol, OccurrenceLocation.expression))
+                    if (isLocation(ol, OL.expression))
                     then (postfix then postfixKeywords else expressionKeywords)
                     else escaping.keywords;
             
             keywords.filter((kw) => kw.startsWith(prefix)).each(
                 (kw) => addKeywordProposal(ctx, offset, prefix, kw)
             );
-        } else if (isLocation(ol, OccurrenceLocation.\icase),
+        } else if (isLocation(ol, OL.\icase),
             previousTokenType == CeylonLexer.lparen) {
             
             addKeywordProposal(ctx, offset, prefix, "is");
         } else if (!prefix.empty,
-            isLocation(ol, OccurrenceLocation.\icase)) {
+            isLocation(ol, OL.\icase)) {
             
             if ("case".startsWith(prefix)) {
                 addKeywordProposal(ctx, offset, prefix, "case");
@@ -79,7 +79,7 @@ shared interface KeywordCompletion {
             
             addKeywordProposal(ctx, offset, prefix, "exists");
             addKeywordProposal(ctx, offset, prefix, "nonempty");
-        } else if (isLocation(ol, OccurrenceLocation.\iextends)) {
+        } else if (isLocation(ol, OL.\iextends)) {
             addKeywordProposal(ctx, offset, prefix, "package");
             addKeywordProposal(ctx, offset, prefix, "super");
         }
