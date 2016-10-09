@@ -58,7 +58,7 @@ import org.antlr.runtime {
 shared object addAnnotationQuickFix {
     
     value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
-    "actual", "formal", "default", "variable"];
+    "static", "actual", "formal", "default", "variable"];
     
     value annotationsOnSeparateLine => ["doc", "throws", "see", "tagged"];
     
