@@ -7,7 +7,7 @@ offline=false
 
 [compiler]
 source=source
-source=test-source
+resource=resource
 
 [repositories]
 lookup=./repo
