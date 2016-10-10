@@ -559,16 +559,12 @@ shared void appendTypeParametersWithArguments(Declaration d,
 }
 
 void appendDeclarationHeaderDescription(Declaration d, Reference? pr, Unit unit,
-    StringBuilder result) {
-    
-    appendDeclarationHeader(d, pr, unit, result, true);
-}
+    StringBuilder result)
+        => appendDeclarationHeader(d, pr, unit, result, true);
 
 void appendDeclarationHeaderText(Declaration d, Reference? pr, Unit unit,
-    StringBuilder result) {
-    
-    appendDeclarationHeader(d, pr, unit, result, false);
-}
+    StringBuilder result)
+        => appendDeclarationHeader(d, pr, unit, result, false);
 
 // see CodeCompletions.appendDeclarationHeader
 void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
@@ -911,7 +907,5 @@ shared void appendParameter(StringBuilder result, Reference? pr, Parameter p,
 // see CodeCompletions.appendParametersDescription
 void appendParametersDescription(Declaration d,
     Reference? pr, Unit unit, StringBuilder result, Boolean descriptionOnly,
-    LocalAnalysisResult? cmp) {
-    
-    appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
-}
+    LocalAnalysisResult? cmp)
+        => appendParameters(d, pr, d.unit, result, cmp, descriptionOnly);
