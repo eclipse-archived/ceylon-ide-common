@@ -22,9 +22,8 @@ shared object splitIfStatementQuickFix {
                 if (exists cl = ifSt.ifClause.conditionList) {
                     value conditions = cl.conditions;
                     value size = conditions.size();
-                    if (size >= 2, 
-                        exists c1 = conditions.get(size - 2),
-                        exists c2 = conditions.get(size - 1)) {
+                    if (exists c1 = conditions[size - 2],
+                        exists c2 = conditions[size - 1]) {
                         
                         value doc = data.document;
                         value change 
@@ -74,46 +73,42 @@ shared object splitIfStatementQuickFix {
                 }
             } else if (exists block = elseClause.block,
                        block.token.type == CeylonLexer.ifClause) {
-                value statements = block.statements;
 
-                if (statements.size() == 1) {
-                    value st = statements.get(0);
-                    if (is Tree.IfStatement st) {
-                        value inner = st;
-                        value icl = inner.ifClause.conditionList;
-                        value doc = data.document;
-                        value change 
-                                = platformServices.document.createTextChange(
-                                    "Split If Statement", doc);
-                        change.initMultiEdit();
-                        value ws 
-                                = doc.defaultLineDelimiter
-                                + doc.getIndent(ifSt);
-                        value indent = platformServices.document.defaultIndent;
-                        value start = block.startIndex.intValue();
-                        change.addEdit( 
-                            InsertEdit {
-                                start = start;
-                                text = "{" + ws + indent;
-                            });
-                        change.addEdit(
-                            InsertEdit {
-                                start = ifSt.endIndex.intValue();
-                                text = ws + "}";
-                            });
-                        incrementIndent {
-                            doc = doc;
-                            ifSt = ifSt;
-                            cl = icl;
-                            change = change;
-                            indent = indent;
-                        };
-                        
-                        data.addQuickFix {
-                            description = "Split 'if' statement at 'else'";
-                            change = change;
-                        };
-                    }
+                if (is Tree.IfStatement st = block.statements[0],
+                    exists value icl = st.ifClause.conditionList) {
+
+                    value doc = data.document;
+                    value change
+                            = platformServices.document.createTextChange(
+                                "Split If Statement", doc);
+                    change.initMultiEdit();
+                    value ws
+                            = doc.defaultLineDelimiter
+                            + doc.getIndent(ifSt);
+                    value indent = platformServices.document.defaultIndent;
+                    value start = block.startIndex.intValue();
+                    change.addEdit(
+                        InsertEdit {
+                            start = start;
+                            text = "{" + ws + indent;
+                        });
+                    change.addEdit(
+                        InsertEdit {
+                            start = ifSt.endIndex.intValue();
+                            text = ws + "}";
+                        });
+                    incrementIndent {
+                        doc = doc;
+                        ifSt = ifSt;
+                        cl = icl;
+                        change = change;
+                        indent = indent;
+                    };
+
+                    data.addQuickFix {
+                        description = "Split 'if' statement at 'else'";
+                        change = change;
+                    };
                 }
             }
         }
