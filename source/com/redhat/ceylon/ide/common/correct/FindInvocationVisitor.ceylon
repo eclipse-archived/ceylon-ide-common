@@ -84,14 +84,10 @@ shared class FindInvocationVisitor(Node node) extends Visitor() {
         Tree.Expression? e = that.specifierExpression.expression;
         if (exists e,
             exists term = e.term,
-            node == term) {
-            value bme = that.baseMemberExpression;
-            if (is Tree.BaseMemberExpression bme) {
-                value d = bme.declaration;
-                if (is TypedDeclaration d) {
-                    parameter = d;
-                }
-            }
+            node == term,
+            is Tree.BaseMemberExpression bme = that.baseMemberExpression,
+            is TypedDeclaration d = bme.declaration) {
+            parameter = d;
         }
         super.visit(that);
     }
