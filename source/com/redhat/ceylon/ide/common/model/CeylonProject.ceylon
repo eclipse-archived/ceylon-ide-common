@@ -183,63 +183,69 @@ shared abstract class BaseCeylonProject() {
 
     shared formal void removeOverridesProblemMarker();
 
+	shared CeylonRepoManagerBuilder newRepositoryManagerBuilder(Boolean withOutput = false) {
+		value builder = object extends CeylonRepoManagerBuilder() {
+			shared actual Overrides? getOverrides(String? path) {
+				if (! path exists) {
+					removeOverridesProblemMarker();
+				}
+				return super.getOverrides(path);
+			}
+			
+			shared actual Overrides? getOverrides(File absoluteFile) {
+				variable Overrides? result = null;
+				variable Exception? overridesException = null;
+				variable Integer overridesLine = -1;
+				variable Integer overridesColumn = -1;
+				try {
+					result = super.getOverrides(absoluteFile);
+				} catch(Overrides.InvalidOverrideException e) {
+					overridesException = e;
+					overridesLine = e.line;
+					overridesColumn = e.column;
+				} catch(IllegalStateException e) {
+					Throwable? cause = e.cause;
+					if (is SAXParseException cause) {
+						value parseException =  cause;
+						overridesException = parseException;
+						overridesLine = parseException.lineNumber;
+						overridesColumn = parseException.columnNumber;
+					} else if (is Exception cause) {
+						overridesException = cause;
+					} else {
+						overridesException = e;
+					}
+				} catch(Exception e) {
+					overridesException = e;
+				}
+				
+				if (exists theOverridesException = overridesException) {
+					createOverridesProblemMarker(
+						theOverridesException,
+						absoluteFile,
+						overridesLine,
+						overridesColumn);
+				} else {
+					removeOverridesProblemMarker();
+				}
+				return result;
+			}
+		}.offline(configuration.offline)
+		.cwd(rootDirectory)
+		.systemRepo(systemRepository)
+		.extraUserRepos(Arrays.asList(
+			for (p in referencedCeylonProjects)
+			javaString(p.ceylonModulesOutputDirectory.absolutePath)))
+		.logger(platformUtils.cmrLogger)
+		.isJDKIncluded(true);
+		if (withOutput) {
+			builder.outRepo(configuration.outputRepo);
+		}
+		return builder;
+	}
+
     function createRepositoryManager() 
-        => object extends CeylonRepoManagerBuilder() {
-            shared actual Overrides? getOverrides(String? path) {
-                if (! path exists) {
-                    removeOverridesProblemMarker();
-                }
-                return super.getOverrides(path);
-            }
-
-            shared actual Overrides? getOverrides(File absoluteFile) {
-                variable Overrides? result = null;
-                variable Exception? overridesException = null;
-                variable Integer overridesLine = -1;
-                variable Integer overridesColumn = -1;
-                try {
-                    result = super.getOverrides(absoluteFile);
-                } catch(Overrides.InvalidOverrideException e) {
-                    overridesException = e;
-                    overridesLine = e.line;
-                    overridesColumn = e.column;
-                } catch(IllegalStateException e) {
-                    Throwable? cause = e.cause;
-                    if (is SAXParseException cause) {
-                        value parseException =  cause;
-                        overridesException = parseException;
-                        overridesLine = parseException.lineNumber;
-                        overridesColumn = parseException.columnNumber;
-                    } else if (is Exception cause) {
-                        overridesException = cause;
-                    } else {
-                        overridesException = e;
-                    }
-                } catch(Exception e) {
-                    overridesException = e;
-                }
-
-                if (exists theOverridesException = overridesException) {
-                    createOverridesProblemMarker(
-                        theOverridesException,
-                        absoluteFile,
-                        overridesLine,
-                        overridesColumn);
-                } else {
-                    removeOverridesProblemMarker();
-                }
-                return result;
-            }
-        }
-        .offline(configuration.offline)
-        .cwd(rootDirectory)
-        .systemRepo(systemRepository)
-        .extraUserRepos(Arrays.asList(
-            for (p in referencedCeylonProjects)
-            javaString(p.ceylonModulesOutputDirectory.absolutePath)))
-        .logger(platformUtils.cmrLogger)
-        .isJDKIncluded(true)
-        .buildManager();
+        => newRepositoryManagerBuilder().buildManager();
 
     shared RepositoryManager repositoryManager {
         try {
