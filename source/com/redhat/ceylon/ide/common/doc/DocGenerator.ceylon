@@ -1,6 +1,3 @@
-import com.redhat.ceylon.common {
-    Backends
-}
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -592,7 +589,7 @@ shared interface DocGenerator {
 
         value nativeBackends = mod.nativeBackends;
         if (!nativeBackends.none(), 
-            !Backends.header == nativeBackends) {
+            !nativeBackends.header()) {
             value buf2 = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf2, nativeBackends);
             buf.append("(")
@@ -741,7 +738,7 @@ shared interface DocGenerator {
         }
         if (exists backends = decl.nativeBackends, 
             !backends.none(),
-            backends != Backends.header) {
+            !backends.header()) {
             
             value buf = StringBuilder();
             moduleImportUtil.appendNativeBackends(buf, backends);
