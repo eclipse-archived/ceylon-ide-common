@@ -161,5 +161,5 @@ test shared void testMapBug301(){
     map.put("b", "b");
     map.remove("a");
     assertEquals(map.size, 1);
-    assertEquals({ for (item in map) item }.sequence(), ["b"->"b"]);
+    assertEquals({ *map }.sequence(), ["b"->"b"]);
 }

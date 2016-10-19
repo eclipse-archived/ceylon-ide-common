@@ -226,19 +226,18 @@ shared final class Path satisfies List<String> {
         // and trailing slashes
         variable value next = firstPosition;
 
-        return Array { for (i in 0:segmentCount)
-                    let (buildPart = (Integer i) {
-                        value start = next;
-                        value end = path.firstOccurrence(_SEPARATOR, next);
-                        if (! exists end) {
-                            return path.span(start, lastPosition);
-                        } else {
-                            next=end+1;
-                            return path.span(start, end-1);
-                        }
-                    })
-                    buildPart(i)
-        };
+        function buildPart(Integer i) {
+            value start = next;
+            value end = path.firstOccurrence(_SEPARATOR, next);
+            if (! exists end) {
+                return path.span(start, lastPosition);
+            } else {
+                next=end+1;
+                return path.span(start, end-1);
+            }
+        }
+
+        return Array((0:segmentCount).map(buildPart));
     }
 
     """

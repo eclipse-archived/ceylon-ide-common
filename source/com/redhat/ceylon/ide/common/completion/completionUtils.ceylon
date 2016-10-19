@@ -156,13 +156,13 @@ shared {Declaration*} overloads(Declaration dec) {
         if (exists refined = dec.overloads[0]?.refinedDeclaration, refined.overloaded,
             exists abstraction = refined.scope.getDirectMember(dec.name, null, false),
             abstraction.abstraction) {
-            return { for (d in dec.overloads) d }
+            return { *dec.overloads }
                 .chain { for (r in abstraction.overloads)
                          if (!any { for (d in dec.overloads) r==d.refinedDeclaration })
                          r };
         }
         else {
-            return { for (d in dec.overloads) d };
+            return { *dec.overloads };
         }
     }
     else {
