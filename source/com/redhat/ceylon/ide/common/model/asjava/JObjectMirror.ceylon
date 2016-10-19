@@ -13,15 +13,22 @@ import com.redhat.ceylon.model.typechecker.model {
     Value,
     Declaration,
     Type,
-    FunctionOrValue
+    FunctionOrValue,
+    Package,
+    TypeDeclaration
 }
 
 import java.lang {
-    JString=String
+    JString=String,
+    IllegalArgumentException
 }
 import java.util {
     List,
     Collections
+}
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
 }
 
 shared class JObjectMirror(Value decl)
@@ -92,8 +99,25 @@ shared class GetMethod(JObjectMirror obj)
 }
 
 shared String javaQualifiedName(Declaration decl)
-        => let (fqn = CodegenUtil.getJavaNameOfDeclaration(decl))
+        => let (fqn = getJavaNameOfDeclaration(decl))
         if (decl is FunctionOrValue && decl.toplevel,
             exists loc = fqn.lastOccurrence('.'))
         then fqn.initial(loc) //strip off the static method/getter name
         else fqn;
+
+String getJavaNameOfDeclaration(Declaration decl) {
+    try {
+        return CodegenUtil.getJavaNameOfDeclaration(decl);
+    } catch (IllegalArgumentException e) {
+        variable value s = decl.scope;
+        while (!s is Package) {
+            if (!s is TypeDeclaration) {
+                platformUtils.log(Status._WARNING, "getJavaNameOfDeclaration: unexpected scope of type ``className(s)``");
+                break;
+            }
+            s = s.container;
+        }
+
+        return decl.name;
+    }
+}
