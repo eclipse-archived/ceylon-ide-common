@@ -121,6 +121,9 @@ import java.util.concurrent.locks {
 import org.xml.sax {
     SAXParseException
 }
+import com.redhat.ceylon.cmr.impl {
+    NpmRepository
+}
 
 shared final class ProjectState
         of missing | parsing | parsed | typechecking | typechecked | compiled
@@ -244,8 +247,13 @@ shared abstract class BaseCeylonProject() {
 		return builder;
 	}
 
-    function createRepositoryManager() 
-        => newRepositoryManagerBuilder().buildManager();
+    function createRepositoryManager() {
+        value manager = newRepositoryManagerBuilder().buildManager();
+        CeylonIterable(manager.repositories)
+                .narrow<NpmRepository>()
+                .each((r) => r.setNpmCommand(ideConfiguration.npmPath));
+        return manager;
+    }
 
     shared RepositoryManager repositoryManager {
         try {

@@ -5,7 +5,8 @@ import ceylon.interop.java {
 import com.redhat.ceylon.common.config {
     CeylonConfig,
     CeylonConfigFinder,
-    ConfigWriter
+    ConfigWriter,
+    ConfigFinder
 }
 
 import java.io {
@@ -14,13 +15,19 @@ import java.io {
     IOException
 }
 import java.lang {
-    JBoolean=Boolean
+    JBoolean=Boolean,
+    System {
+        systemProperty = getProperty
+    }
 }
 import java.util {
     Properties
 }
 import java.util.regex {
     Pattern
+}
+import com.redhat.ceylon.common {
+    Constants
 }
 
 shared interface JavaToCeylonConverterConfig {
@@ -44,10 +51,12 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
     shared String projectRelativePath = ".ceylon/ide-config";
 
+    ConfigFinder configFinder = ConfigFinder("ide-config", "ceylon.ide-config");
+    
     shared File ideConfigFile => File(File(project.rootDirectory, ".ceylon"), "ide-config");
 
     void initMergedConfig() {
-        mergedConfig = CeylonConfig.createFromLocalDir(project.rootDirectory);
+        mergedConfig = configFinder.loadDefaultConfig(project.rootDirectory);
     }
 
     void initIdeConfig() {
@@ -55,7 +64,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         variable CeylonConfig? searchedConfig = null;
         if (configFile.\iexists() && configFile.file) {
             try {
-                searchedConfig = CeylonConfigFinder.loadConfigFromFile(configFile);
+                searchedConfig = configFinder.loadConfigFromFile(configFile);
             } catch (IOException e) {
                 throw Exception(null, e);
             }
@@ -70,6 +79,41 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     initMergedConfig();
     initIdeConfig();
 
+    Boolean isExe(String p) =>
+            let(f = File(p))
+            f.\iexists() && f.canExecute();
+
+    value windowsPaths = { 
+        "C:\\Program Files\\nodejs\\",
+        "C:\\Program Files (x86)\\nodejs\\"
+    };
+    
+    value windowsExtensions = { 
+        ".exe",
+        ".cmd"
+    };
+    
+    value windowsPathsAndExtensions = windowsPaths.product(windowsExtensions);
+
+    value unixLikePaths = {
+        "/usr/bin/",
+        "/usr/local/",
+        "/bin/",
+        "/opt/bin/"
+    };
+            
+    value unixLikePathsAndExtensions = unixLikePaths.map((p) => [p, ""]);
+
+    value possiblePathsAndExtensions = concatenate(
+        unixLikePathsAndExtensions,
+        windowsPathsAndExtensions);
+
+    String? searchForNodeOrNpmPath(String* commandsWithoutExtension) => {
+        for (cmdName in commandsWithoutExtension)
+        for ([path, extension] in possiblePathsAndExtensions)
+        path + cmdName + extension
+    }.find(isExe);
+    
     shared Boolean? compileToJvm => let (JBoolean? option = ideConfig.getBoolOption("project.compile-jvm")) option?.booleanValue();
     assign compileToJvm {
         this.isCompileToJvmChanged = true;
@@ -88,6 +132,20 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientSystemRepository = systemRepository;
     }
 
+    shared String? nodePath => 
+            if (exists fromConfig = ideConfig.getOption("js.node-path"))
+            then fromConfig
+            else if (exists fromSystem = systemProperty(Constants.propCeylonExtcmdNode))
+            then fromSystem
+            else searchForNodeOrNpmPath("node", "nodejs");
+
+    shared String? npmPath => 
+            if (exists fromConfig = ideConfig.getOption("js.npm-path"))
+            then fromConfig
+            else if (exists fromSystem = systemProperty(Constants.propCeylonExtcmdNpm))
+            then fromSystem
+            else searchForNodeOrNpmPath("npm");
+    
     deprecated("Use [[CeylonProjectConfig.javacOptions]] instead.")
     shared {String*}? javacOptions => getConfigValuesAsList(ideConfig, "project.javac", null);
     assign javacOptions {
