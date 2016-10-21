@@ -1,7 +1,6 @@
-import ceylon.interop.java {
-    CeylonIterable
+import com.redhat.ceylon.common {
+    Constants
 }
-
 import com.redhat.ceylon.common.config {
     CeylonConfig,
     ConfigWriter,
@@ -14,9 +13,8 @@ import java.io {
     IOException
 }
 import java.lang {
-    JBoolean=Boolean,
     System {
-        systemProperty = getProperty
+        systemProperty=getProperty
     }
 }
 import java.util {
@@ -24,9 +22,6 @@ import java.util {
 }
 import java.util.regex {
     Pattern
-}
-import com.redhat.ceylon.common {
-    Constants
 }
 
 shared interface JavaToCeylonConverterConfig {
@@ -60,17 +55,14 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
     void initIdeConfig() {
         File configFile = ideConfigFile;
-        variable CeylonConfig? searchedConfig = null;
         if (configFile.\iexists() && configFile.file) {
             try {
-                searchedConfig = configFinder.loadConfigFromFile(configFile);
+                ideConfig = configFinder.loadConfigFromFile(configFile);
             } catch (IOException e) {
                 throw Exception(null, e);
             }
         }
-        if (exists existingConfig=searchedConfig) {
-            ideConfig = existingConfig;
-        } else {
+        else {
             ideConfig = CeylonConfig();
         }
     }
@@ -113,13 +105,15 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         path + cmdName + extension
     }.find(isExe);
     
-    shared Boolean? compileToJvm => let (JBoolean? option = ideConfig.getBoolOption("project.compile-jvm")) option?.booleanValue();
+    shared Boolean? compileToJvm =>
+            ideConfig.getBoolOption("project.compile-jvm")?.booleanValue();
     assign compileToJvm {
         this.isCompileToJvmChanged = true;
         this.transientCompileToJvm = compileToJvm;
     }
 
-    shared Boolean? compileToJs => let (JBoolean? option = ideConfig.getBoolOption("project.compile-js")) option?.booleanValue();
+    shared Boolean? compileToJs =>
+            ideConfig.getBoolOption("project.compile-js")?.booleanValue();
     assign compileToJs {
         this.isCompileToJsChanged = true;
         this.transientCompileToJs = compileToJs;
@@ -152,10 +146,11 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientJavacOptions = javacOptions;
     }
     
-    shared JavaToCeylonConverterConfig converterConfig => object satisfies JavaToCeylonConverterConfig {
-        shared actual Boolean transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
-        shared actual Boolean useValues => ideConfig.getBoolOption("converter.use-values", false);
-    };
+    shared JavaToCeylonConverterConfig converterConfig
+            => object satisfies JavaToCeylonConverterConfig {
+                transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
+                useValues => ideConfig.getBoolOption("converter.use-values", false);
+            };
 
     shared String? getSourceAttachment(String moduleName, String moduleVersion) {
         value propertiesFile = File(
@@ -169,13 +164,13 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         if (propertiesFile.\iexists()) {
             value properties = Properties();
             properties.load(FileReader(propertiesFile));
-            value srcPaths =
-                    CeylonIterable(properties.stringPropertyNames())
-                    .filter((name)=> name.matches(optionPattern))
-                    .map((s)=>s.string)
-                    .sort((x, y) => x.count('*'.equals) <=> y.count('*'.equals))
-                    .map((name) => properties.getProperty(name.string));
-            return srcPaths.first;
+            value propName =
+                    { for (name in properties.stringPropertyNames())
+                      if (name.matches(optionPattern)) name.string };
+            return if (exists srcPath
+                    = propName.max(byDecreasing((String x) => x.count('*'.equals))))
+                then properties.getProperty(srcPath)
+                else null;
         }
 
         return null;
@@ -207,9 +202,15 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
 
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
-                if (isCompileToJvmChanged) { ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false); }
-                if (isCompileToJsChanged) { ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false); }
-                if (isCompileToJvmChanged) { ideConfig.setOption("project.system-repository", transientSystemRepository else ""); }
+                if (isCompileToJvmChanged) {
+                    ideConfig.setBoolOption("project.compile-jvm", transientCompileToJvm else false);
+                }
+                if (isCompileToJsChanged) {
+                    ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false);
+                }
+                if (isCompileToJvmChanged) {
+                    ideConfig.setOption("project.system-repository", transientSystemRepository else "");
+                }
                 if (isJavacOptionsChanged) { 
                     setConfigValuesAsList(ideConfig, "project.javac", transientJavacOptions);
                 }

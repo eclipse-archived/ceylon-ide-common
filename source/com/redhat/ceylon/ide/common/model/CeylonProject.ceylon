@@ -2,7 +2,6 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaClass,
     javaString
 }
@@ -249,9 +248,11 @@ shared abstract class BaseCeylonProject() {
 
     function createRepositoryManager() {
         value manager = newRepositoryManagerBuilder().buildManager();
-        CeylonIterable(manager.repositories)
-                .narrow<NpmRepository>()
-                .each((r) => r.setNpmCommand(ideConfiguration.npmPath));
+        for (repo in manager.repositories) {
+             if (is NpmRepository repo) {
+                repo.setNpmCommand(ideConfiguration.npmPath);
+             }
+        }
         return manager;
     }
 
@@ -383,15 +384,17 @@ shared abstract class BaseCeylonProject() {
     shared default Boolean loadInterProjectDependenciesFromSourcesFirst => false;
 
     shared {String*} ceylonRepositories
-            => let (c = configuration) c.projectLocalRepos
-        .chain(c.globalLookupRepos)
-        .chain(c.projectRemoteRepos)
-        .chain(c.otherRemoteRepos);
+            => let (c = configuration)
+                c.projectLocalRepos
+                 .chain(c.globalLookupRepos)
+                 .chain(c.projectRemoteRepos)
+                 .chain(c.otherRemoteRepos);
 
-    shared {File*} ceylonRepositoryBaseDirectories => CeylonIterable(repositoryManager.repositories)
-        .map((repo) => repo.root.getService(javaClass<ContentStore>()) else null)
-        .coalesced
-        .flatMap((contentStore) => CeylonIterable(contentStore.baseDirectories));
+    shared {File*} ceylonRepositoryBaseDirectories =>
+            { for (repo in repositoryManager.repositories)
+              if (exists contentStore = repo.root.getService(javaClass<ContentStore>()))
+              for (dir in contentStore.baseDirectories)
+              dir };
 
     shared default Boolean isJavaLikeFileName(String fileName) =>
             fileName.endsWith(".java");
@@ -535,9 +538,9 @@ given NativeFile satisfies NativeResource {
         shared formal TypecheckerModules typecheckerModules;
 
         shared actual Iterator<IdeModuleAlias> iterator() =>
-                typecheckerModules.listOfModules
-                    .toArray(ObjectArray<Module>(typecheckerModules.listOfModules.size()))
-                    .iterable.map((m) => unsafeCast<IdeModuleAlias>(m)).iterator();
+                [ for (m in typecheckerModules.listOfModules)
+                  unsafeCast<IdeModuleAlias>(m) ]
+                    .iterator();
 
         shared actual IdeModuleAlias default =>
                 unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.defaultModule);
@@ -951,10 +954,9 @@ given NativeFile satisfies NativeResource {
                             if (_module.isCeylonArchive
                             && ModelUtil.isForBackend(_module.nativeBackends, Backend.javaScript.asSet())) {
                                 value importedModuleImports =
-                                        CeylonIterable(moduleSourceMapper.retrieveModuleImports(_module))
-                                            .filter((moduleImport) =>
-                                        ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.javaScript.asSet()))
-                                            .sequence();
+                                        [ for (moduleImport in moduleSourceMapper.retrieveModuleImports(_module))
+                                           if (ModelUtil.isForBackend(moduleImport.nativeBackends, Backend.javaScript.asSet()))
+                                           moduleImport ];
                                 if (nonempty importedModuleImports) {
                                     File? artifact = repositoryManager.getArtifact(
                                         ArtifactContext(
@@ -962,7 +964,7 @@ given NativeFile satisfies NativeResource {
                                             _module.nameAsString,
                                             _module.version,
                                             ArtifactContext.js));
-                                    if (artifact is Null) {
+                                    if (!exists artifact) {
                                         for (importInError in importedModuleImports) {
                                             moduleSourceMapper.attachErrorToModuleImport(importInError,
                                                 "module not available for JavaScript platform: '``_module.nameAsString``' \"``_module.version``\"");
@@ -1029,11 +1031,7 @@ given NativeFile satisfies NativeResource {
 
     Boolean isFolderInRootFolder(NativeFolder folder, Boolean? sourceRoot=null) {
         if (exists rootIsSource = vfsServices.getRootIsSourceProperty(this, folder)) {
-            if (exists sourceRoot) {
-                return sourceRoot == rootIsSource;
-            } else {
-                return true;
-            }
+            return if (exists sourceRoot) then sourceRoot == rootIsSource else true;
         }
         return vfsServices.isDescendantOfAny(folder,
             if (exists sourceRoot)
