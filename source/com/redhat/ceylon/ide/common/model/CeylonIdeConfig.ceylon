@@ -87,8 +87,8 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     value windowsPathsAndExtensions = windowsPaths.product(windowsExtensions);
 
     value unixLikePaths = {
+        "/usr/local/bin/",
         "/usr/bin/",
-        "/usr/local/",
         "/bin/",
         "/opt/bin/"
     };
