@@ -6,12 +6,10 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     synchronize,
-    CeylonIterable,
     JavaList,
     javaClass,
     JavaIterable,
-    JavaCollection,
-    CeylonStringIterable
+    JavaCollection
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -708,9 +706,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 return messages;
             }
             
-            state.frontendMessages.addAll(
-                expand(phasedUnitsToTypecheck
-                    .map(retrieveErrors)));
+            state.frontendMessages.addAll(expand(phasedUnitsToTypecheck.map(retrieveErrors)));
             
             ceylonProject.model.buildMessagesChanged(ceylonProject, frontendMessages, null, null);
             // TODO addTaskMarkers(file, phasedUnit.getTokens());
@@ -736,15 +732,19 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         assert(exists modules = ceylonProject.modules,
             exists typeChecker = ceylonProject.typechecker);
         
-        value dependencyNumber = CeylonIterable(typeChecker.phasedUnitsOfDependencies)
-                .fold(0)((number, pus) => number + pus.phasedUnits.size());
+        value dependencyNumber
+                = sum({ for (pus in typeChecker.phasedUnitsOfDependencies)
+                        pus.phasedUnits.size() }
+                    .follow(0));
         value dependenciesTypecheckingTicks = dependencyNumber * 6;
         
-        try(progress = monitor.Progress(dependenciesTypecheckingTicks, "Typechecking `` dependencyNumber `` dependencies fro project `` ceylonProject.name ``")) {
+        try(progress = monitor.Progress(dependenciesTypecheckingTicks,
+            "Typechecking `` dependencyNumber `` dependencies fro project `` ceylonProject.name ``")) {
             
-            value dependencies = CeylonIterable(typeChecker.phasedUnitsOfDependencies)
-                    .flatMap((phasedUnits) => CeylonIterable(phasedUnits.phasedUnits))
-                    .sequence();
+            value dependencies
+                    = [ for (phasedUnits in typeChecker.phasedUnitsOfDependencies)
+                        for (phasedUnit in phasedUnits.phasedUnits)
+                        phasedUnit ];
             
             value dependencyTypecheckingPhases = {
                 ["Scanning declarations", 1, (PhasedUnit pu) => pu.scanDeclarations()],
@@ -765,7 +765,8 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         value fileNumber = filesRequiringCeylonModelUpdate.size;
         value sourceTypecheckingTicks = fileNumber * 10;
         value sourceUpdatingTicks = fileNumber * 5;
-        try(progress = monitor.Progress(sourceTypecheckingTicks + sourceUpdatingTicks, "Updating `` fileNumber `` source files of project `` ceylonProject.name ``")) {
+        try(progress = monitor.Progress(sourceTypecheckingTicks + sourceUpdatingTicks,
+            "Updating `` fileNumber `` source files of project `` ceylonProject.name ``")) {
             assert(exists typeChecker=ceylonProject.typechecker,
                 exists modules = ceylonProject.modules,
                 exists modelLoader = ceylonProject.modelLoader);
@@ -1272,11 +1273,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     .getPhasedUnit(srcFile),
             exists unit = phasedUnit.unit) {
             
-            return CeylonStringIterable(unit.dependentsOf);
+            return { for (str in unit.dependentsOf) str.string };
         } 
         else {
             if (is JavaCompilationUnitAlias unit = srcFile.unit) {
-                return CeylonStringIterable(unit.dependentsOf);
+                return { for (str in unit.dependentsOf) str.string };
             }
         }
         

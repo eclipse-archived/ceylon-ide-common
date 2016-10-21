@@ -491,11 +491,11 @@ shared abstract class BaseCeylonProject() {
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
         satisfies ChangeAware<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & ModelServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & VfsAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
 given NativeProject satisfies Object
 given NativeResource satisfies Object
 given NativeFolder satisfies NativeResource
@@ -529,7 +529,7 @@ given NativeFile satisfies NativeResource {
         buildHooks.each((hook) => hook.repositoryManagerReset(this));
     }
 
-    shared actual Boolean nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
+    nativeProjectIsAccessible => modelServices.nativeProjectIsAccessible(ideArtifact);
 
     shared actual abstract class Modules()
             extends super.Modules()
@@ -547,7 +547,7 @@ given NativeFile satisfies NativeResource {
         shared actual IdeModuleAlias language =>
                 unsafeCast<IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>>(typecheckerModules.languageModule);
 
-        shared actual Package? javaLangPackage =>
+        javaLangPackage =>
                 find((m) => m.nameAsString == "java.base")
                 ?.getDirectPackage("java.lang");
 
