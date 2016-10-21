@@ -36,12 +36,10 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     variable Boolean? transientCompileToJvm = null;
     variable Boolean? transientCompileToJs = null;
     variable String? transientSystemRepository = null;
-    variable {String*}? transientJavacOptions = null;
 
     variable Boolean isCompileToJvmChanged = false;
     variable Boolean isCompileToJsChanged = false;
     variable Boolean isSystemRepositoryChanged = false;
-    variable Boolean isJavacOptionsChanged = false;
 
     shared String projectRelativePath = ".ceylon/ide-config";
 
@@ -139,13 +137,6 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
             then fromSystem
             else searchForNodeOrNpmPath("npm");
     
-    deprecated("Use [[CeylonProjectConfig.javacOptions]] instead.")
-    shared {String*}? javacOptions => getConfigValuesAsList(ideConfig, "project.javac", null);
-    assign javacOptions {
-        this.isJavacOptionsChanged = true;
-        this.transientJavacOptions = javacOptions;
-    }
-    
     shared JavaToCeylonConverterConfig converterConfig
             => object satisfies JavaToCeylonConverterConfig {
                 transformGetters => ideConfig.getBoolOption("converter.transform-getters", true);
@@ -183,12 +174,10 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         isCompileToJvmChanged = false;
         isCompileToJsChanged = false;
         isSystemRepositoryChanged = false;
-        isJavacOptionsChanged = false;
 
         transientCompileToJvm = null;
         transientCompileToJs = null;
         transientSystemRepository = null;
-        transientJavacOptions = null;
     }
 
     shared void save() {
@@ -197,8 +186,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         Boolean someSettingsChanged = 
                 isCompileToJvmChanged || 
                 isCompileToJsChanged || 
-                isSystemRepositoryChanged ||
-                isJavacOptionsChanged;
+                isSystemRepositoryChanged;
 
         if (!ideConfigFile.\iexists() || someSettingsChanged) {
             try {
@@ -210,9 +198,6 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
                 }
                 if (isCompileToJvmChanged) {
                     ideConfig.setOption("project.system-repository", transientSystemRepository else "");
-                }
-                if (isJavacOptionsChanged) { 
-                    setConfigValuesAsList(ideConfig, "project.javac", transientJavacOptions);
                 }
 
                 ConfigWriter.instance().write(ideConfig, ideConfigFile);
