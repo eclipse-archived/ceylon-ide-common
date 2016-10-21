@@ -4,7 +4,6 @@ import ceylon.interop.java {
 
 import com.redhat.ceylon.common.config {
     CeylonConfig,
-    CeylonConfigFinder,
     ConfigWriter,
     ConfigFinder
 }
