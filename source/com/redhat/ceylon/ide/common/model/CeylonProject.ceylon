@@ -17,6 +17,9 @@ import com.redhat.ceylon.cmr.ceylon {
         CeylonRepoManagerBuilder
     }
 }
+import com.redhat.ceylon.cmr.impl {
+    NpmRepository
+}
 import com.redhat.ceylon.cmr.spi {
     ContentStore
 }
@@ -93,7 +96,6 @@ import java.lang {
     InterruptedException,
     RuntimeException,
     IllegalStateException,
-    ObjectArray,
     ByteArray
 }
 import java.lang.ref {
@@ -119,9 +121,6 @@ import java.util.concurrent.locks {
 
 import org.xml.sax {
     SAXParseException
-}
-import com.redhat.ceylon.cmr.impl {
-    NpmRepository
 }
 
 shared final class ProjectState
@@ -708,26 +707,18 @@ given NativeFile satisfies NativeResource {
 
     shared actual {CeylonProjectAlias*} referencedCeylonProjects =>
             modelServices.referencedNativeProjects(ideArtifact)
-                .map((NativeProject nativeProject) => model.getProject(nativeProject))
+                .map((nativeProject) => model.getProject(nativeProject))
                 .coalesced;
 
     shared actual {CeylonProjectAlias*} referencingCeylonProjects =>
             modelServices.referencingNativeProjects(ideArtifact)
-                .map((NativeProject nativeProject) => model.getProject(nativeProject))
+                .map((nativeProject) => model.getProject(nativeProject))
                 .coalesced;
 
-    shared Boolean isCompilable(NativeFile file) {
-        if (isCeylon(file)) {
-            return true;
-        }
-        if (isJava(file) && compileToJava) {
-            return true;
-        }
-        if (isJavascript(file) && compileToJs) {
-            return true;
-        }
-        return false;
-    }
+    shared Boolean isCompilable(NativeFile file)
+            => isCeylon(file)
+            || (isJava(file) && compileToJava)
+            || (isJavascript(file) && compileToJs);
 
     shared default Boolean isCeylon(NativeFile file) =>
             vfsServices.getShortName(file).endsWith(".ceylon");
@@ -810,7 +801,7 @@ given NativeFile satisfies NativeResource {
                 moduleManager.typeChecker = newTypechecker;
                 moduleSourceMapper.typeChecker = newTypechecker;
                 Context context = newTypechecker.context;
-                BaseIdeModelLoader modelLoader = moduleManager.modelLoader;
+                value modelLoader = moduleManager.modelLoader;
                 //Module defaultModule = context.modules.defaultModule;
 
                 progress.worked(1);
@@ -853,7 +844,7 @@ given NativeFile satisfies NativeResource {
                     throw platformUtils.newOperationCanceledException("");
                 }
 
-                ModuleValidator moduleValidator = object extends ModuleValidator(context, phasedUnits) {
+                object moduleValidator extends ModuleValidator(context, phasedUnits) {
                     shared actual void executeExternalModulePhases() {}
 
                     shared actual Exception catchIfPossible(Exception e) {
@@ -862,7 +853,7 @@ given NativeFile satisfies NativeResource {
                         }
                         return e;
                     }
-                };
+                }
 
                 Integer maxModuleValidatorWork = 100000;
                 try(validatorProgress = progress.newChild(100).Progress(maxModuleValidatorWork, null)) {
@@ -921,7 +912,7 @@ given NativeFile satisfies NativeResource {
                         }
 
                         shared actual void resolvingModuleArtifact(Module _module,
-                        ArtifactResult artifactResult) {
+                                ArtifactResult artifactResult) {
                             if (validatorProgress.cancelled) {
                                 throw platformUtils.newOperationCanceledException("Interrupted the resolution of module : " + _module.signature);
                             }
@@ -1136,7 +1127,7 @@ given NativeFile satisfies NativeResource {
                         }
                     }
                     case(is NativeFolderRemoval) {
-                        FolderVirtualFileAlias removedFolder = getOrCreateFolderVirtualFile(folder);
+                        value removedFolder = getOrCreateFolderVirtualFile(folder);
                         removeFolderFromModel(folder);
                         return removedFolder;
                     }
