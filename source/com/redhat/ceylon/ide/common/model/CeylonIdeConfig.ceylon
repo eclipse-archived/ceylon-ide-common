@@ -84,7 +84,8 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
     
     value windowsPathsAndExtensions = windowsPaths.product(windowsExtensions);
 
-    value unixLikePaths = {
+    value unixLikePaths = let(home = process.propertyValue("user.home")) {
+        if (exists home) "`` home ``/bin" }.chain {
         "/usr/local/bin/",
         "/usr/bin/",
         "/bin/",

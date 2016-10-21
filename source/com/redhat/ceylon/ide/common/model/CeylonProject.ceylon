@@ -3,7 +3,8 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     javaClass,
-    javaString
+    javaString,
+    CeylonMap
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -96,7 +97,8 @@ import java.lang {
     InterruptedException,
     RuntimeException,
     IllegalStateException,
-    ByteArray
+    ByteArray,
+    System
 }
 import java.lang.ref {
     WeakReference,
@@ -248,9 +250,28 @@ shared abstract class BaseCeylonProject() {
     function createRepositoryManager() {
         value manager = newRepositoryManagerBuilder().buildManager();
         for (repo in manager.repositories) {
-             if (is NpmRepository repo) {
-                repo.setNpmCommand(ideConfiguration.npmPath);
-             }
+            if (is NpmRepository repo) {
+                value npmCommand = ideConfiguration.npmPath;
+                String? pathForRunningNpm;
+                if (exists nodeCommand = ideConfiguration.nodePath) {
+                    String nodeDirectory = File(nodeCommand).parentFile.absolutePath;
+                    value m = CeylonMap(System.getenv());
+                    value oldPathElements = m.find((key->item) 
+                            => key.string.equalsIgnoringCase("PATH")
+                    )?.item?.string?.split(File.pathSeparatorChar.equals, true, true);
+                    pathForRunningNpm = 
+                        if (exists oldPathElements)
+                        then File.pathSeparator.join(
+                            if (nodeDirectory in oldPathElements)
+                            then oldPathElements
+                            else { nodeDirectory, *oldPathElements })
+                        else nodeDirectory;
+                } else {
+                    pathForRunningNpm = null;
+                }
+                repo.setNpmCommand(npmCommand); 
+                repo.setPathForRunningNpm(pathForRunningNpm); 
+            }
         }
         return manager;
     }
