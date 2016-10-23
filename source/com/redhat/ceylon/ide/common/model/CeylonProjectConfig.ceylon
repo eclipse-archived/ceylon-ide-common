@@ -68,8 +68,8 @@ shared class CeylonProjectConfig(project) {
     late variable Repositories projectRepositories;
 
     variable String? transientOutputRepo = null;
-    variable {String*}? transientProjectLocalRepos = null;
-    variable {String*}? transientProjectRemoteRepos = null;
+    variable String[]? transientProjectLocalRepos = null;
+    variable String[]? transientProjectRemoteRepos = null;
 
     variable Boolean isOfflineChanged = false;
     variable Boolean isEncodingChanged = false;
@@ -139,15 +139,15 @@ shared class CeylonProjectConfig(project) {
     shared {String*} globalLookupRepos =>
             toRepositoriesUrlList(mergedRepositories.globalLookupRepositories);
 
-    shared {String*} otherRemoteRepos =>
+    shared String[] otherRemoteRepos =>
             toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
 
-    shared {String*} projectLocalRepos=>
+    shared String[] projectLocalRepos=>
             toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
     assign projectLocalRepos =>
             transientProjectLocalRepos = projectLocalRepos;
 
-    shared {String*} projectRemoteRepos =>
+    shared String[] projectRemoteRepos =>
             toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeRemoteLookup));
     assign projectRemoteRepos =>
             transientProjectRemoteRepos = projectRemoteRepos;
@@ -424,10 +424,10 @@ shared class CeylonProjectConfig(project) {
     }
 
 
-    {String*} toRepositoriesUrlList(ObjectArray<Repository>? repositories)
-            => if (exists repositories)
-            then { for (repository in repositories.iterable.coalesced) repository.url }
-            else {};
+    String[] toRepositoriesUrlList(ObjectArray<Repository>? repositories)
+            => [ if (exists repositories)
+                 for (repository in repositories)
+                 repository.url ];
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
             => if (exists repositoriesUrl)

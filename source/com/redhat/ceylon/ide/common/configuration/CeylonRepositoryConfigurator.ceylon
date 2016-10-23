@@ -69,8 +69,8 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void applyToConfiguration(CeylonProjectConfig config) {
-        config.projectLocalRepos = projectLocalRepos;
-        config.projectRemoteRepos = projectRemoteRepos;
+        config.projectLocalRepos = projectLocalRepos.sequence();
+        config.projectRemoteRepos = projectRemoteRepos.sequence();
     }
 
     shared void loadFromConfiguration(CeylonProjectConfig config) {
