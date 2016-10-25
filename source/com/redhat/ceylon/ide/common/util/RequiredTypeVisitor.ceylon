@@ -29,10 +29,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     variable Reference? namedArgTarget = null;
     variable String? paramName = null;
     
-    shared actual Type? type => finalResult;
-    shared actual String? parameterName => paramName;
-
-    shared actual Parameter? parameter => finalParameter;
+    type => finalResult;
+    parameterName => paramName;
+    parameter => finalParameter;
     
     shared actual void visitAny(Node that) {
         if (node == that) {
@@ -65,21 +64,15 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         requiredType = ort;
     }
 
-    function getTarget(Tree.InvocationExpression that) {
-        if (is Tree.MemberOrTypeExpression p = that.primary) {
-            return p.target;
-        } else {
-            return null;
-        }
-    }
+    function getTarget(Tree.InvocationExpression that)
+            => if (is Tree.MemberOrTypeExpression primary = that.primary)
+            then primary.target
+            else null;
 
-    function getParameters(Reference pr) {
-        if (is Functional declaration = pr.declaration) {
-            return declaration.parameterLists[0]?.parameters;
-        } else {
-            return null;
-        }
-    }
+    function getParameters(Reference reference)
+            => if (is Functional declaration = reference.declaration)
+            then declaration.parameterLists[0]?.parameters
+            else null;
 
     shared actual void visit(Tree.InvocationExpression that) {
         if (exists p = that.primary) {
@@ -165,9 +158,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
                 exists params = getParameters(nat),
                 !params.empty) {
                 
-                Parameter param = params.get(params.size() - 1);
+                value param = params[params.size()-1];
                 this.parameterResult = param;
-                if (unit.isIterableType(param.type)) {
+                if (exists param, unit.isIterableType(param.type)) {
                     requiredType = nat.getTypedParameter(param).fullType;
                     requiredType = unit.getIteratedType(requiredType);
                 }
@@ -188,12 +181,11 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.SpecifiedArgument that) {
         value ort = requiredType;
-        if (exists p = that.parameter) {
-            if (exists nat = namedArgTarget) {
-                requiredType = nat.getTypedParameter(p).type;
-            } else {
-                requiredType = p.type;
-            }
+        if (exists parameter = that.parameter) {
+            requiredType
+                    = if (exists nat = namedArgTarget)
+                    then nat.getTypedParameter(parameter).type
+                    else parameter.type;
         }
         super.visit(that);
         requiredType = ort;
