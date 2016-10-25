@@ -62,9 +62,9 @@ shared abstract class CeylonRepositoryConfigurator() {
     shared void addAetherRepo(String repo) {
         Integer index = projectLocalRepos.size + globalLookupRepos.size + projectRemoteRepos.size;
         if (repo.empty) {
-            addProjectRepo("aether", index, false);
+            addProjectRepo("maven", index, false);
         } else {
-            addProjectRepo("aether:" + repo, index, false);
+            addProjectRepo("maven:" + repo, index, false);
         }
     }
 
