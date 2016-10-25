@@ -201,8 +201,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.ForIterator that) {
         value ort = requiredType;
-        value unit = that.unit;
-        requiredType = unit.getIterableType(unit.anythingType);
+        if (exists unit = that.unit) {
+            requiredType = unit.getIterableType(unit.anythingType);
+        }
         super.visit(that);
         requiredType = ort;
     }
@@ -216,7 +217,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     
     shared actual void visit(Tree.SwitchStatement that) {
         value ort = requiredType;
-        variable Type? srt = that.unit.anythingType;
+        Type? srt;
         if (exists switchClause = that.switchClause) {
             switchClause.visit(this);
             if (exists e = switchClause.switched?.expression) {
@@ -226,6 +227,9 @@ shared class RequiredTypeVisitor(Node node, Token? token)
             } else {
                 srt = null;
             }
+        }
+        else {
+            srt = null;
         }
         
         if (exists switchCaseList = that.switchCaseList,
