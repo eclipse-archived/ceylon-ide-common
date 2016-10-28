@@ -830,14 +830,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     shared actual void clearCache(TypeDeclaration declaration) {
         clearCacheLocally(declaration);
         if (exists deps = projectModuleDependencies) {
-            value clearModuleCacheAction = object satisfies TraversalAction<Module> {
-                shared actual void applyOn(Module mod) {
-                    if (is AnyIdeModule mod) {
-                        mod.clearCacheLocally(declaration);
-                    }
+            void clearModuleCacheAction(Module mod) {
+                if (is AnyIdeModule mod) {
+                    mod.clearCacheLocally(declaration);
                 }
-                
-            };
+            }
             deps.doWithReferencingModules(this, clearModuleCacheAction);
             deps.doWithTransitiveDependencies(this, clearModuleCacheAction);
             assert(is AnyIdeModule languageIdeModule=languageModule);

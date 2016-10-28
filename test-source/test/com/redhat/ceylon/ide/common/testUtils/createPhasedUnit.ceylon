@@ -166,21 +166,21 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         suppressWarnings("expressionTypeNothing")
         shared actual Map<String,PhasedUnit?> clone() => nothing;
 
-        shared actual Boolean defines(Object key)
-                => codeCollection.any((SourceCode code) => code.path == key);
+        defines(Object key)
+                => codeCollection.any((code) => code.path == key);
 
-        shared actual PhasedUnit? get(Object key)
+        get(Object key)
                 => if (is String key)
                     then phasedUnits.getPhasedUnitFromRelativePath(key)
                     else null;
 
-        shared actual Iterator<String->PhasedUnit?> iterator()
+        iterator()
                 => codeCollection.map(
                     (SourceCode code)
                             => code.path->phasedUnits.getPhasedUnitFromRelativePath(code.path))
                     .iterator();
 
-        shared actual Integer hash => (super of Map<String, PhasedUnit?>).hash;
-        shared actual Boolean equals(Object that) => (super of Map<String, PhasedUnit?>).equals(that);
+        hash => (super of Map<String, PhasedUnit?>).hash;
+        equals(Object that) => (super of Map<String, PhasedUnit?>).equals(that);
     };
 }

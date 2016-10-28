@@ -9,8 +9,7 @@ import ceylon.collection {
 import ceylon.interop.java {
     createJavaObjectArray,
     CeylonIterable,
-    javaString,
-    JavaRunnable
+    javaString
 }
 
 import com.redhat.ceylon.common {
@@ -93,9 +92,6 @@ import java.util {
     JArrayList=ArrayList,
     Collections
 }
-import java.util.concurrent {
-    JCallable=Callable
-}
 
 shared abstract class BaseIdeModelLoader(
             BaseIdeModuleManager theModuleManager,
@@ -123,18 +119,11 @@ shared abstract class BaseIdeModelLoader(
    
     shared Map<String, SourceDeclarationHolder> sourceDeclarations => _sourceDeclarations;
 
-    shared void runWithLock(void action()) {
-        synchronizedRun(JavaRunnable(action));
-    }
+    shared void runWithLock(void action()) => synchronizedRun(action);
 
-    shared T callWithLock<T>(T fun())
-    {
-        return synchronizedCall(object satisfies JCallable<T&Object> {
-            call() => fun() else null;
-        });
-    }
+    shared T callWithLock<T>(T fun()) => synchronizedCall(() => fun() else null);
     
-    shared class GlobalTypeFactory(Context context) 
+    shared class GlobalTypeFactory(Context context)
            extends TypeFactory(context) {
        
         shared actual Package \ipackage =>

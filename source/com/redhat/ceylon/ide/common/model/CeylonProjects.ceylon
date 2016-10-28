@@ -35,9 +35,6 @@ import java.util.concurrent.locks {
     Lock
 }
 
-import org.jgrapht {
-    EdgeFactory
-}
 import org.jgrapht.experimental.dag {
     DirectedAcyclicGraph
 }
@@ -208,12 +205,7 @@ shared abstract class CeylonProjects<NativeProject, NativeResource, NativeFolder
     shared {CeylonProjectAlias*} ceylonProjectsInTopologicalOrder {
        value theCeylonProjects = ceylonProjects.sequence();
        class Dependency(shared CeylonProjectAlias requiring, shared CeylonProjectAlias required) {}
-       value dag = DirectedAcyclicGraph<CeylonProjectAlias, Dependency>(
-            object satisfies EdgeFactory<CeylonProjectAlias, Dependency> {
-               createEdge(CeylonProjectAlias sourceVertex, CeylonProjectAlias targetVertex) =>
-                       Dependency(sourceVertex, targetVertex);
-           }
-       );
+       value dag = DirectedAcyclicGraph<CeylonProjectAlias, Dependency>(Dependency);
        for (ceylonProject in theCeylonProjects) {
            dag.addVertex(ceylonProject);
        }
