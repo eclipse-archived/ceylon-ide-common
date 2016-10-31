@@ -1066,8 +1066,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     type()  => null;
                     namespace() => null;
                     name() => null;
-                    importType() => null;
+                    exported() => false;
+                    optional() => false;
                     dependencies() => null;
+                    exclusions => null;
+                    moduleScope() => null;
                     artifact() => null;
                     repositoryDisplayString() => null;
                     filter() => null;

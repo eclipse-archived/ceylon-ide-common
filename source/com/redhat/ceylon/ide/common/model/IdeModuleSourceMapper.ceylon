@@ -80,7 +80,7 @@ shared abstract class ExternalModulePhasedUnits(Context context, ModuleManagerFa
 }
 
 shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModuleManager theModuleManager) 
-        extends LazyModuleSourceMapper(theContext, theModuleManager) {
+        extends LazyModuleSourceMapper(theContext, theModuleManager, null, false, null) {
     
     theModuleManager.moduleSourceMapper = this;
 
@@ -126,7 +126,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
                 artifact = existingSourceArtifact;
             }
             else {
-                ModuleHelper.buildErrorOnMissingArtifact(artifactContext, theModule, moduleImport, dependencyTree, exceptionOnGetArtifact, this);
+                ModuleHelper.buildErrorOnMissingArtifact(artifactContext, theModule, moduleImport, dependencyTree, exceptionOnGetArtifact, this, true);
             }
         }
         if (is BaseIdeModule theModule) {

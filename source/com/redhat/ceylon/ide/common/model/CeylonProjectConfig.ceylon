@@ -205,7 +205,7 @@ shared class CeylonProjectConfig(project) {
             DefaultToolOptions.getDefaultAutoExportMavenDependencies(mergedConfig);
 
     shared Boolean? projectAutoExportMavenDependencies =>
-            projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies)?.booleanValue();
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsAutoExportMavenDependencies)?.booleanValue();
     assign projectAutoExportMavenDependencies {
         this.isAutoExportMavenDependenciesChanged = true;
         this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
@@ -393,9 +393,9 @@ shared class CeylonProjectConfig(project) {
                 }
                 if (isAutoExportMavenDependenciesChanged) {
                     if (exists nonNullAutoExportMavenDependencies = transientAutoExportMavenDependencies) {
-                        projectConfig.setBoolOption(DefaultToolOptions.defaultsAutoEportMavenDependencies, nonNullAutoExportMavenDependencies);
+                        projectConfig.setBoolOption(DefaultToolOptions.defaultsAutoExportMavenDependencies, nonNullAutoExportMavenDependencies);
                     } else {
-                        projectConfig.setOption(DefaultToolOptions.defaultsAutoEportMavenDependencies, null);
+                        projectConfig.setOption(DefaultToolOptions.defaultsAutoExportMavenDependencies, null);
                     }
                 }
                 if (isEncodingChanged) {
