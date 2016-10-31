@@ -77,12 +77,14 @@ shared class CeylonProjectConfig(project) {
     variable Boolean isJdkProviderChanged = false;
     variable Boolean isFlatClasspathChanged = false;
     variable Boolean isAutoExportMavenDependenciesChanged = false;
+    variable Boolean isFullyExportMavenDependenciesChanged = false;
     variable Boolean? transientOffline = null;
     variable String? transientEncoding = null;
     variable String? transientOverrides = null;
     variable String? transientJdkProvider = null;
     variable Boolean? transientFlatClasspath = null;
     variable Boolean? transientAutoExportMavenDependencies = null;
+    variable Boolean? transientFullyExportMavenDependencies = null;
 
     variable {String*}? transientSourceDirectories = null;
     variable {String*}? transientResourceDirectories = null;
@@ -211,6 +213,16 @@ shared class CeylonProjectConfig(project) {
         this.transientAutoExportMavenDependencies = projectAutoExportMavenDependencies;
     }
 
+    shared Boolean fullyExportMavenDependencies =>
+            DefaultToolOptions.getDefaultFullyExportMavenDependencies(mergedConfig);
+
+    shared Boolean? projectFullyExportMavenDependencies =>
+            projectConfig.getBoolOption(DefaultToolOptions.defaultsFullyExportMavenDependencies)?.booleanValue();
+    assign projectFullyExportMavenDependencies {
+        this.isFullyExportMavenDependenciesChanged = true;
+        this.transientFullyExportMavenDependencies = projectFullyExportMavenDependencies;
+    }
+
     shared {String*} sourceDirectories =>
             sourceDirectoriesFromCeylonConfig(mergedConfig);
 
@@ -292,6 +304,7 @@ shared class CeylonProjectConfig(project) {
         isJdkProviderChanged = false;
         isFlatClasspathChanged = false;
         isAutoExportMavenDependenciesChanged = false;
+        isFullyExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
         isJavacOptionsChanged = false;
 
@@ -301,6 +314,7 @@ shared class CeylonProjectConfig(project) {
         transientJdkProvider = null;
         transientFlatClasspath = null;
         transientAutoExportMavenDependencies = null;
+        transientFullyExportMavenDependencies = null;
         transientOutputRepo = null;
         transientProjectLocalRepos = null;
         transientProjectRemoteRepos = null;
@@ -352,6 +366,7 @@ shared class CeylonProjectConfig(project) {
                 || isJdkProviderChanged
                 || isFlatClasspathChanged
                 || isAutoExportMavenDependenciesChanged
+                || isFullyExportMavenDependenciesChanged
                 || isSuppressWarningsChanged
                 || isJavacOptionsChanged;
 
@@ -396,6 +411,13 @@ shared class CeylonProjectConfig(project) {
                         projectConfig.setBoolOption(DefaultToolOptions.defaultsAutoExportMavenDependencies, nonNullAutoExportMavenDependencies);
                     } else {
                         projectConfig.setOption(DefaultToolOptions.defaultsAutoExportMavenDependencies, null);
+                    }
+                }
+                if (isFullyExportMavenDependenciesChanged) {
+                    if (exists nonNullFullyExportMavenDependencies = transientFullyExportMavenDependencies) {
+                        projectConfig.setBoolOption(DefaultToolOptions.defaultsFullyExportMavenDependencies, nonNullFullyExportMavenDependencies);
+                    } else {
+                        projectConfig.setOption(DefaultToolOptions.defaultsFullyExportMavenDependencies, null);
                     }
                 }
                 if (isEncodingChanged) {
