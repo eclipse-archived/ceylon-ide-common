@@ -21,12 +21,13 @@ shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
             if (exists startIndex = node.startIndex?.intValue(),
                 exists stopIndex = node.endIndex?.intValue()) {
 
-                Integer nodeStartLine = document.getLineOfOffset(startIndex);
+                value adjustedStopIndex = stopIndex + 1;
+                value nodeStartLine = document.getLineOfOffset(startIndex);
 
                 if (nodeStartLine >= requestedLine) {
                     nodes[nodeStartLine] = node;
                 } else {
-                    value nodeEndLine = document.getLineOfOffset(stopIndex);
+                    value nodeEndLine = document.getLineOfOffset(adjustedStopIndex);
                     if (nodeEndLine >= requestedLine) {
                         nodes[requestedLine] = node;
                     }
