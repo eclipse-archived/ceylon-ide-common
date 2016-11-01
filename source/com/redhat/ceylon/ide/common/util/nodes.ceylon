@@ -342,7 +342,7 @@ shared object nodes {
         
         while (high > low) {
             Integer mid = (high + low) / 2;
-            assert (is CommonToken midElement = tokens.get(mid));
+            assert (exists midElement = tokens[mid]);
             if (offset>=midElement.startIndex,
                 offset<=midElement.stopIndex) {
                 

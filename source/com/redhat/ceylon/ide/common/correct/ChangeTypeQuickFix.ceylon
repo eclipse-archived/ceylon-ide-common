@@ -53,12 +53,10 @@ shared object changeTypeQuickFix {
                 shared actual void visit(Tree.SimpleType that) {
                     super.visit(that);
 
-                    if (is Tree.TypeArgumentList args = that.typeArgumentList) {
-                        value tal = args;
-                        if (tal.types.contains(stn)) {
-                            declaration = that.declarationModel;
-                            typeArgs = tal;
-                        }
+                    if (exists args = that.typeArgumentList,
+                        stn in args.types) {
+                        declaration = that.declarationModel;
+                        typeArgs = args;
                     }
                 }
             }
@@ -88,45 +86,48 @@ shared object changeTypeQuickFix {
         }
     }
     
+    function getTerm(QuickFixData data) {
+        value node = data.node;
+        if (is Tree.SpecifierExpression node,
+            exists ex = node.expression) {
+            return ex.term;
+        }
+        if (is Tree.Expression node) {
+            return node.term;
+        }
+        if (is Tree.Term node) {
+            return node;
+        }
+        return null;
+    }
+
     shared void addChangeTypeProposals(QuickFixData data) {
-        variable Node node = data.node;
-        
-        if (is Tree.SpecifierExpression se = data.node) {
-            if (exists e = se.expression) {
-                node = e.term;
-            }
-        }
-        
-        if (is Tree.Expression e = node) {
-            node = e.term;
-        }
-        
-        if (is Tree.Term term = node) {
+        if (exists term = getTerm(data)) {
             Type? t = term.typeModel;
             if (!exists t) {
                 return;
             }
             
-            value type = node.unit.denotableType(t);
-            value fav = FindInvocationVisitor(node);
+            value type = term.unit.denotableType(t);
+            value fav = FindInvocationVisitor(term);
             fav.visit(data.rootNode);
-            value td = fav.parameter;
-            if (exists td) {
-                if (is Tree.InvocationExpression ie = node) {
-                    node = ie.primary;
+
+            if (exists td = fav.parameter) {
+                switch (term)
+                case (is Tree.InvocationExpression) {
+                    addChangeTypeProposalsInternal(data, term.primary, type, td, false);
                 }
-                
-                if (is Tree.BaseMemberExpression bme = node) {
-                    addChangeTypeProposalsInternal(data, node, td.type, 
-                        bme.declaration, true);
+                case (is Tree.BaseMemberExpression) {
+                    addChangeTypeProposalsInternal(data, term, td.type,
+                        term.declaration, true);
                 }
-                
-                if (is Tree.QualifiedMemberExpression qme = node) {
-                    addChangeTypeProposalsInternal(data, node, td.type, 
-                        qme.declaration, true);
+                case (is Tree.QualifiedMemberExpression) {
+                    addChangeTypeProposalsInternal(data, term, td.type,
+                        term.declaration, true);
                 }
-                
-                addChangeTypeProposalsInternal(data, node, type, td, false);
+                else {
+                    addChangeTypeProposalsInternal(data, term, type, td, false);
+                }
             }
         }
     }
