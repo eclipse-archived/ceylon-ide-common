@@ -381,7 +381,12 @@ shared abstract class BaseIdeModelLoader(
             moduleManager.ceylonProject
                 ?.configuration?.autoExportMavenDependencies
                     else false;
-      
+
+    shared actual Boolean fullyExportMavenDependencies =>
+            moduleManager.ceylonProject
+                ?.configuration?.fullyExportMavenDependencies
+                    else false;
+
     shared actual Boolean flatClasspath =>
             moduleManager.ceylonProject
                 ?.configuration?.flatClasspath
