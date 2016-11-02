@@ -118,6 +118,8 @@
     <target name="test-quick" depends="compile-test"
         description="Runs the compiled test module">
         <ceylon-test
+            failonerror="false"
+            tap="test-output.tap"
             fork="true">
             <reposet refid="reposet.run.test"/>
             <moduleset refid="modules.test"/>
