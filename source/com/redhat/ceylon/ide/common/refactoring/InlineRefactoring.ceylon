@@ -1101,6 +1101,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         object extends Visitor() {
             variable value needsParens = false;
             variable value disabled = false;
+            value synthVarInserts = ArrayList<[Integer, String]>();
             
             shared actual void visit(Tree.Variable that) {
                 value dec = that.declarationModel;
@@ -1109,11 +1110,17 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     original(dec) == editorData.declaration,
                     editorData.delete) {
                     disabled = true;
-                    textChange.addEdit( 
-                        InsertEdit {
-                            start = id.startIndex.intValue();
-                            text = id.text + " = ";
-                        });
+
+                    // Don't make the same insert multiple times on `case` clauses
+                    value insert = [id.startIndex.intValue(), id.text + " = "];
+                    if (!synthVarInserts.contains(insert)) {
+                        textChange.addEdit(
+                            InsertEdit {
+                                start = insert[0];
+                                text = insert[1];
+                            });
+                        synthVarInserts.add(insert);
+                    }
                 }
                 super.visit(that);
             }
