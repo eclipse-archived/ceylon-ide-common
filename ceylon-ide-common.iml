@@ -16,6 +16,7 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/source" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test-source" isTestSource="true" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -26,6 +27,7 @@
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.formatter/1.3.1-SNAPSHOT" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.interop.java/1.3.1-SNAPSHOT" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.language/1.3.1-SNAPSHOT" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: ceylon.test/1.3.1-SNAPSHOT" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.cli/1.3.1-SNAPSHOT" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.common/1.3.1-SNAPSHOT" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: com.redhat.ceylon.compiler.java/1.3.1-SNAPSHOT" level="project" />
@@ -39,5 +41,6 @@
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.antlr.runtime/3.4" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.antlr.stringtemplate/3.2.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Ceylon: org.jgrapht.core/0.9.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Ceylon: test.ceylon.collection/1.3.1-SNAPSHOT" level="project" />
   </component>
 </module>
