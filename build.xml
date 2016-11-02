@@ -50,6 +50,7 @@
 
         <reposet id="reposet.compile.test">
             <repo url="${out.repo}"/>
+            <repo url="${basedir}/../ceylon-sdk/modules"/>
             <repo url="${basedir}/repo"/>
             <repo url="${ceylon.repo.dir}"/>
         </reposet>
@@ -111,7 +112,10 @@
         </ceylon-compile>
     </target>
 
-    <target name="test" depends="compile,compile-test"
+    <target name="test" depends="compile,test-quick"
+        description="Compiles the module then runs the compiled test module" />
+
+    <target name="test-quick" depends="compile-test"
         description="Runs the compiled test module">
         <ceylon-test
             fork="true">
