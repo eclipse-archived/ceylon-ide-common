@@ -384,8 +384,11 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
     
     shared {ChangeToAnalyze*} fileChangesToAnalyze => state.fileChangesToAnalyze.immutable;
     
-    shared Boolean somethingToDo => 
-            state.buildType.fullBuildRequested 
+    shared Boolean fullBuildRequested =>
+            state.buildType.fullBuildRequested;
+
+    shared Boolean somethingToDo =>
+            state.buildType.fullBuildRequested
             || state.buildType.classpathResolutionRequested
             || ! state.fileChangesToAnalyze.empty;
     
