@@ -564,6 +564,7 @@ shared object completionManager
                 = nodes.findNode {
                     node = rootNode;
                     startOffset = token.startIndex;
+                    endOffset = token.stopIndex + 1;
                     tokens = null;
                 };
         if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
