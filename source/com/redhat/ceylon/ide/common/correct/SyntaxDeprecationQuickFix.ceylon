@@ -31,7 +31,7 @@ object syntaxDeprecationQuickFix {
 
          Integer.parse(\"1\");
      "
-    void addQualifyStaticMemberWithTypeProposal(QuickFixData data) {
+    shared void addQualifyStaticMemberWithTypeProposal(QuickFixData data) {
         if (is Tree.Primary node = data.node) {
             object vis extends VisitorAdaptor() {
                 shared variable Tree.QualifiedMemberOrTypeExpression? result = null;

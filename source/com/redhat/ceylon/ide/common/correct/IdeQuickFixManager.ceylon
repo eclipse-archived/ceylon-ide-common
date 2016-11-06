@@ -246,6 +246,9 @@ shared object ideQuickFixManager {
         case (13000) {
             changeToQuickFix.changeToFunction(data);
         }
+        case (14000) {
+            syntaxDeprecationQuickFix.addQualifyStaticMemberWithTypeProposal(data);
+        }
         case (20000) {
             addAnnotations.addMakeNativeProposal(node, data);
         }
