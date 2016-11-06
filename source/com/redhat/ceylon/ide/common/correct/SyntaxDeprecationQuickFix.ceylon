@@ -2,9 +2,6 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     UsageWarning,
     Warning
 }
-import com.redhat.ceylon.ide.common.util {
-    nodes
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     VisitorAdaptor
