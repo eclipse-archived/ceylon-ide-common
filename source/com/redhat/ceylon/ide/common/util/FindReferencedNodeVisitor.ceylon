@@ -35,16 +35,18 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
     
     actual shared void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
-        Referenceable? m = that.importPath.model;
-        if (exists m, exists declaration, m==declaration) {
+        if (exists m = that.importPath.model,
+            exists declaration,
+            declaration in m) {
             declarationNode = that;
         }
     }
     
     actual shared void visit(Tree.PackageDescriptor that) {
         super.visit(that);
-        Referenceable? p = that.importPath.model;
-        if (exists p, exists declaration, p==declaration) {
+        if (exists p = that.importPath.model,
+            exists declaration,
+            declaration in p) {
             declarationNode = that;
         }
     }

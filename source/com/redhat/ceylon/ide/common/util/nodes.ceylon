@@ -364,7 +364,7 @@ shared object nodes {
     
     shared Referenceable? getReferencedModel(Node node) {
         if (is Tree.ImportPath node) {
-            return node.model;
+            return node.model.get(0);
         } else if (is Tree.DocLink node) {
             if (!node.base exists) {
                 if (node.\imodule exists) {
@@ -457,7 +457,7 @@ shared object nodes {
                 else node.base;
         }
         case (is Tree.ImportPath) {
-            return node.model;
+            return node.model.get(0);
         }
         else {
             return null;

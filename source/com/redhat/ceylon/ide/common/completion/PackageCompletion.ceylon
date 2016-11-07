@@ -78,7 +78,8 @@ shared interface PackageCompletion {
                             //don't add already imported packages, unless
                             //it is an exact match to the typed path
                             for (il in unit.importLists) {
-                                if (exists scope = il.importedScope, scope == candidate) {
+                                if (exists scopes = il.importedScopes,
+                                    candidate in scopes) {
                                     already = true;
                                 }
                             }

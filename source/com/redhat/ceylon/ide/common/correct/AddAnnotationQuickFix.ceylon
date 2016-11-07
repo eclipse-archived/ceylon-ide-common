@@ -686,7 +686,7 @@ shared object addAnnotationQuickFix {
             typeArguments = null;
         }
         case (is Tree.ImportPath) {
-            dec = node.model;
+            dec = node.model.get(0);
             typeArguments = null;
         }
         case (is Tree.TypedDeclaration) {
