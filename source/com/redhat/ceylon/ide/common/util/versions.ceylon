@@ -5,12 +5,8 @@ shared Boolean ceylonVersionHasBeenReleased(String version) =>
         !version.endsWith("SNAPSHOT");
 
 shared [String*] versionsAvailableForBoostrap = 
-        Versions.jvmVersions.array.coalesced
-        .map((versionDetail) => 
-            versionDetail.version)
-        .filter((version) => 
-            ! version.startsWith("0.") &&
-            ceylonVersionHasBeenReleased(version))
-        .sequence()
+        [ for (version in Versions.jvmVersions*.version)
+          if (version.startsWith("0.") && ceylonVersionHasBeenReleased(version))
+          version ]
         .reversed;
 
