@@ -9,8 +9,7 @@ import ceylon.collection {
 import ceylon.interop.java {
     createJavaObjectArray,
     CeylonIterable,
-    javaString,
-    JavaRunnable
+    javaString
 }
 
 import com.redhat.ceylon.common {
@@ -85,16 +84,12 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     ObjectArray,
     JString=String,
-    Runnable,
     RuntimeException
 }
 import java.util {
     JList=List,
     JArrayList=ArrayList,
     Collections
-}
-import java.util.concurrent {
-    JCallable=Callable
 }
 
 shared abstract class BaseIdeModelLoader(
@@ -123,16 +118,9 @@ shared abstract class BaseIdeModelLoader(
    
     shared Map<String, SourceDeclarationHolder> sourceDeclarations => _sourceDeclarations;
 
-    shared void runWithLock(void action()) {
-        synchronizedRun(JavaRunnable(action));
-    }
+    shared void runWithLock(void action()) => synchronizedRun(action);
 
-    shared T callWithLock<T>(T fun())
-    {
-        return synchronizedCall(object satisfies JCallable<T&Object> {
-            call() => fun() else null;
-        });
-    }
+    shared T callWithLock<T>(T fun()) => synchronizedCall(() => fun() else null);
     
     shared class GlobalTypeFactory(Context context) 
            extends TypeFactory(context) {
@@ -159,11 +147,11 @@ shared abstract class BaseIdeModelLoader(
            PackageTypeFactory(pkg);
    
    
-   shared void resetJavaModelSourceIfNecessary(Runnable resetAction) {
+   shared void resetJavaModelSourceIfNecessary(void resetAction()) {
        callWithLock {
            void fun() {
                if (mustResetLookupEnvironment) {
-                   resetAction.run();
+                   resetAction();
                    mustResetLookupEnvironment = false;
                }
            }

@@ -39,7 +39,7 @@ void testChangeParametersRefactoring(
     String unitName,
     Integer selectionStart,
     "Use null to indicate the refactoring should not be available at this location"
-    Callable<Anything, [ChangeParametersRefactoring.ParameterList]>? doWithParams) {
+    Anything(ChangeParametersRefactoring.ParameterList)? doWithParams) {
     
     testPlatform.register();
     

@@ -48,7 +48,7 @@ shared interface QuickFixData {
      until the quick fix is called."
     shared default Boolean useLazyFixes => false;
     
-    shared formal void addQuickFix(String description, TextChange|Callable<Anything, []> change,
+    shared formal void addQuickFix(String description, TextChange|Anything() change,
         DefaultRegion? selection = null, 
         Boolean qualifiedNameIsPath = false,
         Icons? image = null,
