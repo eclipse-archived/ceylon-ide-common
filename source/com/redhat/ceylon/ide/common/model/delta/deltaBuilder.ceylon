@@ -56,9 +56,12 @@ shared interface NodeComparisonListener {
     shared formal void comparedDeclaration(Ast.Declaration declaration, Boolean hasStructuralChanges);
 }
 
+
 shared class DeltaBuilderFactory(
     Boolean compareAnalysisErrors = false) {
 
+    variable value unknownCounter = 0;
+    function unknownKey() => "<unknown_`` unknownCounter++ ``>";
     value producedTypeNamePrinter = TypePrinter(true, true, true, true, false, true, true);
 
     "Builds a [[model delta|AbstractDelta]] that describes the model differences
@@ -152,7 +155,7 @@ shared class DeltaBuilderFactory(
             if (exists importPath) {
                 moduleName = formatPath(importPath.identifiers);
             } else {
-                moduleName = "<unknown>";
+                moduleName = unknownKey();
             }
         }
         return moduleName;
@@ -238,25 +241,29 @@ shared class DeltaBuilderFactory(
                             String childKey;
                             switch (child)
                             case (is Ast.Declaration) {
-                                value model = child.declarationModel;
-                                childKey = "``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
+                                value model = child.declarationModel else null;
+                                childKey = if (exists model) 
+                                then "``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]" 
+                                else unknownKey();
                             }
                             case (is Ast.SpecifierStatement) {
-                                value model = child.declaration;
-                                childKey = "=>``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]";
+                                value model = child.declaration else null;
+                                childKey = if (exists model) 
+                                then "=>``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]" 
+                                else unknownKey();
                             }
                             case (is Ast.ModuleDescriptor) {
-                                childKey = child.unit.fullPath;
+                                childKey = child.unit?.fullPath else unknownKey();
                             }
                             case (is Ast.PackageDescriptor) {
-                                childKey = child.unit.fullPath;
+                                childKey = child.unit?.fullPath  else unknownKey();
                             }
                             case (is Ast.CompilationUnit) {
-                                childKey = child.unit.fullPath;
+                                childKey = child.unit?.fullPath else unknownKey();
                             }
                             case (is Ast.ImportModule) {
                                 childKey = importedModuleName(child) + "/"
-                                         + (child.version?.text?.trim('"'.equals) else "<unknown>");
+                                         + (child.version?.text?.trim('"'.equals) else unknownKey());
                             } else {
                                 continue;
                             }
@@ -403,7 +410,7 @@ shared class DeltaBuilderFactory(
         }
 
         getChildren(Ast.ModuleDescriptor astNode)
-                => [ if (structuralChange in changes)
+                => [ if (! structuralChange in changes)
                      for (im in astNode.importModuleList.importModules)
                      im ];
     }
@@ -422,8 +429,8 @@ shared class DeltaBuilderFactory(
                 shared actual ModuleImport changedElement {
                     value moduleImport = CeylonIterable(oldParentModule.imports).find {
                         Boolean selecting(ModuleImport element) {
-                            value modelName = element.\imodule.nameAsString;
-                            value modelVersion = element.\imodule.version;
+                            value modelName = element.\imodule?.nameAsString else unknownKey();
+                            value modelVersion = element.\imodule?.version else unknownKey();
                             value astName = importedModuleName(oldNode);
                             value astVersion = oldNode.version.text.trim('"'.equals);
 
@@ -472,7 +479,10 @@ shared class DeltaBuilderFactory(
 
         manageChildDelta(Nothing oldChild, Nothing? newChild) => noop();
         registerMemberAddedChange(Nothing newChild) => noop();
-        registerRemovedChange() => noop();
+        
+        shared actual void registerRemovedChange() {
+            change = removed;
+        }
 
         getChildren(Ast.ImportModule astNode) => [];
     }
@@ -669,8 +679,8 @@ shared class DeltaBuilderFactory(
                                             Ast.Declaration newAstDeclaration,
                                             NodeComparisonListener? listener) {
 
-            ModelDeclaration? identifierToDeclaration(Ast.Identifier id)
-                    => id.unit?.getImport(TreeUtil.name(id))?.declaration;
+            ModelDeclaration? identifierToDeclaration(Ast.Identifier? id)
+                    => id?.unit?.getImport(TreeUtil.name(id))?.declaration;
 
             object nodeSigner extends VisitorAdaptor() {
                 variable value builder = StringBuilder();
@@ -727,7 +737,7 @@ shared class DeltaBuilderFactory(
                     enclose {
                         title = node.nodeType;
                         void action() {
-                            variable value identifier = node.text;
+                            variable value identifier = node.text else null;
                             if (mustSearchForIndentifierDeclaration) {
                                 mustSearchForIndentifierDeclaration = false;
                                 if (exists decl = identifierToDeclaration(node)) {
@@ -738,7 +748,7 @@ shared class DeltaBuilderFactory(
                                     }
                                 }
                             }
-                            builder.append(identifier);
+                            builder.append(identifier else "<null>");
                         }
                     };
                 }
@@ -746,7 +756,7 @@ shared class DeltaBuilderFactory(
 
             String annotationName(Ast.Annotation annot) {
                 assert (is Ast.BaseMemberExpression primary = annot.primary);
-                value identifier = primary.identifier;
+                value identifier = primary.identifier else null;
                 value declaration = identifierToDeclaration(identifier);
                 if (exists declaration) {
                     return declaration.name;
