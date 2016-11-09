@@ -13,8 +13,7 @@ import ceylon.interop.java {
 }
 import ceylon.test {
     assertEquals,
-    assertTrue,
-    assertNotNull
+    assertTrue
 }
 
 import com.redhat.ceylon.ide.common.vfs {
@@ -68,10 +67,12 @@ shared abstract class BaseTest() {
 
     BaseResourceVirtualFile findChildVirtualFileByName(
         BaseFolderVirtualFile parentVirtualFile, String name) {
-        value child = CeylonIterable(parentVirtualFile.children).find((f)=>f.name == name.trimTrailing('/'.equals));
-        assertNotNull(child, "The virtual file ``parentVirtualFile `` should have a child name '``name``'");
-        assert (exists child);
-        return child;
+        for (child in parentVirtualFile.children) {
+            if (child.name == name.trimTrailing('/'.equals)) {
+                return child;
+            }
+        }
+        throw AssertionError("The virtual file ``parentVirtualFile `` should have a child named '``name``'");
     }
 
 
