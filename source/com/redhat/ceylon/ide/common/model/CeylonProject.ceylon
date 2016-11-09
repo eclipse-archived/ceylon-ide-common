@@ -1090,7 +1090,8 @@ given NativeFile satisfies NativeResource {
             } else {
                 return false;
             }
-        }) else null,
+        })
+        else null,
 
         if (exists ideConfigResource =
                 vfsServices.fromJavaFile(
@@ -1102,17 +1103,18 @@ given NativeFile satisfies NativeResource {
             } else {
                 return false;
             }
-        }) else null,
+        })
+        else null,
 
-        if (exists overridesResource =
-                if (exists overridesFilePath = configuration.overrides,
-                    exists overridesFile = FileUtil.absoluteFile(
-                        FileUtil.applyCwd(rootDirectory, File(overridesFilePath))))
-                then vfsServices.fromJavaFile(overridesFile, ideArtifact)
-                else null)
-        then overridesResource -> (() {
-            return vfsServices.flushIfNecessary(overridesResource);
-        }) else null
+        if (exists overridesFilePath
+                = configuration.overrides,
+            exists overridesFile
+                = FileUtil.absoluteFile(
+                    FileUtil.applyCwd(rootDirectory, File(overridesFilePath))),
+            exists overridesResource
+                = vfsServices.fromJavaFile(overridesFile, ideArtifact))
+        then overridesResource -> (() => vfsServices.flushIfNecessary(overridesResource))
+        else null
 
     }.coalesced;
 
@@ -1130,7 +1132,7 @@ given NativeFile satisfies NativeResource {
                         return addFileToModel(file);
                     }
                     case(is NativeFileRemoval) {
-                        FileVirtualFileAlias removedFile = getOrCreateFileVirtualFile(file);
+                        value removedFile = getOrCreateFileVirtualFile(file);
                         removeFileFromModel(file);
                         return removedFile;
                     }
@@ -1140,14 +1142,14 @@ given NativeFile satisfies NativeResource {
             case(is NativeFolderChange) {
                 function convertToVirtualFile(NativeFolder folder) {
                     switch(nativeChange)
-                    case(is NativeFolderAddition) {
+                    case (is NativeFolderAddition) {
                         if(vfsServices.existsOnDisk(folder)) {
                             return addFolderToModel(folder);
                         } else {
                             return null;
                         }
                     }
-                    case(is NativeFolderRemoval) {
+                    case (is NativeFolderRemoval) {
                         value removedFolder = getOrCreateFolderVirtualFile(folder);
                         removeFolderFromModel(folder);
                         return removedFolder;
@@ -1159,24 +1161,22 @@ given NativeFile satisfies NativeResource {
 
         value shouldBeMadeFullyVisible = map(shouldBeMadeFullyVisibleBeforeModelUpdate);
 
-        function changeFullyVisible(NativeResourceChange change) {
-            value resource = change.resource;
-            value actionToMakeItVisible = shouldBeMadeFullyVisible[resource];
-            if (exists actionToMakeItVisible) {
-                return actionToMakeItVisible();
-            }
-            return true;
-        }
+        function changeFullyVisible(NativeResourceChange change)
+                => if (exists actionToMakeItVisible = shouldBeMadeFullyVisible[change.resource])
+                then actionToMakeItVisible()
+                else true;
+
+        function changeAndArtifact(NativeResourceChange change)
+                => if (isResourceForModel(change.resource),
+                       exists projectFileChange
+                           = model.toProjectChange(updateModelAndConvertToProjectFileChange(change)))
+                then projectFileChange
+                else [change, ideArtifact];
 
         build.fileTreeChanged(
             projectFileChanges
                 .filter(changeFullyVisible)
-                .map((nativeChange) =>
-            if (isResourceForModel(nativeChange.resource),
-                exists projectFileChange=model.toProjectChange(updateModelAndConvertToProjectFileChange(nativeChange)))
-            then projectFileChange
-            else [nativeChange, ideArtifact]));
-
+                .map(changeAndArtifact));
 
         for (referencingProject in referencingCeylonProjects) {
             referencingProject.referencedProjectFileTreeChanged(this, projectFileChanges);

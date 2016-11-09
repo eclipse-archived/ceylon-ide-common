@@ -1,4 +1,6 @@
-shared Boolean equalsWithNulls<OneType, OtherType>(OneType? one, OtherType? other, Boolean(OtherType)(OneType) equals=OneType.equals, Boolean twoNullsAreEqual=true)
+shared Boolean equalsWithNulls<OneType, OtherType>(OneType? one, OtherType? other,
+        Boolean(OtherType)(OneType) equals = OneType.equals,
+        Boolean twoNullsAreEqual = true)
     given OneType satisfies Object
     given OtherType satisfies Object {
 

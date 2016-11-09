@@ -125,14 +125,15 @@ shared abstract class BaseIdeModelLoader(
     shared class GlobalTypeFactory(Context context) 
            extends TypeFactory(context) {
        
-        shared actual Package \ipackage =>
-                let (do = () {
-                    if(! super.\ipackage exists){
-                        super.\ipackage = modules.languageModule
-                            .getDirectPackage(Module.languageModuleName);
-                    }
-                    return super.\ipackage;
-                }) callWithLock(do); 
+    shared actual Package \ipackage
+            => let (do = () {
+                if (!super.\ipackage exists) {
+                    super.\ipackage = modules.languageModule
+                        .getDirectPackage(Module.languageModuleName);
+                }
+                return super.\ipackage;
+            })
+            callWithLock(do);
             
        assign \ipackage {
            super.\ipackage = \ipackage;
@@ -148,21 +149,19 @@ shared abstract class BaseIdeModelLoader(
    
    
    shared void resetJavaModelSourceIfNecessary(void resetAction()) {
-       callWithLock {
-           void fun() {
-               if (mustResetLookupEnvironment) {
-                   resetAction();
-                   mustResetLookupEnvironment = false;
-               }
+       callWithLock(() {
+           if (mustResetLookupEnvironment) {
+               resetAction();
+               mustResetLookupEnvironment = false;
            }
-       };
+       });
    }
    
    "
     TODO : remove when the bug in the AbstractModelLoader is corrected
     "
    shared actual LazyPackage findOrCreatePackage(Module? mod, String pkgName) =>
-       let(do = () {
+       let (do = () {
            value pkg = super.findOrCreatePackage(mod, pkgName);
            value currentModule = pkg.\imodule;
            if (currentModule.java){
@@ -178,7 +177,8 @@ shared abstract class BaseIdeModelLoader(
                }
            }
            return pkg;
-       }) callWithLock(do);
+       })
+       callWithLock(do);
        
    shared actual Module loadLanguageModuleAndPackage() {
        value lm = languageModule;
@@ -190,15 +190,12 @@ shared abstract class BaseIdeModelLoader(
    }
    
    shared actual ObjectArray<ClassMirror> getClassMirrorsToRemove(Declaration declaration) {
-       ObjectArray<ClassMirror> mirrors = super.getClassMirrorsToRemove(declaration);
-       if (mirrors.size == 0) {
-           Unit? unit = declaration.unit;
-           if (is SourceFile unit) {
-               String fqn = getToplevelQualifiedName(unit.ceylonPackage.nameAsString, declaration.nameAsString);
-               SourceDeclarationHolder? holder = _sourceDeclarations.get(fqn);
-               if (exists holder) {
-                   return createJavaObjectArray { SourceClass(holder) };
-               }
+       value mirrors = super.getClassMirrorsToRemove(declaration);
+       if (mirrors.size == 0,
+           is SourceFile unit = declaration.unit) {
+           String fqn = getToplevelQualifiedName(unit.ceylonPackage.nameAsString, declaration.nameAsString);
+           if (exists holder = _sourceDeclarations.get(fqn)) {
+               return createJavaObjectArray { SourceClass(holder) };
            }
        }
        return mirrors;
@@ -250,13 +247,10 @@ shared abstract class BaseIdeModelLoader(
        void do() {
            JList<JString> keysToRemove = JArrayList<JString>(classMirrorCache.size());
            for (element in classMirrorCache.entrySet()) {
-               if (! element.\ivalue exists) {
-                   JString? className = element.key;
-                   if (exists className) {
-                       String classPackageName = className.replaceAll("\\.[^\\.]+$", "");
-                       if (classPackageName.equals(packageName)) {
-                           keysToRemove.add(className);
-                       }
+               if (!element.\ivalue exists, exists className = element.key) {
+                   String classPackageName = className.replaceAll("\\.[^\\.]+$", "");
+                   if (classPackageName == packageName) {
+                       keysToRemove.add(className);
                    }
                }
            }
@@ -272,45 +266,40 @@ shared abstract class BaseIdeModelLoader(
        runWithLock(do);
    }
    
-   shared void clearClassMirrorCacheForClass(BaseIdeModule mod, String classNameToRemove) {
-       runWithLock(() {
-           classMirrorCache.remove(cacheKeyByModule(mod, classNameToRemove));        
-           mustResetLookupEnvironment = true;
-       });
-   }
+   shared void clearClassMirrorCacheForClass(BaseIdeModule mod, String classNameToRemove)
+           => runWithLock(() {
+               classMirrorCache.remove(cacheKeyByModule(mod, classNameToRemove));
+               mustResetLookupEnvironment = true;
+           });
    
-   shared actual void setupSourceFileObjects(JList<out Object> treeHolders) {
-       runWithLock(() {
-           addSourcePhasedUnits(treeHolders, true);
-       });
-   }
+   shared actual void setupSourceFileObjects(JList<out Object> treeHolders)
+           => runWithLock(() {
+               addSourcePhasedUnits(treeHolders, true);
+           });
    
-    shared void addSourcePhasedUnits(JList<out Object> treeHolders, Boolean isSourceToCompile) {
-       runWithLock(() {
-           for (Object treeHolder in treeHolders) {
-               if (is PhasedUnit treeHolder) {
-                   value pkgName = treeHolder.\ipackage.qualifiedNameString;
-                   treeHolder.compilationUnit.visit(object extends SourceDeclarationVisitor(){
-                       shared actual void loadFromSource(Tree.Declaration decl) {
-                           if (exists id=decl.identifier) {
-                               String fqn = getToplevelQualifiedName(pkgName, id.text);
-                               if (! _sourceDeclarations.defines(fqn)) {
-                                   _sourceDeclarations[fqn]
-                                        = SourceDeclarationHolder(treeHolder, decl, isSourceToCompile);
+    shared void addSourcePhasedUnits(JList<out Object> treeHolders, Boolean isSourceToCompile)
+            => runWithLock(() {
+               for (treeHolder in treeHolders) {
+                   if (is PhasedUnit treeHolder) {
+                       value pkgName = treeHolder.\ipackage.qualifiedNameString;
+                       treeHolder.compilationUnit.visit(object extends SourceDeclarationVisitor(){
+                           shared actual void loadFromSource(Tree.Declaration decl) {
+                               if (exists id=decl.identifier) {
+                                   String fqn = getToplevelQualifiedName(pkgName, id.text);
+                                   if (! _sourceDeclarations.defines(fqn)) {
+                                       _sourceDeclarations[fqn]
+                                            = SourceDeclarationHolder(treeHolder, decl, isSourceToCompile);
+                                   }
                                }
                            }
-                       }
-                       shared actual void loadFromSource(Tree.ModuleDescriptor that) {
-                       }
-                       
-                       shared actual void loadFromSource(Tree.PackageDescriptor that) {
-                       }
-                   });
+                           shared actual void loadFromSource(Tree.ModuleDescriptor that) {}
+
+                           shared actual void loadFromSource(Tree.PackageDescriptor that) {}
+                       });
+                   }
                }
-           }
-       });
-    }
-   
+           });
+
     shared void addSourceArchivePhasedUnits(JList<PhasedUnit> sourceArchivePhasedUnits) =>
             addSourcePhasedUnits(sourceArchivePhasedUnits, false);
    
@@ -463,7 +452,8 @@ shared abstract class BaseIdeModelLoader(
            JString nameJString = javaString(name);
            if (ideModule.isCeylonBinaryArchive || ideModule.isJavaBinaryArchive) {
                String classRelativePath = nameJString.replace('.', '/');
-               return ideModule.containsClass(classRelativePath + ".class") || ideModule.containsClass(classRelativePath + "_.class");
+               return ideModule.containsClass(classRelativePath + ".class")
+                   || ideModule.containsClass(classRelativePath + "_.class");
            } else if (ideModule.isProjectModule) {
                value nameLength = nameJString.length();
                value packageEnd = nameJString.lastIndexOf('.'.integer);
@@ -482,17 +472,16 @@ shared abstract class BaseIdeModelLoader(
            !forceLoadFromBinaries(cachedDeclaration))) {
            return false;
        }
-       return searchAgain(null, lazyPackage.\imodule, lazyPackage.getQualifiedName(lazyPackage.qualifiedNameString, name));
+       return searchAgain(null, lazyPackage.\imodule,
+           lazyPackage.getQualifiedName(lazyPackage.qualifiedNameString, name));
    }
 
    shared actual Declaration? convertToDeclaration(Module ideModule, String typeName,
        DeclarationType declarationType) {
-        return let (do = () {
-           value fqn = getToplevelQualifiedName(typeName);
-           
-           SourceDeclarationHolder? foundSourceDeclaration = sourceDeclarations.get(fqn);
+       return let (do = () {
+           value foundSourceDeclaration = sourceDeclarations[getToplevelQualifiedName(typeName)];
            if (exists foundSourceDeclaration,
-               ! forceLoadFromBinaries(foundSourceDeclaration.astDeclaration)) {
+               !forceLoadFromBinaries(foundSourceDeclaration.astDeclaration)) {
                return foundSourceDeclaration.modelDeclaration;
            }
            
@@ -502,23 +491,23 @@ shared abstract class BaseIdeModelLoader(
            } catch(RuntimeException e) {
                platformUtils.log(Status._ERROR, "Cannot convert type name \"``typeName``\" to a Declaration", e);
            }
-           if (exists foundSourceDeclaration, 
-               ! (result exists)) {
+
+           if (exists foundSourceDeclaration, !result exists) {
                result = foundSourceDeclaration.modelDeclaration;
            }
            return result;
        }) callWithLock(do);
    }
    
-   shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror, DeclarationType declarationType) {
-       return super.convertToDeclaration(ideModule, classMirror, declarationType);
-   }
+   shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror,
+        DeclarationType declarationType)
+           => super.convertToDeclaration(ideModule, classMirror, declarationType);
    
    
    shared formal ClassMirror? buildClassMirrorInternal(String string);
 
    shared actual ClassMirror? lookupNewClassMirror(Module ideModule, String name) {
-       return let(do = (){
+       return let (do = () {
            String topLevelPartiallyQuotedName = getToplevelQualifiedName(name);
            variable SourceDeclarationHolder? foundSourceDeclaration = sourceDeclarations.get(topLevelPartiallyQuotedName);
            if (exists sourceDeclaration=foundSourceDeclaration,
@@ -537,27 +526,28 @@ shared abstract class BaseIdeModelLoader(
                classMirror = buildClassMirrorInternal(JVMModuleUtil.quoteJavaKeywords(name + "_"));
            }
            
-           if(exists existingMirror = classMirror) {
-               Module? classMirrorModule = findModuleForClassMirror(existingMirror);
-               if(! exists classMirrorModule){
+           if (exists existingMirror = classMirror) {
+               value classMirrorModule = findModuleForClassMirror(existingMirror);
+               if (!exists classMirrorModule) {
                    logVerbose("Found a class mirror with no module");
                    return null;
                }
                // make sure it's imported
-               if(isImported(ideModule, classMirrorModule)){
+               if (isImported(ideModule, classMirrorModule)) {
                    return classMirror;
                }
                logVerbose("Found a class mirror that is not imported: "+name);
                return null;
            } else {
-               if (exists sourceDeclaration=foundSourceDeclaration) {
+               if (exists sourceDeclaration = foundSourceDeclaration) {
                    return SourceClass(sourceDeclaration);
                }
                
                return null;
            }
            
-       }) callWithLock(do);
+       })
+       callWithLock(do);
    }
    
    shared formal void addModuleToClasspathInternal(ArtifactResult? artifact);
@@ -585,7 +575,8 @@ shared abstract class BaseIdeModelLoader(
            value unitName = classMirror.fileName;
            
            if (!classMirror.isBinary,
-               exists foundUnit = CeylonIterable(pkg.units)
+               exists foundUnit
+                       = CeylonIterable(pkg.units)
                        .find((u) => u.filename == unitName)) {
                // This search is for source Java classes since several classes might have the same file name 
                //  and live inside the same Java source file => into the same Unit
@@ -595,14 +586,16 @@ shared abstract class BaseIdeModelLoader(
            unit = newCompiledUnit(pkg, classMirror);
        }
        
-       if (exists u=unit) {
+       if (exists u = unit) {
            return u;
-       } else {
+       }
+       else {
            JString key = javaString(getPackageCacheKey(pkg));
-           unit = unitsByPackage.get(key);
-           if (exists u=unit) {
+           unit = unitsByPackage[key];
+           if (exists u = unit) {
                return u;
-           } else {
+           }
+           else {
                value newUnit = newPackageTypeFactory(pkg);
                newUnit.\ipackage = pkg;
                unitsByPackage[key] = newUnit;
@@ -628,7 +621,7 @@ shared abstract class BaseIdeModelLoader(
            if (is BaseIdeModule ideModule, 
                ideModule.isCeylonBinaryArchive) {
                for (p in ideModule.packages) {
-                   if (! p.unit exists) {
+                   if (!p.unit exists) {
                        ClassMirror? packageClassMirror 
                                = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName)
                             else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.packageDescriptorClassName.rest);
@@ -640,7 +633,7 @@ shared abstract class BaseIdeModelLoader(
                        }
                    }
                    if (p.nameAsString == ideModule.nameAsString) {
-                       if (! ideModule.unit exists) {
+                       if (!ideModule.unit exists) {
                            ClassMirror? moduleClassMirror 
                                    = lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.moduleDescriptorClassName)
                                 else lookupClassMirror(ideModule, p.qualifiedNameString + "." + NamingBase.oldModuleDescriptorClassName);

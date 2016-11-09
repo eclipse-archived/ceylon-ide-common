@@ -35,7 +35,7 @@ shared class ExternalSourceFile(ExternalPhasedUnit thePhasedUnit)
         
         // TODO : check this method !!!
         shared Declaration? retrieveBinaryDeclaration(Declaration sourceDeclaration) {
-            if (!equalsWithNulls(this, sourceDeclaration.unit else null)) {
+            if (!equalsWithNulls(this, sourceDeclaration.unit)) {
                 return null;
             }
             variable Declaration? binaryDeclaration = null;
