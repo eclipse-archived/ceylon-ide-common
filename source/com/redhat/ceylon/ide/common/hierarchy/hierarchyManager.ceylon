@@ -37,10 +37,12 @@ shared object hierarchyManager {
             model.actual) {
 
             List<Type>? signature = ModelUtil.getSignature(model);
-
+            Boolean variadic = ModelUtil.isVariadic(model);
             return {
                 for (supertype in container.supertypeDeclarations)
-                if (exists declaration = supertype.getDirectMember(model.name, signature, false, true),
+                if (exists declaration
+                        = supertype.getDirectMember(model.name,
+                                signature, variadic, true),
                     declaration.default || declaration.formal,
                     model.refines(declaration),
                     directlyRefines(model, declaration))
@@ -53,12 +55,11 @@ shared object hierarchyManager {
 
     Boolean directlyRefines(Declaration subtype, Declaration supertype) {
         assert (is TypeDeclaration subtypeScope = subtype.container,
-            is TypeDeclaration supertypeScope = supertype.container);
+                is TypeDeclaration supertypeScope = supertype.container);
         value interveningRefinements
-                = ModelUtil.getInterveningRefinements(subtype.name,
-            ModelUtil.getSignature(subtype),
-            supertype.refinedDeclaration,
-            subtypeScope, supertypeScope);
+                = ModelUtil.getInterveningRefinements(subtype,
+                        supertype.refinedDeclaration,
+                        subtypeScope, supertypeScope);
         interveningRefinements.remove(supertype);
         return interveningRefinements.empty;
     }
