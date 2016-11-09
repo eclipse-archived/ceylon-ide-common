@@ -17,13 +17,11 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.util {
     equalsWithNulls,
     unsafeCast,
-    Path,
-    ifExists
+    Path
 }
 import com.redhat.ceylon.model.typechecker.model {
     Package,
-    Module,
-    Declaration
+    Module
 }
 
 import java.io {
@@ -248,11 +246,22 @@ shared interface FileVirtualFile<NativeProject, NativeResource, NativeFolder, Na
             then !isInSourceFolder 
             else false;
     
-    shared <ModifiableSourceFileAlias | JavaUnitAlias>? unit 
-            => ifExists(ceylonPackage?.members, CeylonIterable<Declaration>) 
-                ?.map(Declaration.unit)
-                // Go through `members` since the units of Java files are added lazily in the Package.
-                // `members` loads all the declarations eagerly, making the units of Java files visible
-                ?.narrow<ModifiableSourceFileAlias | JavaUnitAlias>()
-                ?.find((unit) => unit.filename == name);
+    shared ModifiableSourceFileAlias|JavaUnitAlias? unit {
+        if (exists pack = ceylonPackage) {
+            // Go through `members` since the units of Java files are added lazily in the Package.
+            // `members` loads all the declarations eagerly, making the units of Java files visible
+            for (dec in pack.members) {
+                if (is ModifiableSourceFileAlias|JavaUnitAlias unit = dec.unit,
+                    unit.filename == name) {
+                    return unit;
+                }
+            }
+            else {
+                return null;
+            }
+        }
+        else {
+            return null;
+        }
+    }
 }
