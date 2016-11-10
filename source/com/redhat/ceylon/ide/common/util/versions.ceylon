@@ -6,7 +6,7 @@ shared Boolean ceylonVersionHasBeenReleased(String version) =>
 
 shared [String*] versionsAvailableForBoostrap = 
         [ for (version in Versions.jvmVersions*.version)
-          if (version.startsWith("0.") && ceylonVersionHasBeenReleased(version))
+          if (! version.startsWith("0.") && ceylonVersionHasBeenReleased(version))
           version ]
         .reversed;
 
