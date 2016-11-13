@@ -1084,7 +1084,8 @@ shared interface DocGenerator {
 
     void addPackageInfo(Declaration decl, StringBuilder builder) {
         if (exists pkg = decl.unit.\ipackage, decl.toplevel) {
-            value label = if (pkg.nameAsString.empty)
+            value label
+                = if (pkg.nameAsString.empty)
                 then "<span>Member of default package.</span>"
                 else "<span>Member of package&nbsp;``buildLink(pkg, pkg.qualifiedNameString)``.</span>";
             
@@ -1097,7 +1098,8 @@ shared interface DocGenerator {
     // see addDoc(Declaration dec, Node node, StringBuilder buffer)
     Boolean addDoc(Declaration dec, Node? node, 
         StringBuilder builder, IdeComponent cmp) {
-        value rn = let (n = nodes.getReferencedNode(dec)) 
+        value rn
+                = let (n = nodes.getReferencedNode(dec))
                 if (is Tree.SpecifierStatement n)
                 then nodes.getReferencedNode(n.refined) 
                 else n;
@@ -1473,6 +1475,9 @@ shared interface DocGenerator {
                 .append(printer.print(ret, unit))
                 .append("</tt>.");
 
+            if (dec.hasUncheckedNullType()) {
+                buf.append(" (Has unchecked null values.)");
+            }
             addIconAndText(buffer, Icons.returns, buf.string);
 
             buffer.append("</div>");
