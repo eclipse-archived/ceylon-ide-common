@@ -1,9 +1,6 @@
 import ceylon.collection {
     HashSet
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.context {
     PhasedUnit
@@ -96,7 +93,7 @@ shared object createTypeParameterQuickFix {
             if (!exists d) {
                 return null;
             }
-            if (d.actual || !(d is Function || d is ClassOrInterface)) {
+            if (d.actual || !(d is Function|ClassOrInterface)) {
                 return null;
             }
             
@@ -146,18 +143,15 @@ shared object createTypeParameterQuickFix {
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
                 if (is Generic d = that.declaration) {
-                    value g = d;
-                    value tps = g.typeParameters;
+                    value tps = d.typeParameters;
                     value tas = that.typeArguments;
                     if (is Tree.TypeArgumentList tas) {
-                        value tal = tas;
-                        value ts = tal.types;
+                        value ts = tas.types;
                         variable Integer i = 0;
                         while (i < ts.size()) {
                             if (ts.get(i) == type) {
                                 result = tps.get(i).satisfiedTypes;
                             }
-                            
                             i++;
                         }
                     }
@@ -169,7 +163,7 @@ shared object createTypeParameterQuickFix {
         ftpcv.visit(data.rootNode);
         String? constraints;
         if (exists result = ftpcv.result) {
-            value bounds = correctionUtil.asIntersectionTypeString(CeylonIterable(result));
+            value bounds = correctionUtil.asIntersectionTypeString { *result };
             if (bounds.empty) {
                 constraints = null;
             } else {
@@ -206,40 +200,55 @@ shared object createTypeParameterQuickFix {
                 = platformServices.document
                     .createTextChange("Add Type Parameter", phasedUnit);
         change.initMultiEdit();
-        
         value doc = change.document;
-        value decs = HashSet<Declaration>();
-        value cu = phasedUnit.compilationUnit;
-        value il = importProposals.applyImports(change, decs, cu, change.document);
+
+        value il = importProposals.applyImports {
+            change = change;
+            declarations = HashSet<Declaration>();
+            rootNode = phasedUnit.compilationUnit;
+            doc = doc;
+        };
         
         change.addEdit(InsertEdit(offset, def));
         
         if (exists constraints) {
             value loc = getConstraintLoc(decNode);
             if (loc >= 0) {
-                value start = doc.getLineStartOffset(loc);
-                value string = doc.getText(start, loc - start);
-
                 String text;
-                if (!string.trimmed.empty) {
-                    text = doc.defaultLineDelimiter
-                            + doc.getIndent(decNode)
-                            + platformServices.document.defaultIndent
-                            + platformServices.document.defaultIndent
-                            + constraints;
-                } else {
-                    text = constraints;
+                try {
+                    value start = doc.getLineStartOffset(loc);
+                    value string = doc.getText(start, loc - start);
+
+                    if (!string.trimmed.empty) {
+                        value defaultIndent
+                                = platformServices.document
+                                    .defaultIndent;
+                        text = doc.defaultLineDelimiter
+                             + doc.getIndent(decNode)
+                             + defaultIndent
+                             + defaultIndent
+                             + constraints;
+                    }
+                    else {
+                        text = constraints;
+                    }
+                }
+                catch (e) {
+                    return;
                 }
                 
                 change.addEdit(InsertEdit(loc, text));
             }
         }
-        value off = wasNotGeneric then 1 else 2;
         
         data.addQuickFix {
             description = "Add type parameter '``name``' to '``dec.name``'";
             change = change;
-            selection = DefaultRegion(offset + il + off, name.size);
+            selection = DefaultRegion {
+                start = offset + il
+                      + (wasNotGeneric then 1 else 2);
+                length = name.size;
+            };
         };
     }
     
@@ -247,23 +256,29 @@ shared object createTypeParameterQuickFix {
         switch (decNode)
         case (is Tree.ClassDefinition) {
             return decNode.classBody.startIndex.intValue();
-        } case (is Tree.InterfaceDefinition) {
+        }
+        case (is Tree.InterfaceDefinition) {
             return decNode.interfaceBody.startIndex.intValue();
-        } case (is Tree.MethodDefinition) {
+        }
+        case (is Tree.MethodDefinition) {
             return decNode.block.startIndex.intValue();
-        } case (is Tree.ClassDeclaration) {
+        }
+        case (is Tree.ClassDeclaration) {
             return if (exists s = decNode.classSpecifier)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
-        } case (is Tree.InterfaceDeclaration) {
+        }
+        case (is Tree.InterfaceDeclaration) {
             return if (exists s = decNode.typeSpecifier)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
-        } case (is Tree.MethodDeclaration) {
+        }
+        case (is Tree.MethodDeclaration) {
             return if (exists s = decNode.specifierExpression)
                    then s.startIndex.intValue()
                    else decNode.endIndex.intValue();
-        } else {
+        }
+        else {
             return -1;
         }
     }
@@ -271,11 +286,10 @@ shared object createTypeParameterQuickFix {
     Tree.TypeParameterList? getTypeParameters(Tree.Declaration decl) {
         switch (decl)
         case (is Tree.ClassOrInterface) {
-            value ci = decl;
-            return ci.typeParameterList;
-        } case (is Tree.AnyMethod) {
-            value am = decl;
-            return am.typeParameterList;
+            return decl.typeParameterList;
+        }
+        case (is Tree.AnyMethod) {
+            return decl.typeParameterList;
         }
         else {
             return null;
