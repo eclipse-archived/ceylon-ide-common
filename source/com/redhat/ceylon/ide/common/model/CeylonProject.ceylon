@@ -508,6 +508,7 @@ shared abstract class BaseCeylonProject() {
     }
 }
 
+shared alias AnyCeylonProject => CeylonProject<out Anything, out Anything, out Anything, out Anything>;
 
 shared abstract class CeylonProject<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseCeylonProject()
