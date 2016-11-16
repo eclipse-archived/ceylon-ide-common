@@ -211,6 +211,8 @@ shared abstract class BaseIdeModule()
     shared formal void refresh();
 }
 
+shared alias AnyIdeModule => IdeModule<out Anything, out Anything, out Anything, out Anything>;
+
 shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, NativeFile>()
         extends BaseIdeModule()
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
