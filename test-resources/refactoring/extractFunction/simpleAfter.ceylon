@@ -1,4 +1,4 @@
-Boolean boolean() 
+Boolean boolean()
         => 1 == 1;
 
 void run() {
