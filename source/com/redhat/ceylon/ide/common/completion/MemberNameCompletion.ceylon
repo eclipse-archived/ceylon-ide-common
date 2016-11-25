@@ -106,7 +106,12 @@ shared interface MemberNameCompletion {
             Tree.Identifier? id = td.identifier;
             
             if (exists id) {
-                node = id.startIndex.intValue() <= offset <= id.endIndex.intValue() then type;
+                node =
+                        if (exists start = id.startIndex,
+                            exists end = id.endIndex,
+                            start.intValue() <= offset <= end.intValue())
+                        then type
+                        else null;
             } else {
                 node = type;
             }
