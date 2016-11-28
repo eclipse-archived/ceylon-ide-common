@@ -820,7 +820,7 @@ shared object completionManager
                     else node is Tree.QualifiedMemberOrTypeExpression
                                | Tree.QualifiedType;
 
-            if (!secondLevel, !inDoc, !memberOp) {
+            if (!secondLevel, !inDoc, !isMember) {
                 addKeywordProposals {
                     ctx = ctx;
                     cu = ctx.lastCompilationUnit;
@@ -1807,7 +1807,7 @@ class FindScopeVisitor(Node node) extends Visitor() {
         if (exists al = that.annotationList) {
             for (ann in al.annotations) {
                 if (ann.primary.startIndex==node.startIndex) {
-                    myScope = that.declarationModel.scope;
+                    myScope = that.declarationModel?.scope;
                 }
             }
         }
