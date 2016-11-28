@@ -130,7 +130,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             }
         }
         if (is BaseIdeModule theModule) {
-            (theModule).setArtifactResult(artifact);
+            theModule.setArtifactResult(artifact);
         }
         if (equalsWithNulls(artifact.namespace(), "npm")) {
             moduleManager.sourceModules.add(theModule.nameAsString);
@@ -145,12 +145,20 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             }
         }
         try {
+            if (forCompiledModule || theModule == theModule.languageModule || moduleManager.shouldLoadTransitiveDependencies(),
+                artifact.artifact().name.lowercased.endsWith(".js")) {
+
+                // Sometimes the CMR will return a .js file if .car and .src are missing
+                // (the repo contains xxxx.car.missing and xxxx.src.missing). In that case, we avoid
+                // adding the artifact to the classpath.
+                return;
+            }
             super.resolveModule(artifact, theModule, moduleImport, dependencyTree, phasedUnitsOfDependencies, forCompiledModule);
         }
         catch (Exception e) {
             if (is BaseIdeModule theModule) {
                 logModuleResolvingError(theModule, e);
-                (theModule).setResolutionException(e);
+                theModule.setResolutionException(e);
             }
         }
     }
@@ -170,11 +178,11 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
     shared actual void addToPhasedUnitsOfDependencies(
         PhasedUnits modulePhasedUnits, 
         List<PhasedUnits> phasedUnitsOfDependencies, 
-        Module \imodule) {
-        super.addToPhasedUnitsOfDependencies(modulePhasedUnits, phasedUnitsOfDependencies, \imodule);
-        if (is BaseIdeModule \imodule) {
+        Module mod) {
+        super.addToPhasedUnitsOfDependencies(modulePhasedUnits, phasedUnitsOfDependencies, mod);
+        if (is BaseIdeModule mod) {
             assert(is ExternalModulePhasedUnits modulePhasedUnits);
-            \imodule.setSourcePhasedUnits(modulePhasedUnits);
+            mod.setSourcePhasedUnits(modulePhasedUnits);
         }
     }
     
