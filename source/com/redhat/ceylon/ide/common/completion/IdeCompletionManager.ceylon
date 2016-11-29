@@ -139,7 +139,7 @@ shared object completionManager
         //find the node at the token
         value node = getTokenNode {
             token = adjustedToken;
-            rootNode = typecheckedRootNode;
+            rootNode = ctx.parsedRootNode;
             offset = offset;
         };
 
