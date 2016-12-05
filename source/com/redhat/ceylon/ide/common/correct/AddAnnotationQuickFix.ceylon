@@ -57,8 +57,11 @@ import org.antlr.runtime {
 
 shared object addAnnotationQuickFix {
     
-    value annotationsOrder => ["doc", "throws", "see", "tagged", "shared", "abstract",
-    "static", "actual", "formal", "default", "variable"];
+    value annotationsOrder => [
+        "doc", "throws", "see", "tagged",
+        "shared", "native", "abstract", "static",
+        "actual", "formal", "default", "variable"
+    ];
     
     value annotationsOnSeparateLine => ["doc", "throws", "see", "tagged"];
     
@@ -95,15 +98,6 @@ shared object addAnnotationQuickFix {
                     return annotation.string;
                 }
                 
-                void addEdit(TextChange change, 
-                    Tree.ModuleDescriptor|Tree.ImportModule that, 
-                    String annotation) {
-                    change.addEdit(InsertEdit {
-                        start = that.startIndex.intValue();
-                        text = annotation + " ";
-                    });
-                }
-                
                 shared actual void visit(Tree.ModuleDescriptor that) {
                     assert (is Module mod = node.model);
                     value change = platformServices.document.createTextChange {
@@ -111,7 +105,11 @@ shared object addAnnotationQuickFix {
                         input = data.phasedUnit;
                     };
                     value annotation = nativeAnnotation(mod);
-                    addEdit(change, that, annotation);
+                    change.addEdit(createInsertAnnotationEdit {
+                        newAnnotation = annotation;
+                        node = that;
+                        doc = change.document;
+                    });
                     data.addQuickFix {
                         description = "Declare module '``annotation``'";
                         change = change;
@@ -129,7 +127,11 @@ shared object addAnnotationQuickFix {
                             input = data.phasedUnit;
                         };
                         value annotation = nativeAnnotation(mod);
-                        addEdit(change, that, annotation);
+                        change.addEdit(createInsertAnnotationEdit {
+                            newAnnotation = annotation;
+                            node = that;
+                            doc = change.document;
+                        });
                         data.addQuickFix {
                             description = "Declare import '``annotation``'";
                             change = change;
@@ -487,7 +489,8 @@ shared object addAnnotationQuickFix {
                 if (exists id = getAnnotationIdentifier(annotation),
                     isAnnotationAfter(newAnnotationName, id)) {
                     prevAnnotation = annotation;
-                } else if (!nextAnnotation exists) {
+                }
+                else if (!nextAnnotation exists) {
                     nextAnnotation = annotation;
                     break;
                 }
@@ -496,16 +499,17 @@ shared object addAnnotationQuickFix {
         Integer nextNodeStartIndex;
         if (exists ann = nextAnnotation) {
             nextNodeStartIndex = ann.startIndex.intValue();
-        } else {
-            switch (node) 
-            case (is Tree.AnyAttribute|Tree.AnyMethod) {
+        }
+        else {
+            switch (node)
+            case (is Tree.AnyAttribute
+                   | Tree.AnyMethod) {
                 nextNodeStartIndex = node.type.startIndex.intValue();
-            } 
-            case (is Tree.ObjectDefinition) {
-                assert (is CommonToken token = node.mainToken);
-                nextNodeStartIndex = token.startIndex;
             }
-            case (is Tree.ClassOrInterface) {
+            case (is Tree.ObjectDefinition
+                   | Tree.ClassOrInterface
+                   | Tree.ModuleDescriptor
+                   | Tree.ImportModule) {
                 assert (is CommonToken token = node.mainToken);
                 nextNodeStartIndex = token.startIndex;
             }
@@ -526,13 +530,15 @@ shared object addAnnotationQuickFix {
                 newAnnotationText.append(doc.defaultLineDelimiter);
                 newAnnotationText.append(doc.getIndent(node));
                 newAnnotationText.append(newAnnotation);
-            } else {
+            }
+            else {
                 newAnnotationOffset = nextNodeStartIndex;
                 newAnnotationText.append(newAnnotation);
                 newAnnotationText.append(doc.defaultLineDelimiter);
                 newAnnotationText.append(doc.getIndent(node));
             }
-        } else {
+        }
+        else {
             newAnnotationOffset = nextNodeStartIndex;
             newAnnotationText.append(newAnnotation);
             newAnnotationText.append(" ");
