@@ -4,6 +4,7 @@ encoding=UTF-8
 flatclasspath=false
 autoexportmavendependencies=false
 offline=false
+fullyexportmavendependencies=false
 
 [compiler]
 source=source
