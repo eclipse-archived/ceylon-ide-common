@@ -142,6 +142,7 @@ shared abstract class BaseIdeModule()
     shared formal BaseIdeModuleManager moduleManager;
     shared formal BaseIdeModuleSourceMapper moduleSourceMapper;
     
+    shared formal String? namespace;
     shared formal ArtifactResultType artifactType;
     
     shared formal variable Boolean isProjectModule;
@@ -222,6 +223,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         given NativeFile satisfies NativeResource {
     variable ModuleType? _moduleType = null;
     variable String _repositoryDisplayString = "";
+    variable String? _namespace = null;
     variable File? _artifact = null;
     variable WeakReference<ExternalModulePhasedUnits>? sourceModulePhasedUnits=null;
     variable BinaryPhasedUnits? binaryModulePhasedUnits=null;
@@ -387,6 +389,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     artifact => _artifact;
     
+    namespace => _namespace;
+
     value this_ => this;
     setArtifactResult(ArtifactResult artifactResult) =>
         synchronize {
@@ -394,6 +398,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             void do() {
                 value existingArtifact = artifactResult.artifact();
                 _artifact = existingArtifact;
+                _namespace = artifactResult.namespace();
                 _repositoryDisplayString = artifactResult.repositoryDisplayString();
                 if (_repositoryDisplayString == Constants.repoUrlCeylon.replaceFirst("https", "http")) {
                     _repositoryDisplayString = Constants.repoUrlCeylon;
