@@ -149,7 +149,9 @@ shared interface MemberNameCompletion {
     void addProposalsForType(Node? node, MutableSet<String> proposals) {
         switch (node)
         case (is Tree.SimpleType) {
-            addProposals(proposals, node.identifier, node.typeModel);
+            if (exists model = node.typeModel) {
+                addProposals(proposals, node.identifier, model);
+            }
         }
         case (is Tree.BaseTypeExpression) {
             addProposals(proposals, node.identifier,
