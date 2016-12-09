@@ -1368,11 +1368,14 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                 }
                 
                 void appendUpTo(Node it) {
-                    value len = it.startIndex.intValue() - templateStart - start;
-                    if (len>=0) {
-                        value text = template[start:len];
-                        result.append(text);
-                        start = it.endIndex.intValue() - templateStart;
+                    if (exists startIndex = it.startIndex,
+                        exists endIndex = it.endIndex) {
+                        value len = startIndex.intValue() - templateStart - start;
+                        if (len>=0) {
+                            value text = template[start : len];
+                            result.append(text);
+                            start = endIndex.intValue() - templateStart;
+                        }
                     }
                 }
                 
