@@ -1,8 +1,7 @@
 import ceylon.interop.java {
     toStringArray,
     javaClass,
-    createJavaObjectArray,
-    createJavaStringArray
+    javaString
 }
 
 import com.redhat.ceylon.common {
@@ -50,7 +49,7 @@ shared String removeCurrentDirPrefix(String url)
 
 void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? values) {
     if (exists values) {
-        config.setOptionValues(optionKey, createJavaStringArray(values));
+        config.setOptionValues(optionKey, ObjectArray.with(values.map(javaString)));
     } else {
         config.removeOption(optionKey);
     }
@@ -453,7 +452,7 @@ shared class CeylonProjectConfig(project) {
 
     ObjectArray<Repository> toRepositoriesArray({String*}? repositoriesUrl)
             => if (exists repositoriesUrl)
-            then createJavaObjectArray {
+            then ObjectArray.with {
                 for (url in repositoriesUrl)
                 Repositories.SimpleRepository("", url, null)
             }
