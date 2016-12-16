@@ -1,9 +1,6 @@
 import ceylon.collection {
     TreeSet
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.io {
     ClosableVirtualFile,
@@ -144,15 +141,16 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     shared actual String? charset => null;
 }
 
-ZipEntryVirtualFile? searchFileChildren(JList<BaseResourceVirtualFile> theChildren, String fileName) 
-        => CeylonIterable(theChildren).map {
-            collecting(VirtualFile vf)
-                    => if (is ZipEntryVirtualFile vf, vf.name == fileName)
-            then vf
-            else null;
-        }.first;
-
-
+ZipEntryVirtualFile? searchFileChildren(JList<BaseResourceVirtualFile> theChildren, String fileName) {
+    for (vf in theChildren) {
+        if (is ZipEntryVirtualFile vf, vf.name == fileName) {
+            return vf;
+        }
+    }
+    else {
+        return null;
+    }
+}
 
 shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtualFile {
     ZipFile zipFile;

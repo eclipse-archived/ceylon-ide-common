@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
@@ -23,7 +19,7 @@ shared object convertSwitchStatementToExpressionQuickFix {
         
         if (is Tree.SwitchStatement statement) {
             
-            value cases = CeylonIterable(statement.switchCaseList.caseClauses);
+            value cases = { *statement.switchCaseList.caseClauses };
             if (cases.empty) {
                 return;
             }

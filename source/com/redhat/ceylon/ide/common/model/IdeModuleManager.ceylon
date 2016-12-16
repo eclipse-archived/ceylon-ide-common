@@ -4,7 +4,6 @@ import ceylon.collection {
 }
 import ceylon.interop.java {
     javaString,
-    CeylonIterable,
     JavaIterable
 }
 
@@ -194,14 +193,19 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
         String sourceUnitPathString = switch(sourceUnitPath)
         case(is String) sourceUnitPath
         case(is Path) sourceUnitPath.platformDependentString;
-        
-        return CeylonIterable(typeChecker.context.modules.listOfModules)
-                .narrow<BaseIdeModule>()
-                .find((m) => if (m.isCeylonArchive, 
-                                    exists sap=m.sourceArchivePath,
-                                    sourceUnitPathString.startsWith("``sap``!"))
-                                then true 
-                                else false);
+
+        for (m in typeChecker.context.modules.listOfModules) {
+            if (is BaseIdeModule m,
+                m.isCeylonArchive,
+                exists sap = m.sourceArchivePath,
+                sourceUnitPathString.startsWith("``sap``!")) {
+                return m;
+            }
+        }
+        else {
+            return null;
+        }
+
     }
     
     shared actual void visitedModule(Module theModule, Boolean forCompiledModule) {

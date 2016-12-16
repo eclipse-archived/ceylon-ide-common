@@ -1,5 +1,4 @@
 import ceylon.interop.java {
-    CeylonIterable,
     javaClassFromInstance
 }
 
@@ -70,7 +69,7 @@ shared interface BaseResourceVirtualFile
     
     shared formal actual JList<out BaseResourceVirtualFile> children;
     shared actual formal BaseFolderVirtualFile? parent;
-    shared default {BaseResourceVirtualFile*} childrenIterable => CeylonIterable(children);
+    shared default {BaseResourceVirtualFile*} childrenIterable => {*children};
     shared Boolean existsOnDisk => \iexists();
     shared actual default String string => "`` javaClassFromInstance(this).name ``: `` path ``";
 }
@@ -103,7 +102,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
             then vfsServices.getProjectRelativePath(nativeResource, theProject)
             else null;
     
-    shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => CeylonIterable(children);
+    shared actual default {ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile>*} childrenIterable => {*children};
     
     shared actual default Boolean \iexists() => vfsServices.existsOnDisk(nativeResource);
     

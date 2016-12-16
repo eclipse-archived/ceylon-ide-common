@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.ide.common.platform {
     platformServices
 }
@@ -515,7 +511,7 @@ shared void appendTypeParametersWithArguments(Declaration d,
         if (!types.empty) {
             result.append("<");
             
-            CeylonIterable(types).fold(true)((isFirst, tp) {
+            { *types }.fold(true)((isFirst, tp) {
                 if (!isFirst) {
                     result.append(", ");
                 }

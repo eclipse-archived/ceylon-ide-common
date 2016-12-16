@@ -1,32 +1,30 @@
-import ceylon.test {
-    test,
-    assertEquals
-}
-import com.redhat.ceylon.ide.common.util {
-    nodes
-}
-import ceylon.interop.java {
-    CeylonIterable
-}
-import com.redhat.ceylon.compiler.typechecker.tree {
-    Message,
-    Tree,
-    Node
-}
-import com.redhat.ceylon.compiler.typechecker.analyzer {
-    UsageWarning
-}
 import ceylon.file {
     Directory,
     File,
     lines
 }
-import ceylon.language.meta.model {
-    ClassOrInterface
-}
 import ceylon.language.meta {
     type
 }
+import ceylon.language.meta.model {
+    ClassOrInterface
+}
+import ceylon.test {
+    test,
+    assertEquals
+}
+
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+    UsageWarning
+}
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree,
+    Node
+}
+import com.redhat.ceylon.ide.common.util {
+    nodes
+}
+
 import test.com.redhat.ceylon.ide.common.testUtils {
     SourceCode,
     parseAndTypecheckCode,
@@ -52,8 +50,7 @@ shared class NodesTests() {
         }
     }.first?.item;
     assert(exists pu);
-    assertEquals(CeylonIterable(pu.compilationUnit.errors)
-        .filter((Message message) => !(message is UsageWarning)).sequence(), []);
+    assertEquals([for (message in pu.compilationUnit.errors) if (!message is UsageWarning) message], []);
 
     String? toString(Node? node)
         => if (exists start=node?.startIndex?.intValue())

@@ -8,9 +8,6 @@ import ceylon.file {
     Directory,
     ExistingResource
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 import ceylon.test {
     assertEquals,
     assertTrue
@@ -45,8 +42,17 @@ shared abstract class BaseTest() {
     }
 
     void checkChildren(Directory ceylonResource, BaseResourceVirtualFile virtualFile) {
-        value ceylonChildren = HashSet { * ceylonResource.childPaths().map((p)=>p.elements.last?.trimTrailing('/'.equals)).coalesced };
-        value virtualFileChildren = HashSet { * CeylonIterable(virtualFile.children).map((vf)=>vf.name) };
+        value ceylonChildren
+                = HashSet {
+                    for (p in ceylonResource.childPaths())
+                    if (exists last=p.elements.last)
+                    last.trimTrailing('/'.equals)
+                };
+        value virtualFileChildren
+                = HashSet {
+                    for (vf in virtualFile.children)
+                    vf.name
+                };
         assertEquals(virtualFileChildren, ceylonChildren,
             "Wrong virtual file children");
     }

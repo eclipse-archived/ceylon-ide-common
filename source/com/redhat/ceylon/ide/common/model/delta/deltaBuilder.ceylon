@@ -7,7 +7,6 @@ import ceylon.collection {
     TreeSet
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaClassFromInstance
 }
 import ceylon.language.meta.model {
@@ -427,7 +426,7 @@ shared class DeltaBuilderFactory(
             recurse();
             return object satisfies ModuleImportDelta {
                 shared actual ModuleImport changedElement {
-                    value moduleImport = CeylonIterable(oldParentModule.imports).find {
+                    value moduleImport = { *oldParentModule.imports }.find {
                         Boolean selecting(ModuleImport element) {
                             value modelName = element.\imodule?.nameAsString else unknownKey();
                             value modelVersion = element.\imodule?.version else unknownKey();
@@ -871,8 +870,8 @@ shared class DeltaBuilderFactory(
                                                 nodesDiffer(oldMethod.typeParameterList, newMethod.typeParameterList, "typeParameterList"),
                                                 oldMethod.parameterLists.size() != newMethod.parameterLists.size(),
                                                 anyPair {
-                                                    firstIterable => CeylonIterable(oldMethod.parameterLists);
-                                                    secondIterable => CeylonIterable(newMethod.parameterLists);
+                                                    firstIterable => {*oldMethod.parameterLists};
+                                                    secondIterable => {*newMethod.parameterLists};
                                                     selecting(Ast.ParameterList oldParamList,
                                                               Ast.ParameterList newParamlist)
                                                             => nodesDiffer(oldParamList, newParamlist, "parameterLists");
@@ -895,8 +894,8 @@ shared class DeltaBuilderFactory(
                                             => any {
                                                 oldVariable.parameterLists.size() != oldVariable.parameterLists.size(),
                                                 anyPair {
-                                                    firstIterable => CeylonIterable(oldVariable.parameterLists);
-                                                    secondIterable => CeylonIterable(newVariable.parameterLists);
+                                                    firstIterable => {*oldVariable.parameterLists};
+                                                    secondIterable => {*newVariable.parameterLists};
                                                     selecting(Ast.ParameterList oldParamList,
                                                               Ast.ParameterList newParamlist)
                                                             => nodesDiffer(oldParamList, newParamlist,"parameterLists");

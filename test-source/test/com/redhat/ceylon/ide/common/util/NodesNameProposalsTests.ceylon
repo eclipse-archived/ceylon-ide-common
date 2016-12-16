@@ -2,9 +2,6 @@ import ceylon.file {
     lines,
     File
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 import ceylon.test {
     assertEquals,
     test,
@@ -16,7 +13,6 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
     UsageWarning
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Message,
     Tree
 }
 import com.redhat.ceylon.ide.common.util {
@@ -46,8 +42,7 @@ shared class NodesNameProposalsTests() {
 		}
 	}.first?.item;
 	assert (exists pu);
-	assertEquals(CeylonIterable(pu.compilationUnit.errors)
-			.filter((Message message) => !(message is UsageWarning)).sequence(), []);
+	assertEquals([for (message in pu.compilationUnit.errors) if (!message is UsageWarning) message], []);
 	
 	[String+] nameProposals(String stringLiteralValue) {
 		String searchedText = "\"``stringLiteralValue``\"";
@@ -113,7 +108,8 @@ shared class NodesNameProposalsTests() {
 	class Proposed(String* names) satisfies Condition {
 		shared actual void check([String+] proposedNames) {
 			for(value name in names){
-				assertTrue(proposedNames.contains(name), "Expected proposal \"``name``\" to be found in propositions ``proposedNames``");
+				assertTrue(proposedNames.contains(name),
+					"Expected proposal \"``name``\" to be found in propositions ``proposedNames``");
 			}
 		}
 	}
@@ -121,7 +117,8 @@ shared class NodesNameProposalsTests() {
 	class NotProposed(String* names) satisfies Condition {
 		shared actual void check([String+] proposedNames) {			
 			for(value name in names){
-				assertFalse(proposedNames.contains(name), "Expected proposal \"``name``\" not to be found in propositions ``proposedNames``");
+				assertFalse(proposedNames.contains(name),
+					"Expected proposal \"``name``\" not to be found in propositions ``proposedNames``");
 			}
 		}
 	}

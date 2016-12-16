@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
 import com.redhat.ceylon.compiler.typechecker {
     TypeChecker
 }
@@ -122,8 +118,7 @@ shared class ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, Nati
         };
     }
 
-    shared {EditedPhasedUnitAlias*} workingCopies 
-            => CeylonIterable(theWorkingCopies.keySet());
+    shared {EditedPhasedUnitAlias*} workingCopies => { *theWorkingCopies.keySet() };
 
     shared void install() {
         if (exists tc = typeChecker) {

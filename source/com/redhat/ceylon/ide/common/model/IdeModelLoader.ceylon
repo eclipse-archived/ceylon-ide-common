@@ -7,7 +7,6 @@ import ceylon.collection {
     HashMap
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaString
 }
 
@@ -574,12 +573,10 @@ shared abstract class BaseIdeModelLoader(
            value unitName = classMirror.fileName;
            
            if (!classMirror.isBinary,
-               exists foundUnit
-                       = CeylonIterable(pkg.units)
-                       .find((u) => u.filename == unitName)) {
+               exists foundUnit = {*pkg.units}.find((u) => u.filename == unitName)) {
                // This search is for source Java classes since several classes might have the same file name 
                //  and live inside the same Java source file => into the same Unit
-                   return foundUnit;
+               return foundUnit;
            }
            
            unit = newCompiledUnit(pkg, classMirror);
@@ -678,14 +675,13 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
         String fileName = classMirror.fileName;
         
         String relativePath = "/".join (
-            CeylonIterable(pkg.name).map((JString name) => Util.quoteIfJavaKeyword(name.string)).chain({fileName}));
+            {*pkg.name}.map((name) => Util.quoteIfJavaKeyword(name.string)).chain {fileName});
                 
         String fullPath = classMirror.fullPath;
         
         if (!classMirror.isBinary) {
             if (is IdeModuleAlias ideModule = pkg.\imodule) {
-                CeylonProjectAlias? originalProject = ideModule.originalProject;
-                if (exists originalProject) {
+                if (exists originalProject = ideModule.originalProject) {
                     unit = javaModelServices.newCrossProjectJavaCompilationUnit(originalProject, typeRoot, relativePath,
                         fileName, fullPath, pkg);
                 } else {

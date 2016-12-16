@@ -3,9 +3,6 @@ import ceylon.collection {
     ArrayList,
     MutableSet
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 
 import com.redhat.ceylon.compiler.typechecker.analyzer {
     TypeVisitor,
@@ -611,7 +608,7 @@ shared abstract class ChangeParametersRefactoring(
         Boolean actual, JList<CommonToken> tokens) {
         
         value sb = StringBuilder().append("(");
-        value params = CeylonIterable(pl.parameters);
+        value params = { *pl.parameters };
         
         for (p in list.parameters) {
             
@@ -717,7 +714,7 @@ shared abstract class ChangeParametersRefactoring(
             
             // Add new args
             for (p in list.parameters) {
-                value nas = CeylonIterable(nal.namedArguments);
+                value nas = { *nal.namedArguments };
 
                 if (!p.defaulted || p.defaultHasChanged,
                     !nas.find((na) 
@@ -770,7 +767,7 @@ shared abstract class ChangeParametersRefactoring(
         Tree.PositionalArgumentList pal,
         JList<CommonToken> tokens) {
         
-        value oldArgs = CeylonIterable(pal.positionalArguments);
+        value oldArgs = { *pal.positionalArguments };
         value builder = StringBuilder().append("(");
         
         for (p in list.parameters) {
@@ -802,7 +799,7 @@ shared abstract class ChangeParametersRefactoring(
         Tree.ParameterList pal,
         JList<CommonToken> tokens) {
         
-        value oldArgs = CeylonIterable(pal.parameters);
+        value oldArgs = { *pal.parameters };
         value builder = StringBuilder().append("(");
         
         for (p -> pTree in zipEntries(list.parameters, oldArgs)) {

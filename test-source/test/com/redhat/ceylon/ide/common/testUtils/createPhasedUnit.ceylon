@@ -2,7 +2,6 @@ import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
-    CeylonIterable,
     javaString,
     JavaList
 }
@@ -140,7 +139,7 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
     value moduleValidator = ModuleValidator(context, phasedUnits);
     moduleValidator.verifyModuleDependencyTree();
 
-    value listOfUnits = CeylonIterable(phasedUnits.phasedUnits);
+    value listOfUnits = { *phasedUnits.phasedUnits };
 
     for (pu in listOfUnits) {
         pu.validateTree();

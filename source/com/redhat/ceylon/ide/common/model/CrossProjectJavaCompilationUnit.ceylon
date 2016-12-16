@@ -1,18 +1,15 @@
-import ceylon.interop.java {
-    CeylonIterable
-}
-
-import com.redhat.ceylon.model.typechecker.model {
-    Unit
+import com.redhat.ceylon.ide.common.platform {
+    JavaModelServicesConsumer
 }
 import com.redhat.ceylon.model.loader.model {
     LazyPackage
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Unit
+}
+
 import java.lang.ref {
     WeakReference
-}
-import com.redhat.ceylon.ide.common.platform {
-    JavaModelServicesConsumer
 }
 
 shared abstract class CrossProjectJavaCompilationUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>(
@@ -28,10 +25,11 @@ shared abstract class CrossProjectJavaCompilationUnit<NativeProject, NativeFolde
     
     function findOriginalSourceFile() => 
             let(searchedPackageName = pkg.nameAsString)
-    if (exists members=originalProject.modules?.fromProject?.flatMap((m) => CeylonIterable(m.packages))
+    if (exists members=originalProject.modules?.fromProject?.flatMap((m) => { *m.packages })
         ?.find((p) => p.nameAsString == searchedPackageName)
             ?.members)
-    then CeylonIterable(members).map((decl) => decl.unit)
+    then { *members }
+            .map((decl) => decl.unit)
             .narrow<JavaCompilationUnit<NativeProject, NativeFolder, NativeFile, JavaClassRoot, JavaElement>>()
             .find((unit) => unit.fullPath == fullPath)
     else null;

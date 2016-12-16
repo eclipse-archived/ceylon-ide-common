@@ -4,9 +4,6 @@ import ceylon.collection {
     ArrayList,
     naturalOrderTreeMap
 }
-import ceylon.interop.java {
-    CeylonIterable
-}
 import ceylon.language.meta {
     type
 }
@@ -26,7 +23,6 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Ast=Tree,
-    Message,
     Node
 }
 import com.redhat.ceylon.ide.common.model.delta {
@@ -37,7 +33,6 @@ import com.redhat.ceylon.ide.common.model.delta {
 import test.com.redhat.ceylon.ide.common.model.delta {
     CompilationUnitDeltaMockup
 }
-
 import test.com.redhat.ceylon.ide.common.testUtils {
     parseAndTypecheckCode,
     SourceCode
@@ -180,12 +175,10 @@ void comparePhasedUnits(String path, String oldContents, String newContents,
     Anything({[String, String, String->String]*})? doWithNodeComparisons = null) {
 
     assert (exists oldPasedUnit = parseAndTypecheckCode { SourceCode(oldContents, path) }.first?.item);
-    assertEquals(CeylonIterable(oldPasedUnit.compilationUnit.errors)
-            .filter((Message message) => !(message is UsageWarning)).sequence(), []);
+    assertEquals([for (message in oldPasedUnit.compilationUnit.errors) if (!message is UsageWarning) message], []);
 
     assert (exists newPhasedUnit = parseAndTypecheckCode { SourceCode(newContents, path) }.first?.item);
-    assertEquals(CeylonIterable(newPhasedUnit.compilationUnit.errors)
-            .filter((Message message) => !(message is UsageWarning)).sequence(), []);
+    assertEquals([for (message in newPhasedUnit.compilationUnit.errors) if (!message is UsageWarning) message], []);
 
     compare(oldPasedUnit, newPhasedUnit, expectedDelta, printNodeComparisons, doWithNodeComparisons);
 }
