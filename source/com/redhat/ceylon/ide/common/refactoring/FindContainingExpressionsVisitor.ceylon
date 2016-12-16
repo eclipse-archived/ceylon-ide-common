@@ -1,9 +1,6 @@
 import ceylon.collection {
     ArrayList
 }
-import ceylon.interop.java {
-    createJavaObjectArray
-}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
@@ -18,7 +15,7 @@ shared class FindContainingExpressionsVisitor(Integer offset) extends Visitor() 
 
     value myElements = ArrayList<Tree.Term>();
     
-    shared ObjectArray<Tree.Term> elements => createJavaObjectArray(myElements);
+    shared ObjectArray<Tree.Term> elements => ObjectArray.with(myElements);
     
     shared actual void visit(Tree.Term that) {
         super.visit(that);

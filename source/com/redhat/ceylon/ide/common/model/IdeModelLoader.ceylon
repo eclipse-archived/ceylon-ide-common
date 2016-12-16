@@ -7,7 +7,6 @@ import ceylon.collection {
     HashMap
 }
 import ceylon.interop.java {
-    createJavaObjectArray,
     CeylonIterable,
     javaString
 }
@@ -195,7 +194,7 @@ shared abstract class BaseIdeModelLoader(
            is SourceFile unit = declaration.unit) {
            String fqn = getToplevelQualifiedName(unit.ceylonPackage.nameAsString, declaration.nameAsString);
            if (exists holder = _sourceDeclarations.get(fqn)) {
-               return createJavaObjectArray { SourceClass(holder) };
+               return ObjectArray.with { SourceClass(holder) };
            }
        }
        return mirrors;
