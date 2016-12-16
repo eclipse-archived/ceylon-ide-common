@@ -7,7 +7,6 @@ import ceylon.collection {
 import ceylon.interop.java {
     synchronize,
     JavaList,
-    javaClass,
     JavaIterable,
     JavaCollection
 }
@@ -230,7 +229,9 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
         
         shared BuildTypeState buildType = BuildTypeState();
     }
-    
+
+    value warningClass = `Warning`;
+
     State state = State();
     
     shared abstract class BuildMessage() 
@@ -690,7 +691,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             
             function retrieveErrors(TypecheckerAliases<NativeProject,NativeResource,NativeFolder,NativeFile>.ProjectPhasedUnitAlias projectPhasedUnit) {
                 value compilationUnit = projectPhasedUnit.compilationUnit;
-                compilationUnit.visit(WarningSuppressionVisitor<Warning>(javaClass<Warning>(),
+                compilationUnit.visit(WarningSuppressionVisitor<Warning>(warningClass,
                     ceylonProject.configuration.suppressWarningsEnum));
                 value messages = LinkedList<SourceFileMessage>();
                 compilationUnit.visit(object extends ErrorVisitor() {

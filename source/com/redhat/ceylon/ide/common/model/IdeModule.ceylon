@@ -7,9 +7,7 @@ import ceylon.collection {
     MutableList
 }
 import ceylon.interop.java {
-    javaString,
-    CeylonIterable,
-    javaClass
+    javaString
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -414,8 +412,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 }
                 else if (equalsWithNulls("npm", artifactResult.namespace())) {
                     _moduleType = ModuleType._NPM_MODULE;
-                    assert(is AbstractRepository repository = artifactResult.repository());
-                    if (is NpmContentStore contentStore = repository.root.getService(javaClass<ContentStore>())) {
+                    assert (is AbstractRepository repository = artifactResult.repository());
+                    if (is NpmContentStore contentStore = repository.root.getService(`ContentStore`)) {
                         value absoluteNpmPath = artifactResult.artifact().absolutePath;
                         for (baseDir in contentStore.baseDirectories) {
                             if (Path(baseDir.absolutePath).isPrefixOf(Path(absoluteNpmPath))) {
@@ -445,7 +443,11 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 _artifactType = artifactResult.type();
                 if (isCeylonBinaryArchive) {
                     String carPath = existingArtifact.path;
-                    _sourceArchivePath = switchExtension(carPath, ArtifactContext.car, ArtifactContext.src);
+                    _sourceArchivePath = switchExtension {
+                        sap = carPath;
+                        oldExtension = ArtifactContext.car;
+                        newExtension = ArtifactContext.src;
+                    };
                     try {
                         fillSourceRelativePaths();
                     }
@@ -456,8 +458,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     for (sourceRelativePath in sourceRelativePaths) {
                         variable String pathToPut = sourceRelativePath;
                         if (sourceRelativePath.endsWith(".java")) {
-                            String? ceylonRelativePath = javaImplFilesToCeylonDeclFiles.get(sourceRelativePath);
-                            if (exists ceylonRelativePath) {
+                            if (exists ceylonRelativePath = javaImplFilesToCeylonDeclFiles.get(sourceRelativePath)) {
                                 pathToPut = ceylonRelativePath;
                             }
                         }
@@ -609,7 +610,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     phasedUnits =>
             doWithPhasedUnitsObject { 
                 action(AnyPhasedUnitMap phasedUnitMap) 
-                        => CeylonIterable(phasedUnitMap.phasedUnits);
+                        => { *phasedUnitMap.phasedUnits };
                 defaultValue = []; 
             };
     
@@ -867,12 +868,12 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     
     referencingModules =>
             switch (value deps = projectModuleDependencies)
-            case (is Object) CeylonIterable(deps.getReferencingModules(this))
+            case (is Object) { *deps.getReferencingModules(this) }
             else [];
     
     transitiveDependencies =>
             switch (value deps = projectModuleDependencies)
-            case (is Object) CeylonIterable(deps.getTransitiveDependencies(this))
+            case (is Object) { *deps.getTransitiveDependencies(this) }
             else [];
     
     resolutionFailed => resolutionException exists;

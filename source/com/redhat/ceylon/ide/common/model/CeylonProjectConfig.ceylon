@@ -1,6 +1,4 @@
 import ceylon.interop.java {
-    toStringArray,
-    javaClass,
     javaString
 }
 
@@ -44,7 +42,7 @@ shared String removeCurrentDirPrefix(String url)
 {String*}|Default getConfigValuesAsList<Default=Nothing>(CeylonConfig config, String optionKey, String|Default defaultKey)
         given Default satisfies Null
         => if (exists values = config.getOptionValues(optionKey))
-        then toStringArray(values.array).coalesced
+        then { for (string in values) string.string }
         else if (is Default defaultKey) then defaultKey else { defaultKey };
 
 void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? values) {
@@ -57,7 +55,7 @@ void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? val
 
 shared class CeylonProjectConfig(project) {
 
-    value warningClass = javaClass<Warning>();
+    value warningClass = `Warning`;
 
     shared BaseCeylonProject project;
 
