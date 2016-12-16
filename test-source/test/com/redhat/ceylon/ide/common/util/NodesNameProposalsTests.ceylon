@@ -45,19 +45,26 @@ shared class NodesNameProposalsTests() {
 	assertEquals([for (message in pu.compilationUnit.errors) if (!message is UsageWarning) message], []);
 	
 	[String+] nameProposals(String stringLiteralValue) {
-		String searchedText = "\"``stringLiteralValue``\"";
-		value offset = findInLines(theLines, searchedText, 0);
-		value node = nodes.findNode(pu.compilationUnit, pu.tokens, offset, offset);
-		assert(is Tree.Term|Tree.Type? node);
+		value offset = findInLines {
+		    lines = theLines;
+		    searchedText = "\"``stringLiteralValue``\"";
+		    indexInText = 0;
+		};
+		value node = nodes.findNode {
+		    node = pu.compilationUnit;
+		    tokens = pu.tokens;
+		    startOffset = offset;
+		    endOffset = offset;
+		};
+		assert (is Tree.Term|Tree.Type? node);
 		return nodes.nameProposals {
 		    node = node;
 		    rootNode = pu.compilationUnit;
 		};
 	}
 	
-	void test(String stringLiteralValue, Condition condition) {
-		condition.check(nameProposals(stringLiteralValue));
-	}
+	void test(String stringLiteralValue, Condition condition)
+			=> condition.check(nameProposals(stringLiteralValue));
 	
 	test shared void emptyString() => test("", NotProposed("", "\\i"));
 	test shared void notOnlyLeters() => test("a1", NotProposed("a1", "a", "", "\\i"));
