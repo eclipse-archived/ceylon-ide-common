@@ -2,9 +2,7 @@ import ceylon.collection {
     MutableMap
 }
 import ceylon.interop.java {
-    javaClass,
-    javaString,
-    CeylonMap
+    javaString
 }
 
 import com.redhat.ceylon.cmr.api {
@@ -143,6 +141,8 @@ shared final class ProjectState
             else false;
 }
 
+EnumSet<Warning> allWarnings = EnumSet.allOf(`Warning`);
+
 shared abstract class BaseCeylonProject() {
     shared String ceylonConfigFileProjectRelativePath = ".ceylon/config";
     variable CeylonProjectConfig? ceylonConfig = null;
@@ -152,6 +152,8 @@ shared abstract class BaseCeylonProject() {
     variable RepositoryManager? _repositoryManager = null;
 
     shared ModuleDependencies moduleDependencies = ModuleDependencies();
+
+    value contentStoreClass = `ContentStore`;
 
     "TODO: should not be shared. Will be made unshared when the
      using methods will have been implemented in Ceylon"
@@ -255,10 +257,16 @@ shared abstract class BaseCeylonProject() {
                 String? pathForRunningNpm;
                 if (exists nodeCommand = ideConfiguration.nodePath) {
                     String nodeDirectory = File(nodeCommand).parentFile.absolutePath;
-                    value m = CeylonMap(System.getenv());
-                    value oldPathElements = m.find((key->item) 
-                            => key.string.equalsIgnoringCase("PATH")
-                    )?.item?.string?.split(File.pathSeparatorChar.equals, true, true);
+                    {String+}? oldPathElements;
+                    for (entry in System.getenv().entrySet()) {
+                        if (entry.key.string.equalsIgnoringCase("PATH")) {
+                            oldPathElements = entry.\ivalue.string.split(File.pathSeparatorChar.equals, true, true);
+                            break;
+                        }
+                    }
+                    else {
+                        oldPathElements = null;
+                    }
                     pathForRunningNpm = 
                         if (exists oldPathElements)
                         then File.pathSeparator.join(
@@ -334,7 +342,7 @@ shared abstract class BaseCeylonProject() {
     }
 
     shared Boolean showWarnings =>
-            configuration.suppressWarningsEnum != EnumSet.allOf(javaClass<Warning>());
+            configuration.suppressWarningsEnum != allWarnings;
 
     "Returns:
      - [[true]] if no error occured while creating the ceylon bootstrap files,
@@ -412,7 +420,7 @@ shared abstract class BaseCeylonProject() {
 
     shared {File*} ceylonRepositoryBaseDirectories =>
             { for (repo in repositoryManager.repositories)
-              if (exists contentStore = repo.root.getService(javaClass<ContentStore>()))
+              if (exists contentStore = repo.root.getService(contentStoreClass))
               for (dir in contentStore.baseDirectories)
               dir };
 
