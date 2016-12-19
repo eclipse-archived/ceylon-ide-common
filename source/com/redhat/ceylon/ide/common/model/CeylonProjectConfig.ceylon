@@ -3,7 +3,8 @@ import ceylon.interop.java {
 }
 
 import com.redhat.ceylon.common {
-    Constants
+    Constants,
+    Backend
 }
 import com.redhat.ceylon.common.config {
     CeylonConfig,
@@ -91,6 +92,13 @@ shared class CeylonProjectConfig(project) {
 
     variable {String*}? transientJavacOptions = null;
     variable Boolean isJavacOptionsChanged = false;
+
+    variable String? transientRuntoolModule = null;
+    variable String? transientRuntoolRun = null;
+    variable {String*}? transientRuntoolArgs = null;
+    variable Boolean isRuntoolModuleChanged = false;
+    variable Boolean isRuntoolRunChanged = false;
+    variable Boolean isRuntoolArgsChanged = false;
 
     shared String projectRelativePath = ".ceylon/config";
     
@@ -292,6 +300,33 @@ shared class CeylonProjectConfig(project) {
         this.transientJavacOptions = javacOptions;
     }
 
+    shared String? runToolModule(Backend backend) =>
+            DefaultToolOptions.getRunToolModule(mergedConfig, backend);
+    shared String? projectRunToolModule(Backend backend) =>
+            DefaultToolOptions.getRunToolModule(projectConfig, backend);
+    shared void setProjectRunToolModule(String runToolModule, Backend backend) {
+        this.isRuntoolModuleChanged = true;
+        this.transientRuntoolModule = runToolModule;
+    }
+
+    shared String? runToolRun =>
+            DefaultToolOptions.getRunToolRun(mergedConfig, Backend.java);
+    shared String? projectRunToolRun =>
+            DefaultToolOptions.getRunToolRun(projectConfig, Backend.java);
+    assign projectRunToolRun {
+        this.isRuntoolRunChanged = true;
+        this.transientRuntoolRun = projectRunToolRun;
+    }
+
+    shared {String*}? runToolArgs =>
+            getConfigValuesAsList(mergedConfig, DefaultToolOptions.runtoolArg, null);
+    shared {String*}? projectRunToolArgs =>
+            getConfigValuesAsList(projectConfig, DefaultToolOptions.runtoolArg, null);
+    assign projectRunToolArgs {
+        this.isRuntoolArgsChanged = true;
+        this.transientRuntoolArgs = projectRunToolArgs;
+    }
+
     shared void refresh() {
         initMergedConfig();
         initProjectConfig();
@@ -304,6 +339,9 @@ shared class CeylonProjectConfig(project) {
         isFullyExportMavenDependenciesChanged = false;
         isSuppressWarningsChanged = false;
         isJavacOptionsChanged = false;
+        isRuntoolArgsChanged = false;
+        isRuntoolModuleChanged = false;
+        isRuntoolRunChanged = false;
 
         transientEncoding = null;
         transientOffline = null;
@@ -319,6 +357,9 @@ shared class CeylonProjectConfig(project) {
         transientResourceDirectories = null;
         transientSuppressWarnings = null;
         transientJavacOptions = null;
+        transientRuntoolArgs = null;
+        transientRuntoolModule = null;
+        transientRuntoolRun = null;
     }
 
     shared void save() {
@@ -365,7 +406,10 @@ shared class CeylonProjectConfig(project) {
                 || isAutoExportMavenDependenciesChanged
                 || isFullyExportMavenDependenciesChanged
                 || isSuppressWarningsChanged
-                || isJavacOptionsChanged;
+                || isJavacOptionsChanged
+                || isRuntoolArgsChanged
+                || isRuntoolModuleChanged
+                || isRuntoolRunChanged;
 
         if (!project.hasConfigFile ||
             someSettingsChanged) {
@@ -431,6 +475,15 @@ shared class CeylonProjectConfig(project) {
                 }
                 if (isJavacOptionsChanged) {
                     setConfigValuesAsList(projectConfig, DefaultToolOptions.\iCOMPILER_JAVAC, transientJavacOptions);
+                }
+                if (isRuntoolArgsChanged) {
+                    setConfigValuesAsList(projectConfig, DefaultToolOptions.runtoolArg, transientRuntoolArgs);
+                }
+                if (isRuntoolModuleChanged) {
+                    projectConfig.setOption(DefaultToolOptions.runtoolModule, transientRuntoolModule);
+                }
+                if (isRuntoolRunChanged) {
+                    projectConfig.setOption(DefaultToolOptions.runtoolRun, transientRuntoolRun);
                 }
 
                 ConfigWriter.instance().write(projectConfig, projectConfigFile);
