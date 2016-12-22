@@ -153,7 +153,7 @@ shared abstract class BaseCeylonProject() {
 
     shared ModuleDependencies moduleDependencies = ModuleDependencies();
 
-    value contentStoreClass = `ContentStore`;
+    value contentStoreClass => `ContentStore`;
 
     "TODO: should not be shared. Will be made unshared when the
      using methods will have been implemented in Ceylon"
