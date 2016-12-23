@@ -70,6 +70,7 @@ import org.antlr.runtime {
     Token
 }
 
+
 shared object completionManager
         satisfies InvocationCompletion
                 & ParametersCompletion
@@ -906,7 +907,6 @@ shared object completionManager
                 if (!secondLevel,
                     !inDoc,
                     noParamsFollow,
-                    !node is Tree.BaseType,
                     isInvocationProposable {
                         dwp = dwp;
                         ol = ol;
