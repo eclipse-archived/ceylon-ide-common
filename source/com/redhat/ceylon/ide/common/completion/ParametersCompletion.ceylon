@@ -1,18 +1,25 @@
+import ceylon.interop.java {
+	CeylonList
+}
+
+import com.redhat.ceylon.compiler.typechecker.analyzer {
+	Warning
+}
 import com.redhat.ceylon.compiler.typechecker.tree {
-    Tree
+	Tree
+}
+import com.redhat.ceylon.ide.common.doc {
+	Icons
 }
 import com.redhat.ceylon.ide.common.platform {
-    platformServices
+	platformServices
 }
 import com.redhat.ceylon.ide.common.util {
-    escaping
+	escaping
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Type,
-    Functional
-}
-import ceylon.interop.java {
-    CeylonList
+	Type,
+	Functional
 }
 
 shared interface ParametersCompletion {
@@ -32,6 +39,19 @@ shared interface ParametersCompletion {
             value cd = unit.callableDeclaration;
             value td = type.declaration;
             
+            if (td.qualifiedNameString == "ceylon.language::SuppressWarningsAnnotation") {
+                value warnings = { for (w in Warning.values()) w.name() };
+                
+                for (val in sort(warnings)) {
+                    platformServices.completion.addProposal {
+                    	ctx = ctx;
+                    	offset = offset;
+                    	prefix = prefix;
+                    	icon = Icons.ceylonLiteral;
+                    	description = "\"``val``\"";
+                    };
+                }
+            }
             if (type.classOrInterface, td==cd) {
                 value argTypes = unit.getCallableArgumentTypes(type);
                 value paramTypes = ctx.options.parameterTypesInCompletion;
