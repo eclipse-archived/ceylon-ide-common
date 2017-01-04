@@ -3,7 +3,8 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree {
         Term
-    }
+    },
+	CustomTree
 }
 import java.util {
     List
@@ -267,7 +268,9 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
     
     shared actual void visit(Tree.Declaration that) {
         if (inBounds(that.identifier)) {
-            node = that;
+            if (!is CustomTree.GuardedVariable that) {
+            	node = that;
+        	}
         }
         else {
             super.visit(that);
