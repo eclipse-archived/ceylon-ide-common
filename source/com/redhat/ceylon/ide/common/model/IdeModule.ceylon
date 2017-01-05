@@ -262,8 +262,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 }
             }
         };
-        assert(exists existingModuleType = _moduleType);
-        return ModuleType._SDK_MODULE == existingModuleType;
+        return if (exists existingModuleType = _moduleType)
+        then ModuleType._SDK_MODULE == existingModuleType
+        else false;
     }
     
     isCeylonArchive => 
