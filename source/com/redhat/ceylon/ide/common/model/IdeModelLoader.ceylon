@@ -119,7 +119,7 @@ shared abstract class BaseIdeModelLoader(
     shared void runWithLock(void action()) => synchronizedRun(action);
 
     shared T callWithLock<T>(T fun()) => synchronizedCall(() => fun() else null);
-    
+
     shared class GlobalTypeFactory(Context context) 
            extends TypeFactory(context) {
        
@@ -788,7 +788,8 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
                             // Some languages like Scala generate classes like com.foo.package which we would
                             // quote to com.foo.$package, which does not exist, so we'd get a null leading to an NPE
                             // So ATM we just avoid it, presumably we don't support what it does anyways
-                            if(exists classMirror = lookupClassMirror(mod, fqn)) {
+                            if (exists classMirror = lookupClassMirror(mod, fqn),
+                                isValidMirror(classMirror)) {
                                 convertToDeclaration(mod, classMirror, DeclarationType.\iVALUE);
                             }
                         });
@@ -804,4 +805,6 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             }
         }) callWithLock(do);
     }
+
+    shared default Boolean isValidMirror(ClassMirror mirror) => true;
 }
