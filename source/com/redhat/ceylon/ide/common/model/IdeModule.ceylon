@@ -1038,8 +1038,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                             value zipFile = ZipFileVirtualFile.fromFile(File(_sourceArchivePath));
                             theSourceArchive = zipFile;
                             for (relativePathToAdd in originalUnitsToAdd) {
-                                if (exists archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile)) {
-                                    assert(exists pkg = getPackageFromRelativePath(relativePathToAdd));
+                                if (exists archiveEntry = searchInSourceArchive(relativePathToAdd, zipFile),
+                                    exists pkg = getPackageFromRelativePath(relativePathToAdd)) {
                                     phasedUnitMap.parseFileInPackage(archiveEntry, zipFile, pkg);
                                 }
                             }
