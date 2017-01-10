@@ -118,7 +118,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
         this.transientCompileToJs = compileToJs;
     }
 
-    shared String? systemRepository => CeylonConfig.get("project.system-repository");
+    shared String? systemRepository => ideConfig.getOption("project.system-repository");
     assign systemRepository {
         this.isSystemRepositoryChanged = true;
         this.transientSystemRepository = systemRepository;
@@ -197,7 +197,7 @@ shared class CeylonIdeConfig(shared BaseCeylonProject project) {
                 if (isCompileToJsChanged) {
                     ideConfig.setBoolOption("project.compile-js", transientCompileToJs else false);
                 }
-                if (isCompileToJvmChanged) {
+                if (isSystemRepositoryChanged) {
                     ideConfig.setOption("project.system-repository", transientSystemRepository else "");
                 }
 
