@@ -12,6 +12,7 @@ module com.redhat.ceylon.ide.common "1.3.2-SNAPSHOT" {
     shared import com.redhat.ceylon.compiler.java "1.3.2-SNAPSHOT";
     shared import com.redhat.ceylon.compiler.js "1.3.2-SNAPSHOT";
     shared import com.redhat.ceylon.common "1.3.2-SNAPSHOT";
+    shared import com.redhat.ceylon.tools "1.3.2-SNAPSHOT";
     shared import org.jgrapht.core "0.9.1";
     shared import net.lingala.zip4j "1.3.2";
     import ceylon.bootstrap "1.3.2-SNAPSHOT";

@@ -96,7 +96,7 @@ shared object addModuleImportQuickFix {
                                 moduleName = mod.string;
                                 moduleVersion = version;
                             };
-                        declaration = ModuleVersionDetails(mod.string, version);
+                        declaration = ModuleVersionDetails(mod.string, version, null, null);
                         affectsOtherUnits = true;
                     };
                     
