@@ -504,10 +504,14 @@ shared abstract class BaseIdeModelLoader(
    
    shared formal ClassMirror? buildClassMirrorInternal(String string);
 
+   shared SourceDeclarationHolder? lookupSourceDeclaration(String name) {
+       String topLevelPartiallyQuotedName = getToplevelQualifiedName(name);
+       return sourceDeclarations.get(topLevelPartiallyQuotedName);
+   }
+   
    shared actual ClassMirror? lookupNewClassMirror(Module ideModule, String name) {
        return let (do = () {
-           String topLevelPartiallyQuotedName = getToplevelQualifiedName(name);
-           variable SourceDeclarationHolder? foundSourceDeclaration = sourceDeclarations.get(topLevelPartiallyQuotedName);
+           value foundSourceDeclaration = lookupSourceDeclaration(name);
            if (exists sourceDeclaration=foundSourceDeclaration,
                !forceLoadFromBinaries(
                sourceDeclaration.astDeclaration)) {
@@ -556,7 +560,7 @@ shared abstract class BaseIdeModelLoader(
        }
        
        if (is BaseIdeModule ideModule) {
-           if (ideModule != languageModule 
+           if (ideModule != languageModule
                && (ideModule.isCeylonBinaryArchive 
                     || ideModule.isJavaBinaryArchive)) {
                addModuleToClasspathInternal(artifact);
@@ -611,6 +615,8 @@ shared abstract class BaseIdeModelLoader(
    shared actual default void logVerbose(String message) {
        platformUtils.log(Status._DEBUG, message);
    }
+   
+   shared actual Boolean hasJavaAndCeylonSources() => true;
    
    shared void setModuleAndPackageUnits() {
        for (ideModule in moduleManager.modules.listOfModules) {

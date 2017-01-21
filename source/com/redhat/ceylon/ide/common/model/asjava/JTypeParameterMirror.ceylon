@@ -7,13 +7,16 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.util {
-    Collections
+    Collections,
+    Arrays,
+    List
 }
 
-shared class JTypeParameterMirror(TypeParameter param) satisfies TypeParameterMirror {
-    
-    bounds => Collections.emptyList<TypeMirror>();
-    
-    name => param.nameAsString;
-    
+shared class JTypeParameterMirror(TypeParameter param, {TypeMirror*}(TypeParameter) retrieveBounds) satisfies TypeParameterMirror {
+    name = param.nameAsString;
+    variable List<TypeMirror>? bounds_ = null;
+    bounds => bounds_ else (bounds_ = 
+        let(theBounds = retrieveBounds(param))
+        if (theBounds.empty) then Collections.emptyList<TypeMirror>()
+        else Arrays.asList(*theBounds));
 }

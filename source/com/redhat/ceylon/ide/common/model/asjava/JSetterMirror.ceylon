@@ -1,6 +1,7 @@
 import com.redhat.ceylon.model.loader.mirror {
     TypeParameterMirror,
-    VariableMirror
+    VariableMirror,
+    ClassMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value
@@ -10,21 +11,25 @@ import java.util {
     Collections
 }
 
-shared class JSetterMirror(Value decl)
-        extends AbstractMethodMirror(decl) {
+shared class JSetterMirror(Value decl, ClassMirror? enclosingClass, mapper)
+        extends AbstractMethodMirror<Value>(decl, enclosingClass) {
+    
+    shared actual CeylonToJavaMapper mapper;
+    variable Integer? flags_ = null;
+    
+    flags => flags_ else 
+    (flags_ = mapper.transformer.modifierTransformation().getterSetter(decl, false));
     
     constructor => false;
     
     declaredVoid => true;
 
-    final => true;
-    
     name => "set" + capitalize(decl.name);
     
     parameters
-            => Collections.singletonList<VariableMirror>(JVariableMirror(decl));
+            => Collections.singletonList<VariableMirror>(JSetterParameterMirror(decl, mapper));
     
-    returnType => JTypeMirror(decl.type);
+    returnType => PrimitiveMirror.\ivoid;
     
     typeParameters
             => Collections.emptyList<TypeParameterMirror>();

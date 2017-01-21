@@ -1,38 +1,28 @@
+import com.redhat.ceylon.langtools.tools.javac.code {
+    Flags
+}
 import com.redhat.ceylon.model.loader.mirror {
-    MethodMirror
+    MethodMirror,
+    ClassMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue
 }
-import java.util {
-    Collections
-}
-import java.lang {
-    JString=String
-}
 
-shared abstract class AbstractMethodMirror(shared FunctionOrValue decl)
-        satisfies MethodMirror & DeclarationMirror {
+shared abstract class AbstractMethodMirror<DeclarationType>(DeclarationType decl, enclosingClass = null)
+        extends DeclarationMirror<DeclarationType>(decl)
+        satisfies MethodMirror
+        given DeclarationType satisfies FunctionOrValue {
     
-    declaration => decl;
+    shared formal Integer flags;
     
-    abstract => decl.abstraction;
-    
-    default => decl.default;
-    
-    defaultAccess => !decl.shared;
-    
-    enclosingClass => null;
-    
-    getAnnotation(String? string) => null;
-    
-    annotationNames => Collections.emptySet<JString>();
-
-    protected => false;
-    
-    public => decl.shared;
-    
-    shared actual default Boolean static => decl.static;
-    
-    staticInit => false;
+    shared actual default Boolean abstract => flags.and(Flags.abstract) > 0;
+    shared actual default Boolean default => flags.and(Flags.default) > 0;
+    shared actual default Boolean defaultAccess => flags.and(Flags.accessFlags) == 0;
+    shared actual ClassMirror? enclosingClass;
+    shared actual default Boolean protected => flags.and(Flags.protected) > 0;
+    shared actual default Boolean public => flags.and(Flags.public) > 0;
+    shared actual default Boolean static => declaration.static;
+    shared actual default Boolean staticInit => false;
+    shared actual default Boolean final => flags.and(Flags.final) > 0;
 }

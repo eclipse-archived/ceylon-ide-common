@@ -616,10 +616,10 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             };
     
     shared Boolean containsPhasedUnitWithRelativePath(String relativePath) =>
-            doWithPhasedUnitsObject { 
-                action(AnyPhasedUnitMap phasedUnitMap) 
+            doWithPhasedUnitsObject {
+                action(AnyPhasedUnitMap phasedUnitMap)
                         => phasedUnitMap.containsRelativePath(relativePath);
-                defaultValue = false; 
+                defaultValue = false;
             };
     
     shared actual ExternalPhasedUnit? getPhasedUnit(

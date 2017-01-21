@@ -1,109 +1,228 @@
-import ceylon.interop.java {
-    javaClass
-}
-
-import com.redhat.ceylon.model.loader.impl.reflect.mirror {
-    ReflectionType
+import com.redhat.ceylon.compiler.java.codegen {
+    Naming
 }
 import com.redhat.ceylon.model.loader.mirror {
     TypeMirror,
-    TypeKind
+    TypeKind,
+    ClassMirror,
+    TypeParameterMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Type,
-    ClassOrInterface
+    TypeParameter,
+    Declaration
 }
 
-import java.lang {
-    JString=String,
-    Class
-}
 import java.util {
     List,
     Collections,
-    ArrayList
+    Arrays
 }
 
-TypeMirror longMirror = PrimitiveMirror(TypeKind.long, "long");
-
-TypeMirror doubleMirror = PrimitiveMirror(TypeKind.double, "double");
-
-TypeMirror booleanMirror = PrimitiveMirror(TypeKind.boolean, "boolean");
-
-TypeMirror intMirror = PrimitiveMirror(TypeKind.int, "int");
-
-TypeMirror byteMirror = PrimitiveMirror(TypeKind.byte, "byte");
-
-TypeMirror stringMirror = JavaClassType(javaClass<JString>());
-
-TypeMirror objectMirror = JavaClassType(javaClass<Object>());
-
-class JTypeMirror(Type type) satisfies TypeMirror {
+class PrimitiveMirror
+        satisfies TypeMirror {
+    TypeKind kind_;
+    String name;
     
-    componentType => null;
-    
-    declaredClass
-            => if (is ClassOrInterface decl = type.declaration)
-            then JClassMirror(decl)
-            else null;
-    
-    kind => TypeKind.declared;
-    
-    lowerBound => null;
-    
-    primitive => false;
-    
-    qualifiedName => type.asQualifiedString();
-    
-    qualifyingType => null;
-    
-    raw => type.raw;
-    
-    shared actual List<TypeMirror> typeArguments {
-        value args = ArrayList<TypeMirror>();
-        for (arg in type.typeArgumentList) {
-            args.add(JTypeMirror(arg));
-        }
-        return args;
+    new create(TypeKind kind, String name) {
+        this.kind_ = kind;
+        this.name = name;
     }
     
-    typeParameter => null;
+    shared new long extends create(TypeKind.long, "long") {}
+    shared new double extends create(TypeKind.double, "double") {}
+    shared new float extends create(TypeKind.float, "float") {}
+    shared new boolean extends create(TypeKind.boolean, "boolean") {}
+    shared new int extends create(TypeKind.int, "int") {}
+    shared new short extends create(TypeKind.short, "short") {}
+    shared new byte extends create(TypeKind.byte, "byte") {}
+    shared new char extends create(TypeKind.char, "char") {}
+    shared new \ivoid extends create(TypeKind.\ivoid, "void") {}
     
-    upperBound => null;
-    
-    string => type.asString();
-}
-
-class PrimitiveMirror(TypeKind _kind, String name)
-        satisfies TypeMirror {
-
     componentType => null;
-    
     declaredClass => null;
-    
-    kind => _kind;
-    
+    kind => kind_;
     lowerBound => null;
-    
     primitive => true;
-    
     qualifiedName => name;
-    
     qualifyingType => null;
-    
     raw => false;
-    
-    typeArguments
-            => Collections.emptyList<TypeMirror>();
-    
+    typeArguments => Collections.emptyList<TypeMirror>();
     typeParameter => null;
-    
     upperBound => null;
-    
     string => name;
 }
 
-class JavaClassType<Type>(Class<Type> type) extends ReflectionType(type)
-        given Type satisfies Object {
-    string => type.simpleName;
+class JTypeMirror 
+        satisfies TypeMirror &
+        ModelBasedMirror {
+
+    shared actual CeylonToJavaMapper mapper;
+    ClassMirror? declaredClass_;
+    TypeMirror? componentType_;
+    TypeKind kind_;
+    TypeMirror? upperBound_;
+    TypeMirror? lowerBound_;
+    String? qualifiedName_;
+    List<TypeMirror> typeArguments_;
+    TypeMirror? qualifyingType_;
+    variable Boolean? raw_ = null;
+    Boolean calculateRaw();
+    TypeParameterMirror? typeParameter_;
+    
+    abstract new wildcard(CeylonToJavaMapper mapper) {
+        kind_ = TypeKind.wildcard;
+        qualifiedName_ = null;
+        qualifyingType_ = null;
+        componentType_ = null;
+        declaredClass_ = null;
+        typeArguments_ = Collections.emptyList<TypeMirror>();        
+        calculateRaw = () => false;
+        typeParameter_ = null;
+        this.mapper = mapper;
+    }
+    
+    shared new extendsWildcard(TypeMirror? upperBound, CeylonToJavaMapper mapper) extends wildcard(mapper) {
+        upperBound_ = upperBound;
+        lowerBound_ = null;
+    }
+    shared new superWildcard(TypeMirror? lowerBound, CeylonToJavaMapper mapper) extends wildcard(mapper) {
+        upperBound_ = null;
+        lowerBound_ = lowerBound;
+    }
+    shared new unboundWildcard(CeylonToJavaMapper mapper) extends wildcard(mapper) {
+        upperBound_ = null;
+        lowerBound_ = null;
+    }
+
+    shared new apply(TypeMirror klass, {TypeMirror*} typeArguments, CeylonToJavaMapper mapper) {
+        assert(exists theDeclaredClass = klass.declaredClass);
+        declaredClass_ = theDeclaredClass;
+        qualifiedName_ = theDeclaredClass.qualifiedName;
+        kind_ = TypeKind.declared;
+        typeArguments_ = if(typeArguments.empty)
+        then Collections.emptyList<TypeMirror>()
+        else Arrays.asList(for (arg in typeArguments) arg);
+        qualifyingType_ = klass.qualifyingType;
+        calculateRaw = () => false;
+        
+        upperBound_ = null;
+        lowerBound_ = null;
+        componentType_ = null;
+        typeParameter_ = null;
+        
+        this.mapper = mapper;
+    }
+    
+    shared new array(TypeMirror componentType, CeylonToJavaMapper mapper) {
+        componentType_ = componentType;
+        kind_ = TypeKind.array;
+        typeArguments_ = Collections.emptyList<TypeMirror>();
+        qualifyingType_ = null;
+        calculateRaw = let(isRaw = componentType.raw) (() => isRaw);
+        qualifiedName_ = null;
+        upperBound_ = null;
+        lowerBound_ = null;
+        declaredClass_ = null;
+        typeParameter_ = null;
+        
+        this.mapper = mapper;
+    }
+
+    shared new fromClassMirror(ClassMirror theDeclaredClass, TypeMirror? qualifyingType, CeylonToJavaMapper mapper) {
+        declaredClass_ = theDeclaredClass;
+        qualifiedName_ = theDeclaredClass.qualifiedName;
+        kind_ = TypeKind.declared;
+        typeArguments_ = Collections.emptyList<TypeMirror>();
+        qualifyingType_ = if (exists qualifyingType) then qualifyingType
+        else if (exists enclosingClass = theDeclaredClass.enclosingClass) then mapper.mapType(enclosingClass)
+        else null;
+        
+        calculateRaw = () => ! theDeclaredClass.typeParameters.empty;
+        
+        upperBound_ = null;
+        lowerBound_ = null;
+        componentType_ = null;
+        typeParameter_ = null;
+        
+        this.mapper = mapper;
+    }
+
+    shared new fromTypeParameter(TypeParameter typeParameter, CeylonToJavaMapper mapper) {
+        qualifiedName_ = Naming.quoteIfJavaKeyword(typeParameter.name);
+        kind_ = TypeKind.typevar;
+        
+        if (is Declaration container = typeParameter.container,
+            is GenericMirror<out Anything> mirror = mapper.mapDeclaration(container)[0]) {
+            value tpMirror = mirror.toTypeParamterMirror(typeParameter);
+            typeParameter_ = tpMirror;
+        } else {
+            typeParameter_ = null;
+        }
+        
+        componentType_ = null;
+        declaredClass_ = null;
+        qualifyingType_ = null;
+        typeArguments_ = Collections.emptyList<TypeMirror>();
+        calculateRaw = () => false;
+        upperBound_ = null;
+        lowerBound_ = null;
+        
+        this.mapper = mapper;
+    }
+    
+    componentType => componentType_;
+    kind => kind_;
+    
+    declaredClass
+            => declaredClass_;
+    
+    primitive => false;
+    
+    qualifiedName => qualifiedName_;
+    
+    qualifyingType => qualifyingType_;
+    
+    raw => raw_ else (raw_ = calculateRaw());
+    
+    typeArguments => typeArguments_;
+    
+    typeParameter => typeParameter_;
+    
+    upperBound => upperBound_;
+    lowerBound => lowerBound_;
+    
+    shared actual String string {
+        switch(theKind = kind)
+        case(is Null) {
+            return "<unresolved>";
+        }
+        case(TypeKind.declared | TypeKind.typevar) {
+            return "``qualifiedName``<`` ",".join {
+                for (ta in typeArguments) ta.string
+            } ``>";
+        }
+        case(TypeKind.wildcard) {
+            return "[lower bound]`` lowerBound?.string else "<null>" `` - [upper bound]`` upperBound?.string else "<null>"``";
+        }
+        case(TypeKind.array) {
+            return "``componentType.string``[]";
+        }
+        case(TypeKind.null) {
+            return "'null'";
+        }
+        case(TypeKind.\ivoid) {
+            return "'void'";
+        }
+        case(TypeKind.error) {
+            return "'error'";
+        }
+        else {
+            if (kind.primitive) {
+                return kind.name().lowercased;
+            }
+            else {
+                return "'unknown'";
+            }
+        }
+    }
 }

@@ -15,6 +15,9 @@ import com.redhat.ceylon.ide.common.platform {
     JavaModelServices,
     Status
 }
+import com.redhat.ceylon.ide.common.util {
+    unsafeCast
+}
 import com.redhat.ceylon.model.typechecker.model {
     Unit
 }
@@ -32,13 +35,28 @@ void setupTests() {
     testPlatform.register();
 }
 
+
 shared object testPlatform satisfies PlatformServices {
-    
-    shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> model<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
+    variable ModelServices<out Anything, out Anything, out Anything, out Anything>? modelServices_ = null;
+    shared void installModelServices<NativeProject,NativeResource,NativeFolder,NativeFile>(ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> services) {
+        modelServices_ = services;
+    }
+
+    variable VfsServices<out Anything, out Anything, out Anything, out Anything>? vfsServices_ = null;
+    shared void installVfsServices<NativeProject,NativeResource,NativeFolder,NativeFile>(VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> services) {
+        vfsServices_ = services;
+    }
+
+    shared actual ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile> model<NativeProject, NativeResource, NativeFolder, NativeFile>() => 
+            unsafeCast<ModelServices<NativeProject,NativeResource,NativeFolder,NativeFile>>
+            (modelServices_);
     
     utils() => testIdeUtils;
     
-    shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() => nothing;
+    shared actual VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile> vfs<NativeProject, NativeResource, NativeFolder, NativeFile>() =>
+            unsafeCast<VfsServices<NativeProject,NativeResource,NativeFolder,NativeFile>>
+            (vfsServices_);
+            
     
     gotoLocation(Unit unit, Integer offset, Integer length) => null;
     

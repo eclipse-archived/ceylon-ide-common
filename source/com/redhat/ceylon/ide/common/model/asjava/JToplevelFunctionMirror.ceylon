@@ -11,23 +11,28 @@ import java.util {
     Collections
 }
 
-shared class JToplevelFunctionMirror(Function decl)
-        extends AbstractClassMirror(decl) {
+shared class JToplevelFunctionMirror(Function decl, mapper)
+        extends AbstractClassMirror<Function>(decl, null) {
+    shared actual CeylonToJavaMapper mapper;
 
     abstract => false;
-    
     ceylonToplevelAttribute => false;
-    
     ceylonToplevelMethod => true;
-    
     ceylonToplevelObject => false;
-    
     satisfiedTypes => Collections.emptyList<Type>();
-    
+    name => super.name + "_";
     supertype => null;
     
-    name => super.name + "_";
+    ceylonAnnotations => super.ceylonAnnotations.chain {
+        CeylonAnnotations.method.entry
+    };
+    
+    declarationForName => declaration;
     
     scanExtraMembers(List<MethodMirror> methods)
-            => methods.add(JMethodMirror(decl, true));
+            => methods.add(object extends JMethodMirror(decl, outer, outer.mapper) {
+            ceylonAnnotations => [];
+    });
+    
+    extraInterfaces => [];
 }

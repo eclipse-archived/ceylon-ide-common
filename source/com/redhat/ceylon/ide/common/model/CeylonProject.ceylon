@@ -122,6 +122,25 @@ import java.util.concurrent.locks {
 import org.xml.sax {
     SAXParseException
 }
+import com.redhat.ceylon.compiler.java.codegen {
+    Naming,
+    ClassTransformer
+}
+import com.redhat.ceylon.compiler.java.tools {
+    CeylonLog,
+    CeyloncFileManager,
+    LanguageCompiler
+}
+import com.redhat.ceylon.langtools.tools.javac.util {
+    JavacContext=Context
+}
+import com.redhat.ceylon.compiler.java.loader {
+    ModelLoaderFactory,
+    TypeFactory
+}
+import java.nio.charset {
+    Charset
+}
 
 shared final class ProjectState
         of missing | parsing | parsed | typechecking | typechecked | compiled
@@ -512,6 +531,26 @@ shared abstract class BaseCeylonProject() {
             } else {
                 throw RuntimeException(e);
             }
+        }
+    }
+    
+    shared JavacContext? createJavacContextWithClassTransformer() {
+        if (exists typeChecker = typechecker,
+            exists modelLoader = this.modelLoader) {
+            value javacContext = JavacContext();
+            CeylonLog.preRegister(javacContext);
+            suppressWarnings("unusedDeclaration")
+            value fileManager = CeyloncFileManager(javacContext, true, Charset.forName(defaultCharset));
+            javacContext.put(LanguageCompiler.ceylonContextKey, typeChecker.context);
+            javacContext.put(`TypeFactory`, modelLoader.typeFactory);
+            javacContext.put(`ModelLoaderFactory`, object satisfies ModelLoaderFactory {
+                createModelLoader(
+                    JavacContext context) => modelLoader;
+            });
+            
+            return javacContext;
+        } else {
+            return null;
         }
     }
 }

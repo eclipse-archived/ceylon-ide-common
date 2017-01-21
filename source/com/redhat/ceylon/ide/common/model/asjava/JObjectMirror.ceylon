@@ -1,13 +1,18 @@
 import com.redhat.ceylon.compiler.java.codegen {
     CodegenUtil
 }
+import com.redhat.ceylon.ide.common.platform {
+    platformUtils,
+    Status
+}
 import com.redhat.ceylon.model.loader {
     NamingBase
 }
 import com.redhat.ceylon.model.loader.mirror {
     MethodMirror,
     TypeParameterMirror,
-    VariableMirror
+    VariableMirror,
+    ClassMirror
 }
 import com.redhat.ceylon.model.typechecker.model {
     Value,
@@ -26,76 +31,49 @@ import java.util {
     List,
     Collections
 }
-import com.redhat.ceylon.ide.common.platform {
-    platformUtils,
-    Status
-}
 
-shared class JObjectMirror(Value decl)
-        extends AbstractClassMirror(decl) {
-
-    shared Type type => decl.type;
-
+shared class JObjectMirror(Value decl, ClassMirror? enclosingClass, mapper)
+        extends AbstractClassMirror<TypeDeclaration>(decl.typeDeclaration, enclosingClass) {
+    
+    shared actual CeylonToJavaMapper mapper;
     abstract => false;
-    
     ceylonToplevelAttribute => false;
-    
     ceylonToplevelMethod => false;
-    
     ceylonToplevelObject => true;
-    
-    satisfiedTypes => type.satisfiedTypes;
-    
-    supertype => type.extendedType;
-    
+
     name => super.name + "_";
     
+    shared Type type => decl.type;
+    
+    declarationForName => decl;
+    satisfiedTypes => type.satisfiedTypes;
+    supertype => type.extendedType;
     scanExtraMembers(List<MethodMirror> methods)
             => methods.add(GetMethod(this));
+    extraInterfaces => [];
 }
 
 shared class GetMethod(JObjectMirror obj)
         satisfies MethodMirror {
-
     abstract => false;
-    
     constructor => false;
-    
     declaredVoid => false;
-    
     default => false;
-    
     defaultAccess => false;
-    
-    enclosingClass => obj;
-    
-    final => true;
-    
-    getAnnotation(String? string) => null;
-    
-    annotationNames => Collections.emptySet<JString>();
-
-    name => NamingBase.Unfix.get_.string;
-    
-    parameters
-            => Collections.emptyList<VariableMirror>();
-    
+    final => false;
     protected => false;
-    
     public => true;
-    
-    returnType => ceylonToJavaMapper.mapType(obj.type);
-    
     static => true;
-    
     staticInit => false;
-    
-    typeParameters
-            => Collections.emptyList<TypeParameterMirror>();
-    
     variadic => false;
-    
     defaultMethod => false;
+    name => NamingBase.Unfix.get_.string;
+    parameters => Collections.emptyList<VariableMirror>();
+    enclosingClass => obj;
+    annotationNames => Collections.emptySet<JString>();
+    getAnnotation(String? string) => null;
+    returnType => obj.mapper.mapType(obj);
+    typeParameters => Collections.emptyList<TypeParameterMirror>();
 }
 
 shared String javaQualifiedName(Declaration decl)
