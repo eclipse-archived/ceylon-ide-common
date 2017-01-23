@@ -268,20 +268,22 @@ shared object testModelBasedMirrors {
                     
                     assert(is BaseIdeModule theModule);
                     object  artifact satisfies ArtifactResult {
-                        shared actual File artifact() => moduleArchive;
-                        shared actual List<ArtifactResult> dependencies() => Collections.emptyList<ArtifactResult>();
-                        shared actual List<Exclusion> exclusions => Collections.emptyList<Exclusion>();
-                        shared actual Boolean exported() => true;
-                        shared actual PathFilter? filter() => null;
-                        shared actual ModuleScope? moduleScope() => null;
-                        shared actual String name() => theModule.nameAsString;
-                        shared actual String? namespace() => null;
-                        shared actual Boolean optional() => false;
-                        shared actual Repository? repository() => null;
-                        shared actual String repositoryDisplayString() => "dummy";
-                        shared actual ArtifactResultType type() => ArtifactResultType.ceylon;
-                        shared actual String version() => theModule.version;
-                        shared actual VisibilityType visibilityType() => VisibilityType.strict;
+                        artifact() => moduleArchive;
+                        dependencies() => Collections.emptyList<ArtifactResult>();
+                        exclusions => Collections.emptyList<Exclusion>();
+                        exported() => true;
+                        filter() => null;
+                        moduleScope() => null;
+                        name() => theModule.nameAsString;
+                        namespace() => null;
+                        optional() => false;
+                        repository() => null;
+                        repositoryDisplayString() => "dummy";
+                        type() => ArtifactResultType.ceylon;
+                        version() => theModule.version;
+                        visibilityType() => VisibilityType.strict;
+                        artifactId() => null;
+                        groupId() => null;
                     }
                     
                     theModule.setArtifactResult(artifact);
