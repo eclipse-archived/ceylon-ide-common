@@ -52,7 +52,7 @@ class PrimitiveMirror
     string => name;
 }
 
-class JTypeMirror 
+shared class JTypeMirror 
         satisfies TypeMirror &
         ModelBasedMirror {
 
