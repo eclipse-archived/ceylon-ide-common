@@ -95,6 +95,16 @@ shared object splitDeclarationQuickFix {
                 length = paramsEndOffset - idEndOffset;
             });
 
+            // Specifier expressions should be split to `name = (params) => expression`
+            // instead of `name => expression`
+            if (is Tree.MethodDeclaration md = decNode,
+                md.specifierExpression exists) {
+                change.addEdit(InsertEdit {
+                    start = idEndOffset;
+                    text = " = ``paramsString``";
+                });
+            }
+
             value containerNode 
                     = nodes.getReferencedNode { 
                         model = container; 
@@ -196,8 +206,7 @@ shared object splitDeclarationQuickFix {
                 }
             }
             case (is Tree.MethodDeclaration) {
-                if (decNode.specifierExpression exists
-                    then !dec.parameter else dec.parameter) {
+                if (decNode.specifierExpression exists || dec.parameter) {
                     addSplitDeclarationProposal(data, decNode);
                 }
             }
