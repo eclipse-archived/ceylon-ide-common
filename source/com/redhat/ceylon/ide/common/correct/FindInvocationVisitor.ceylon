@@ -15,8 +15,7 @@ shared class FindInvocationVisitor(Node node) extends Visitor() {
     shared variable TypedDeclaration? parameter = null;
     
     shared actual void visit(Tree.ListedArgument that) {
-        Tree.Expression? e = that.expression;
-        if (exists e,
+        if (exists e = that.expression,
             exists term = e.term,
             node == term) {
             result = current;
@@ -29,8 +28,7 @@ shared class FindInvocationVisitor(Node node) extends Visitor() {
     }
     
     shared actual void visit(Tree.SpreadArgument that) {
-        Tree.Expression? e = that.expression;
-        if (exists e,
+        if (exists e = that.expression,
             exists term = e.term,
             node == term) {
             result = current;
@@ -52,7 +50,20 @@ shared class FindInvocationVisitor(Node node) extends Visitor() {
         }
         super.visit(that);
     }
-    
+
+    shared actual void visit(Tree.SpecifiedArgument that) {
+        if (exists e = that.specifierExpression?.expression,
+            exists term = e.term,
+            node == term) {
+            result = current;
+            Parameter? p = that.parameter;
+            if (exists p) {
+                parameter = p.model;
+            }
+        }
+        super.visit(that);
+    }
+
     shared actual void visit(Tree.Return that) {
         Tree.Expression? e = that.expression;
         if (exists e,

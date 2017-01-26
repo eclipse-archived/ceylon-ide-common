@@ -191,6 +191,7 @@ shared object ideQuickFixManager {
             appendMemberReferenceQuickFix.addAppendMemberReferenceProposals(data);
             changeTypeQuickFix.addChangeTypeProposals(data);
             addSatisfiesQuickFix.addSatisfiesProposals(data);
+            wrapExpressionQuickFix.addProposal(data);
         }
         case (2102) {
             changeTypeQuickFix.addChangeTypeArgProposals(data);

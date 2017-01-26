@@ -28,6 +28,21 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface
 }
 
+Tree.Term? getTerm(QuickFixData data) {
+    value node = data.node;
+    if (is Tree.SpecifierExpression node,
+        exists ex = node.expression) {
+        return ex.term;
+    }
+    if (is Tree.Expression node) {
+        return node.term;
+    }
+    if (is Tree.Term node) {
+        return node;
+    }
+    return null;
+}
+
 shared object changeTypeQuickFix {
     
     shared void addChangeTypeArgProposals(QuickFixData data) {
@@ -85,29 +100,11 @@ shared object changeTypeQuickFix {
             }
         }
     }
-    
-    function getTerm(QuickFixData data) {
-        value node = data.node;
-        if (is Tree.SpecifierExpression node,
-            exists ex = node.expression) {
-            return ex.term;
-        }
-        if (is Tree.Expression node) {
-            return node.term;
-        }
-        if (is Tree.Term node) {
-            return node;
-        }
-        return null;
-    }
 
     shared void addChangeTypeProposals(QuickFixData data) {
-        if (exists term = getTerm(data)) {
-            Type? t = term.typeModel;
-            if (!exists t) {
-                return;
-            }
-            
+        if (exists term = getTerm(data),
+            exists t = term.typeModel) {
+
             value type = term.unit.denotableType(t);
             value fav = FindInvocationVisitor(term);
             fav.visit(data.rootNode);
