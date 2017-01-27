@@ -28,6 +28,8 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     JString=String,
     JLong=Long,
+    JDouble=Double,
+    JFloat=Float,
     JInteger=Integer
 }
 
@@ -120,9 +122,12 @@ shared object wrapExpressionQuickFix {
             return null;
         }
 
-        function matchTypes(Type rhs, <Function<>|Class<>> lhs) {
-            if (actualType == rhs,
-                is TypeDeclaration declaration = findDeclaration(lhs),
+        "Tries to match [[type]] with [[actualType]] and the [[candidate]] wrapper with
+         [[expectedType]]. If both tests match, returns the typechecker [[Declaration]]
+         corresponding to [[candidate]]."
+        function matchTypes(Type type, <Function<>|Class<>> candidate) {
+            if (actualType == type,
+                is TypeDeclaration declaration = findDeclaration(candidate),
                 !ModelUtil.intersectionType(expectedType, declaration.type, unit).nothing) {
 
                 return declaration;
@@ -132,7 +137,6 @@ shared object wrapExpressionQuickFix {
         }
 
         if (exists jStringDeclaration = matchTypes(unit.stringType, `JString`)) {
-
             if (importsJavaInterop,
                 is Declaration javaStringDeclaration = findDeclaration(`javaString`)) {
                 addProposalInternal(data, term, javaStringDeclaration);
@@ -146,6 +150,14 @@ shared object wrapExpressionQuickFix {
 
         if (exists jLongDeclaration = matchTypes(unit.integerType, `JLong`)) {
             addProposalInternal(data, term, jLongDeclaration, "JLong");
+        }
+
+        if (exists jFloatDeclaration = matchTypes(unit.floatType, `JFloat`)) {
+            addProposalInternal(data, term, jFloatDeclaration, "JFloat");
+        }
+
+        if (exists jDoubleDeclaration = matchTypes(unit.floatType, `JDouble`)) {
+            addProposalInternal(data, term, jDoubleDeclaration, "JDouble");
         }
     }
 
