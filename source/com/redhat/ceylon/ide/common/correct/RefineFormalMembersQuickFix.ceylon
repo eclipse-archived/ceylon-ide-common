@@ -25,7 +25,8 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
-    Unit
+    Unit,
+    Function
 }
 import com.redhat.ceylon.model.loader.model {
     FieldValue
@@ -136,7 +137,11 @@ shared object refineFormalMembersQuickFix {
             value dec = dwp.declaration;
             for (d in overloads(dec)) {
                 try {
-                    if (d.formal, ci.isInheritedFromSupertype(d)) {
+
+                    if (d.formal,
+                        ci.isInheritedFromSupertype(d),
+                        if (is Function d, d.realFunction exists) then false else true) {
+
                         appendRefinementText(data, isInterface, indent, result, ci, unit, d);
                         importProposals.importSignatureTypes(d, rootNode, already);
                         ambiguousNames.add(d.name);
