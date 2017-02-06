@@ -9,6 +9,12 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import ceylon.collection {
     TreeMap
 }
+import java.util.regex {
+    Pattern
+}
+import com.redhat.ceylon.common {
+    JVMModuleUtil
+}
 
 
 shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
@@ -55,4 +61,33 @@ shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
     }.visit(rootNode);
     
     return nodes.first;
+}
+
+"Matches local variable names like `i$20`."
+shared Pattern localVariablePattern = Pattern.compile("([^$]+)\\$[0-9]+");
+
+"Transforms a variable name from its bytecode form to its original Ceylon source form."
+shared String fixVariableName(variable String name, Boolean isLocalVariable, Boolean isSynthetic) {
+    if (isSynthetic, name.startsWith("val$")) {
+        name = name.removeInitial("val$");
+    }
+    if (exists c = name.first,
+        c == '$') {
+        if (JVMModuleUtil.isJavaKeyword(name, 1, name.size)) {
+            name = name.substring(1);
+        }
+    }
+
+    if (isLocalVariable || isSynthetic,
+        name.contains("$")) {
+
+        if (name.endsWith("$param$")) {
+            return name.substring(0, name.size - "$param$".size);
+        }
+        value matcher = localVariablePattern.matcher(name);
+        if (matcher.matches()) {
+            name = matcher.group(1);
+        }
+    }
+    return name;
 }
