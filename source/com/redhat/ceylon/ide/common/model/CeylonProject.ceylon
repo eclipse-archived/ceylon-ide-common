@@ -814,10 +814,8 @@ given NativeFile satisfies NativeResource {
                 value moduleManager = unsafeCast<IdeModuleManagerAlias>(phasedUnits.moduleManager);
 
                 if (exists jdkProvider = configuration.jdkProvider) {
-                    value parts = jdkProvider.split('/'.equals).sequence();
-                    if (parts.size == 2,
-                        exists name = parts[0],
-                        exists version = parts[1],
+                    value [name, *rest] = jdkProvider.split('/'.equals).sequence();
+                    if (exists version = rest[0],
                         exists file = repositoryManager.getArtifact(
                             ArtifactContext(null, name, version, ArtifactContext.jar))) {
 
