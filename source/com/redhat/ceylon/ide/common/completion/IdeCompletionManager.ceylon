@@ -137,11 +137,19 @@ shared object completionManager
         }
 
         //find the node at the token
-        value node = getTokenNode {
+        value parsedNode = getTokenNode {
             token = adjustedToken;
             rootNode = ctx.parsedRootNode;
             offset = offset;
         };
+        value node = if (exists _ = parsedNode.unit)
+            then parsedNode
+            // perhaps the IDE didn't typecheck the file to make completion faster?
+            else getTokenNode {
+                token = adjustedToken;
+                rootNode = ctx.lastCompilationUnit;
+                offset = offset;
+            };
 
         //it's useful to know the type of the preceding token, if any
         variable Integer index = adjustedToken.tokenIndex;
