@@ -304,10 +304,12 @@ class FindOccurrenceLocationVisitor(Integer offset, Node node)
     }
     
     Boolean inBounds(Node? left, Node? right = left) {
-        if (exists startIndex = left?.startIndex?.intValue(), 
-            exists stopIndex = right?.endIndex?.intValue()) {
-            return startIndex <= node.startIndex.intValue() && 
-                    stopIndex >= node.endIndex.intValue();
+        if (exists startIndex = left?.startIndex,
+            exists stopIndex = right?.endIndex,
+            exists nodeStartIndex = node.startIndex,
+            exists nodeEndIndex = node.endIndex) {
+            return startIndex.intValue() <= nodeStartIndex.intValue()
+                && stopIndex.intValue() >= nodeEndIndex.intValue();
         }
         else {
             return false;
