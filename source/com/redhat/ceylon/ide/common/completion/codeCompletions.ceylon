@@ -417,7 +417,7 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
             for (p in params) {
                 value name
                         = descriptionOnly
-                        then p.name
+                        then (p.name else "")
                         else escaping.escapeName(p.model);
                 if (is Functional mod = p.model) {
                     if (p.declaredVoid) {
