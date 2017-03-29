@@ -94,58 +94,53 @@ shared object addSatisfiesQuickFix {
         String changeText, Node declaration, Boolean sameFile) {
         
         if (isTypeParam) {
-            if (is Tree.ClassDefinition declaration) {
-                value classDefinition = declaration;
+            switch (declaration)
+            case (is Tree.ClassDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
-                    classDefinition.typeConstraintList, 
-                    classDefinition.classBody.startIndex.intValue(), sameFile);
-            } else if (is Tree.InterfaceDefinition declaration) {
-                value interfaceDefinition = declaration;
+                    declaration.typeConstraintList,
+                    declaration.classBody.startIndex.intValue(), sameFile);
+            } case (is Tree.InterfaceDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data, 
-                    interfaceDefinition.typeConstraintList, 
-                    interfaceDefinition.interfaceBody.startIndex.intValue(), sameFile);
-            } else if (is Tree.MethodDefinition declaration) {
-                value methodDefinition = declaration;
+                    declaration.typeConstraintList,
+                    declaration.interfaceBody.startIndex.intValue(), sameFile);
+            } case (is Tree.MethodDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
-                    methodDefinition.typeConstraintList, 
-                    methodDefinition.block.startIndex.intValue(), sameFile);
-            } else if (is Tree.ClassDeclaration declaration) {
-                value classDefinition = declaration;
+                    declaration.typeConstraintList,
+                    declaration.block.startIndex.intValue(), sameFile);
+            } case (is Tree.ClassDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
-                    classDefinition.typeConstraintList, 
-                    classDefinition.classSpecifier.startIndex.intValue(), sameFile);
-            } else if (is Tree.InterfaceDeclaration declaration) {
-                value interfaceDefinition = declaration;
+                    declaration.typeConstraintList,
+                    declaration.classSpecifier.startIndex.intValue(), sameFile);
+            } case (is Tree.InterfaceDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
-                    interfaceDefinition.typeConstraintList, 
-                    interfaceDefinition.typeSpecifier.startIndex.intValue(), sameFile);
-            } else if (is Tree.MethodDeclaration declaration) {
-                value methodDefinition = declaration;
+                    declaration.typeConstraintList,
+                    declaration.typeSpecifier.startIndex.intValue(), sameFile);
+            } case (is Tree.MethodDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
-                    methodDefinition.typeConstraintList, 
-                    methodDefinition.specifierExpression.startIndex.intValue(), sameFile);
+                    declaration.typeConstraintList,
+                    declaration.specifierExpression.startIndex.intValue(), sameFile);
             }
+            else {}
         } else {
-            if (is Tree.ClassDefinition declaration) {
-                value classDefinition = declaration;
+            switch (declaration)
+            case (is Tree.ClassDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
-                    classDefinition.satisfiedTypes, 
-                    if (!classDefinition.typeConstraintList exists) 
-                    then classDefinition.classBody.startIndex.intValue()
-                    else classDefinition.typeConstraintList.startIndex.intValue(), sameFile);
-            } else if (is Tree.ObjectDefinition declaration) {
-                value objectDefinition = declaration;
+                    declaration.satisfiedTypes,
+                    if (!declaration.typeConstraintList exists)
+                    then declaration.classBody.startIndex.intValue()
+                    else declaration.typeConstraintList.startIndex.intValue(), sameFile);
+            } case (is Tree.ObjectDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
-                    objectDefinition.satisfiedTypes, 
-                    objectDefinition.classBody.startIndex.intValue(), sameFile);
-            } else if (is Tree.InterfaceDefinition declaration) {
-                value interfaceDefinition = declaration;
+                    declaration.satisfiedTypes,
+                    declaration.classBody.startIndex.intValue(), sameFile);
+            } case (is Tree.InterfaceDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
-                    interfaceDefinition.satisfiedTypes, 
-                    if (!interfaceDefinition.typeConstraintList exists) 
-                    then interfaceDefinition.interfaceBody.startIndex.intValue() 
-                    else interfaceDefinition.typeConstraintList.startIndex.intValue(), sameFile);
+                    declaration.satisfiedTypes,
+                    if (!declaration.typeConstraintList exists)
+                    then declaration.interfaceBody.startIndex.intValue()
+                    else declaration.typeConstraintList.startIndex.intValue(), sameFile);
             }
+            else {}
         }
     }
     
@@ -225,26 +220,26 @@ shared object addSatisfiesQuickFix {
     }
     
     TypeDeclaration? determineTypeDeclaration(Node node) {
-        variable TypeDeclaration? typeDec = null;
-        if (is Tree.ClassOrInterface|Tree.TypeParameterDeclaration node) {
-            value d = node;
-            value declaration = d.declarationModel;
-            if (is ClassOrInterface declaration) {
-                typeDec = declaration;
+
+        switch (node)
+        case (is Tree.ClassOrInterface
+               | Tree.TypeParameterDeclaration) {
+            if (is ClassOrInterface declaration
+                    = node.declarationModel) {
+                return declaration;
             }
-        } else if (is Tree.ObjectDefinition node) {
-            value od = node;
-            value val = od.declarationModel;
-            return val.type.declaration;
-        } else if (is Tree.BaseType node) {
-            typeDec = node.declarationModel;
-        } else if (is Tree.Term t = node) {
-            if (exists type = t.typeModel) {
-                typeDec = type.declaration;
+        } case (is Tree.ObjectDefinition) {
+            return node.declarationModel.type.declaration;
+        } case (is Tree.BaseType) {
+            return node.declarationModel;
+        } case (is Tree.Term) {
+            if (exists type = node.typeModel) {
+                return type.declaration;
             }
         }
+        else {}
         
-        return typeDec;
+        return null;
     }
     
     Node? determineContainer(Tree.CompilationUnit rootNode, TypeDeclaration typeDec) {

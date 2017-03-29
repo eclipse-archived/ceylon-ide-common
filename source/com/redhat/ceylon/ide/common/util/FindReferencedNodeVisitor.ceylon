@@ -21,8 +21,8 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
                 return false;
             }
             else if (is Function declaration) {
-                return !declaration.overloaded ||
-                        declaration === dec;
+                return !declaration.overloaded
+                    || declaration === dec;
             }
             else {
                 return true;

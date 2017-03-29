@@ -82,24 +82,31 @@ shared object refineFormalMembersQuickFix {
         //TODO: copy/pasted from CeylonQuickFixAssistant
         Tree.Body? body;
         variable Integer offset;
-        if (is Tree.ClassDefinition node) {
-            body = (node).classBody;
+        switch (node)
+        case (is Tree.ClassDefinition) {
+            body = node.classBody;
             offset = -1;
-        } else if (is Tree.InterfaceDefinition node) {
-            body = (node).interfaceBody;
+        }
+        case (is Tree.InterfaceDefinition) {
+            body = node.interfaceBody;
             offset = -1;
-        } else if (is Tree.ObjectDefinition node) {
-            body = (node).classBody;
+        }
+        case (is Tree.ObjectDefinition) {
+            body = node.classBody;
             offset = -1;
-        } else if (is Tree.ObjectExpression node) {
-            body = (node).classBody;
+        }
+        case (is Tree.ObjectExpression) {
+            body = node.classBody;
             offset = -1;
-        } else if (is Tree.ClassBody|Tree.InterfaceBody node) {
+        }
+        case (is Tree.ClassBody|Tree.InterfaceBody) {
             body = node;
             offset = editorOffset;
-        } else {
+        }
+        else {
             return null;
         }
+        
         if (!exists body) {
             return null;
         }

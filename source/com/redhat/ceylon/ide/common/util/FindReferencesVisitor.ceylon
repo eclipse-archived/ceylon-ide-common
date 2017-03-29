@@ -84,17 +84,14 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     shared variable Referenceable declaration 
             = initialDeclaration(dec);
     
-    shared default Boolean isReference(Parameter|Declaration? param) {
-        if (is Parameter param) {
-            return isReference(param.model);
-        } else if (is Declaration ref = param) {
-            return isRefinedDeclarationReference(ref)
-                || isSetterParameterReference(ref);
-        }
-        else {
-            return false;
-        }
-    }
+    shared default Boolean isReference(Parameter|Declaration? param)
+            => switch (param)
+            case (is Parameter)
+                    isReference(param.model)
+            case (is Declaration)
+                    isRefinedDeclarationReference(param)
+                 || isSetterParameterReference(param)
+            else false;
     
     shared default Boolean isRefinedDeclarationReference(Declaration ref) 
             => if (is Declaration dec = declaration) 

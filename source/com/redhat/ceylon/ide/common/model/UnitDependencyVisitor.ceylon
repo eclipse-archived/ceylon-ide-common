@@ -128,37 +128,39 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
         String dependedOnPackage = declarationUnit.\ipackage.nameAsString;
         if (dependedOnUnitName != currentUnitName ||
             dependedOnPackage != currentUnitPackage) {
-            
-            if (is ProjectSourceFileAlias declarationUnit) {
+
+            switch (declarationUnit)
+            else case (is ProjectSourceFileAlias) {
                 declarationUnit.dependentsOf
                         .add(javaString(currentUnitPath));
             }
-            else if (is ICrossProjectReferenceAlias crossProjectReference=declarationUnit) {
-                if (exists originalUnit = 
-                        crossProjectReference.originalSourceFile) {
+            else case (is ICrossProjectReferenceAlias) {
+                if (exists originalUnit =
+                        declarationUnit.originalSourceFile) {
                     originalUnit.dependentsOf
                             .add(javaString(currentUnitPath));
                 }
             }
-            else if (is ExternalSourceFile declarationUnit) {
+            else case (is ExternalSourceFile) {
                 // Don't manage them : they cannot change ... Well they might if we were using these dependencies to manage module 
                 // removal. But since module removal triggers a classpath container update and so a full build, it's not necessary.
                 // Might change in the future 
             }
-            else if (is CeylonBinaryUnitAlias declarationUnit) {
+            else case (is CeylonBinaryUnitAlias) {
                 declarationUnit.dependentsOf.add(javaString(currentUnitPath));
-            } 
-            else if (is JavaCompilationUnitAlias declarationUnit) {
+            }
+            else case (is JavaCompilationUnitAlias) {
                     // The cross-project case for Java files has already been managed
                     // as an ICrossProjectReferenceAlias
                     declarationUnit.dependentsOf.add(javaString(currentUnitPath));
             }
-            else  if (is JavaClassFileAlias declarationUnit) {
+            else case (is JavaClassFileAlias) {
                     //TODO: All the dependencies to class files are also added... It is really useful ?
                     // I assume in the case of the classes in the classes or exploded dirs, it might be,
                     // but not sure it is also used not in the case of jar-located classes
                     declarationUnit.dependentsOf.add(javaString(currentUnitPath));
             }
+            else {}
         }
     }
     

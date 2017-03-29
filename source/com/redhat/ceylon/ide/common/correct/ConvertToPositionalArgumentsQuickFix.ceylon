@@ -67,8 +67,9 @@ shared object convertToPositionalArgumentsQuickFix {
                 
                 if (param.model == p.model) {
                     found = true;
-                    if (is Tree.SpecifiedArgument sna = na) {
-                        if (exists ex = sna.specifierExpression?.expression?.term) {
+                    switch (na)
+                    case (is Tree.SpecifiedArgument) {
+                        if (exists ex = na.specifierExpression?.expression?.term) {
                             if (p.sequenced) {
                                 if (is Tree.Tuple ex) {
                                     result.append(nodes.text(tokens, ex.sequencedArgument));
@@ -83,17 +84,17 @@ shared object convertToPositionalArgumentsQuickFix {
                         }
                         
                         break;
-                    } else if (is Tree.MethodArgument na) {
-                        value ma = na;
-                        if (ma.declarationModel.declaredVoid) {
+                    }
+                    case (is Tree.MethodArgument) {
+                        if (na.declarationModel.declaredVoid) {
                             result.append("void ");
                         }
                         
-                        for (pl in ma.parameterLists) {
+                        for (pl in na.parameterLists) {
                             result.append(nodes.text(tokens, pl));
                         }
                         
-                        if (exists block = ma.block) {
+                        if (exists block = na.block) {
                             value indent = data.document.getIndent(block);
                             value defaultIndent = platformServices.document.defaultIndent;
                             value lessIndent = indent.removeTerminal(defaultIndent);
@@ -103,7 +104,7 @@ shared object convertToPositionalArgumentsQuickFix {
                             result.append(" ").append(blockText);
                         }
                         
-                        if (exists se = ma.specifierExpression) {
+                        if (exists se = na.specifierExpression) {
                             result.append(" ").append(nodes.text(tokens, se));
                         }
                     } else {

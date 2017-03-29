@@ -64,20 +64,12 @@ object correctionUtil {
         return result;
     }
     
-    shared Tree.Body? getClassOrInterfaceBody(Tree.Declaration decNode) {
-        if (is Tree.ClassDefinition decNode) {
-            value cd = decNode;
-            return cd.classBody;
-        } else if (is Tree.InterfaceDefinition decNode) {
-            value id = decNode;
-            return id.interfaceBody;
-        } else if (is Tree.ObjectDefinition decNode) {
-            value od = decNode;
-            return od.classBody;
-        } else {
-            return null;
-        }
-    }
+    shared Tree.Body? getClassOrInterfaceBody(Tree.Declaration decNode)
+            => switch (decNode)
+            case (is Tree.ClassDefinition) decNode.classBody
+            case (is Tree.InterfaceDefinition) decNode.interfaceBody
+            case (is Tree.ObjectDefinition) decNode.classBody
+            else null;
     
     shared Tree.CompilationUnit getRootNode(PhasedUnit unit) {
         //value ce = currentEditor;
@@ -230,29 +222,32 @@ object correctionUtil {
     shared List<TypedDeclaration> collectUninitializedMembers(Tree.Body? body) {
         value uninitialized = ArrayList<TypedDeclaration>();
         if (exists body) {
-            value statements = body.statements;
-            for (st in statements) {
-                if (is Tree.AttributeDeclaration st) {
-                    if (!exists a = st.specifierOrInitializerExpression) {
+            for (st in body.statements) {
+                switch (st)
+                case (is Tree.AttributeDeclaration) {
+                    if (!st.specifierOrInitializerExpression exists) {
                         value v = st.declarationModel;
                         if (!v.formal) {
                             uninitialized.add(v);
                         }
                     }
-                } else if (is Tree.MethodDeclaration st) {
-                    if (!exists sp = st.specifierExpression) {
+                }
+                case (is Tree.MethodDeclaration) {
+                    if (!st.specifierExpression exists) {
                         value m = st.declarationModel;
                         if (!m.formal) {
                             uninitialized.add(m);
                         }
                     }
-                } else if (is Tree.SpecifierStatement st) {
-                    value term = st.baseMemberExpression;
-                    if (is Tree.BaseMemberExpression term, 
+                }
+                case (is Tree.SpecifierStatement) {
+                    if (is Tree.BaseMemberExpression term
+                            = st.baseMemberExpression,
                         is TypedDeclaration d = term.declaration) {
                         uninitialized.remove(d);
                     }
                 }
+                else {}
             }
         }
         return uninitialized;

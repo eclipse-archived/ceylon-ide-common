@@ -169,7 +169,7 @@ shared interface AbstractLocalProposal {
             }
         }
         case (is Tree.Declaration) {
-            Declaration? d = st.declarationModel;
+            value d = st.declarationModel;
             if (!exists d) {
                 return null;
             }

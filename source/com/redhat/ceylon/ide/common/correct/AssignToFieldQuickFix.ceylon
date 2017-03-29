@@ -1,14 +1,12 @@
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
-import com.redhat.ceylon.model.typechecker.model {
-    FunctionOrValue,
-    Declaration,
-    Type
-}
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
     InsertEdit
+}
+import com.redhat.ceylon.model.typechecker.model {
+    FunctionOrValue
 }
 
 shared object assignToFieldQuickFix {
@@ -29,13 +27,13 @@ shared object assignToFieldQuickFix {
             }
             
             value clazz = cmodel.extendedType.declaration;
-            Declaration? existing = clazz.getMember(name, null, false);
+            value existing = clazz.getMember(name, null, false);
             
             if (!exists existing) {
                 //ok, continue
             } else if (is FunctionOrValue fov = existing) {
-                Type? type = fov.typedReference.fullType;
-                Type? paramType = model.typedReference.fullType;
+                value type = fov.typedReference.fullType;
+                value paramType = model.typedReference.fullType;
                 
                 if (!exists type) {
                     return;

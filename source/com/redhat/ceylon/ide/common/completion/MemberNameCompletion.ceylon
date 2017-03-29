@@ -96,16 +96,15 @@ shared interface MemberNameCompletion {
         value fcv = FindCompoundTypeVisitor();
         fcv.visit(rootNode);
         variable Node? node = fcv.result;
-        
-        if (is Tree.TypeDeclaration n = node) {
+
+        switch (n = node)
+        case (is Tree.TypeDeclaration) {
             //TODO: dictionary completions?
             return;
-        } else if (is Tree.TypedDeclaration n = node) {
-            Tree.TypedDeclaration td = n;
-            Tree.Type type = td.type;
-            Tree.Identifier? id = td.identifier;
-            
-            if (exists id) {
+        }
+        case (is Tree.TypedDeclaration) {
+            value type = n.type;
+            if (exists id = n.identifier) {
                 node =
                         if (exists start = id.startIndex,
                             exists end = id.endIndex,
@@ -116,6 +115,10 @@ shared interface MemberNameCompletion {
                 node = type;
             }
         }
+        else {
+            assert (false);
+        }
+
         addProposalsForType(node, proposals);
         /*if (suggestedName!=null) {
             suggestedName = lower(suggestedName);

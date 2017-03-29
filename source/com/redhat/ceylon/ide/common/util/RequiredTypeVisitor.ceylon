@@ -36,16 +36,19 @@ shared class RequiredTypeVisitor(Node node, Token? token)
     shared actual void visitAny(Node that) {
         if (node == that) {
             finalResult = requiredType;
-            
-            if (is Tree.PositionalArgument pa = that) {
-                if (exists parameter = pa.parameter) {
-                    paramName = parameter.name;
-                }
-            } else if (is Tree.NamedArgument na = that) {
-                if (exists parameter = na.parameter) {
+
+            switch (that)
+            case (is Tree.PositionalArgument) {
+                if (exists parameter = that.parameter) {
                     paramName = parameter.name;
                 }
             }
+            case (is Tree.NamedArgument) {
+                if (exists parameter = that.parameter) {
+                    paramName = parameter.name;
+                }
+            }
+            else {}
         }
         super.visitAny(that);
     }

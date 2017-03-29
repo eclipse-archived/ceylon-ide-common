@@ -1060,16 +1060,19 @@ shared class ExtractFunctionRefactoring(
 
     shared Boolean forceWizardMode {
         if (exists scope = node.scope) {
-            if (is Tree.Body|Tree.Statement node,
-                exists body = body) {
-                for (s in statements) {
-                    value v = CheckStatementsVisitor(body, statements);
-                    s.visit(v);
-                    if (v.problem exists) {
-                        return true;
+            switch (node)
+            case (is Tree.Body|Tree.Statement) {
+                if (exists body = body) {
+                    for (s in statements) {
+                        value v = CheckStatementsVisitor(body, statements);
+                        s.visit(v);
+                        if (v.problem exists) {
+                            return true;
+                        }
                     }
                 }
-            } else if (is Tree.Term node) {
+            }
+            case (is Tree.Term) {
                 variable value problem = false;
                 node.visit(object extends Visitor() {
                         shared actual void visit(Tree.Body that) {}
@@ -1082,6 +1085,7 @@ shared class ExtractFunctionRefactoring(
                     return true;
                 }
             }
+            else {}
             return scope.getMemberOrParameter(node.unit, newName, null, false) exists;
         } else {
             return false;

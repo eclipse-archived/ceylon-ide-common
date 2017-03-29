@@ -232,16 +232,18 @@ shared object operatorQuickFix {
             ignoreLeftSideVisitor.visit(data.rootNode);
             node = ignoreLeftSideVisitor.result;
         }
-        
-        if (is Tree.Expression node) {
+
+        switch (node)
+        case (is Tree.Expression) {
             addRemoveParenthesesProposal(data, node);
         }
-        else if (is Tree.Term node) {
+        else case (is Tree.Term) {
             addAddParenthesesProposal(data, node);
             if (exists oe, oe != node) {
                 addAddParenthesesProposal(data, oe);
             }
         }
+        else {}
     }
     
     function termDescription(Node node) {

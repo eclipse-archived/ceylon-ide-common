@@ -117,19 +117,13 @@ shared object addSuppressWarningsQuickFix {
         return target;
     }
 
-    Tree.AnnotationList? annotationList(Node node) {
-        if (is Tree.Declaration node) {
-            return node.annotationList;
-        } else if (is Tree.ModuleDescriptor node) {
-            return node.annotationList;
-        } else if (is Tree.PackageDescriptor node) {
-            return node.annotationList;
-        } else if (is Tree.ImportModule node) {
-            return node.annotationList;
-        } else {
-            return null;
-        }
-    }
+    Tree.AnnotationList? annotationList(Node node)
+            => switch (node)
+            case (is Tree.Declaration) node.annotationList
+            case (is Tree.ModuleDescriptor) node.annotationList
+            case (is Tree.PackageDescriptor) node.annotationList
+            case (is Tree.ImportModule) node.annotationList
+            else null;
     
     class CollectWarningsToSuppressVisitor(StringBuilder sb, StringBuilder ss) extends Visitor() {
         

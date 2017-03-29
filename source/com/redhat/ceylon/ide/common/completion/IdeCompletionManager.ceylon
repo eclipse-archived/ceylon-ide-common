@@ -736,7 +736,8 @@ shared object completionManager
                 = let (pref = ctx.options.inexactMatches)
                 pref in ["both", "positional"];
 
-        if (is Tree.Term node) {
+        switch (node)
+        case (is Tree.Term) {
             addParametersProposal {
                 offset = offset;
                 prefix = prefix;
@@ -744,7 +745,7 @@ shared object completionManager
                 ctx = ctx;
             };
         }
-        else if (is Tree.ArgumentList node) {
+        case (is Tree.ArgumentList) {
             value fiv = FindInvocationVisitor(node);
             fiv.visit(cu);
             if (exists ie = fiv.result) {
@@ -756,6 +757,7 @@ shared object completionManager
                 };
             }
         }
+        else {}
 
         if (is Tree.TypeConstraint node) {
             for (dwp in sortedProposals) {

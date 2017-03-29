@@ -17,14 +17,17 @@ shared object specifyTypeArgumentsQuickFix {
         
         Tree.Identifier identifier;
         Tree.TypeArguments typeArguments;
-        
-        if (is Tree.BaseMemberOrTypeExpression ref) {
-            identifier = (ref).identifier;
-            typeArguments = (ref).typeArguments;
-        } else if (is Tree.QualifiedMemberOrTypeExpression ref) {
-            identifier = (ref).identifier;
-            typeArguments = (ref).typeArguments;
-        } else {
+
+        switch (ref)
+        case (is Tree.BaseMemberOrTypeExpression) {
+            identifier = ref.identifier;
+            typeArguments = ref.typeArguments;
+        }
+        case (is Tree.QualifiedMemberOrTypeExpression) {
+            identifier = ref.identifier;
+            typeArguments = ref.typeArguments;
+        }
+        else {
             return;
         }
         

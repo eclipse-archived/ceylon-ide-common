@@ -39,23 +39,25 @@ shared object refineEqualsHashQuickFix {
         
         Tree.Body? body;
         variable Integer offset;
-        if (is Tree.ClassDefinition node) {
+        switch (node)
+        case (is Tree.ClassDefinition) {
             value classDefinition = node;
             body = classDefinition.classBody;
             offset = -1;
-        } else if (is Tree.InterfaceDefinition node) {
+        } case (is Tree.InterfaceDefinition) {
             value interfaceDefinition = node;
             body = interfaceDefinition.interfaceBody;
             offset = -1;
-        } else if (is Tree.ObjectDefinition node) {
+        } case (is Tree.ObjectDefinition) {
             value objectDefinition = node;
             body = objectDefinition.classBody;
             offset = -1;
-        } else if (is Tree.ObjectExpression node) {
+        } case (is Tree.ObjectExpression) {
             value objectExpression = node;
             body = objectExpression.classBody;
             offset = -1;
-        } else if (is Tree.ClassBody|Tree.InterfaceBody node) {
+        } case (is Tree.ClassBody
+                 | Tree.InterfaceBody) {
             body = node;
             offset = currentOffset;
         } else {

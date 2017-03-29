@@ -204,23 +204,28 @@ shared abstract class BaseCeylonProject() {
 				variable Integer overridesColumn = -1;
 				try {
 					result = super.getOverrides(absoluteFile);
-				} catch(Overrides.InvalidOverrideException e) {
+				}
+                catch(Overrides.InvalidOverrideException e) {
 					overridesException = e;
 					overridesLine = e.line;
 					overridesColumn = e.column;
-				} catch(IllegalStateException e) {
-					Throwable? cause = e.cause;
-					if (is SAXParseException cause) {
+				}
+                catch(IllegalStateException e) {
+					switch (cause = e.cause)
+                    case (is SAXParseException) {
 						value parseException =  cause;
 						overridesException = parseException;
 						overridesLine = parseException.lineNumber;
 						overridesColumn = parseException.columnNumber;
-					} else if (is Exception cause) {
+					}
+                    else case (is Exception) {
 						overridesException = cause;
-					} else {
+					}
+                    else {
 						overridesException = e;
 					}
-				} catch(Exception e) {
+				}
+                catch(Exception e) {
 					overridesException = e;
 				}
 				

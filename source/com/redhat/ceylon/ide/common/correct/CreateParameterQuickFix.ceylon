@@ -220,20 +220,12 @@ shared object createParameterQuickFix {
         }
     }
 
-    Tree.ParameterList? getParameters(Tree.Declaration decNode) {
-        if (is Tree.AnyClass decNode) {
-            value ac = decNode;
-            return ac.parameterList;
-        } else if (is Tree.AnyMethod decNode) {
-            value am = decNode;
-            value pls = am.parameterLists;
-            return pls[0];
-        } else if (is Tree.Constructor decNode) {
-            value c = decNode;
-            return c.parameterList;
-        }
-        return null;
-    }
+    Tree.ParameterList? getParameters(Tree.Declaration decNode)
+            => switch (decNode)
+            case (is Tree.AnyClass) decNode.parameterList
+            case (is Tree.AnyMethod) decNode.parameterLists[0]
+            case (is Tree.Constructor) decNode.parameterList
+            else null;
 
     void addCreateParameterProposalsInternal(QuickFixData data, 
         variable String def, String desc, Declaration? typeDec, Type t) {

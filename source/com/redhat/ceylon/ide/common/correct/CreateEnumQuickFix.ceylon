@@ -142,12 +142,15 @@ shared object createEnumQuickFix {
             variable value i = 0;
             for (Tree.Parameter? p in pl.parameters) {
                 if (exists p) {
-                    if (is Tree.ParameterDeclaration p) {
+                    switch (p)
+                    case (is Tree.ParameterDeclaration) {
                         value td = (p).typedDeclaration;
                         result.append(td.type.typeModel.asString()).append(" ").append(td.identifier.text);
-                    } else if (is Tree.InitializerParameter p) {
+                    }
+                    case (is Tree.InitializerParameter) {
                         result.append(p.parameterModel.type.asString()).append(" ").append((p).identifier.text);
                     }
+                    else {}
                 }
                 if (++i < len) {
                     result.append(", ");
@@ -170,11 +173,14 @@ shared object createEnumQuickFix {
             for (Tree.Parameter? p in pl.parameters) {
                 if (exists p) {
                     Tree.Identifier id;
-                    if (is Tree.InitializerParameter p) {
-                        id = (p).identifier;
-                    } else if (is Tree.ParameterDeclaration p) {
-                        id = (p).typedDeclaration.identifier;
-                    } else {
+                    switch (p)
+                    case (is Tree.InitializerParameter) {
+                        id = p.identifier;
+                    }
+                    case (is Tree.ParameterDeclaration) {
+                        id = p.typedDeclaration.identifier;
+                    }
+                    else {
                         continue;
                     }
                     result.append(id.text);

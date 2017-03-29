@@ -34,35 +34,36 @@ shared object joinDeclarationQuickFix {
                         super.visit(that);
                         if (statement in that.statements) {
                             for (st in that.statements) {
-                                if (is Tree.AttributeDeclaration st) {
-                                    value ad = st;
-                                    if (ad.declarationModel==dec, 
-                                        !ad.specifierOrInitializerExpression exists) {
+                                switch (st)
+                                case (is Tree.AttributeDeclaration) {
+                                    if (st.declarationModel==dec,
+                                        !st.specifierOrInitializerExpression exists) {
                                         createJoinDeclarationProposal {
                                             data = data;
                                             statement = statement;
                                             dec = dec;
                                             that = that;
                                             i = that.statements.indexOf(st);
-                                            ad = ad;
-                                        };
-                                        break;
-                                    }
-                                } else if (is Tree.MethodDeclaration st) {
-                                    value ad = st;
-                                    if (ad.declarationModel==dec, 
-                                        !ad.specifierExpression exists) {
-                                        createJoinDeclarationProposal {
-                                            data = data;
-                                            statement = statement;
-                                            dec = dec;
-                                            that = that;
-                                            i = that.statements.indexOf(st);
-                                            ad = ad;
+                                            ad = st;
                                         };
                                         break;
                                     }
                                 }
+                                case (is Tree.MethodDeclaration) {
+                                    if (st.declarationModel==dec,
+                                        !st.specifierExpression exists) {
+                                        createJoinDeclarationProposal {
+                                            data = data;
+                                            statement = statement;
+                                            dec = dec;
+                                            that = that;
+                                            i = that.statements.indexOf(st);
+                                            ad = st;
+                                        };
+                                        break;
+                                    }
+                                }
+                                else {}
                             }
                         }
                     }

@@ -133,11 +133,14 @@ shared interface DocGenerator {
     
     function targetScope(Referenceable current) {
         Scope scope;
-        if (is Scope current) {
+        switch (current)
+        case (is Scope) {
             scope = current;
-        } else if (is TypedDeclaration current) {
+        }
+        else case (is TypedDeclaration) {
             scope = current.type.declaration;
-        } else {
+        }
+        else {
             return null;
         }
 
@@ -831,16 +834,26 @@ shared interface DocGenerator {
         
         value div = "<div style='padding-left:20px'>";
         builder.append(div);
-        variable Boolean obj = false;
-        
-        if (is TypedDeclaration decl) {
+
+        Boolean obj;
+        switch (decl)
+        case (is TypedDeclaration) {
             if (exists td = decl.typeDeclaration, td.anonymous) {
                 obj = true;
                 documentInheritance(td, node, pr, builder, unit);
             }
-        } else if (is TypeDeclaration decl) {
-            documentInheritance(decl, node, pr, builder, unit);
+            else {
+                obj = false;
+            }
         }
+        case (is TypeDeclaration) {
+            documentInheritance(decl, node, pr, builder, unit);
+            obj = false;
+        }
+        else {
+            assert (false);
+        }
+
         documentTypeParameters(decl, node, pr, builder, unit);
 
         if (builder.endsWith(div)) {

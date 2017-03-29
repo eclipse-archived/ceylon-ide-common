@@ -363,9 +363,11 @@ shared object nodes {
             => node?.endIndex?.intValue() else 0;
     
     shared Referenceable? getReferencedModel(Node node) {
-        if (is Tree.ImportPath node) {
+        switch (node)
+        case (is Tree.ImportPath) {
             return node.model;
-        } else if (is Tree.DocLink node) {
+        }
+        case (is Tree.DocLink) {
             if (!node.base exists) {
                 if (node.\imodule exists) {
                     return node.\imodule;
@@ -376,6 +378,7 @@ shared object nodes {
                 }
             }
         }
+        else {}
         
         variable value dec = getReferencedDeclaration(node);
         if (is FunctionOrValue mv = dec) {
@@ -872,18 +875,21 @@ shared object nodes {
     }
     
     shared Tree.SpecifierOrInitializerExpression? getDefaultArgSpecifier(Tree.Parameter p) {
-        if (is Tree.ValueParameterDeclaration p,
-            is Tree.AttributeDeclaration pd = p.typedDeclaration) {
-
-            return pd.specifierOrInitializerExpression;
-        } else if (is Tree.FunctionalParameterDeclaration p,
-                   is Tree.MethodDeclaration pd = p.typedDeclaration) {
-
-            return pd.specifierExpression;
-        } else if (is Tree.InitializerParameter p) {
-            return p.specifierExpression;
-        } else {
-            return null;
+        switch (p)
+        case (is Tree.ValueParameterDeclaration) {
+            if (is Tree.AttributeDeclaration pd = p.typedDeclaration) {
+                return pd.specifierOrInitializerExpression;
+            }
         }
+        case (is Tree.FunctionalParameterDeclaration) {
+            if (is Tree.MethodDeclaration pd = p.typedDeclaration) {
+                return pd.specifierExpression;
+            }
+        }
+        case (is Tree.InitializerParameter) {
+            return p.specifierExpression;
+        }
+        else {}
+        return null;
     }
 }
