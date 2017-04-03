@@ -106,10 +106,6 @@ shared final class Severity
     
     compare(Severity other) => 
             ordinal <=> other.ordinal;
-    equals(Object that) =>
-            if (is Severity that)
-    then ordinal==that.ordinal
-    else false;
 }
 
 "We don't want to run the *Did you mean ?* search during the typechecking in the IDE:
