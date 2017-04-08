@@ -2,8 +2,12 @@ import ceylon.collection {
     ArrayList
 }
 import ceylon.interop.java {
-    javaString,
     JavaList
+}
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.cmr.ceylon {
@@ -83,7 +87,7 @@ shared Map<String, PhasedUnit?> parseAndTypecheckCode({SourceCode*} codeCollecti
         shared actual JList<VirtualFile> children => emptyList<VirtualFile>();
         shared actual Boolean \iexists() => true;
         shared actual Boolean folder => false;
-        shared actual InputStream inputStream => ByteArrayInputStream(javaString(contents + " ").bytes);
+        shared actual InputStream inputStream => ByteArrayInputStream(nativeString(contents + " ").bytes);
     }
 
     class TestDirectory(String path) extends TestVirtualFile(path) {

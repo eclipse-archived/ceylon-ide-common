@@ -1,9 +1,6 @@
 import ceylon.collection {
     MutableMap
 }
-import ceylon.interop.java {
-    javaString
-}
 
 import com.redhat.ceylon.cmr.api {
     RepositoryManager,
@@ -92,6 +89,9 @@ import java.io {
     IOException
 }
 import java.lang {
+    Types {
+        nativeString
+    },
     InterruptedException,
     RuntimeException,
     IllegalStateException,
@@ -245,7 +245,7 @@ shared abstract class BaseCeylonProject() {
 		.systemRepo(systemRepository)
 		.extraUserRepos(Arrays.asList(
 			for (p in referencedCeylonProjects)
-			javaString(p.ceylonModulesOutputDirectory.absolutePath)))
+			nativeString(p.ceylonModulesOutputDirectory.absolutePath)))
 		.logger(platformUtils.cmrLogger)
 		.isJDKIncluded(true);
 		if (withOutput) {

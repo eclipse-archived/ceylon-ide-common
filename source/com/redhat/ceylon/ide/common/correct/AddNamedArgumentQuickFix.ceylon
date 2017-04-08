@@ -1,5 +1,7 @@
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -48,7 +50,7 @@ shared object addNamedArgumentQuickFix {
             variable value multipleResults = false;
             for (param in args.parameterList.parameters) {
                 if (!param.defaulted, 
-                    !javaString(param.name) in args.argumentNames) {
+                    !nativeString(param.name) in args.argumentNames) {
                     multipleResults = result exists;
                     result = param.name;
                     change.addEdit(InsertEdit {

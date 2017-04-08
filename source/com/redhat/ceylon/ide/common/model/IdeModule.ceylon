@@ -6,9 +6,6 @@ import ceylon.collection {
     MutableSet,
     MutableList
 }
-import ceylon.interop.java {
-    javaString
-}
 
 import com.redhat.ceylon.cmr.api {
     ArtifactContext
@@ -90,6 +87,9 @@ import java.io {
     IOException
 }
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String,
     RuntimeException
 }
@@ -318,12 +318,12 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         
         shared void putRelativePath(String sourceRelativePath) {
             String path = fullPathPrefix + sourceRelativePath;
-            phasedUnitPerPath[javaString(path)] = SoftReference<ExternalPhasedUnit>(null);
-            relativePathToPath[javaString(sourceRelativePath)] = javaString(path);
+            phasedUnitPerPath[nativeString(path)] = SoftReference<ExternalPhasedUnit>(null);
+            relativePathToPath[nativeString(sourceRelativePath)] = nativeString(path);
         }
         
         shared actual ExternalPhasedUnit? getPhasedUnit(String path) {
-            if (!phasedUnitPerPath.containsKey(javaString(path))) {
+            if (!phasedUnitPerPath.containsKey(nativeString(path))) {
                 if (path.endsWith(".java")) {
                     // Case of a Ceylon file with a Java implementation, the classesToSources key is the Java source file.
                     String? ceylonFileRelativePath = getCeylonDeclarationFile(path.replace("``existingSourceArchivePath``!/", ""));
@@ -340,7 +340,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             if (relativePath.startsWith("/")) {
                 relativePath = relativePath.spanFrom(1);
             }
-            if (!relativePathToPath.containsKey(javaString(relativePath))) {
+            if (!relativePathToPath.containsKey(nativeString(relativePath))) {
                 if (relativePath.endsWith(".java")) {
                     String? ceylonFileRelativePath = getCeylonDeclarationFile(relativePath);
                     if (exists ceylonFileRelativePath) {
@@ -358,7 +358,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 if (!path in sourceCannotBeResolved) {
                     result = buildPhasedUnitForBinaryUnit(path);
                     if (exists existingResult=result) {
-                        phasedUnitPerPath[javaString(path)] = toStoredType(existingResult);
+                        phasedUnitPerPath[nativeString(path)] = toStoredType(existingResult);
                     }
                     else {
                         sourceCannotBeResolved.add(path);
@@ -378,7 +378,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 => SoftReference<ExternalPhasedUnit>(phasedUnit);
         
         shared actual void removePhasedUnitForRelativePath(String relativePath) {
-            JString relPath = javaString(relativePath);
+            JString relPath = nativeString(relativePath);
             JString? fullPath = relativePathToPath.get(relPath);
             relativePathToPath.remove(relPath);
             phasedUnitPerPath.remove(fullPath);
@@ -777,7 +777,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
         String packageName = 
                 ModelUtil.formatPath(Arrays.asList(
                     for (seg in relativePathOfClassToRemove.split('/'.equals).exceptLast)
-                    javaString(seg)));
+                    nativeString(seg)));
         return findPackageNoLazyLoading(packageName);
     }
     

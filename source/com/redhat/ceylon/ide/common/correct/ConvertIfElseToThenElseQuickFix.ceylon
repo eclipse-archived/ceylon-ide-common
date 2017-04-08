@@ -1,5 +1,7 @@
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -257,7 +259,7 @@ Tree.Statement? findPreviousStatement(QuickFixData data,
         value prevLine 
                 = doc.getLineContent(previousLineNo);
         value m = Pattern.compile("(\\s*)\\w+")
-                .matcher(javaString(prevLine));
+                .matcher(nativeString(prevLine));
         if (m.find()) {
             value whitespaceLen = m.group(1).size;
             if (exists node = nodes.findNode {

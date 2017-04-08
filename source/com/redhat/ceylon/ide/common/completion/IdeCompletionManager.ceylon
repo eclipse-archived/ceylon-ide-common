@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.compiler.typechecker.parser {
     Lexer=CeylonLexer
 }
@@ -52,6 +48,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String,
     ObjectArray
 }
@@ -520,7 +519,7 @@ shared object completionManager
                 value dwp = iterator.next();
                 String name = dwp.declaration.qualifiedNameString;
                 for (filter in filters) {
-                    if (filter.matcher(javaString(name)).matches()) {
+                    if (filter.matcher(nativeString(name)).matches()) {
                         iterator.remove();
                     }
                 }

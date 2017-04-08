@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.cmr.api {
     ArtifactContext,
     RepositoryManager
@@ -62,6 +58,9 @@ import java.io {
     File
 }
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String
 }
 import java.util {
@@ -141,7 +140,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             variable File file = artifact.artifact();
             if (artifact.artifact().name.endsWith(".src")) {
                 moduleManager.sourceModules.add(theModule.nameAsString);
-                file = File(javaString(file.absolutePath).replaceAll("\\.src$", ".car"));
+                file = File(nativeString(file.absolutePath).replaceAll("\\.src$", ".car"));
             }
         }
         try {

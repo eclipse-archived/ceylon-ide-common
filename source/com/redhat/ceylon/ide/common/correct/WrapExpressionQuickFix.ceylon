@@ -1,9 +1,6 @@
 import ceylon.collection {
     HashSet
 }
-import ceylon.interop.java {
-    javaString
-}
 import ceylon.language.meta.model {
     Function,
     Class
@@ -26,6 +23,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String,
     JLong=Long,
     JDouble=Double,
@@ -45,7 +45,7 @@ import java.lang {
 
  or even
 
-     list.add(javaString(\"hello\"));
+     list.add(nativeString(\"hello\"));
  "
 shared object wrapExpressionQuickFix {
 
@@ -88,12 +88,6 @@ shared object wrapExpressionQuickFix {
     void wrapTerm(QuickFixData data, Tree.Term term, Type actualType, Type expectedType) {
         value unit = data.rootNode.unit;
 
-        value importsJavaInterop = any {
-                for (pkg in unit.\ipackage.\imodule.allReachablePackages)
-                if (pkg.nameAsString == "ceylon.interop.java")
-                true
-        };
-
         function findDeclaration(<Function<>|Class<>> wrapper) {
             value qName = wrapper is Function<>
             then wrapper.declaration.qualifiedName + "_"
@@ -109,8 +103,8 @@ shared object wrapExpressionQuickFix {
                 value candidates = unit.\ipackage.\imodule
                     .getAvailableDeclarations(unit, wrapper.declaration.name, 0, null);
 
-                if (exists dwp = candidates.get(javaString(qName))
-                    else candidates.get(javaString(qName.replace("::", ".")))) {
+                if (exists dwp = candidates.get(nativeString(qName))
+                    else candidates.get(nativeString(qName.replace("::", ".")))) {
                     return dwp.declaration;
                 }
             } catch (e) {
@@ -137,10 +131,7 @@ shared object wrapExpressionQuickFix {
         }
 
         if (exists jStringDeclaration = matchTypes(unit.stringType, `JString`)) {
-            if (importsJavaInterop,
-                is Declaration javaStringDeclaration = findDeclaration(`javaString`)) {
-                addProposalInternal(data, term, javaStringDeclaration);
-            }
+            //TODO: add proposal for Types.nativeString()
             addProposalInternal(data, term, jStringDeclaration, "JString");
         }
 
@@ -177,7 +168,7 @@ shared object wrapExpressionQuickFix {
 
         value aliasedDeclarations = decs.empty
             then emptyMap
-            else map {declaration -> javaString(aliasName)};
+            else map {declaration -> nativeString(aliasName)};
         value name = decs.empty
             then unit.getAliasedName(declaration) // already imported
             else aliasName;

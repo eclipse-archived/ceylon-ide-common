@@ -18,8 +18,10 @@
 import ceylon.collection {
     ArrayList
 }
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import java.util.regex {
@@ -83,7 +85,7 @@ List<[Pattern,String]> pluralizations = ArrayList {
 
 String applyPatterns(List<[Pattern, String]> list, String word) {
     for ([pattern,replacement] in list) {
-        value matcher = pattern.matcher(javaString(word));
+        value matcher = pattern.matcher(nativeString(word));
         if (matcher.matches()) {
             return matcher.replaceFirst(replacement);
         }

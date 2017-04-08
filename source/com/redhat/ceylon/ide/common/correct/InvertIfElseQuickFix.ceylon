@@ -1,5 +1,7 @@
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -242,7 +244,7 @@ shared object invertIfElseQuickFix {
     }
     
     String indent(String s, String indentation, String delim) 
-            => javaString(s)
+            => nativeString(s)
                 .replaceAll(delim + "(\\s*)", delim + "$1" + indentation);
     
    String invertTerm(CommonDocument doc, Tree.Term? term) {

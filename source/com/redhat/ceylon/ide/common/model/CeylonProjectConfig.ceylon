@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.common {
     Constants,
     Backend
@@ -24,6 +20,9 @@ import java.io {
     IOException
 }
 import java.lang {
+    Types {
+        nativeString
+    },
     ObjectArray,
     IllegalArgumentException
 }
@@ -48,7 +47,7 @@ shared String removeCurrentDirPrefix(String url)
 
 void setConfigValuesAsList(CeylonConfig config, String optionKey, {String*}? values) {
     if (exists values) {
-        config.setOptionValues(optionKey, ObjectArray.with(values.map(javaString)));
+        config.setOptionValues(optionKey, ObjectArray.with(values.map(nativeString)));
     } else {
         config.removeOption(optionKey);
     }

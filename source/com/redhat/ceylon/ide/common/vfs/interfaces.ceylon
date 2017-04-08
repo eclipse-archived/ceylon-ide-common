@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaClassFromInstance
-}
-
 import com.redhat.ceylon.compiler.typechecker.io {
     VirtualFile
 }
@@ -31,7 +27,11 @@ import java.util {
     JList=List,
     Collections
 }
-
+import java.lang {
+    Types {
+        classForInstance
+    }
+}
 
 shared interface WithParentVirtualFile satisfies VirtualFile {
     shared formal VirtualFile? parent;
@@ -71,7 +71,7 @@ shared interface BaseResourceVirtualFile
     shared actual formal BaseFolderVirtualFile? parent;
     shared default {BaseResourceVirtualFile*} childrenIterable => {*children};
     shared Boolean existsOnDisk => \iexists();
-    shared actual default String string => "`` javaClassFromInstance(this).name ``: `` path ``";
+    shared actual default String string => "`` classForInstance(this).name ``: `` path ``";
 }
 
 shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder, NativeFile> 
@@ -144,7 +144,7 @@ shared interface ResourceVirtualFile<NativeProject, NativeResource, NativeFolder
         return hash;
     }
     
-    string => "`` javaClassFromInstance(this).name ``: `` nativeResource ``";
+    string => "`` classForInstance(this).name ``: `` nativeResource ``";
 }
 
 shared interface BaseFolderVirtualFile

@@ -1,10 +1,11 @@
 import ceylon.collection {
     ArrayList
 }
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
-
 import java.io {
     JFile=File
 }
@@ -119,10 +120,10 @@ shared final class Path satisfies List<String> {
         => separators.and(_HAS_LEADING) != 0;
 
     Integer computeHashCode() {
-        variable Integer theHash = if (exists d=_device) then javaString(d).hash else 17;
+        variable Integer theHash = if (exists d=_device) then nativeString(d).hash else 17;
         for (segment in _segments) {
             //this function tends to given a fairly even distribution
-            theHash = theHash * 37 + javaString(segment).hash;
+            theHash = theHash * 37 + nativeString(segment).hash;
         }
         return theHash;
     }

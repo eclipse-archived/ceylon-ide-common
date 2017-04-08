@@ -1,7 +1,3 @@
- import ceylon.interop.java {
-    javaClassFromInstance
-}
-
 import com.redhat.ceylon.compiler.java.loader {
     UnknownTypeCollector
 }
@@ -38,7 +34,11 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    Error
+    Error,
+    Types
+}
+import java.lang.ref {
+    WeakReference
 }
 import java.util {
     JList=List
@@ -46,9 +46,6 @@ import java.util {
 
 import org.antlr.runtime {
     CommonToken
-}
-import java.lang.ref {
-    WeakReference
 }
 
 shared DeltaBuilderFactory deltaBuilderFactory = DeltaBuilderFactory();
@@ -155,7 +152,7 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
         } catch(AssertionError e) {
             e.printStackTrace();
         } catch(Error e) {
-            if (javaClassFromInstance(e).name == 
+            if (Types.classForInstance(e).name ==
                 "com.redhat.ceylon.compiler.java.runtime.metamodel.ModelError") {
                 e.printStackTrace();
             } else {

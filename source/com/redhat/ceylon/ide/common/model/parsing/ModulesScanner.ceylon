@@ -1,6 +1,10 @@
 import ceylon.interop.java {
-    JavaList,
-    javaString
+    JavaList
+}
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -117,7 +121,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                 // The right module will be set when calling findOrCreatePackage() with the right module
                 value pkg = Package();
 
-                pkg.name = JavaList(pkgName.map((String s)=> javaString(s)).sequence());
+                pkg.name = JavaList(pkgName.map((String s)=> nativeString(s)).sequence());
 
                 try {
                     value moduleVirtualFile = vfsServices.createVirtualFile(moduleFile, ceylonProject.ideArtifact);

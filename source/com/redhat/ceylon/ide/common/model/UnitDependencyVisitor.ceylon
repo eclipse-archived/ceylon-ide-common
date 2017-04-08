@@ -29,8 +29,10 @@ import com.redhat.ceylon.model.typechecker.model {
     Parameter,
     ModelUtil
 }
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> thePhasedUnit) extends Visitor()
@@ -132,13 +134,13 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
             switch (declarationUnit)
             else case (is ProjectSourceFileAlias) {
                 declarationUnit.dependentsOf
-                        .add(javaString(currentUnitPath));
+                        .add(nativeString(currentUnitPath));
             }
             else case (is ICrossProjectReferenceAlias) {
                 if (exists originalUnit =
                         declarationUnit.originalSourceFile) {
                     originalUnit.dependentsOf
-                            .add(javaString(currentUnitPath));
+                            .add(nativeString(currentUnitPath));
                 }
             }
             else case (is ExternalSourceFile) {
@@ -147,18 +149,18 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
                 // Might change in the future 
             }
             else case (is CeylonBinaryUnitAlias) {
-                declarationUnit.dependentsOf.add(javaString(currentUnitPath));
+                declarationUnit.dependentsOf.add(nativeString(currentUnitPath));
             }
             else case (is JavaCompilationUnitAlias) {
                     // The cross-project case for Java files has already been managed
                     // as an ICrossProjectReferenceAlias
-                    declarationUnit.dependentsOf.add(javaString(currentUnitPath));
+                    declarationUnit.dependentsOf.add(nativeString(currentUnitPath));
             }
             else case (is JavaClassFileAlias) {
                     //TODO: All the dependencies to class files are also added... It is really useful ?
                     // I assume in the case of the classes in the classes or exploded dirs, it might be,
                     // but not sure it is also used not in the case of jar-located classes
-                    declarationUnit.dependentsOf.add(javaString(currentUnitPath));
+                    declarationUnit.dependentsOf.add(nativeString(currentUnitPath));
             }
             else {}
         }

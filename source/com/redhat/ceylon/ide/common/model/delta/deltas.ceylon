@@ -5,8 +5,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Package,
     ModuleImport
 }
-import ceylon.interop.java {
-    javaClassFromInstance
+
+import java.lang {
+    Types
 }
 
 shared alias DifferencedModelElement => Module | ModuleImport | Package | Unit | Declaration;
@@ -95,7 +96,7 @@ shared interface DeclarationRelatedDelta of DeclarationDelta | SpecifierDelta
     shared formal actual Declaration? changedElement;
     shared default actual String changedElementString {
         if (exists declaration=changedElement) {
-            return "``javaClassFromInstance(declaration).simpleName``[``declaration.nameAsString ``]";
+            return "``Types.classForInstance(declaration).simpleName``[``declaration.nameAsString ``]";
         }
         return "<unknown>";
     }

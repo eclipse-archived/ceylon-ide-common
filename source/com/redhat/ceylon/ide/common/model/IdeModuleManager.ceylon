@@ -3,7 +3,6 @@ import ceylon.collection {
     MutableSet
 }
 import ceylon.interop.java {
-    javaString,
     JavaIterable
 }
 
@@ -44,6 +43,9 @@ import java.io {
     JFile=File
 }
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String,
     JIterable=Iterable
 }
@@ -57,8 +59,8 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
         extends LazyModuleManager() 
         satisfies LazyModuleManagerEx {
 
-    value languageModuleName = Arrays.asList(*Module.languageModuleName.split('.'.equals).map(javaString));
-    value defaultModuleName = Collections.singletonList(javaString(Module.defaultModuleName));
+    value languageModuleName = Arrays.asList(*Module.languageModuleName.split('.'.equals).map(nativeString));
+    value defaultModuleName = Collections.singletonList(nativeString(Module.defaultModuleName));
 
     shared default BaseCeylonProject? ceylonProject = theCeylonProject;
 
@@ -184,7 +186,7 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
             let (extensions = loadDependenciesFromModelLoaderFirst
                     then {"car", "jar", "src", "js"}
                     else {"jar", "src", "car", "js"})
-            JavaIterable(extensions.map(javaString));
+            JavaIterable(extensions.map(nativeString));
     
     shared Boolean isLoadDependenciesFromModelLoaderFirst() =>
             loadDependenciesFromModelLoaderFirst;

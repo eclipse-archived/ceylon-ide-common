@@ -1,14 +1,11 @@
-import ceylon.interop.java {
-    javaClassFromInstance
-}
-
 import com.redhat.ceylon.common.log {
     Logger
 }
 
 import java.lang {
     RuntimeException,
-    ClassLoader
+    ClassLoader,
+    Types
 }
 shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
     String _string;
@@ -72,5 +69,5 @@ shared class DefaultIdeUtils() satisfies IdeUtils {
     isExceptionToPropagateInVisitors(Exception exception)
             => false;
 
-    pluginClassLoader => javaClassFromInstance(this).classLoader;
+    pluginClassLoader => Types.classForInstance(this).classLoader;
 }

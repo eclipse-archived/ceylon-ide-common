@@ -1,7 +1,8 @@
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
-
 import com.redhat.ceylon.ide.common.util {
     Path
 }
@@ -22,7 +23,7 @@ shared class SourceCodeVirtualFile<NativeProject,NativeResource,NativeFolder,Nat
         given NativeFile satisfies NativeResource {
     
     shared actual InputStream inputStream 
-            = ByteArrayInputStream(javaString(fileContent)
+            = ByteArrayInputStream(nativeString(fileContent)
                     .getBytes(charset));
     
     shared actual String name;

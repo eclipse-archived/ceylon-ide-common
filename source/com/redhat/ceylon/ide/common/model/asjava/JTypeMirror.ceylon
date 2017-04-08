@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaClass
-}
-
 import com.redhat.ceylon.model.loader.impl.reflect.mirror {
     ReflectionType
 }
@@ -15,6 +11,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        classForType
+    },
     JString=String,
     Class
 }
@@ -34,9 +33,9 @@ TypeMirror intMirror = PrimitiveMirror(TypeKind.int, "int");
 
 TypeMirror byteMirror = PrimitiveMirror(TypeKind.byte, "byte");
 
-TypeMirror stringMirror = JavaClassType(javaClass<JString>());
+TypeMirror stringMirror = JavaClassType<JString>();
 
-TypeMirror objectMirror = JavaClassType(javaClass<Object>());
+TypeMirror objectMirror = JavaClassType<Object>();
 
 class JTypeMirror(Type type) satisfies TypeMirror {
     
@@ -93,8 +92,7 @@ class PrimitiveMirror(TypeKind _kind, String name)
     
     raw => false;
     
-    typeArguments
-            => Collections.emptyList<TypeMirror>();
+    typeArguments => Collections.emptyList<TypeMirror>();
     
     typeParameter => null;
     
@@ -103,7 +101,8 @@ class PrimitiveMirror(TypeKind _kind, String name)
     string => name;
 }
 
-class JavaClassType<Type>(Class<Type> type) extends ReflectionType(type)
+class JavaClassType<Type>()
+        extends ReflectionType(classForType<Type>())
         given Type satisfies Object {
-    string => type.simpleName;
+    string => super.string.replaceFirst("Reflection", "JavaClass");
 }

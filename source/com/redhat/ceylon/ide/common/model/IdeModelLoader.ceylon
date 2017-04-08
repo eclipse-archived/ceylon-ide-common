@@ -6,9 +6,6 @@ import ceylon.collection {
     MutableMap,
     HashMap
 }
-import ceylon.interop.java {
-    javaString
-}
 
 import com.redhat.ceylon.common {
     JVMModuleUtil
@@ -80,6 +77,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     ObjectArray,
     JString=String,
     RuntimeException
@@ -220,7 +220,7 @@ shared abstract class BaseIdeModelLoader(
            
            super.removeDeclarations(allDeclarations);
            for (changedPackage in changedPackages) {
-               loadedPackages.remove(javaString(cacheKeyByModule(changedPackage.\imodule, changedPackage.nameAsString)));
+               loadedPackages.remove(nativeString(cacheKeyByModule(changedPackage.\imodule, changedPackage.nameAsString)));
            }
            mustResetLookupEnvironment = true;
        }
@@ -257,7 +257,7 @@ shared abstract class BaseIdeModelLoader(
            }
            Package pkg = findPackage(packageName);
            value packageCacheKey = cacheKeyByModule(pkg.\imodule, packageName);
-           loadedPackages.remove(javaString(packageCacheKey));
+           loadedPackages.remove(nativeString(packageCacheKey));
            packageExistence.remove(packageCacheKey);
            mustResetLookupEnvironment = true;
        }
@@ -447,7 +447,7 @@ shared abstract class BaseIdeModelLoader(
            return false;
        }
        if (is BaseIdeModule ideModule) {
-           JString nameJString = javaString(name);
+           JString nameJString = nativeString(name);
            if (ideModule.isCeylonBinaryArchive || ideModule.isJavaBinaryArchive) {
                String classRelativePath = nameJString.replace('.', '/');
                return ideModule.containsClass(classRelativePath + ".class")
@@ -586,7 +586,7 @@ shared abstract class BaseIdeModelLoader(
            return u;
        }
        else {
-           JString key = javaString(getPackageCacheKey(pkg));
+           JString key = nativeString(getPackageCacheKey(pkg));
            unit = unitsByPackage[key];
            if (exists u = unit) {
                return u;
@@ -750,7 +750,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
             packageName = Util.quoteJavaKeywords(packageName);
             value cacheKey = cacheKeyByModule(mod, packageName);
             if(loadDeclarations) {
-                if(!loadedPackages.add(javaString(cacheKey))) {
+                if(!loadedPackages.add(nativeString(cacheKey))) {
                     // If declarations were already loaded for this package
                     return true;
                 }

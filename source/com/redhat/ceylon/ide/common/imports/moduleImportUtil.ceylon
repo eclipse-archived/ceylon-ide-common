@@ -1,7 +1,3 @@
-import ceylon.interop.java {
-    javaString
-}
-
 import com.redhat.ceylon.common {
     Backends
 }
@@ -36,6 +32,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     ObjectArray,
     JString=String
 }
@@ -127,7 +126,7 @@ shared object moduleImportUtil {
                 for (im in importModules) {
                     value importedName = nodes.getImportedModuleName(im);
                     if (exists importedName, exists moduleName,
-                        javaString(importedName).equals(moduleName)) {
+                        nativeString(importedName).equals(moduleName)) {
                         
                         if (!removeSharedAnnotation(change, im.annotationList)) {
                             change.addEdit(InsertEdit(im.startIndex.intValue(), "shared "));
@@ -256,7 +255,7 @@ shared object moduleImportUtil {
         }
         
         importModule.append("import ");
-        if (!javaString(moduleName).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
+        if (!nativeString(moduleName).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
             importModule.append("\"")
                     .append(moduleName)
                     .append("\"");

@@ -1,5 +1,7 @@
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -59,7 +61,7 @@ shared object appendMemberReferenceQuickFix {
                                     node.unit, node.scope, "", 0, null);
                 for (dwp in proposals.values()) {
                     if (is Value val = dwp.declaration,
-                        !javaString(dwp.name) in val.aliases) {
+                        !nativeString(dwp.name) in val.aliases) {
                         value vt = val.appliedReference(type, noTypes).type;
                         if (!ModelUtil.isTypeUnknown(vt) 
                             && vt.isSubtypeOf(requiredType)) {

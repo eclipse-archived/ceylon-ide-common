@@ -28,10 +28,10 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 import java.lang {
     IllegalAccessError,
-    JString=String
-}
-import ceylon.interop.java {
-    javaString
+    JString=String,
+    Types {
+        nativeString
+    }
 }
 
 shared class SourceClass satisfies ClassMirror {
@@ -102,7 +102,7 @@ shared class SourceClass satisfies ClassMirror {
         if (! _flatName exists ) {
             String? ceylonQualifiedName = modelDeclaration.qualifiedNameString;
             if (exists ceylonQualifiedName) {
-                value packageAndDecl = javaString(ceylonQualifiedName).split("::");
+                value packageAndDecl = nativeString(ceylonQualifiedName).split("::");
                 value declName = packageAndDecl.get(packageAndDecl.size - 1).replace('.', '$');
                 if (packageAndDecl.size > 1) {
                     _flatName = "``packageAndDecl.get(0)``.``declName``";

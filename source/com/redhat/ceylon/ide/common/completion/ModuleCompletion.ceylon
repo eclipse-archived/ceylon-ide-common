@@ -3,15 +3,16 @@ import ceylon.collection {
     SortedSet,
     HashSet
 }
-import ceylon.interop.java {
-    javaString
-}
 
 import com.redhat.ceylon.cmr.api {
     ModuleSearchResult {
         ModuleDetails
     },
     ModuleVersionDetails
+}
+import com.redhat.ceylon.cmr.impl {
+    DefaultRepository,
+    JDKRepository
 }
 import com.redhat.ceylon.common {
     Versions
@@ -20,6 +21,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     Node,
     VisitorAdaptor
+}
+import com.redhat.ceylon.ide.common.doc {
+    Icons
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
@@ -45,14 +49,10 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     JInteger=Integer
-}
-import com.redhat.ceylon.ide.common.doc {
-    Icons
-}
-import com.redhat.ceylon.cmr.impl {
-    DefaultRepository,
-    JDKRepository
 }
 
 SortedSet<String> sortedJdkModuleNames
@@ -254,7 +254,7 @@ shared interface ModuleCompletion {
     }
     
     String getModuleString(Boolean withBody, variable String name, String version, String? namespace = null) {
-        if (!javaString(name).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
+        if (!nativeString(name).matches("^[a-z_]\\w*(\\.[a-z_]\\w*)*$")) {
             name = "\"``name``\"";
         }
         

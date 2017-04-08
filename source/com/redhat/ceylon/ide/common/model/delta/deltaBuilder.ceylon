@@ -6,9 +6,6 @@ import ceylon.collection {
     MutableList,
     TreeSet
 }
-import ceylon.interop.java {
-    javaClassFromInstance
-}
 import ceylon.language.meta.model {
     ClassOrInterface
 }
@@ -48,6 +45,11 @@ import com.redhat.ceylon.model.typechecker.util {
 
 import java.util {
     JList=List
+}
+import java.lang {
+    Types {
+        classForInstance
+    }
 }
 
 shared interface NodeComparisonListener {
@@ -242,13 +244,13 @@ shared class DeltaBuilderFactory(
                             case (is Ast.Declaration) {
                                 value model = child.declarationModel else null;
                                 childKey = if (exists model) 
-                                then "``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]" 
+                                then "``classForInstance(model).simpleName``[``model.qualifiedNameString``]"
                                 else unknownKey();
                             }
                             case (is Ast.SpecifierStatement) {
                                 value model = child.declaration else null;
                                 childKey = if (exists model) 
-                                then "=>``javaClassFromInstance(model).simpleName``[``model.qualifiedNameString``]" 
+                                then "=>``classForInstance(model).simpleName``[``model.qualifiedNameString``]"
                                 else unknownKey();
                             }
                             case (is Ast.ModuleDescriptor) {

@@ -1,6 +1,3 @@
-import ceylon.interop.java {
-    javaClass
-}
 import ceylon.test {
     beforeTestRun
 }
@@ -20,7 +17,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    RuntimeException
+    RuntimeException,
+    Types
 }
 
 import test.com.redhat.ceylon.ide.common.completion {
@@ -66,5 +64,5 @@ object testIdeUtils satisfies IdeUtils {
     newOperationCanceledException(String message)
             => MyException(message);
 
-    pluginClassLoader => javaClass<IdeUtils>().classLoader;
+    pluginClassLoader => Types.classForType<IdeUtils>().classLoader;
 }

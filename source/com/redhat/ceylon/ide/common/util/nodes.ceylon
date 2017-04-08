@@ -3,9 +3,6 @@ import ceylon.collection {
     MutableSet,
     SetMutator
 }
-import ceylon.interop.java {
-    javaString
-}
 
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer
@@ -35,6 +32,9 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
+    Types {
+        nativeString
+    },
     JString=String,
     StringBuilder
 }
@@ -730,7 +730,7 @@ shared object nodes {
      Appended names are quoted to be valid text representing a variable name."
     void addStringLiteralNameProposals(HashSet<String> names, Tree.StringLiteral node) {
         String text = node.text;
-        value matcher = wordPattern.matcher(javaString(text));
+        value matcher = wordPattern.matcher(nativeString(text));
         if (matcher.matches()) {
             String unformatted = matcher.group();
             names.add(escaping.escape(unformatted.lowercased));
@@ -800,7 +800,7 @@ shared object nodes {
         Boolean plural, String name,
         Boolean lowercase = true) {
         
-        value matcher = idPattern.matcher(javaString(name));
+        value matcher = idPattern.matcher(nativeString(name));
         function lower(String str) 
                 => lowercase then str.lowercased else str;
         while (matcher.find()) {
@@ -822,7 +822,7 @@ shared object nodes {
             if (is SetMutator<String> names) {
                 names.add(escaped);
             } else {
-                names.add(javaString(escaped));
+                names.add(nativeString(escaped));
             }
         }
         /*matcher.reset();
@@ -837,7 +837,7 @@ shared object nodes {
                 if (is MutableSet<String> names) {
                     names.add(initials);
                 } else {
-                    names.add(javaString(initials));
+                    names.add(nativeString(initials));
                 }
             }
         }*/

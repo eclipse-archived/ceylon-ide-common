@@ -1,8 +1,10 @@
 import ceylon.collection {
     HashSet
 }
-import ceylon.interop.java {
-    javaString
+import java.lang {
+    Types {
+        nativeString
+    }
 }
 
 import com.redhat.ceylon.compiler.typechecker.tree {
@@ -293,7 +295,7 @@ shared abstract class RefinementCompletionProposal
             return;
         }
         
-        value split = javaString(prefix).split("\\s+");
+        value split = nativeString(prefix).split("\\s+");
         if (split.size > 0, 
             dec.name==split.get(split.size-1).string) {
             return;
