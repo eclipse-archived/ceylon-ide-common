@@ -14,8 +14,7 @@ import java.lang {
     Types {
         classForType
     },
-    JString=String,
-    Class
+    JString=String
 }
 import java.util {
     List,
