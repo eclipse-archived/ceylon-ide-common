@@ -1,17 +1,17 @@
 import ceylon.collection {
-    ArrayList
+    ArrayList,
+    MutableList
 }
+
+import com.redhat.ceylon.ide.common.model {
+    CeylonProjectConfig
+}
+
 import java.lang {
     IntArray,
     ObjectArray,
-    JString=String
-}
-
-import ceylon.interop.java {
-    createJavaStringArray
-}
-import com.redhat.ceylon.ide.common.model {
-    CeylonProjectConfig
+    JString=String,
+    Types
 }
 
 shared abstract class CeylonRepositoryConfigurator() {
@@ -52,6 +52,12 @@ shared abstract class CeylonRepositoryConfigurator() {
     shared formal void addRepositoryToList(Integer index, String repo);
     shared formal void addAllRepositoriesToList(ObjectArray<JString> repos);
 
+    void addRepositoryListToList({String*} newRepos, MutableList<String> repos) {
+        repos.clear();
+        repos.addAll(newRepos);
+        addAllRepositoriesToList(ObjectArray.with(repos.map(Types.nativeString)));
+    }
+    
     shared void addExternalRepo(String repo) => addProjectRepo(repo, 0, true);
 
     shared void addRemoteRepo(String repo) {
@@ -74,21 +80,10 @@ shared abstract class CeylonRepositoryConfigurator() {
     }
 
     shared void loadFromConfiguration(CeylonProjectConfig config) {
-        projectLocalRepos.clear();
-        projectLocalRepos.addAll(config.projectLocalRepos);
-        addAllRepositoriesToList(createJavaStringArray(projectLocalRepos));
-
-        globalLookupRepos.clear();
-        globalLookupRepos.addAll(config.globalLookupRepos);
-        addAllRepositoriesToList(createJavaStringArray(globalLookupRepos));
-
-        projectRemoteRepos.clear();
-        projectRemoteRepos.addAll(config.projectRemoteRepos);
-        addAllRepositoriesToList(createJavaStringArray(projectRemoteRepos));
-
-        otherRemoteRepos.clear();
-        otherRemoteRepos.addAll(config.otherRemoteRepos);
-        addAllRepositoriesToList(createJavaStringArray(otherRemoteRepos));
+        addRepositoryListToList(config.projectLocalRepos, projectLocalRepos);
+        addRepositoryListToList(config.globalLookupRepos, globalLookupRepos);
+        addRepositoryListToList(config.projectRemoteRepos, projectRemoteRepos);
+        addRepositoryListToList(config.otherRemoteRepos, otherRemoteRepos);
     }
 
     shared Boolean isRepoConfigurationModified(CeylonProjectConfig config) 
