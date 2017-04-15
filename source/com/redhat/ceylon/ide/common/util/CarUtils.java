@@ -2,8 +2,6 @@ package com.redhat.ceylon.ide.common.util;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 import net.lingala.zip4j.core.ZipFile;
