@@ -64,16 +64,22 @@ shared object wrapExpressionQuickFix {
 
                     if (exists pal = invocation.positionalArgumentList) {
                         for (i in 0:pal.positionalArguments.size()) {
-                            value arg = pal.positionalArguments.get(i);
-                            if (arg.parameter == param.initializerParameter) {
-                                wrapTerm(data, term, type, paramTypes.get(i));
+                            if (exists arg = pal.positionalArguments[i],
+                                exists ap = arg.parameter,
+                                exists ip = param.initializerParameter,
+                                ap == ip,
+                                exists pt = paramTypes[i]) {
+                                wrapTerm(data, term, type, pt);
                             }
                         }
                     } else if (exists nal = invocation.namedArgumentList) {
                         for (i in 0:nal.namedArguments.size()) {
-                            value arg = nal.namedArguments.get(i);
-                            if (arg.parameter == param.initializerParameter) {
-                                wrapTerm(data, term, type, paramTypes.get(i));
+                            if (exists arg = nal.namedArguments[i],
+                                exists ap = arg.parameter,
+                                exists ip = param.initializerParameter,
+                                ap == ip,
+                                exists pt = paramTypes[i]) {
+                                wrapTerm(data, term, type, pt);
                             }
                         }
                     }
