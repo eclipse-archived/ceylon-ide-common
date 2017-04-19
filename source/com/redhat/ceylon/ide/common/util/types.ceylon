@@ -50,7 +50,7 @@ shared object types {
     shared Declaration? getRefinedDeclaration(Declaration declaration) {
         //Reproduces the algorithm used to build the type hierarchy
         //first walk up the superclass hierarchy
-        if (declaration.shared,
+        if (declaration.shared || declaration.actual,
             is ClassOrInterface container = declaration.container) {
 
             variable TypeDeclaration? dec = container;
