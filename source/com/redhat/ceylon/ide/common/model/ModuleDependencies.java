@@ -451,7 +451,7 @@ public class ModuleDependencies {
                             return false;
                         }
                         if (moduleAnalysis.isRootVisibleFrom != null) {
-                            return moduleAnalysis.isRootVisibleFrom.booleanValue();
+                            return moduleAnalysis.isRootVisibleFrom;
                         }
                         
                         boolean rootIsVisible = false;
@@ -471,7 +471,7 @@ public class ModuleDependencies {
                             }
                         }
                         
-                        moduleAnalysis.isRootVisibleFrom = new Boolean(rootIsVisible);
+                        moduleAnalysis.isRootVisibleFrom = rootIsVisible;
                         return rootIsVisible; 
                     }
 
@@ -481,7 +481,7 @@ public class ModuleDependencies {
                             return false;
                         }
                         if (moduleAnalysis.isRootExportedBy != null) {
-                            return moduleAnalysis.isRootExportedBy.booleanValue();
+                            return moduleAnalysis.isRootExportedBy;
                         }
                         
                         boolean rootIsExported = false;
@@ -501,7 +501,7 @@ public class ModuleDependencies {
                                 }
                             }
                         }
-                        moduleAnalysis.isRootExportedBy = new Boolean(rootIsExported);
+                        moduleAnalysis.isRootExportedBy = rootIsExported;
                         return rootIsExported;
                     }                
                 }
