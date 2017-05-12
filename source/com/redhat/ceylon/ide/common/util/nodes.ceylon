@@ -28,8 +28,7 @@ import com.redhat.ceylon.model.typechecker.model {
     FunctionOrValue,
     Function,
     Class,
-    Type,
-    ClassOrInterface
+    Type
 }
 
 import java.lang {
@@ -413,48 +412,12 @@ shared object nodes {
             return null;
         }
     }
-
-    function bestTarget(Tree.MemberOrTypeExpression node) {
-        value target = node.declaration;
-        //Look for un-shared refinements
-        if (is Tree.QualifiedMemberOrTypeExpression node,
-            exists target,
-            is ClassOrInterface td = target.container,
-            !target.overloaded, //&& !target.refinedDeclaration.overloaded,
-            exists type = node.primary.typeModel) {
-            variable Declaration? currentResult = null;
-            for (std in type.declaration.supertypeDeclarations) {
-                if (std.inherits(td),
-                    exists refinement
-                        = std.getDirectMember(target.name, null, false),
-                    refinement.sharedOrActual) {
-                    if (exists result = currentResult) {
-                        if (refinement.refines(result)) {
-                            currentResult = refinement;
-                        }
-                        else if (result.refines(refinement)) {
-                            //nothing to do
-                        }
-                        else {
-                            //ambiguous
-                            return target;
-                        }
-                    }
-                    else {
-                        currentResult = refinement;
-                    }
-                }
-            }
-            return currentResult else target;
-        }
-        return target;
-    }
-
+    
     shared Referenceable? getReferencedDeclaration(Node? node) {
         //NOTE: this must accept a null node, returning null!
         switch (node)
         case (is Tree.MemberOrTypeExpression) {
-            return bestTarget(node);
+            return node.declaration;
         }
         case (is Tree.SimpleType) {
             return node.declarationModel;
