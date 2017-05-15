@@ -791,7 +791,12 @@ shared object completionManager
                 };
             }
             //otherwise guess something from the type
-            addMemberNameProposal(ctx, offset, prefix, node, cu);
+            addMemberNameProposalsForType {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                node = node;
+            };
         }
         else if (is Tree.TypedDeclaration node,
             !(node is Tree.Variable 
@@ -816,7 +821,13 @@ shared object completionManager
                 };
             }
             //otherwise guess something from the type
-            addMemberNameProposal(ctx, offset, prefix, node, cu);
+            addMemberNameProposal {
+                ctx = ctx;
+                offset = offset;
+                prefix = prefix;
+                previousNode = node;
+                rootNode = cu;
+            };
         }
         else if (is Tree.TypeDeclaration node,
             isMemberNameProposable(offset, node, memberOp)) {

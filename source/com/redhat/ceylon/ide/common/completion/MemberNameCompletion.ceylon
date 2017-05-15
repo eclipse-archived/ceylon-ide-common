@@ -23,9 +23,6 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
 }
 
-import java.lang {
-    JInteger=Integer
-}
 import java.util {
     JList=List
 }
@@ -33,7 +30,7 @@ import java.util {
 shared interface MemberNameCompletion {
         
     shared void addMemberNameProposals(Integer offset, CompletionContext ctx, Node node) {
-        JInteger? startIndex2 = node.startIndex;
+        value startIndex2 = node.startIndex;
 
         if (exists upToDateAndTypechecked = ctx.typecheckedRootNode) {
             object extends Visitor() {
@@ -44,12 +41,11 @@ shared interface MemberNameCompletion {
                         exists startIndex2, 
                         startIndex.intValue() == startIndex2.intValue()) {
                         
-                        addMemberNameProposal {
+                        addMemberNameProposalsForType {
                             ctx = ctx;
                             offset = offset;
                             prefix = "";
-                            previousNode = that;
-                            rootNode = upToDateAndTypechecked;
+                            node = that;
                         };
                     }
                     super.visit(that);
@@ -61,12 +57,11 @@ shared interface MemberNameCompletion {
                         exists startIndex2, 
                         startIndex.intValue() == startIndex2.intValue()) {
                         
-                        addMemberNameProposal {
+                        addMemberNameProposalsForType {
                             ctx = ctx;
                             offset = offset;
                             prefix = "";
-                            previousNode = that;
-                            rootNode = upToDateAndTypechecked;
+                            node = compoundType(that, upToDateAndTypechecked);
                         };
                     }
                     super.visit(that);
@@ -74,52 +69,34 @@ shared interface MemberNameCompletion {
             }.visit(upToDateAndTypechecked);
         }
     }
-    
-    shared void addMemberNameProposal(CompletionContext ctx, Integer offset,
-        String prefix, Node previousNode, Tree.CompilationUnit rootNode) {
-        
-        value proposals = HashSet<String>();
-        class FindCompoundTypeVisitor() extends Visitor() {
-            shared variable Node result = previousNode;
+
+    Tree.Type compoundType(Tree.SimpleType typeNode, Tree.CompilationUnit rootNode) {
+        object findCompoundTypeVisitor extends Visitor() {
+            shared variable Tree.Type result = typeNode;
 
             shared actual void visit(Tree.Type that) {
                 if (exists thatStart = that.startIndex,
-                    exists prevStart = previousNode.startIndex,
+                    exists prevStart = typeNode.startIndex,
                     exists thatEnd = that.endIndex,
-                    exists prevEnd = previousNode.endIndex,
-                    thatStart.intValue() <= prevStart.intValue() && 
+                    exists prevEnd = typeNode.endIndex,
+                    thatStart.intValue() <= prevStart.intValue() &&
                     thatEnd.intValue() >= prevEnd.intValue()) {
                     result = that;
                 }
             }
         }
-        value fcv = FindCompoundTypeVisitor();
-        fcv.visit(rootNode);
-        variable Node? node = fcv.result;
+        findCompoundTypeVisitor.visit(rootNode);
+        return findCompoundTypeVisitor.result;
+    }
 
-        switch (n = node)
-        case (is Tree.TypeDeclaration) {
-            //TODO: dictionary completions?
-            return;
-        }
-        case (is Tree.TypedDeclaration) {
-            value type = n.type;
-            if (exists id = n.identifier) {
-                node =
-                        if (exists start = id.startIndex,
-                            exists end = id.endIndex,
-                            start.intValue() <= offset <= end.intValue())
-                        then type
-                        else null;
-            } else {
-                node = type;
-            }
-        }
-        else {
-            assert (false);
-        }
+    shared void addMemberNameProposalsForType(CompletionContext ctx,
+            Integer offset, String prefix,
+            Tree.Type|Tree.StaticMemberOrTypeExpression node) {
+
+        value proposals = HashSet<String>();
 
         addProposalsForType(node, proposals);
+
         /*if (suggestedName!=null) {
             suggestedName = lower(suggestedName);
             String unquoted = prefix.startsWith("\\i")||prefix.startsWith("\\I") ?
@@ -133,10 +110,17 @@ shared interface MemberNameCompletion {
         /*if (proposals.isEmpty()) {
             proposals.add("it");
          }*/
+
         for (name in proposals) {
-            String unquotedPrefix = prefix.startsWith("\\i") then prefix[2...] else prefix;
+            String unquotedPrefix
+                    = prefix.startsWith("\\i")
+                    then prefix[2...]
+                    else prefix;
             if (name.startsWith(unquotedPrefix)) {
-                value unquotedName = name.startsWith("\\i") then name[2...] else name;
+                value unquotedName
+                        = name.startsWith("\\i")
+                        then name[2...]
+                        else name;
                 platformServices.completion.addProposal {
                     ctx = ctx;
                     offset = offset;
@@ -148,12 +132,49 @@ shared interface MemberNameCompletion {
             }
         }
     }
+
+    shared void addMemberNameProposal(CompletionContext ctx,
+            Integer offset, String prefix,
+            Tree.TypedDeclaration previousNode,
+            Tree.CompilationUnit rootNode) {
+
+        Tree.Type node;
+        switch (previousNode)
+        case (is Tree.TypedDeclaration) {
+            value type = previousNode.type;
+            if (exists id = previousNode.identifier) {
+                if (exists start = id.startIndex,
+                    exists end = id.endIndex,
+                    start.intValue() <= offset <= end.intValue()) {
+                    node = type;
+                }
+                else {
+                    return;
+                }
+            } else {
+                node = type;
+            }
+        }
+
+        addMemberNameProposalsForType {
+            prefix = prefix;
+            node = node;
+            ctx = ctx;
+            offset = offset;
+        };
+    }
     
-    void addProposalsForType(Node? node, MutableSet<String> proposals) {
+    void addProposalsForType(
+            Tree.Type|Tree.StaticMemberOrTypeExpression node,
+            MutableSet<String> proposals) {
         switch (node)
         case (is Tree.SimpleType) {
             if (exists model = node.typeModel) {
-                addProposals(proposals, node.identifier, model);
+                addProposals {
+                    proposals = proposals;
+                    identifier = node.identifier;
+                    type = model;
+                };
             }
         }
         case (is Tree.BaseTypeExpression) {
@@ -177,14 +198,22 @@ shared interface MemberNameCompletion {
         case (is Tree.SequenceType) {
             Tree.StaticType et = node.elementType;
             if (is Tree.SimpleType et) {
-                addPluralProposals(proposals, et.identifier, node.typeModel);
+                addPluralProposals {
+                    proposals = proposals;
+                    identifier = et.identifier;
+                    type = node.typeModel;
+                };
             }
             proposals.add("sequence");
         }
         case (is Tree.IterableType) {
             if (is Tree.SequencedType st = node.elementType,
                 is Tree.SimpleType et = st.type) {
-                addPluralProposals(proposals, et.identifier, node.typeModel);
+                addPluralProposals {
+                    proposals = proposals;
+                    identifier = et.identifier;
+                    type = node.typeModel;
+                };
             }
             proposals.add("stream");
             proposals.add("iterable");
@@ -194,19 +223,29 @@ shared interface MemberNameCompletion {
             if (ets.empty) {
                 proposals.add("none");
                 proposals.add("empty");
-            } else if (ets.size() == 1) {
+            }
+            else if (ets.size() == 1) {
                 value first = ets.get(0);
                 if (is Tree.SequencedType first) {
                     if (is Tree.SimpleType set = first.type) {
-                        addPluralProposals(proposals, set.identifier, node.typeModel);
+                        addPluralProposals {
+                            proposals = proposals;
+                            identifier = set.identifier;
+                            type = node.typeModel;
+                        };
                     }
                     proposals.add("sequence");
                 } else {
                     addProposalsForType(first, proposals);
                     proposals.add("singleton");
                 }
-            } else {
-                addCompoundTypeProposal(ets, proposals, "With");
+            }
+            else {
+                addCompoundTypeProposal {
+                    ets = ets;
+                    proposals = proposals;
+                    join = "With";
+                };
                 if (ets.size()==2) {
                     proposals.add("pair");
                 }
@@ -217,14 +256,25 @@ shared interface MemberNameCompletion {
             }
         }
         case (is Tree.FunctionType) {
-            addProposalsForType(node.returnType, proposals);
+            addProposalsForType {
+                node = node.returnType;
+                proposals = proposals;
+            };
             proposals.add("callable");
         }
         case (is Tree.UnionType) {
-            addCompoundTypeProposal(node.staticTypes, proposals, "Or");
+            addCompoundTypeProposal {
+                ets = node.staticTypes;
+                proposals = proposals;
+                join = "Or";
+            };
         }
         case (is Tree.IntersectionType) {
-            addCompoundTypeProposal(node.staticTypes, proposals, "And");
+            addCompoundTypeProposal {
+                ets = node.staticTypes;
+                proposals = proposals;
+                join = "And";
+            };
         }
         else {}
     }
@@ -237,14 +287,14 @@ shared interface MemberNameCompletion {
             value set = HashSet<String>();
             addProposalsForType(t, set);
             if (!is Finished text = set.iterator().next()) {
-                value _text =
+                value withoutEscape =
                         if (text.startsWith("\\i"))
                         then text[2...] else text;
                 if (sb.empty) {
-                    sb.append(_text);
+                    sb.append(withoutEscape);
                 } else {
                     sb.append(join)
-                      .append(escaping.toInitialUppercase(_text));
+                      .append(escaping.toInitialUppercase(withoutEscape));
                 }
             } else {
                 return;
@@ -255,18 +305,29 @@ shared interface MemberNameCompletion {
     }
 
 
-    Type getLiteralType(Node node, Tree.StaticMemberOrTypeExpression typeExpression) {
+    Type getLiteralType(Node node,
+            Tree.StaticMemberOrTypeExpression typeExpression) {
         value unit = node.unit;
         value pt = typeExpression.typeModel;
-        
-        return if (unit.isCallableType(pt)) then unit.getCallableReturnType(pt) else pt;
+        return unit.isCallableType(pt)
+            then unit.getCallableReturnType(pt)
+            else pt;
     }
     
-    void addProposals(MutableSet<String> proposals, Tree.Identifier identifier, Type type) {
-        nodes.addNameProposals(proposals, false, identifier.text);
+    void addProposals(MutableSet<String> proposals,
+            Tree.Identifier identifier, Type type) {
+        nodes.addNameProposals {
+            names = proposals;
+            plural = false;
+            name = identifier.text;
+        };
         
         if (!ModelUtil.isTypeUnknown(type)) {
-            addPluralProposals(proposals, identifier, type);
+            addPluralProposals {
+                proposals = proposals;
+                identifier = identifier;
+                type = type;
+            };
             if (type.isString()) {
                 proposals.add("text");
                 proposals.add("name");
@@ -279,7 +340,8 @@ shared interface MemberNameCompletion {
         }
     }
     
-    void addPluralProposals(MutableSet<String> proposals, Tree.Identifier identifier, Type type) {
+    void addPluralProposals(MutableSet<String> proposals,
+            Tree.Identifier identifier, Type type) {
         if (!ModelUtil.isTypeUnknown(type) && !type.nothing) {
             value unit = identifier.unit;
             Type it;
@@ -295,7 +357,11 @@ shared interface MemberNameCompletion {
             else {
                 return;
             }
-            nodes.addNameProposals(proposals, true, it.declaration.getName(unit));
+            nodes.addNameProposals {
+                names = proposals;
+                plural = true;
+                name = it.declaration.getName(unit);
+            };
         }
     }
 }
