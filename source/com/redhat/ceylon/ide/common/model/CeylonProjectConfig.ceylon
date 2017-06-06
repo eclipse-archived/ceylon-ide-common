@@ -233,7 +233,7 @@ shared class CeylonProjectConfig(project) {
     shared {String*} projectSourceDirectories =>
             sourceDirectoriesFromCeylonConfig(projectConfig);
     assign projectSourceDirectories =>
-            transientSourceDirectories = projectSourceDirectories;
+            transientSourceDirectories = projectSourceDirectories.distinct;
 
 
     shared {String*} resourceDirectories =>
@@ -242,7 +242,7 @@ shared class CeylonProjectConfig(project) {
     shared {String*} projectResourceDirectories =>
             resourceDirectoriesFromCeylonConfig(projectConfig);
     assign projectResourceDirectories =>
-            transientResourceDirectories = projectResourceDirectories;
+            transientResourceDirectories = projectResourceDirectories.distinct;
 
     shared EnumSet<Warning> suppressWarningsEnum =>
             let (suppressWarnings = getConfigValuesAsList(mergedConfig, DefaultToolOptions.compilerSuppresswarning, null))
