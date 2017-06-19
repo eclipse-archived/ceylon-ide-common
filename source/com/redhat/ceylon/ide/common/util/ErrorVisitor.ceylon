@@ -76,14 +76,8 @@ shared abstract class ErrorVisitor() extends Visitor() {
     shared formal void handleMessage(Integer startOffset, Integer endOffset,
         Integer startCol, Integer startLine, Message error);
     
-    Boolean include(Message msg) {
-        if (is UsageWarning msg) {
-            value warning = msg;
-            return !warning.suppressed;
-        } else {
-            return true;
-        }
-    }
+    Boolean include(Message msg)
+            => if (is UsageWarning msg) then !msg.suppressed else true;
     
     shared actual void visit(Tree.StatementOrArgument that) {
         value owe = warnForErrors;

@@ -694,9 +694,10 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                     shared actual void handleMessage(Integer startOffset, Integer endOffset,
                         Integer startCol, Integer startLine, Message message) {
                         
-                        value createError = if (message.warning)
-                        then SourceFileWarning
-                        else SourceFileError;
+                        value createError
+                                = if (message.warning)
+                                then SourceFileWarning
+                                else SourceFileError;
                         
                         messages.add(
                             createError(projectPhasedUnit.resourceFile, startOffset, endOffset, startCol, startLine, message)); 
