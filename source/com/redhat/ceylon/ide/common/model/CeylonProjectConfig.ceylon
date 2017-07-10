@@ -148,7 +148,7 @@ shared class CeylonProjectConfig(project) {
     shared String[] otherRemoteRepos =>
             toRepositoriesUrlList(mergedRepositories.otherLookupRepositories);
 
-    shared String[] projectLocalRepos=>
+    shared String[] projectLocalRepos =>
             toRepositoriesUrlList(projectRepositories.getRepositoriesByType(Repositories.repoTypeLocalLookup));
     assign projectLocalRepos =>
             transientProjectLocalRepos = projectLocalRepos;
@@ -273,11 +273,9 @@ shared class CeylonProjectConfig(project) {
         if (!exists suppressWarnings) {
             return EnumSet<Warning>.noneOf(warningClass);
         }
-        else if (suppressWarnings.empty) {
-            return EnumSet<Warning>.allOf(warningClass);
-        }
-        else if (suppressWarnings.sequence() == [""]) {
-            //special case because all warnings is encoded as the empty string
+        else if (suppressWarnings.empty ||
+                //special case because all warnings is encoded as the empty string
+                suppressWarnings.sequence() == [""]) {
             return EnumSet<Warning>.allOf(warningClass);
         }
         else {
