@@ -111,14 +111,14 @@ import org.antlr.runtime {
     CommonTokenStream
 }
 
-shared class ModuleType of 
-        _PROJECT_MODULE | 
-        _CEYLON_SOURCE_ARCHIVE |
-        _CEYLON_BINARY_ARCHIVE |
-        _JAVA_BINARY_ARCHIVE|
-        _NPM_MODULE |
-        _SDK_MODULE |
-        _UNKNOWN {
+shared class ModuleType
+        of _PROJECT_MODULE
+         | _CEYLON_SOURCE_ARCHIVE
+         | _CEYLON_BINARY_ARCHIVE
+         | _JAVA_BINARY_ARCHIVE
+         | _NPM_MODULE
+         | _SDK_MODULE
+         | _UNKNOWN {
     shared actual String string;
     shared new _PROJECT_MODULE { string = "PROJECT_MODULE"; }
     shared new _CEYLON_SOURCE_ARCHIVE { string = "CEYLON_SOURCE_ARCHIVE"; }
