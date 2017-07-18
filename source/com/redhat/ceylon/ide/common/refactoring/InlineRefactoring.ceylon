@@ -57,6 +57,9 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import java.lang {
+    overloaded
+}
 
 shared Boolean isInlineRefactoringAvailable(
     Referenceable? declaration, 
@@ -218,6 +221,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         }
         
         declarationNode.visit(object extends Visitor() {
+            overloaded
             shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
                 super.visit(that);
                 if (exists dec = that.declaration,
@@ -228,6 +232,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     warnings.add("Definition contains reference to unshared declaration: " + dec.name);
                 }
             }
+            overloaded
             shared actual void visit(Tree.Return that) {
                 super.visit(that);
                 if (is Tree.MethodDefinition declarationNode,
@@ -718,7 +723,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         
         object extends Visitor() {
             variable Boolean needsParens = false;
-            
+
+            overloaded
             shared actual void visit(Tree.MethodDeclaration that) {
                 if (is Tree.Block definition,
                     is Tree.LazySpecifierExpression se 
@@ -755,7 +761,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     super.visit(that);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.AttributeDeclaration that) {
                 if (is Tree.Block definition,
                     is Tree.LazySpecifierExpression se 
@@ -792,7 +799,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     super.visit(that);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.SpecifierStatement that) {
                 if (is Tree.Block definition,
                     that.refinement,
@@ -836,7 +844,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     super.visit(that);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.ExpressionStatement that) {
                 if (is Tree.Block definition,
                     is Tree.InvocationExpression ie = that.expression.term,
@@ -865,7 +874,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     super.visit(that);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.InvocationExpression that) {
                 if (!is Tree.Block definition,
                     is Tree.MemberOrTypeExpression primary = that.primary,
@@ -887,7 +897,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     super.visit(that);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.MemberOrTypeExpression that) {
                 if (inlineRef(that, that.declaration)) {
                     //we have a function ref to the inlined
@@ -944,21 +955,24 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     needsParens = onp;
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.OperatorExpression that) {
                 value onp = needsParens;
                 needsParens = true;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.StatementOrArgument that) {
                 value onp = needsParens;
                 needsParens = false;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.Expression that) {
                 value onp = needsParens;
                 needsParens = false;
@@ -1013,6 +1027,7 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         object extends Visitor() {
             variable Boolean needsParens = false;
 
+            overloaded
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
                 inlineDefinitionWithDefaultArgs {
@@ -1028,7 +1043,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     defaultArgs = defaultTypeArgs;
                 };
             }
-            
+
+            overloaded
             shared actual void visit(Tree.InvocationExpression that) {
                 super.visit(that);
                 value primary = that.primary;
@@ -1048,7 +1064,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     };
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.MemberOrTypeExpression that) {
                 super.visit(that);
                 value d = that.declaration;
@@ -1068,21 +1085,24 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                         });
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.OperatorExpression that) {
                 value onp = needsParens;
                 needsParens = true;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.StatementOrArgument that) {
                 value onp = needsParens;
                 needsParens = false;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.Expression that) {
                 value onp = needsParens;
                 needsParens = false;
@@ -1102,7 +1122,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
             variable value needsParens = false;
             variable value disabled = false;
             value synthVarInserts = ArrayList<[Integer, String]>();
-            
+
+            overloaded
             shared actual void visit(Tree.Variable that) {
                 value dec = that.declarationModel;
                 if (that.type is Tree.SyntheticVariable,
@@ -1124,14 +1145,16 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                 }
                 super.visit(that);
             }
-            
+
+            overloaded
             shared actual void visit(Tree.Body that) {
                 if (!disabled) {
                     super.visit(that);
                 }
                 disabled = false;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.ElseClause that) {
                 //don't re-visit the Variable!
                 if (exists block = that.block) { 
@@ -1141,7 +1164,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     expression.visit(this);
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.MemberOrTypeExpression that) {
                 value onp = needsParens;
                 if (that is Tree.QualifiedMemberOrTypeExpression) {
@@ -1163,21 +1187,24 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                             then decNode.declarationModel else null;
                 };
             }
-            
+
+            overloaded
             shared actual void visit(Tree.OperatorExpression that) {
                 value onp = needsParens;
                 needsParens = true;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.StatementOrArgument that) {
                 value onp = needsParens;
                 needsParens = false;
                 super.visit(that);
                 needsParens = onp;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.Expression that) {
                 value onp = needsParens;
                 needsParens = false;
@@ -1378,20 +1405,23 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                         }
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.IsCase it) {
                     if (exists t = it.type) {
                         t.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.QualifiedMemberOrTypeExpression it) {
                     //visit the primary first!
                     if (exists p = it.primary) {
                         p.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.This it) {
                     appendUpTo(it);
                     inlineDefinitionReference {
@@ -1406,9 +1436,11 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     };
                     super.visit(it);
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.AnnotationList it) {}
-                
+
+                overloaded
                 shared actual void visit(Tree.SpecifierStatement it) {
                     if (!it.refinement, 
                         exists lhs = it.baseMemberExpression) {
@@ -1418,7 +1450,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                         se.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.BaseMemberExpression it) {
                     appendUpTo(it.identifier);
                     inlineDefinitionReference {
@@ -1433,7 +1466,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     };
                     super.visit(it);
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.QualifiedType it) {
                     //visit the qualifying type before 
                     //visiting the type argument list
@@ -1444,7 +1478,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                         tal.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.BaseType it) {
                     appendUpTo(it.identifier);
                     inlineAliasDefinitionReference {

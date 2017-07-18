@@ -13,6 +13,9 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import java.lang {
+    overloaded
+}
 
 "Finds the smallest (most specific) node where a given selection
  is completely within bounds of that node (plus whitespace)."
@@ -121,7 +124,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             return false;
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberLiteral that) {
         if (inBounds(that.identifier)) {
             node = that;
@@ -130,7 +134,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ExtendedType that) {
         Tree.SimpleType? t = that.type;
         if (exists t) {
@@ -145,7 +150,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ClassSpecifier that) {
         Tree.SimpleType? t = that.type;
         if (exists t) {
@@ -160,7 +166,7 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
     shared actual void visitAny(Node that) {
         if (inBounds(that)) {
             if (!is Tree.LetClause that) {
@@ -171,7 +177,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
         //otherwise, as a performance optimization
         //don't go any further down this branch
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportPath that) {
         if (inBounds(that)) {
             node = that;
@@ -180,7 +187,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BinaryOperatorExpression that) {
         Term right = that.rightTerm else that;
         Term left = that.leftTerm else that;
@@ -190,7 +198,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.UnaryOperatorExpression that) {
         Term term = that.term else that;
         if (inBounds(that, term) || inBounds(term, that)) {
@@ -198,45 +207,52 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ParameterList that) {
         if (inBounds(that)) {
             node=that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypeParameterList that) {
         if (inBounds(that)) {
             node=that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ArgumentList that) {
         if (inBounds(that)) {
             node=that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypeArgumentList that) {
         if (inBounds(that)) {
             node=that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberOperator that) {
     }
-    
+
+    overloaded
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         if (inBounds(that.memberOperator, that.identifier)) {
             node=that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         if (inBounds(that.identifier)) {
             node = that;
@@ -247,7 +263,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SimpleType that) {
         if (inBounds(that.identifier)) {
             node = that;
@@ -256,7 +273,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportMemberOrType that) {
         if (inBounds(that.identifier) || inBounds(that.\ialias)) {
             node = that;
@@ -265,7 +283,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         if (inBounds(that.identifier)) {
             if (!is CustomTree.GuardedVariable that) {
@@ -276,7 +295,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.InitializerParameter that) {
         if (inBounds(that.identifier)) {
             node = that;
@@ -285,7 +305,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.NamedArgument that) {
         if (inBounds(that.identifier)) {
             node = that;
@@ -294,7 +315,8 @@ shared class FindNodeVisitor(tokens, startOffset, endOffset) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.DocLink that) {
         if (inBounds(that)) {
             node = that;

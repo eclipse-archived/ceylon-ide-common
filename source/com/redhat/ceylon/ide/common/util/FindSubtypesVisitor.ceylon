@@ -16,6 +16,9 @@ import java.util {
 import ceylon.interop.java {
     JavaSet
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() {
     value nodes = HashSet<Tree.Declaration|Tree.ObjectExpression>();
@@ -25,7 +28,8 @@ shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() 
     
     Boolean isRefinement(TypeDeclaration? dec) 
             => dec?.inherits(declaration) else false;
-    
+
+    overloaded
     shared actual void visit(Tree.TypeDeclaration that) {
         if (isRefinement(that.declarationModel)) {
             nodes.add(that);
@@ -33,7 +37,8 @@ shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() 
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ObjectDefinition that) {
         if (isRefinement(that.declarationModel.typeDeclaration)) {
             nodes.add(that);
@@ -41,7 +46,8 @@ shared class FindSubtypesVisitor(TypeDeclaration declaration) extends Visitor() 
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ObjectExpression that) {
         if (exists t=that.typeModel, isRefinement(t.declaration)) {
             nodes.add(that);

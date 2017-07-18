@@ -17,6 +17,9 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import java.lang {
+    overloaded
+}
 
 shared class RequiredTypeVisitor(Node node, Token? token)
         extends Visitor()
@@ -53,6 +56,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         super.visitAny(that);
     }
 
+    overloaded
     shared actual void visit(Tree.Body that) {
         value ort = requiredType;
         requiredType = null;
@@ -60,6 +64,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         requiredType = ort;
     }
 
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         value ort = requiredType;
         requiredType = null;
@@ -77,6 +82,7 @@ shared class RequiredTypeVisitor(Node node, Token? token)
             then declaration.parameterLists[0]?.parameters
             else null;
 
+    overloaded
     shared actual void visit(Tree.InvocationExpression that) {
         if (exists p = that.primary) {
             p.visit(this);
@@ -181,7 +187,8 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         requiredType = ort;
         namedArgTarget = onat;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifiedArgument that) {
         value ort = requiredType;
         if (exists parameter = that.parameter) {
@@ -193,7 +200,8 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ForIterator that) {
         value ort = requiredType;
         if (exists unit = that.unit) {
@@ -202,14 +210,16 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifierStatement that) {
         value ort = requiredType;
         requiredType = that.baseMemberExpression?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SwitchStatement that) {
         value ort = requiredType;
         Type? srt;
@@ -245,7 +255,8 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         }
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SwitchExpression that) {
         value ort = requiredType;
         Type? srt;
@@ -281,62 +292,72 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         }
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AnnotationList that) {
         value ort = requiredType;
         requiredType = null;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeDeclaration that) {
         value ort = requiredType;
         requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MethodDeclaration that) {
         value ort = requiredType;
         requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.FunctionArgument that) {
         value ort = requiredType;
         requiredType = that.type?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
+
+    overloaded
     shared actual void visit(Tree.AssignmentOp that) {
         value ort = requiredType;
         requiredType = that.leftTerm?.typeModel;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Return that) {
         value ort = requiredType;
         requiredType = types.getResultType(that.declaration);
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Throw that) {
         value ort = requiredType;
         requiredType = that.unit?.exceptionType;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ConditionList that) {
         value ort = requiredType;
         requiredType = that.unit?.booleanType;
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ResourceList that) {
         value ort = requiredType;
         if (exists unit = that.unit) {
@@ -349,13 +370,15 @@ shared class RequiredTypeVisitor(Node node, Token? token)
         super.visit(that);
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.StringLiteral that) {
         value ort = requiredType;
         super.visit(that); // pass on
         requiredType = ort;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.DocLink that) {
         value ort = requiredType;
         Declaration? base = that.base;

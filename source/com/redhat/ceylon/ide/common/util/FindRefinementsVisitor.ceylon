@@ -15,6 +15,9 @@ import java.util {
 import ceylon.interop.java {
     JavaSet
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindRefinementsVisitor(Declaration declaration) extends Visitor() {
 
@@ -36,7 +39,8 @@ shared class FindRefinementsVisitor(Declaration declaration) extends Visitor() {
             return false;
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifierStatement that) {
         if (that.refinement, isRefinement(that.declaration)) {
             nodes.add(that);
@@ -44,7 +48,8 @@ shared class FindRefinementsVisitor(Declaration declaration) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         if (!(that is Tree.TypeConstraint), isRefinement(that.declarationModel)) {
             nodes.add(that);

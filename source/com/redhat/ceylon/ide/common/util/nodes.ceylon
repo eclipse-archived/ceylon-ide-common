@@ -36,7 +36,8 @@ import java.lang {
         nativeString
     },
     JString=String,
-    StringBuilder
+    StringBuilder,
+    overloaded
 }
 import java.util {
     JList=List,
@@ -161,7 +162,9 @@ shared object nodes {
         if (exists d = declaration) {
             variable Tree.ImportMemberOrType? result = null;
             object extends Visitor() {
+                overloaded
                 shared actual void visit(Tree.Declaration that) {}
+                overloaded
                 shared actual void visit(Tree.ImportMemberOrType that) {
                     super.visit(that);
                     if (exists dec = that.declarationModel,

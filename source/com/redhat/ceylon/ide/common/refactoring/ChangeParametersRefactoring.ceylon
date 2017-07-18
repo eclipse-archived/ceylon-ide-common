@@ -66,6 +66,9 @@ import org.antlr.runtime {
     ANTLRStringStream,
     CommonTokenStream
 }
+import java.lang {
+    overloaded
+}
 
 "Finds out which [[Declaration]] the 'Change Parameters' refactoring
  can work on."
@@ -492,6 +495,7 @@ shared abstract class ChangeParametersRefactoring(
             value param = p.model;
             
             object fprv extends FindReferencesVisitor(param.model) {
+                overloaded
                 shared actual void visit(Tree.InitializerParameter that) {
                     //initializer parameters will be handled when
                     //we refactor the parameter list
@@ -499,7 +503,8 @@ shared abstract class ChangeParametersRefactoring(
                         se.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.ParameterDeclaration that) {
                     //don't confuse a parameter declaration with
                     //a split declaration below
@@ -513,7 +518,8 @@ shared abstract class ChangeParametersRefactoring(
                         se.visit(this);
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.TypedDeclaration that) {
                     //handle split declarations
                     super.visit(that);
@@ -522,7 +528,8 @@ shared abstract class ChangeParametersRefactoring(
                         nodesMutator.add(that);
                     }
                 }
-                
+
+                overloaded
                 shared actual Boolean isReference(Parameter|Declaration? p) {
                     if (is Parameter p) {
                         return isSameParameter(param, p);

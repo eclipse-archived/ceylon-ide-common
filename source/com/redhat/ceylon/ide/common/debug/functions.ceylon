@@ -15,6 +15,9 @@ import java.util.regex {
 import com.redhat.ceylon.common {
     JVMModuleUtil
 }
+import java.lang {
+    overloaded
+}
 
 
 shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
@@ -40,20 +43,23 @@ shared <Integer->Node>? getFirstValidLocation(Tree.CompilationUnit rootNode,
                 }
             }
         }
-        
-        shared actual void visit(Tree.Annotation that) {
-        }
-        
+
+        overloaded
+        shared actual void visit(Tree.Annotation that) {}
+
+        overloaded
         shared actual void visit(Tree.ExecutableStatement that) {
             check(that);
             super.visit(that);
         }
-        
+
+        overloaded
         shared actual void visit(Tree.SpecifierOrInitializerExpression that) {
             check(that);
             super.visit(that);
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Expression that) {
             check(that);
             super.visit(that);

@@ -30,6 +30,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Generic
 }
 
+import java.lang {
+    overloaded
+}
 import java.util {
     List
 }
@@ -45,13 +48,16 @@ shared object createTypeParameterQuickFix {
         
         class FilterExtendsSatisfiesVisitor() extends Visitor() {
             shared variable Boolean filter = false;
+
+            overloaded
             shared actual void visit(Tree.ExtendedType that) {
                 super.visit(that);
                 if (that.type == type) {
                     filter = true;
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.SatisfiedTypes that) {
                 super.visit(that);
                 for (t in that.types) {
@@ -60,7 +66,8 @@ shared object createTypeParameterQuickFix {
                     }
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.CaseTypes that) {
                 super.visit(that);
                 for (t in that.types) {
@@ -122,6 +129,8 @@ shared object createTypeParameterQuickFix {
         
         class FindTypeParameterConstraintVisitor() extends Visitor() {
             shared variable List<Type>? result = null;
+
+            overloaded
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
                 if (exists dm = that.declarationModel) {
@@ -139,7 +148,8 @@ shared object createTypeParameterQuickFix {
                     }
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
                 if (is Generic d = that.declaration) {

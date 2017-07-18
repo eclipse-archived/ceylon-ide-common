@@ -7,6 +7,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Functional,
     Scope
 }
+import java.lang {
+    overloaded
+}
 
 shared interface TypeArgumentListCompletions {
     
@@ -32,7 +35,8 @@ shared interface TypeArgumentListCompletions {
         }
         
         object extends Visitor() {
-            
+
+            overloaded
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 if (exists startIndex = that.typeArguments?.startIndex?.intValue(),
                     startIndex == start,
@@ -60,7 +64,8 @@ shared interface TypeArgumentListCompletions {
                 }
                 super.visit(that);
             }
-            
+
+            overloaded
             shared actual void visit(Tree.SimpleType that) {
                 if (exists startIndex = that.typeArgumentList?.startIndex?.intValue(),
                     startIndex == start,

@@ -34,6 +34,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     JSet=Set
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
     value nodes = HashSet<Node>();
@@ -121,7 +124,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         return null;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.CaseClause that) {
         if (is Tree.IsCase ic = that.caseItem,
             exists var = ic.variable) {
@@ -147,7 +151,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.WhileClause that) {
         if (exists cl = that.conditionList) {
             value conditions = cl.conditions;
@@ -190,7 +195,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
 
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.IfClause that) {
         if (exists cl = that.conditionList) {
             value conditions = cl.conditions;
@@ -241,7 +247,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
 
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ElseClause that) {
         if (exists var = that.variable) {
             value vd = var.declarationModel;
@@ -264,7 +271,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Variable that) {
         if (is GuardedVariable that) {
             value d = that.declarationModel;
@@ -277,7 +285,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Body body) {
         value d = declaration;
         for (st in body.statements) {
@@ -305,10 +314,11 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         declaration = d;
     }
-    
-    shared actual void visit(Tree.ExtendedTypeExpression that) {
-    }
-    
+
+    overloaded
+    shared actual void visit(Tree.ExtendedTypeExpression that) {}
+
+    overloaded
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         if (isReference(that.declaration)) {
             nodes.add(that);
@@ -316,7 +326,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberLiteral that) {
         if (isReference(that.declaration)) {
             nodes.add(that);
@@ -324,7 +335,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypedArgument that) {
         if (isReference(that.parameter)) {
             nodes.add(that);
@@ -332,7 +344,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifiedArgument that) {
         if (that.identifier exists, 
             that.identifier.token exists, 
@@ -343,7 +356,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SimpleType that) {
         if (exists type = that.typeModel,
             isReference(type.declaration)) {
@@ -353,7 +367,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportMemberOrType that) {
         if (isReference(that.declarationModel)) {
             nodes.add(that);
@@ -361,7 +376,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Import that) {
         super.visit(that);
         if (is Package pkg = declaration) {
@@ -371,7 +387,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportModule that) {
         super.visit(that);
         
@@ -382,7 +399,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
             nodes.add(that);
         }
     }
-    
+
+    overloaded
     shared actual default void visit(Tree.InitializerParameter that) {
         if (isReference(that.parameterModel)) {
             nodes.add(that);
@@ -390,7 +408,8 @@ shared class FindReferencesVisitor(Referenceable dec) extends Visitor() {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypeConstraint that) {
         if (isReference(that.declarationModel)) {
             nodes.add(that);

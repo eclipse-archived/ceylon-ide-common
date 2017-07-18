@@ -16,6 +16,9 @@ import com.redhat.ceylon.ide.common.platform {
 import com.redhat.ceylon.ide.common.refactoring {
     DefaultRegion
 }
+import java.lang {
+    overloaded
+}
 
 "Adds a [[suppressWarnings]] annotation to a declaration to
  remove warnings.
@@ -79,20 +82,23 @@ shared object addSuppressWarningsQuickFix {
             variable shared Tree.StatementOrArgument? result = null;
             variable Tree.StatementOrArgument? current = null;
 
+            overloaded
             shared actual void visit(Tree.Declaration that) {
                 value \iouter = current;
                 current = that;
                 super.visit(that);
                 current = \iouter;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.ModuleDescriptor that) {
                 value \iouter = current;
                 current = that;
                 super.visit(that);
                 current = \iouter;
             }
-            
+
+            overloaded
             shared actual void visit(Tree.PackageDescriptor that) {
                 value \iouter = current;
                 current = that;

@@ -13,11 +13,15 @@ import com.redhat.ceylon.ide.common.util {
 import org.antlr.runtime {
     CommonToken
 }
+import java.lang {
+    overloaded
+}
 
 class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
     CompletionContext ctx, BaseProgressMonitor monitor)
         extends Visitor() {
-    
+
+    overloaded
     shared actual void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
         if (exists path = that.importPath,
@@ -26,6 +30,8 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
+
+    overloaded
     shared actual void visit(Tree.PackageDescriptor that) {
         super.visit(that);
         if (exists path = that.importPath,
@@ -34,6 +40,8 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             completionManager.addCurrentPackageNameCompletion(ctx, offset, text);
         }
     }
+
+    overloaded
     shared actual void visit(Tree.Import that) {
         super.visit(that);
         if (exists path = that.importPath,
@@ -50,6 +58,8 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             };
         }
     }
+
+    overloaded
     shared actual void visit(Tree.PackageLiteral that) {
         super.visit(that);
         if (exists path = that.importPath,
@@ -66,6 +76,8 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             };
         }
     }
+
+    overloaded
     shared actual void visit(Tree.ImportModule that) {
         super.visit(that);
         if (exists path = that.importPath,
@@ -83,6 +95,8 @@ class ImportVisitor(String prefix, CommonToken token, Integer offset, Node node,
             };
         }
     }
+
+    overloaded
     shared actual void visit(Tree.ModuleLiteral that) {
         super.visit(that);
         if (exists path = that.importPath,

@@ -26,7 +26,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    JString=String
+    JString=String,
+    overloaded
 }
 import java.util {
     JMap=Map,
@@ -59,7 +60,8 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
         if (inSelection(that)) {
             addDeclaration(that.declaration, that.identifier);
@@ -67,7 +69,8 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseType that) {
         if (inSelection(that)) {
             addDeclaration(that.declarationModel, that.identifier);
@@ -75,7 +78,8 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberLiteral that) {
         if (inSelection(that), !that.type exists) {
             addDeclaration(that.declaration, that.identifier);
@@ -83,7 +87,8 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         if (inSelection(that),
             exists dec = that.declarationModel) {
@@ -93,7 +98,8 @@ shared class SelectedImportsVisitor(Integer offset, Integer length)
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportMemberOrType that) {
         if (inSelection(that),
             exists dec = that.declarationModel) {

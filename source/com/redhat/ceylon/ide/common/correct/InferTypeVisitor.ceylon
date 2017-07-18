@@ -16,6 +16,9 @@ import com.redhat.ceylon.model.typechecker.model {
     TypeDeclaration,
     Interface
 }
+import java.lang {
+    overloaded
+}
 
 class InferredType(Unit unit) {
     
@@ -50,7 +53,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
     shared InferredType result = InferredType(unit);
     shared variable Declaration? declaration = null;
     variable Reference? pr = null;
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         //TODO: an assignment to something with an inferred
@@ -74,6 +78,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.MethodDeclaration that) {
         super.visit(that);
         //TODO: an assignment to something with an inferred
@@ -96,6 +101,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
         Tree.Term? bme = that.baseMemberExpression;
@@ -124,6 +130,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
         Tree.Term? rt = that.rightTerm;
@@ -148,6 +155,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.InvocationExpression that) {
         //value opr = null;
 
@@ -162,7 +170,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         //pr = opr;
         pr = null;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ListedArgument that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression t 
@@ -184,6 +193,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.SpreadArgument that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression t 
@@ -200,7 +210,8 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
             result.intersect(it);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifiedArgument that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression t 
@@ -216,6 +227,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.Return that) {
         super.visit(that);
         Tree.Term? bme = that.expression?.term;
@@ -236,6 +248,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression primary = that.primary, 
@@ -249,6 +262,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.ValueIterator that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression primary =
@@ -263,6 +277,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.BooleanCondition that) {
         super.visit(that);
         if (is Tree.BaseMemberExpression primary =
@@ -276,6 +291,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.NonemptyCondition that) {
         super.visit(that);
         if (is Tree.Variable var = that.variable, 
@@ -292,6 +308,7 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.ArithmeticOp that) {
         super.visit(that);
         value sd = getArithmeticDeclaration(that);
@@ -299,58 +316,67 @@ class InferTypeVisitor(Unit unit) extends Visitor() {
         genericOperatorTerm(sd, that.rightTerm);
     }
 
+    overloaded
     shared actual void visit(Tree.NegativeOp that) {
         super.visit(that);
         value sd = unit.invertableDeclaration;
         genericOperatorTerm(sd, that.term);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PrefixOperatorExpression that) {
         super.visit(that);
         value sd = unit.ordinalDeclaration;
         genericOperatorTerm(sd, that.term);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PostfixOperatorExpression that) {
         super.visit(that);
         value sd = unit.ordinalDeclaration;
         genericOperatorTerm(sd, that.term);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BitwiseOp that) {
         super.visit(that);
         value sd = unit.setDeclaration;
         genericOperatorTerm(sd, that.leftTerm);
         genericOperatorTerm(sd, that.rightTerm);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ComparisonOp that) {
         super.visit(that);
         value sd = unit.comparableDeclaration;
         genericOperatorTerm(sd, that.leftTerm);
         genericOperatorTerm(sd, that.rightTerm);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.CompareOp that) {
         super.visit(that);
         value sd = unit.comparableDeclaration;
         genericOperatorTerm(sd, that.leftTerm);
         genericOperatorTerm(sd, that.rightTerm);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.LogicalOp that) {
         super.visit(that);
         value sd = unit.booleanDeclaration;
         operatorTerm(sd, that.leftTerm);
         operatorTerm(sd, that.rightTerm);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.NotOp that) {
         super.visit(that);
         value sd = unit.booleanDeclaration;
         operatorTerm(sd, that.term);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.EntryOp that) {
         super.visit(that);
         value sd = unit.objectDeclaration;

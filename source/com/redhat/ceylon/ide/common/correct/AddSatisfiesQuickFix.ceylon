@@ -38,6 +38,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     HashMap
 }
+import java.lang {
+    overloaded
+}
 
 "Add generic type constraints proposal for following code:
  
@@ -353,12 +356,14 @@ shared object addSatisfiesQuickFix {
                     }
                 }
             }
-            
+
+            overloaded
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
                 determineSatisfiedTypesTypeParams(typeDec, that.declarationModel, that.typeArgumentList, typeParamNode);
             }
-            
+
+            overloaded
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
                 determineSatisfiedTypesTypeParams(typeDec, that.declaration, that.typeArguments, typeParamNode);

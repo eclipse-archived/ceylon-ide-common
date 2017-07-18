@@ -13,16 +13,21 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil
 }
 
+import java.lang {
+    overloaded
+}
 import java.util {
     Collections
 }
 
 
 shared object switchQuickFix {
-    
+
     shared void addElseProposal(QuickFixData data) {
         if (is Tree.SwitchClause node = data.node) {
             object extends Visitor() {
+
+                overloaded
                 shared actual void visit(Tree.SwitchStatement that) {
                     if (that.switchClause==node) {
                         value offset = that.endIndex.intValue();
@@ -50,7 +55,8 @@ shared object switchQuickFix {
                         };
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.SwitchExpression that) {
                     if (that.switchClause==node) {
                         value offset = that.endIndex.intValue();
@@ -109,6 +115,8 @@ shared object switchQuickFix {
             exists e = node.switched.expression, 
             !ModelUtil.isTypeUnknown(e.typeModel)) {
             object extends Visitor() {
+
+                overloaded
                 shared actual void visit(Tree.SwitchStatement that) {
                     if (that.switchClause==node) {
                         value type = missingType(node, that.switchCaseList);
@@ -148,7 +156,8 @@ shared object switchQuickFix {
                         };
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.SwitchExpression that) {
                     if (that.switchClause==node) {
                         value type = missingType(node, that.switchCaseList);

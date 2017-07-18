@@ -26,6 +26,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     JList=List
 }
+import java.lang {
+    overloaded
+}
 
 shared interface MemberNameCompletion {
         
@@ -34,7 +37,8 @@ shared interface MemberNameCompletion {
 
         if (exists upToDateAndTypechecked = ctx.typecheckedRootNode) {
             object extends Visitor() {
-    
+
+                overloaded
                 shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                     if (exists tal = that.typeArguments, 
                         exists startIndex = tal.startIndex,
@@ -50,7 +54,8 @@ shared interface MemberNameCompletion {
                     }
                     super.visit(that);
                 }
-    
+
+                overloaded
                 shared actual void visit(Tree.SimpleType that) {
                     if (exists tal = that.typeArgumentList, 
                         exists startIndex = tal.startIndex,

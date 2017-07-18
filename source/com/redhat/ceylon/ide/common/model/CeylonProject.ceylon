@@ -96,7 +96,8 @@ import java.lang {
     RuntimeException,
     IllegalStateException,
     ByteArray,
-    System
+    System,
+    overloaded
 }
 import java.lang.ref {
     WeakReference,
@@ -190,14 +191,15 @@ shared abstract class BaseCeylonProject() {
 
 	shared CeylonRepoManagerBuilder newRepositoryManagerBuilder(Boolean withOutput = false) {
 		value builder = object extends CeylonRepoManagerBuilder() {
-			shared actual Overrides? getOverrides(String? path) {
+            overloaded
+            shared actual Overrides? getOverrides(String? path) {
 				if (! path exists) {
 					removeOverridesProblemMarker();
 				}
 				return super.getOverrides(path);
 			}
-			
-			shared actual Overrides? getOverrides(File absoluteFile) {
+            overloaded
+            shared actual Overrides? getOverrides(File absoluteFile) {
 				variable Overrides? result = null;
 				variable Exception? overridesException = null;
 				variable Integer overridesLine = -1;

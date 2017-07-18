@@ -17,7 +17,8 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    StringBuilder
+    StringBuilder,
+    overloaded
 }
 
 shared object convertToNamedArgumentsQuickFix {
@@ -182,10 +183,12 @@ shared object convertToNamedArgumentsQuickFix {
     class FindPositionalArgumentsVisitor(Integer offset) extends Visitor() {
         shared variable Tree.PositionalArgumentList? argumentList = null;
 
+        overloaded
         shared actual void visit(Tree.ExtendedType that) {
             //don't add proposals for extends clause
         }
-        
+
+        overloaded
         shared actual void visit(Tree.PositionalArgumentList that) {
             if (exists start = that.startIndex,
                 offset >= start.intValue(),

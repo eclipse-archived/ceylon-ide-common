@@ -82,7 +82,8 @@ import java.lang {
     },
     ObjectArray,
     JString=String,
-    RuntimeException
+    RuntimeException,
+    overloaded
 }
 import java.util {
     JList=List,
@@ -281,6 +282,7 @@ shared abstract class BaseIdeModelLoader(
                    if (is PhasedUnit treeHolder) {
                        value pkgName = treeHolder.\ipackage.qualifiedNameString;
                        treeHolder.compilationUnit.visit(object extends SourceDeclarationVisitor(){
+                           overloaded
                            shared actual void loadFromSource(Tree.Declaration decl) {
                                if (exists id=decl.identifier) {
                                    String fqn = getToplevelQualifiedName(pkgName, id.text);
@@ -290,8 +292,11 @@ shared abstract class BaseIdeModelLoader(
                                    }
                                }
                            }
+
+                           overloaded
                            shared actual void loadFromSource(Tree.ModuleDescriptor that) {}
 
+                           overloaded
                            shared actual void loadFromSource(Tree.PackageDescriptor that) {}
                        });
                    }
@@ -424,23 +429,26 @@ shared abstract class BaseIdeModelLoader(
    
    
    shared formal Boolean moduleContainsClass(BaseIdeModule ideModule, String packageName, String className);
-   
-   shared actual Boolean forceLoadFromBinaries(Boolean isNativeDeclaration) =>
+
+    overloaded
+    shared actual Boolean forceLoadFromBinaries(Boolean isNativeDeclaration) =>
            moduleManager.loadDependenciesFromModelLoaderFirst 
                && isNativeDeclaration;
-   
-   shared actual Boolean forceLoadFromBinaries(Tree.Declaration declarationNode) =>
+
+    overloaded
+    shared actual Boolean forceLoadFromBinaries(Tree.Declaration declarationNode) =>
            forceLoadFromBinaries(getNative(declarationNode) exists);
-   
-   shared actual Boolean forceLoadFromBinaries(Declaration declaration) {
-       return forceLoadFromBinaries(declaration.native);
-   }
-   
-   shared actual Boolean forceLoadFromBinaries(ClassMirror classMirror) {
-       return forceLoadFromBinaries(getNativeFromMirror(classMirror) exists);
-   }
-   
-   shared actual Boolean searchAgain(ClassMirror? cachedMirror, Module ideModule, String name) {
+
+    overloaded
+    shared actual Boolean forceLoadFromBinaries(Declaration declaration) =>
+            forceLoadFromBinaries(declaration.native);
+
+    overloaded
+    shared actual Boolean forceLoadFromBinaries(ClassMirror classMirror) =>
+            forceLoadFromBinaries(getNativeFromMirror(classMirror) exists);
+
+    overloaded
+    shared actual Boolean searchAgain(ClassMirror? cachedMirror, Module ideModule, String name) {
        if (cachedMirror exists 
            && ( !(cachedMirror is SourceClass) || 
                    !forceLoadFromBinaries(cachedMirror))) {
@@ -463,8 +471,9 @@ shared abstract class BaseIdeModelLoader(
        }
        return false;
    }
-   
-   shared actual Boolean searchAgain(Declaration? cachedDeclaration, LazyPackage lazyPackage, String name) {
+
+    overloaded
+    shared actual Boolean searchAgain(Declaration? cachedDeclaration, LazyPackage lazyPackage, String name) {
        if (cachedDeclaration exists && 
            (cachedDeclaration is LazyElement || 
            !forceLoadFromBinaries(cachedDeclaration))) {
@@ -474,7 +483,8 @@ shared abstract class BaseIdeModelLoader(
            lazyPackage.getQualifiedName(lazyPackage.qualifiedNameString, name));
    }
 
-   shared actual Declaration? convertToDeclaration(Module ideModule, String typeName,
+    overloaded
+    shared actual Declaration? convertToDeclaration(Module ideModule, String typeName,
        DeclarationType declarationType) {
        return let (do = () {
            value foundSourceDeclaration = sourceDeclarations[getToplevelQualifiedName(typeName)];
@@ -496,8 +506,9 @@ shared abstract class BaseIdeModelLoader(
            return result;
        }) callWithLock(do);
    }
-   
-   shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror,
+
+    overloaded
+    shared actual Declaration? convertToDeclaration(Module ideModule, ClassMirror classMirror,
         DeclarationType declarationType)
            => super.convertToDeclaration(ideModule, classMirror, declarationType);
    

@@ -23,6 +23,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Type,
     Declaration
 }
+import java.lang {
+    overloaded
+}
 
 
 shared interface ExtractParameterRefactoring<IRegion>
@@ -265,8 +268,8 @@ Boolean withinParameterList(Tree.Declaration declaration, Node node) {
     else {
         return false;
     }
-    return node.startIndex.intValue() >= pl1.startIndex.intValue() && 
-           node.endIndex.intValue()   <= pl2.endIndex.intValue();
+    return node.startIndex.intValue() >= pl1.startIndex.intValue()
+        && node.endIndex.intValue()   <= pl2.endIndex.intValue();
 }
 
 shared class FindFunctionVisitor(Node term) extends Visitor() {
@@ -274,24 +277,25 @@ shared class FindFunctionVisitor(Node term) extends Visitor() {
     variable Tree.Declaration? declaration = null;
     variable Tree.Declaration? current = null;
     
-    shared Tree.Declaration? definitionNode {
-        return declaration;
-    }
-    
+    shared Tree.Declaration? definitionNode => declaration;
+
+    overloaded
     shared actual void visit(Tree.MethodDefinition that) {
         value \iouter = current;
         current = that;
         super.visit(that);
         current = \iouter;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ClassDefinition that) {
         value \iouter = current;
         current = that;
         super.visit(that);
         current = \iouter;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Constructor that) {
         value \iouter = current;
         current = that;

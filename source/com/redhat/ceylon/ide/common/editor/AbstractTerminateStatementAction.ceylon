@@ -28,6 +28,9 @@ import org.antlr.runtime {
     Token,
     CommonToken
 }
+import java.lang {
+    overloaded
+}
 
 shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>()
         given Document satisfies CommonDocument {
@@ -145,16 +148,19 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         Integer endOfCodeInLine,
         TextChange change
     ) extends Visitor() {
+        overloaded
         shared actual void visit(Tree.Annotation that) {
             super.visit(that);
             terminateWithSemicolon(that);
         }
-        
+
+        overloaded
         shared actual void visit(Tree.StaticType that) {
             super.visit(that);
             terminateWithSemicolon(that);
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Expression that) {
             super.visit(that);
             terminateWithSemicolon(that);
@@ -166,7 +172,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                         <= endOfCodeInLine)
                     then true else false;
         }
-        
+
+        overloaded
         shared actual void visit(Tree.IfClause that) {
             super.visit(that);
             if (missingBlock(that.block), 
@@ -175,14 +182,16 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                     that.conditionList);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ElseClause that) {
             super.visit(that);
             if (missingBlock(that.block)) {
                 terminateWithBraces(that);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ForClause that) {
             super.visit(that);
             if (missingBlock(that.block), 
@@ -191,7 +200,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                     that.forIterator);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.WhileClause that) {
             super.visit(that);
             if (missingBlock(that.block), 
@@ -200,7 +210,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                     that.conditionList);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.CaseClause that) {
             super.visit(that);
             if (missingBlock(that.block), 
@@ -209,14 +220,16 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                     that.caseItem);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.TryClause that) {
             super.visit(that);
             if (missingBlock(that.block)) {
                 terminateWithBraces(that);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.CatchClause that) {
             super.visit(that);
             if (missingBlock(that.block), 
@@ -225,14 +238,16 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                     that.catchVariable);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.FinallyClause that) {
             super.visit(that);
             if (missingBlock(that.block)) {
                 terminateWithBraces(that);
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.StatementOrArgument that) {
             if (that is Tree.ExecutableStatement
                     && !(that is Tree.ControlStatement)
@@ -409,7 +424,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
         Integer endOfCodeInLine,
         TextChange change
     ) extends Visitor() {
-        
+
+        overloaded
         shared actual void visit(Tree.Expression that) {
             super.visit(that);
             if (exists start = that.startIndex, 
@@ -427,78 +443,92 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 });
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ParameterList that) {
             super.visit(that);
             terminate(that, CL.rparen, ")");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.IndexExpression that) {
             super.visit(that);
             terminate(that, CL.rbracket, "]");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.TypeParameterList that) {
             super.visit(that);
             terminate(that, CL.largerOp, ">");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.TypeArgumentList that) {
             super.visit(that);
             terminate(that, CL.largerOp, ">");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.PositionalArgumentList that) {
             super.visit(that);
             if (exists t = that.token, t.type == CL.lparen) {
                 terminate(that, CL.rparen, ")");
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.NamedArgumentList that) {
             super.visit(that);
             terminate(that, CL.rbrace, " }");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.SequenceEnumeration that) {
             super.visit(that);
             terminate(that, CL.rbrace, " }");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.IterableType that) {
             super.visit(that);
             terminate(that, CL.rbrace, "}");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Tuple that) {
             super.visit(that);
             terminate(that, CL.rbracket, "]");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.TupleType that) {
             super.visit(that);
             terminate(that, CL.rbracket, "]");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ConditionList that) {
             super.visit(that);
             if (!that.mainToken.text.startsWith("<missing ")) {
                 terminate(that, CL.rparen, ")");
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ForIterator that) {
             super.visit(that);
             if (!that.mainToken.text.startsWith("<missing ")) {
                 terminate(that, CL.rparen, ")");
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ImportMemberOrTypeList that) {
             super.visit(that);
             terminate(that, CL.rbrace, " }");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Import that) {
             if (!that.importMemberOrTypeList exists
                 || that.importMemberOrTypeList.mainToken
@@ -516,7 +546,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
             
             super.visit(that);
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ImportModule that) {
             super.visit(that);
             if (that.importPath exists 
@@ -536,32 +567,38 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 });
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ImportModuleList that) {
             super.visit(that);
             terminate(that, CL.rbrace, " }");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.PackageDescriptor that) {
             super.visit(that);
             terminate(that, CL.semicolon, ";");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Directive that) {
             super.visit(that);
             terminate(that, CL.semicolon, ";");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Body that) {
             super.visit(that);
             terminate(that, CL.rbrace, " }");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.MetaLiteral that) {
             super.visit(that);
             terminate(that, CL.backtick, "`");
         }
-        
+
+        overloaded
         shared actual void visit(Tree.StatementOrArgument that) {
             super.visit(that);
             if (is Tree.SpecifiedArgument that) {
@@ -592,7 +629,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 }
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ClassDeclaration that) {
             super.visit(that);
             if (inLine(that),
@@ -605,7 +643,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 });
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.ClassDefinition that) {
             super.visit(that);
             if (inLine(that),
@@ -619,7 +658,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 });
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Constructor that) {
             super.visit(that);
             if (inLine(that),
@@ -637,7 +677,8 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 });
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.AnyMethod that) {
             super.visit(that);
             if (inLine(that),

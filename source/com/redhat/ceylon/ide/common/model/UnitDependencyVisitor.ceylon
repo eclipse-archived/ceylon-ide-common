@@ -32,12 +32,15 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.lang {
     Types {
         nativeString
-    }
+    },
+    overloaded
 }
 
-class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>(ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> thePhasedUnit) extends Visitor()
+class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeFile>
+            (ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile> thePhasedUnit)
+                extends Visitor()
         satisfies ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & VfsServicesConsumer<NativeProject, NativeResource, NativeFolder, NativeFile>
         given NativeProject satisfies Object
         given NativeResource satisfies Object
         given NativeFolder satisfies NativeResource
@@ -165,24 +168,28 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
             else {}
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberOrTypeExpression that) {
         storeDeclarationDependency(that.declaration);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.NamedArgument that) {
         //TODO: is this really necessary?
         storeParameterDependency(that.parameter);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SequencedArgument that) {
         //TODO: is this really necessary?
         storeParameterDependency(that.parameter);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PositionalArgument that) {
         //TODO: is this really necessary?
         storeParameterDependency(that.parameter);
@@ -194,17 +201,20 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
             storeDeclarationDependency(parameter.model);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Type that) {
         storeTypeDependency(that.typeModel);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ImportMemberOrType that) {
         storeDeclarationDependency(that.declarationModel);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypeArguments that) {
         //TODO: is this really necessary?
         if (exists types = that.typeModels) {
@@ -214,13 +224,15 @@ class UnitDependencyVisitor<NativeProject, NativeResource, NativeFolder, NativeF
         }
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Term that) {
         //TODO: is this really necessary?
         storeTypeDependency(that.typeModel);
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         if (exists decl = that.declarationModel,
             decl.native) {

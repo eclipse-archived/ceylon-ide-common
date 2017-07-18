@@ -12,10 +12,14 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
+import java.lang {
+    overloaded
+}
 
 class DetectUnusedImportsVisitor(MutableList<Declaration> result)
         extends Visitor() {
-    
+
+    overloaded
     shared actual void visit(Tree.Import that) {
         super.visit(that);
         for (i in that.importMemberOrTypeList.importMemberOrTypes) {
@@ -46,7 +50,8 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
         return if (exists d, !d.name.equals(id.text)) 
                then true else false;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.QualifiedMemberOrTypeExpression that) {
         super.visit(that);
         Declaration? d = that.declaration;
@@ -54,12 +59,14 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
             remove(nodes.getAbstraction(d));
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
         super.visit(that);
         remove(nodes.getAbstraction(that.declaration));
     }
-    
+
+    overloaded
     shared actual void visit(Tree.QualifiedType that) {
         super.visit(that);
         Declaration? d = that.declarationModel;
@@ -67,12 +74,14 @@ class DetectUnusedImportsVisitor(MutableList<Declaration> result)
             remove(nodes.getAbstraction(d));
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseType that) {
         super.visit(that);
         remove(nodes.getAbstraction(that.declarationModel));
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MemberLiteral that) {
         super.visit(that);
         if (!that.type exists) {

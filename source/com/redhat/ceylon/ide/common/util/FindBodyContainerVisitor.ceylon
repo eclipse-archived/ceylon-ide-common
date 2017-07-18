@@ -3,54 +3,64 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindBodyContainerVisitor(Node node) extends Visitor() {
     
     shared variable Tree.Declaration? declaration = null;
     variable Tree.Declaration? currentDeclaration = null;
-    
+
+    overloaded
     shared actual void visit(Tree.ObjectDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeGetterDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeSetterDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MethodDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Constructor that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ClassDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;
         super.visit(that);
         currentDeclaration = d;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.InterfaceDefinition that) {
         Tree.Declaration? d = currentDeclaration;
         currentDeclaration = that;

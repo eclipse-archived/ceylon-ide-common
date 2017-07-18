@@ -52,7 +52,8 @@ import java.lang {
         nativeString
     },
     JString=String,
-    ObjectArray
+    ObjectArray,
+    overloaded
 }
 import java.util {
     Map,
@@ -1821,6 +1822,7 @@ class FindScopeVisitor(Node node) extends Visitor() {
 
     shared Scope? scope => myScope else node.scope;
 
+    overloaded
     shared actual void visit(Tree.Declaration that) {
         super.visit(that);
 
@@ -1833,6 +1835,7 @@ class FindScopeVisitor(Node node) extends Visitor() {
         }
     }
 
+    overloaded
     shared actual void visit(Tree.DocLink that) {
         super.visit(that);
 

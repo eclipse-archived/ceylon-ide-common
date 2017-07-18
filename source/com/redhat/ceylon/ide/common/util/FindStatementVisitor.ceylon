@@ -3,6 +3,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import java.lang {
+    overloaded
+}
 
 class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     
@@ -12,13 +15,15 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     shared variable Tree.Statement? statement = null;
     variable Tree.Statement? currentStatement = null;
 
+    overloaded
     shared actual void visit(Tree.Parameter that) {
         Boolean tmp = inParameter;
         inParameter = true;
         super.visit(that);
         inParameter = tmp; 
     }
-    
+
+    overloaded
     shared actual void visit(Tree.IfStatement that) {
         if (!toplevel) {
             currentStatement = that;
@@ -29,7 +34,8 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
         }
         that.elseClause?.visit(this);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ForStatement that) {
         if (!toplevel) {
             currentStatement = that;
@@ -42,7 +48,8 @@ class FindStatementVisitor(Node term, Boolean toplevel) extends Visitor() {
     }
     
     //TODO: same thing for SwitchStatement and TryStatement!!
-    
+
+    overloaded
     shared actual void visit(Tree.Statement that) {
         if ((!toplevel || currentlyToplevel) && !inParameter) {
             if (! (that is Tree.Variable ||

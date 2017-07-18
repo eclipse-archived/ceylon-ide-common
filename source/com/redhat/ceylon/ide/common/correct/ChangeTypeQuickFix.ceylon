@@ -27,6 +27,9 @@ import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
     ClassOrInterface
 }
+import java.lang {
+    overloaded
+}
 
 Tree.Term? getTerm(QuickFixData data) {
     value node = data.node;
@@ -52,7 +55,8 @@ shared object changeTypeQuickFix {
             class ArgumentListVisitor() extends Visitor() {
                 shared variable Declaration? declaration = null;
                 shared variable Tree.TypeArgumentList? typeArgs = null;
-                
+
+                overloaded
                 shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                     super.visit(that);
                     value args = that.typeArguments;
@@ -64,7 +68,8 @@ shared object changeTypeQuickFix {
                         }
                     }
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.SimpleType that) {
                     super.visit(that);
 

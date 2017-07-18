@@ -16,6 +16,9 @@ import com.redhat.ceylon.ide.common.platform {
 import org.antlr.runtime {
     CommonToken
 }
+import java.lang {
+    overloaded
+}
 
 shared object operatorQuickFix {
  
@@ -192,14 +195,16 @@ shared object operatorQuickFix {
             object findInvocationVisitor extends Visitor() {
                 variable Tree.InvocationExpression? current = null;
                 shared variable Tree.InvocationExpression? result = null;
-                
+
+                overloaded
                 shared actual void visit(Tree.InvocationExpression that) {
                     value old = current;
                     current = that;
                     super.visit(that);
                     current = old;
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.ArgumentList that) {
                     if (argList == that) {
                         result = current;

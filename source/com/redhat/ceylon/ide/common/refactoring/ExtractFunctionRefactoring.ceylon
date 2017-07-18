@@ -56,6 +56,9 @@ import org.antlr.runtime {
     CommonToken,
     Token
 }
+import java.lang {
+    overloaded
+}
 
 shared ExtractFunctionRefactoring?
 createExtractFunctionRefactoring(
@@ -210,9 +213,11 @@ shared class ExtractFunctionRefactoring(
     
     class CheckExpressionVisitor() extends Visitor() {
         shared variable String? problem = null;
-        
+
+        overloaded
         shared actual void visit(Tree.Body that) {}
-        
+
+        overloaded
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
             problem = "an assignment";
@@ -224,7 +229,8 @@ shared class ExtractFunctionRefactoring(
             extends Visitor() {
         
         variable shared String? problem = null;
-        
+
+        overloaded
         shared actual void visit(Tree.Body that) {
             if (that == scope) {
                 super.visit(that);
@@ -236,7 +242,8 @@ shared class ExtractFunctionRefactoring(
         
         function notResultRef(Declaration d)
                 => !d in results.map(Entry.item);
-        
+
+        overloaded
         shared actual void visit(Tree.Declaration that) {
             super.visit(that);
             if (notResult(that)) {
@@ -248,7 +255,8 @@ shared class ExtractFunctionRefactoring(
                 }
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.SpecifierStatement that) {
             super.visit(that);
             if (notResult(that), 
@@ -260,7 +268,8 @@ shared class ExtractFunctionRefactoring(
                 problem = "a specification statement for a declaration used or defined elsewhere";
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.AssignmentOp that) {
             super.visit(that);
             if (notResult(that), 
@@ -272,7 +281,8 @@ shared class ExtractFunctionRefactoring(
                 problem = "an assignment to a declaration used or defined elsewhere";
             }
         }
-        
+
+        overloaded
         shared actual void visit(Tree.Directive that) {
             super.visit(that);
             problem = "a directive statement";
@@ -1075,12 +1085,14 @@ shared class ExtractFunctionRefactoring(
             case (is Tree.Term) {
                 variable value problem = false;
                 node.visit(object extends Visitor() {
-                        shared actual void visit(Tree.Body that) {}
-                        shared actual void visit(Tree.AssignmentOp that) {
+                    overloaded
+                    shared actual void visit(Tree.Body that) {}
+                    overloaded
+                    shared actual void visit(Tree.AssignmentOp that) {
                             problem = true;
                             super.visit(that);
                         }
-                    });
+                });
                 if (problem) {
                     return true;
                 }
@@ -1148,13 +1160,15 @@ shared class FindResultVisitor(Tree.Body scope,
     function isDefinedLocally(Declaration dec)
             => !ModelUtil.contains(dec.scope, 
                     scope.scope.container);
-    
+
+    overloaded
     shared actual void visit(Tree.Body that) {
         if (that is Tree.Block) {
             super.visit(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         value dec = that.declarationModel;
@@ -1167,7 +1181,8 @@ shared class FindResultVisitor(Tree.Body scope,
     }
     
     //TODO: Tree.AnyMethod!!!!
-    
+
+    overloaded
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression leftTerm
@@ -1179,7 +1194,8 @@ shared class FindResultVisitor(Tree.Body scope,
             all.add(dec);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
         if (is Tree.StaticMemberOrTypeExpression term
@@ -1204,6 +1220,7 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
     for (s in scope.statements) {
         if (!s in statements) {
             s.visit(object extends Visitor() {
+                overloaded
                 shared actual void visit(Tree.MemberOrTypeExpression that) {
                     super.visit(that);
                     if (exists dec = that.declaration,
@@ -1211,6 +1228,7 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
                         refs++;
                     }
                 }
+                overloaded
                 shared actual void visit(Tree.Declaration that) {
                     super.visit(that);
                     if (exists dec = that.declarationModel,
@@ -1218,6 +1236,7 @@ Boolean hasOuterRefs(Declaration d, Tree.Body? scope,
                         refs++;
                     }
                 }
+                overloaded
                 shared actual void visit(Tree.Type that) {
                     super.visit(that);
                     if (exists type = that.typeModel,
@@ -1238,7 +1257,9 @@ shared class FindReturnsVisitor()
     value returnsList = ArrayList<Tree.Return>();
     shared Tree.Return[] returns 
             => returnsList.sequence();
+    overloaded
     shared actual void visit(Tree.Declaration that) {}
+    overloaded
     shared actual void visit(Tree.Return that) {
         super.visit(that);
         if (that.expression exists) {
@@ -1265,14 +1286,16 @@ class FindLocalReferencesVisitor(Scope scope, Scope targetScope)
     
     shared List<Tree.BaseMemberExpression> localReferences => results;
     shared List<Tree.This> localThisReferences => thisResults;
-    
+
+    overloaded
     shared actual void visit(Tree.This that) {
         super.visit(that);
         if (!ModelUtil.contains(that.declarationModel, targetScope)) {
             thisResults.add(that);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseMemberExpression that) {
         super.visit(that);
         if (exists currentDec = that.declaration) {

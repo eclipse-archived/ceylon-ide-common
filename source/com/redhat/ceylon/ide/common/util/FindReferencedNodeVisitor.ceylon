@@ -8,6 +8,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Function
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visitor() {
     
@@ -32,7 +35,8 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
             return false;
         }
     }
-    
+
+    overloaded
     actual shared void visit(Tree.ModuleDescriptor that) {
         super.visit(that);
         Referenceable? m = that.importPath.model;
@@ -40,7 +44,8 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
             declarationNode = that;
         }
     }
-    
+
+    overloaded
     actual shared void visit(Tree.PackageDescriptor that) {
         super.visit(that);
         Referenceable? p = that.importPath.model;
@@ -48,49 +53,56 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
             declarationNode = that;
         }
     }
-    
+
+    overloaded
     actual shared void visit(Tree.Declaration that) {
         if (isDeclaration(that.declarationModel)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.Constructor that) {
         if (isDeclaration(that.constructor)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.Enumerated that) {
         if (isDeclaration(that.enumerated)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.AttributeSetterDefinition that) {
         if (isDeclaration(that.declarationModel?.parameter?.model)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.ObjectDefinition that) {
         if (isDeclaration(that.anonymousClass)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.ObjectExpression that) {
         if (isDeclaration(that.anonymousClass)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.SpecifierStatement that) {
         if (that.refinement) {
             if (isDeclaration(that.declaration)) {
@@ -99,14 +111,16 @@ shared class FindReferencedNodeVisitor(Referenceable? declaration) extends Visit
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.FunctionArgument that) {
         if (isDeclaration(that.declarationModel)) {
             declarationNode = that;
         }
         super.visit(that);
     }
-    
+
+    overloaded
     actual shared void visit(Tree.InitializerParameter that) {
         if (isDeclaration(that.parameterModel?.model)) {
             declarationNode = that;

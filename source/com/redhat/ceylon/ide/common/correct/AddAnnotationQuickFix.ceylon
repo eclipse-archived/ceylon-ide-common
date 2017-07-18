@@ -54,6 +54,9 @@ import java.util {
 import org.antlr.runtime {
     CommonToken
 }
+import java.lang {
+    overloaded
+}
 
 shared object addAnnotationQuickFix {
     
@@ -97,7 +100,8 @@ shared object addAnnotationQuickFix {
                     moduleImportUtil.appendNative(annotation, mod.nativeBackends);
                     return annotation.string;
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.ModuleDescriptor that) {
                     assert (is Module mod = node.model);
                     value change = platformServices.document.createTextChange {
@@ -118,7 +122,8 @@ shared object addAnnotationQuickFix {
                     
                     super.visit(that);
                 }
-                
+
+                overloaded
                 shared actual void visit(Tree.ImportModule that) {
                     if (that.importPath == node) {
                         assert (is Module mod = that.importPath.model);

@@ -3,6 +3,9 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree
 }
+import java.lang {
+    overloaded
+}
 
 class FindArgumentContextVisitor(Node term) extends Visitor() {
     
@@ -13,27 +16,31 @@ class FindArgumentContextVisitor(Node term) extends Visitor() {
     variable Tree.InvocationExpression? currentInvocation = null;
     
     alias InvocationArgument => Tree.NamedArgument|Tree.PositionalArgument;
-    
+
+    overloaded
     shared actual void visit(Tree.NamedArgument that) {
         InvocationArgument? myOuter = currentArgument;
         currentArgument = that;
         super.visit(that);
         currentArgument = myOuter;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PositionalArgument that) {
         InvocationArgument? myOuter = currentArgument;
         currentArgument = that;
         super.visit(that);
         currentArgument = myOuter;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SequencedArgument that) {
         currentSequencedArgument = that;
         super.visit(that);
         currentSequencedArgument = null;
     }
-    
+
+    overloaded
     shared actual void visit(Tree.InvocationExpression that) {
         Tree.InvocationExpression? myOuter = currentInvocation;
         Tree.SequencedArgument? myOuterSequencedArgument = currentSequencedArgument;

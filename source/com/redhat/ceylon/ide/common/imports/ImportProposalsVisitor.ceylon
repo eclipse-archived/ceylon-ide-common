@@ -10,11 +10,15 @@ import com.redhat.ceylon.compiler.typechecker.tree {
 import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
+import java.lang {
+    overloaded
+}
 
 class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> proposals,
         Declaration? chooseDeclaration(List<Declaration> decls))
         extends Visitor() {
 
+    overloaded
     shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
         super.visit(that);
         if (!that.declaration exists) {
@@ -22,7 +26,8 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
             addProposal(cu, proposals, name);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.BaseType that) {
         super.visit(that);
         if (!that.declarationModel exists) {

@@ -22,6 +22,9 @@ import com.redhat.ceylon.model.typechecker.model {
 import java.util {
     JSet=Set
 }
+import java.lang {
+    overloaded
+}
 
 shared class FindAssignmentsVisitor extends Visitor {
     
@@ -71,7 +74,8 @@ shared class FindAssignmentsVisitor extends Visitor {
     Boolean isTermReference(Tree.Term lhs) 
             => if (is Tree.MemberOrTypeExpression lhs) 
             then isReference(lhs.declaration) else false;
-    
+
+    overloaded
     shared actual void visit(Tree.TypeParameterDeclaration that) {
         super.visit(that);
         if (that.typeSpecifier exists) {
@@ -80,7 +84,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.TypeAliasDeclaration that) {
         super.visit(that);
         if (that.typeSpecifier exists) {
@@ -89,7 +94,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.ClassDeclaration that) {
         super.visit(that);
         if (that.classSpecifier exists) {
@@ -98,7 +104,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.InterfaceDeclaration that) {
         super.visit(that);
         if (that.typeSpecifier exists) {
@@ -107,7 +114,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SpecifierStatement that) {
         super.visit(that);
         variable value lhs = that.baseMemberExpression;
@@ -119,7 +127,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(that.specifierExpression);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.InitializerParameter that) {
         super.visit(that);
         if (that.specifierExpression exists) {
@@ -128,7 +137,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             }
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AssignmentOp that) {
         super.visit(that);
         value lhs = that.leftTerm;
@@ -136,7 +146,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(that.rightTerm);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PostfixOperatorExpression that) {
         super.visit(that);
         value lhs = that.term;
@@ -144,7 +155,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(that.term);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PrefixOperatorExpression that) {
         super.visit(that);
         value lhs = that.term;
@@ -152,7 +164,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(that.term);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.AttributeDeclaration that) {
         super.visit(that);
         if (exists sie = that.specifierOrInitializerExpression, 
@@ -160,7 +173,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(sie);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.MethodDeclaration that) {
         super.visit(that);
         if (exists se = that.specifierExpression, 
@@ -168,7 +182,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(se);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Variable that) {
         super.visit(that);
         if (exists se = that.specifierExpression, 
@@ -176,7 +191,8 @@ shared class FindAssignmentsVisitor extends Visitor {
             nodes.add(se);
         }
     }
-    
+
+    overloaded
     shared actual void visit(Tree.NamedArgument that) {
         if (isParameterReference(that.parameter)) {
             if (is Tree.SpecifiedArgument that) {
@@ -189,7 +205,8 @@ shared class FindAssignmentsVisitor extends Visitor {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.PositionalArgument that) {
         if (isParameterReference(that.parameter)) {
             nodes.add(that);
@@ -197,7 +214,8 @@ shared class FindAssignmentsVisitor extends Visitor {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SequencedArgument that) {
         if (isParameterReference(that.parameter)) {
             nodes.add(that);
@@ -205,7 +223,8 @@ shared class FindAssignmentsVisitor extends Visitor {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         value typeArguments = that.typeArguments;
         if (is Tree.TypeArgumentList typeArguments, 
@@ -224,7 +243,8 @@ shared class FindAssignmentsVisitor extends Visitor {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.SimpleType that) {
         if (exists typeArguments = that.typeArgumentList,
             exists value dec = that.declarationModel) {
@@ -241,7 +261,8 @@ shared class FindAssignmentsVisitor extends Visitor {
         
         super.visit(that);
     }
-    
+
+    overloaded
     shared actual void visit(Tree.Return that) {
         if (isReference(that.declaration)) {
             nodes.add(that);
