@@ -125,15 +125,20 @@ import org.xml.sax {
 }
 
 shared final class ProjectState
-        of missing | parsing | parsed | typechecking | typechecked | compiled
+        of missing
+         | parsing
+         | parsed
+         | typechecking
+         | typechecked
+         | compiled
         satisfies Comparable<ProjectState> {
     Integer ordinal;
-    shared new missing {ordinal=0;}
-    shared new parsing {ordinal=1;}
-    shared new parsed {ordinal=2;}
-    shared new typechecking {ordinal=3;}
-    shared new typechecked {ordinal=4;}
-    shared new compiled {ordinal=5;}
+    shared new missing { ordinal=0; }
+    shared new parsing { ordinal=1; }
+    shared new parsed { ordinal=2; }
+    shared new typechecking { ordinal=3; }
+    shared new typechecked { ordinal=4; }
+    shared new compiled { ordinal=5; }
     compare(ProjectState other) =>
             ordinal <=> other.ordinal;
     equals(Object that) =>

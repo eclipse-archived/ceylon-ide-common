@@ -4,11 +4,10 @@ import com.redhat.ceylon.ide.common.vfs {
 
 shared final class ResourceChangeType 
         of fileContentChange 
-        | fileAddition
-        | fileRemoval
-        | folderAddition
-        | folderRemoval
-{
+         | fileAddition
+         | fileRemoval
+         | folderAddition
+         | folderRemoval {
     shared new fileContentChange {}
     shared new fileAddition {}
     shared new fileRemoval {}

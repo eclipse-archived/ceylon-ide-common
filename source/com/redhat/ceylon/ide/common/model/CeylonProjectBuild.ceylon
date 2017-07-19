@@ -97,12 +97,14 @@ import net.lingala.zip4j.exception {
 }
 
 shared final class Severity
-        of info | warning | error
+        of info
+         | warning
+         | error
         satisfies Comparable<Severity> {
     Integer ordinal;
-    shared new info {ordinal=0;}
-    shared new warning {ordinal=1;}
-    shared new error {ordinal=2;}
+    shared new info { ordinal=0; }
+    shared new warning { ordinal=1; }
+    shared new error { ordinal=2; }
     
     compare(Severity other) => 
             ordinal <=> other.ordinal;

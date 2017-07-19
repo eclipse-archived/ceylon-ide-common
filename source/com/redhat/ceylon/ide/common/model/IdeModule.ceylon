@@ -112,21 +112,21 @@ import org.antlr.runtime {
 }
 
 shared class ModuleType
-        of _PROJECT_MODULE
-         | _CEYLON_SOURCE_ARCHIVE
-         | _CEYLON_BINARY_ARCHIVE
-         | _JAVA_BINARY_ARCHIVE
-         | _NPM_MODULE
-         | _SDK_MODULE
-         | _UNKNOWN {
+        of projectModule
+         | ceylonSourceArchive
+         | ceylonBinaryArchive
+         | javaBinaryArchive
+         | npmModule
+         | javaSdkModule
+         | unknown {
     shared actual String string;
-    shared new _PROJECT_MODULE { string = "PROJECT_MODULE"; }
-    shared new _CEYLON_SOURCE_ARCHIVE { string = "CEYLON_SOURCE_ARCHIVE"; }
-    shared new _CEYLON_BINARY_ARCHIVE { string = "CEYLON_BINARY_ARCHIVE"; }
-    shared new _JAVA_BINARY_ARCHIVE { string = "JAVA_BINARY_ARCHIVE"; }
-    shared new _SDK_MODULE { string = "SDK_MODULE"; }
-    shared new _NPM_MODULE { string = "NPM_MODULE"; }
-    shared new _UNKNOWN { string = "UNKNOWN"; }
+    shared new projectModule { string = "PROJECT_MODULE"; }
+    shared new ceylonSourceArchive { string = "CEYLON_SOURCE_ARCHIVE"; }
+    shared new ceylonBinaryArchive { string = "CEYLON_BINARY_ARCHIVE"; }
+    shared new javaBinaryArchive { string = "JAVA_BINARY_ARCHIVE"; }
+    shared new javaSdkModule { string = "SDK_MODULE"; }
+    shared new npmModule { string = "NPM_MODULE"; }
+    shared new unknown { string = "UNKNOWN"; }
 }
 
 shared abstract class BaseIdeModule()
@@ -223,8 +223,8 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     variable String _repositoryDisplayString = "";
     variable String? _namespace = null;
     variable File? _artifact = null;
-    variable WeakReference<ExternalModulePhasedUnits>? sourceModulePhasedUnits=null;
-    variable BinaryPhasedUnits? binaryModulePhasedUnits=null;
+    variable WeakReference<ExternalModulePhasedUnits>? sourceModulePhasedUnits = null;
+    variable BinaryPhasedUnits? binaryModulePhasedUnits = null;
     variable MutableList<String> sourceRelativePaths = ArrayList<String>();
     variable Map<String, String> _classesToSources = emptyMap;
     variable Map<String, String> javaImplFilesToCeylonDeclFiles = HashMap<String, String>();
@@ -243,9 +243,9 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     shared formal actual IdeModuleSourceMapper<NativeProject, NativeResource, NativeFolder, NativeFile> moduleSourceMapper;
     
     shared actual Boolean isProjectModule => 
-            equalsWithNulls(ModuleType._PROJECT_MODULE, _moduleType);
+            equalsWithNulls(ModuleType.projectModule, _moduleType);
     assign isProjectModule =>
-        _moduleType = ModuleType._PROJECT_MODULE;
+        _moduleType = ModuleType.projectModule;
     
     isDefaultModule => 
             this == moduleManager.modules.defaultModule;
@@ -257,13 +257,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                 if (! _moduleType exists) {
                     if (JDKUtils.isJDKModule(nameAsString)
                      || JDKUtils.isOracleJDKModule(nameAsString)) {
-                        _moduleType = ModuleType._SDK_MODULE;
+                        _moduleType = ModuleType.javaSdkModule;
                     }
                 }
             }
         };
         return if (exists existingModuleType = _moduleType)
-        then ModuleType._SDK_MODULE == existingModuleType
+        then ModuleType.javaSdkModule == existingModuleType
         else false;
     }
     
@@ -271,13 +271,13 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
             isCeylonBinaryArchive || isSourceArchive;
     
     isJavaBinaryArchive => 
-            equalsWithNulls(ModuleType._JAVA_BINARY_ARCHIVE, _moduleType);
+            equalsWithNulls(ModuleType.javaBinaryArchive, _moduleType);
     
     isCeylonBinaryArchive => 
-            equalsWithNulls(ModuleType._CEYLON_BINARY_ARCHIVE, _moduleType);
+            equalsWithNulls(ModuleType.ceylonBinaryArchive, _moduleType);
     
     isSourceArchive => 
-            equalsWithNulls(ModuleType._CEYLON_SOURCE_ARCHIVE, _moduleType);
+            equalsWithNulls(ModuleType.ceylonSourceArchive, _moduleType);
     
     isUnresolved => !artifact exists && !available;
     
@@ -403,16 +403,16 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                     _repositoryDisplayString = Constants.repoUrlCeylon;
                 }
                 if (existingArtifact.name.endsWith(ArtifactContext.src)) {
-                    _moduleType = ModuleType._CEYLON_SOURCE_ARCHIVE;
+                    _moduleType = ModuleType.ceylonSourceArchive;
                 }
                 else if (existingArtifact.name.endsWith(ArtifactContext.car)) {
-                    _moduleType = ModuleType._CEYLON_BINARY_ARCHIVE;
+                    _moduleType = ModuleType.ceylonBinaryArchive;
                 }
                 else if (existingArtifact.name.endsWith(ArtifactContext.jar)) {
-                    _moduleType = ModuleType._JAVA_BINARY_ARCHIVE;
+                    _moduleType = ModuleType.javaBinaryArchive;
                 }
                 else if (equalsWithNulls("npm", artifactResult.namespace())) {
-                    _moduleType = ModuleType._NPM_MODULE;
+                    _moduleType = ModuleType.npmModule;
                     assert (is AbstractRepository repository = artifactResult.repository());
                     if (is NpmContentStore contentStore = repository.root.getService(`ContentStore`)) {
                         value absoluteNpmPath = artifactResult.artifact().absolutePath;
@@ -422,10 +422,15 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                                 npmPath = relativeNpmPath;
                                 variable String pkgName = nameAsString;
                                 if ('-' in pkgName.rest) {
-                                    pkgName = pkgName.replace("-", ".");
+                                    pkgName = pkgName.replace("-", ".").replace(":", ".");
                                 }
                                 value pkg = NpmPackage(this_, pkgName);
-                                object pkgUnit extends IdeUnit.init(artifactResult.artifact().name, relativeNpmPath, absoluteNpmPath, pkg) {
+                                object pkgUnit
+                                        extends IdeUnit.init(
+                                                    artifactResult.artifact().name,
+                                                    relativeNpmPath,
+                                                    absoluteNpmPath,
+                                                    pkg) {
                                     sourceFileName = null;
                                     sourceFullPath = null;
                                     sourceRelativePath = null;
@@ -541,7 +546,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     }
     
     shared actual Package? getPackage(variable String name) {
-        if (! equalsWithNulls(_moduleType, ModuleType._NPM_MODULE)) {
+        if (! equalsWithNulls(_moduleType, ModuleType.npmModule)) {
             return super.getPackage(name);
         } else {
             return getDirectPackage(name);
