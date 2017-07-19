@@ -121,7 +121,7 @@ shared interface DocGenerator {
             exists lastCompilationUnit = cmp.lastCompilationUnit,
             exists typechecker = cmp.typeChecker) {
             if (target.startsWith("doc:ceylon.language/")
-             && target.endsWith(":ceylon.language:Nothing")) {
+             && target.endsWith("/ceylon.language/Nothing")) {
                 return lastCompilationUnit.unit.nothingDeclaration;
             }
             return getLinkedModelInternal(target, typechecker);
@@ -152,48 +152,43 @@ shared interface DocGenerator {
     }
 
     Referenceable? getLinkedModelInternal(String link, TypeChecker typeChecker) {
-        value bits = link.split(':'.equals).sequence();
-        
-        if (exists moduleNameAndVersion = bits[1],
-            exists loc = moduleNameAndVersion.firstOccurrence('/')) {
-            
-            String moduleName 
-                    = moduleNameAndVersion[...loc-1];
-            String moduleVersion
-                    = moduleNameAndVersion[loc+1...];
-            
-            Module linkedModule;
-            for (candidate in typeChecker.context.modules.listOfModules) {
-                if (candidate.nameAsString == moduleName
-                 && candidate.version == moduleVersion) {
-                    linkedModule = candidate;
-                    break;
+        value [protocol, *maybeAddress]
+                = link.split { ':'.equals; limit=2; }.sequence();
+        if (exists address = maybeAddress[0]) {
+            value bits = address.split('/'.equals).sequence();
+            value moduleName = bits[0];
+            value moduleVersion = bits[1];
+            if (exists moduleVersion) {
+                Module linkedModule;
+                for (candidate in typeChecker.context.modules.listOfModules) {
+                    if (candidate.nameAsString == moduleName &&
+                        candidate.version == moduleVersion) {
+                        linkedModule = candidate;
+                        break;
+                    }
+                } else {
+                    return null;
                 }
-            }
-            else {
-                return null;
-            }
 
-            if (exists packageName = bits[2],
-                exists linkedPackage
-                    = linkedModule.getPackage(packageName)) {
-                variable Referenceable target = linkedPackage;
-                for (bit in bits.skip(3)) {
-                    if (exists scope = targetScope(target),
-                        exists member = scope.getDirectMember(bit, null, false)) {
-                        target = member;
+                if (exists packageName = bits[2],
+                    exists linkedPackage
+                            = linkedModule.getPackage(packageName)) {
+                    variable Referenceable target = linkedPackage;
+                    for (bit in bits[3...]) {
+                        if (exists scope = targetScope(target),
+                            exists member = scope.getDirectMember(bit, null, false)) {
+                            target = member;
+                        } else {
+                            return null;
+                        }
                     }
-                    else {
-                        return null;
-                    }
+                    return target;
+                } else {
+                    return linkedModule;
                 }
-                return target;
-            }
-            else {
-                return linkedModule;
             }
         }
-        
+
         return null;
 
     }
