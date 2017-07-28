@@ -1,5 +1,4 @@
 import ceylon.collection {
-    linked,
     HashMap,
     HashSet,
     ArrayList,

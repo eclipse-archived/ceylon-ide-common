@@ -197,35 +197,32 @@ shared String getRefinementTextFor(Declaration d, Reference? pr, Unit unit,
 
 void appendConstraints(Declaration d, Reference? pr, Unit unit, String indent,
     Boolean containsNewline, StringBuilder result) {
-    
-    if (is Generic d) {
-        value generic = d;
-        for (tp in generic.typeParameters) {
-            value sts = tp.satisfiedTypes;
-            if (!sts.empty) {
-                result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
-                        .append("given ").append(tp.name).append(" satisfies ");
-                variable Boolean first = true;
-                for (st in sts) {
-                    if (first) {
-                        first = false;
-                    }
-                    else {
-                        result.append("&");
-                    }
-                    Type t;
-                    switch (pr)
-                    case (is Type) {
-                        t = st.substitute(pr);
-                    }
-                    case (is TypedReference) {
-                        t = st.substitute(pr);
-                    }
-                    else {
-                        assert (false);
-                    }
-                    result.append(t.asSourceCodeString(unit));
+
+    for (tp in d.typeParameters) {
+        value sts = tp.satisfiedTypes;
+        if (!sts.empty) {
+            result.append(extraIndent(extraIndent(indent, containsNewline), containsNewline))
+                    .append("given ").append(tp.name).append(" satisfies ");
+            variable value first = true;
+            for (st in sts) {
+                if (first) {
+                    first = false;
                 }
+                else {
+                    result.append("&");
+                }
+                Type t;
+                switch (pr)
+                case (is Type) {
+                    t = st.substitute(pr);
+                }
+                case (is TypedReference) {
+                    t = st.substitute(pr);
+                }
+                else {
+                    assert (false);
+                }
+                result.append(t.asSourceCodeString(unit));
             }
         }
     }
@@ -479,24 +476,22 @@ void appendNamedArgs(Declaration d, Reference pr, Unit unit,
 void appendTypeParameters(Declaration d, StringBuilder result,
     Boolean variances = false) {
     
-    if (is Generic d) {
+    if (d.parameterized) {
         value types = d.typeParameters;
-        if (!types.empty) {
-            result.append("<");
-            for (tp in types) {
-                if (variances) {
-                    if (tp.covariant) {
-                        result.append("out ");
-                    }
-                    if (tp.contravariant) {
-                        result.append("in ");
-                    }
+        result.append("<");
+        for (tp in types) {
+            if (variances) {
+                if (tp.covariant) {
+                    result.append("out ");
                 }
-                result.append(tp.name).append(", ");
+                if (tp.contravariant) {
+                    result.append("in ");
+                }
             }
-            result.deleteTerminal(2);
-            result.append(">");
+            result.append(tp.name).append(", ");
         }
+        result.deleteTerminal(2);
+        result.append(">");
     }
 }
 
@@ -504,53 +499,50 @@ void appendTypeParameters(Declaration d, StringBuilder result,
 shared void appendTypeParametersWithArguments(Declaration d, 
     Reference? pr, Unit unit, StringBuilder result, 
     Boolean variances) {
-    
-    if (is Generic d) {
-        value types = d.typeParameters;
-        
-        if (!types.empty) {
-            result.append("<");
-            
-            { *types }.fold(true)((isFirst, tp) {
-                if (!isFirst) {
-                    result.append(", ");
-                }
-                
-                if (exists arg = if (exists pr) then pr.typeArguments[tp] else null) {
-                    if (is Type pr, variances) {
-                        switch (variance = pr.varianceOverrides[tp])
-                        case (SiteVariance.\iOUT) {
-                            result.append("out ");
-                        }
-                        case (SiteVariance.\iIN) {
-                            result.append("in ");
-                        }
-                        else if (tp.covariant) {
-                            result.append("out ");
-                        }
-                        else if (tp.contravariant) {
-                            result.append("in ");
-                        }
+
+
+    if (d.parameterized) {
+        result.append("<");
+
+        { *d.typeParameters }.fold(true)((isFirst, tp) {
+            if (!isFirst) {
+                result.append(", ");
+            }
+
+            if (exists arg = if (exists pr) then pr.typeArguments[tp] else null) {
+                if (is Type pr, variances) {
+                    switch (variance = pr.varianceOverrides[tp])
+                    case (SiteVariance.\iOUT) {
+                        result.append("out ");
                     }
-                    result.append(arg.asString(unit));
-                }
-                else {
-                    if (variances) {
-                        if (tp.covariant) {
-                            result.append("out ");
-                        }
-                        else if (tp.contravariant) {
-                            result.append("in ");
-                        }
+                    case (SiteVariance.\iIN) {
+                        result.append("in ");
                     }
-                    result.append(tp.name);
+                    else if (tp.covariant) {
+                        result.append("out ");
+                    }
+                    else if (tp.contravariant) {
+                        result.append("in ");
+                    }
                 }
-                
-                return false;
-            });
-            
-            result.append(">");
-        }
+                result.append(arg.asString(unit));
+            }
+            else {
+                if (variances) {
+                    if (tp.covariant) {
+                        result.append("out ");
+                    }
+                    else if (tp.contravariant) {
+                        result.append("in ");
+                    }
+                }
+                result.append(tp.name);
+            }
+
+            return false;
+        });
+
+        result.append(">");
     }
 }
 

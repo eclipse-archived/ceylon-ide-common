@@ -26,8 +26,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Function,
     ClassOrInterface,
     Declaration,
-    Type,
-    Generic
+    Type
 }
 
 import java.lang {
@@ -133,18 +132,17 @@ shared object createTypeParameterQuickFix {
             overloaded
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                if (exists dm = that.declarationModel) {
+                if (exists dm = that.declarationModel,
+                    exists tal = that.typeArgumentList) {
                     value tps = dm.typeParameters;
-                    if (exists tal = that.typeArgumentList) {
-                        value tas = tal.types;
-                        variable value i = 0;
-                        while (i < tas.size()) {
-                            if (tas.get(i) == type) {
-                                result = tps.get(i).satisfiedTypes;
-                            }
-                            
-                            i++;
+                    value tas = tal.types;
+                    variable value i = 0;
+                    while (i < tas.size()) {
+                        if (tas.get(i) == type) {
+                            result = tps.get(i).satisfiedTypes;
                         }
+
+                        i++;
                     }
                 }
             }
@@ -152,18 +150,16 @@ shared object createTypeParameterQuickFix {
             overloaded
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
-                if (is Generic d = that.declaration) {
+                if (exists d = that.declaration,
+                    is Tree.TypeArgumentList tas = that.typeArguments) {
                     value tps = d.typeParameters;
-                    value tas = that.typeArguments;
-                    if (is Tree.TypeArgumentList tas) {
-                        value ts = tas.types;
-                        variable Integer i = 0;
-                        while (i < ts.size()) {
-                            if (ts.get(i) == type) {
-                                result = tps.get(i).satisfiedTypes;
-                            }
-                            i++;
+                    value ts = tas.types;
+                    variable value i = 0;
+                    while (i < ts.size()) {
+                        if (ts.get(i) == type) {
+                            result = tps.get(i).satisfiedTypes;
                         }
+                        i++;
                     }
                 }
             }

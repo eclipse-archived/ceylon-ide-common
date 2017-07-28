@@ -11,7 +11,6 @@ import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.model.typechecker.model {
-    Generic,
     Declaration,
     Parameter,
     FunctionOrValue,
@@ -228,11 +227,10 @@ shared class FindAssignmentsVisitor extends Visitor {
     shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
         value typeArguments = that.typeArguments;
         if (is Tree.TypeArgumentList typeArguments, 
-            is Generic dec = that.declaration) {
+            exists dec = that.declaration) {
             value typeParameters = dec.typeParameters;
-            value tal = typeArguments;
-            value types = tal.types;
-            variable Integer i = 0;
+            value types = typeArguments.types;
+            variable value i = 0;
             while (i < types.size() && i < typeParameters.size()) {
                 if (isReference(typeParameters.get(i))) {
                     nodes.add(types.get(i));

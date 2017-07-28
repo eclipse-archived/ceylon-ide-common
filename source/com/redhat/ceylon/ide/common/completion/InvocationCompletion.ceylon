@@ -28,7 +28,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Scope,
     Functional,
     TypeDeclaration,
-    Generic,
     Unit,
     Class,
     Interface,
@@ -100,31 +99,29 @@ shared interface InvocationCompletion {
         }
 
         //proposal with type args
-        if (is Generic dec) {
-            platformServices.completion.newInvocationCompletion {
-                offset = offset;
-                prefix = prefix;
-                desc = getDescriptionFor2(dwp, unit, true);
-                text = getTextFor(dec, unit);
-                dec = dec;
-                pr = reference;
-                scope = scope;
-                ctx = ctx;
-                includeDefaulted = true;
-                positionalInvocation = false;
-                namedInvocation = false;
-                inheritance 
-                        =  isLocation(ol, OL.upperBound)
-                        || isLocation(ol, OL.\iextends)
-                        || isLocation(ol, OL.\isatisfies);
-                qualified = isMember;
-                qualifyingDec = null;
-            };
-            
-            if (dec.typeParameters.empty) {
-                // don't add another proposal below!
-                return;
-            }
+        platformServices.completion.newInvocationCompletion {
+            offset = offset;
+            prefix = prefix;
+            desc = getDescriptionFor2(dwp, unit, true);
+            text = getTextFor(dec, unit);
+            dec = dec;
+            pr = reference;
+            scope = scope;
+            ctx = ctx;
+            includeDefaulted = true;
+            positionalInvocation = false;
+            namedInvocation = false;
+            inheritance
+                    =  isLocation(ol, OL.upperBound)
+                    || isLocation(ol, OL.\iextends)
+                    || isLocation(ol, OL.\isatisfies);
+            qualified = isMember;
+            qualifyingDec = null;
+        };
+
+        if (!dec.parameterized) {
+            // don't add another proposal below!
+            return;
         }
         
         //proposal without type args
@@ -580,7 +577,7 @@ shared abstract class InvocationCompletionProposal
     }
     
     shared void activeLinkedMode(CommonDocument document, CompletionContext cpc, Cancellable? cancellable=null) {
-        if (is Generic declaration, cpc.options.linkedModeArguments) {
+        if (cpc.options.linkedModeArguments) {
             variable ParameterList? paramList = null;
             if (is Functional fd = declaration,
                 positionalInvocation || namedInvocation) {

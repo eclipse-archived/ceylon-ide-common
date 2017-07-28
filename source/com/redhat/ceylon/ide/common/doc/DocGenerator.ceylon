@@ -61,7 +61,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Reference,
     Type,
     Functional,
-    Generic,
     Parameter,
     ClassOrInterface,
     TypeParameter,
@@ -912,11 +911,8 @@ shared interface DocGenerator {
         Reference? r, StringBuilder builder, Unit unit) {
         
         Reference? pr = r else appliedReference(decl, node);
-        value typeParameters = if (is Generic decl)
-            then decl.typeParameters
-            else Collections.emptyList<TypeParameter>();
 
-        for (tp in typeParameters) {
+        for (tp in decl.typeParameters) {
             value bounds = StringBuilder();
             variable value isFirst = true;
             for (st in tp.satisfiedTypes) {
@@ -946,17 +942,13 @@ shared interface DocGenerator {
     }
 
     JList<Type> getTypeParameters(Declaration dec) {
-        if (is Generic dec) {
+        if (dec.parameterized) {
             value typeParameters = dec.typeParameters;
-            if (typeParameters.empty) {
-                return Collections.emptyList<Type>();
-            } else {
-                value list = ArrayList<Type>();
-                for (p in typeParameters) {
-                    list.add(p.type);
-                }
-                return list;
+            value list = ArrayList<Type>();
+            for (p in typeParameters) {
+                list.add(p.type);
             }
+            return list;
         } else {
             return Collections.emptyList<Type>();
         }

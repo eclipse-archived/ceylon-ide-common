@@ -42,7 +42,6 @@ import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Unit,
     TypeParameter,
-    Generic,
     Referenceable,
     Value,
     Scope,
@@ -1220,9 +1219,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         Map<Declaration,Tree.Expression|Tree.Type> defaultArgs) {
         
         if (exists t = baseType.typeModel,
-            is TypeParameter td = t.declaration,
-            is Generic ta = editorData.declaration) {
-            
+            is TypeParameter td = t.declaration) {
+            value ta = editorData.declaration;
             value index = ta.typeParameters.indexOf(td);
             if (index >= 0) {
                 switch (reference)

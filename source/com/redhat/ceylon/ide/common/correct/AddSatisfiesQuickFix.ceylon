@@ -29,7 +29,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     ClassOrInterface,
     Declaration,
-    Generic,
     Type,
     TypeDeclaration,
     TypeParameter
@@ -331,27 +330,19 @@ shared object addSatisfiesQuickFix {
         object extends Visitor() {
             void determineSatisfiedTypesTypeParams(TypeDeclaration typeParam, Declaration? stDecl, Tree.TypeArguments? args, Node typeParamNode) {
                 if (is Tree.TypeArgumentList args) {
-                    value tal = args;
-                    value stTypeArguments = tal.types;
-                    if (stTypeArguments.contains(typeParamNode), stDecl is Generic) {
-                        variable value i = 0;
-                        while (i < stTypeArguments.size()) {
-                            value type = stTypeArguments.get(i);
-                            if (is Tree.SimpleType type) {
-                                value st = type;
-                                if (exists td = st.declarationModel,
-                                    typeParam.equals(td)) {
-                                    
-                                    assert (is Generic g = stDecl);
-                                    if (exists typeParameters = g.typeParameters,
-                                        typeParameters.size() > i) {
-                                        
-                                        stTypeParams.add(typeParameters.get(i));
-                                    }
+                    value stTypeArguments = args.types;
+                    if (stTypeArguments.contains(typeParamNode),
+                        exists stDecl) {
+                        for (i in 0:stTypeArguments.size()) {
+                            if (is Tree.SimpleType type = stTypeArguments[i],
+                                exists td = type.declarationModel,
+                                typeParam == td) {
+
+                                value typeParameters = stDecl.typeParameters;
+                                if (typeParameters.size() > i) {
+                                    stTypeParams.add(typeParameters.get(i));
                                 }
                             }
-                            
-                            i++;
                         }
                     }
                 }

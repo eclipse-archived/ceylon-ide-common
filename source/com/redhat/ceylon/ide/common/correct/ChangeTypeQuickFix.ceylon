@@ -19,7 +19,6 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     TypeParameter,
     Declaration,
-    Generic,
     IntersectionType,
     Type,
     TypedDeclaration,
@@ -85,11 +84,11 @@ shared object changeTypeQuickFix {
             vis.visit(data.rootNode);
             value std = vis.declaration;
             
-            if (is Generic g = std) {
-                assert(exists tal = vis.typeArgs);
+            if (exists std, std.parameterized) {
+                assert (exists tal = vis.typeArgs);
                 value i = tal.types.indexOf(stn);
-                if (exists tps = g.typeParameters,
-                    tps.size() > i) {
+                value tps = std.typeParameters;
+                if (tps.size() > i) {
                     
                     value stTypeParam = tps.get(i);
                     value sts = stTypeParam.satisfiedTypes;

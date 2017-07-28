@@ -28,7 +28,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Interface,
     Reference,
     Type,
-    Generic,
     Module,
     Value,
     Function,
@@ -114,10 +113,8 @@ shared interface RefinementCompletion {
     Reference refinedProducedReference(Type outerType, 
         Declaration d) {
         value params = JArrayList<Type>();
-        if (is Generic d) {
-            for (tp in d.typeParameters) {
-                params.add(tp.type);
-            }
+        for (tp in d.typeParameters) {
+            params.add(tp.type);
         }
         return d.appliedReference(outerType, params);
     }

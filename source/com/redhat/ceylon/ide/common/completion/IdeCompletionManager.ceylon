@@ -33,7 +33,6 @@ import com.redhat.ceylon.model.typechecker.model {
     },
     Function,
     Reference,
-    Generic,
     TypeParameter,
     FunctionOrValue,
     ClassOrInterface,
@@ -1197,7 +1196,7 @@ shared object completionManager
 
     Reference getRefinedProducedReference(Scope scope, Declaration d) {
         JList<Type> params;
-        if (is Generic d, !d.typeParameters.empty) {
+        if (d.parameterized) {
             params = JArrayList<Type>();
             value typeParameters = d.typeParameters.toArray(emptyTypeParameterArray);
             for (tp in typeParameters) {
