@@ -84,6 +84,9 @@ import java.util {
     ArrayList,
     JList=List
 }
+import com.redhat.ceylon.compiler.typechecker.parser {
+    CeylonLexer
+}
 
 shared abstract class Icon() of annotations {}
 shared object annotations extends Icon() {}
@@ -192,13 +195,24 @@ shared interface DocGenerator {
 
     }
     
+    function isDocAnnotation(Tree.StringLiteral node) {
+        value type = node.token.type;
+        return type==CeylonLexer.astringLiteral
+            || type==CeylonLexer.averbatimString;
+    }
+
     // see getHoverText(CeylonEditor editor, IRegion hoverRegion)
-    shared String? getDocumentation(Tree.CompilationUnit rootNode, 
+    shared String? getDocumentation(Tree.CompilationUnit rootNode,
         Integer offset, IdeComponent cmp, String? selection = null)
             => switch (node = getHoverNode(rootNode, offset))
             case (null) null
             case (is Tree.LocalModifier) getInferredTypeText(node)
-            case (is Tree.Literal) getTermTypeText(node, selection)
+            case (is Tree.StringLiteral)
+                if (isDocAnnotation(node),
+                    exists model = nodes.findDeclaration(rootNode, node)?.declarationModel)
+                then getDocumentationText(model, node, rootNode, cmp)
+                else getTermTypeText(node, selection)
+            else case (is Tree.Literal) getTermTypeText(node, selection)
             else if (exists model = nodes.getReferencedDeclaration(node))
                 then getDocumentationText(model, node, rootNode, cmp)
                 else null;
