@@ -1,5 +1,3 @@
-"Default documentation for module `com.redhat.ceylon.ide.common`."
-
 native("jvm")
 module com.redhat.ceylon.ide.common "1.3.3-SNAPSHOT" {
     shared import java.base "7";
