@@ -341,10 +341,10 @@ shared class DeltaBuilderFactory(
         getChildren(Ast.PackageDescriptor astNode) => [];
     }
 
-    function sameBackend([Ast.AnnotationList, Unit?] oldNode, 
-                         [Ast.AnnotationList, Unit?] newNode)
-            => let (oldNative = getNativeBackend(*oldNode),
-                    newNative = getNativeBackend(*newNode))
+    function sameBackend(Ast.AnnotationList? oldList, Unit? oldUnit,
+                         Ast.AnnotationList? newList, Unit? newUnit)
+            => let (oldNative = getNativeBackend(oldList, oldUnit),
+                    newNative = getNativeBackend(newList, newUnit))
                         oldNative == newNative;
 
     class ModuleDescriptorDeltaBuilder(Ast.ModuleDescriptor oldNode, 
@@ -402,8 +402,8 @@ shared class DeltaBuilderFactory(
                 formatPath(oldNode.importPath.identifiers)
                 != formatPath(newNode.importPath.identifiers),
                 !sameBackend(
-                    [oldNode.annotationList, oldNode.unit],
-                    [newNode.annotationList, newNode.unit])
+                    oldNode.annotationList, oldNode.unit,
+                    newNode.annotationList, newNode.unit)
             }) {
                 changes.add(structuralChange);
                 return;
@@ -457,8 +457,8 @@ shared class DeltaBuilderFactory(
             if (any{
                 isOptional(oldNode) != isOptional(newNode),
                 !sameBackend(
-                    [oldNode.annotationList, oldNode.unit],
-                    [newNode.annotationList, newNode.unit])
+                    oldNode.annotationList, oldNode.unit,
+                    newNode.annotationList, newNode.unit)
             }) {
                 change = structuralChange;
                 return;
@@ -606,7 +606,9 @@ shared class DeltaBuilderFactory(
                                            NodeComparisonListener? nodeComparisonListener)
             of TopLevelDeclarationDeltaBuilder | NestedDeclarationDeltaBuilder
             extends DeltaBuilder<Ast.Declaration, Ast.Statement>(oldNode, newNode) {
-        
+
+        value specialAnnotations = ["shared", "license", "by", "see", "doc"];
+
         shared variable MutableList<NestedDeclarationDelta|SpecifierDelta> childrenDeltas
                 = ArrayList<NestedDeclarationDelta|SpecifierDelta>();
         shared formal void addChange(NestedDeclarationDelta.PossibleChange|TopLevelDeclarationDelta.PossibleChange change);
@@ -759,17 +761,15 @@ shared class DeltaBuilderFactory(
                 assert (is Ast.BaseMemberExpression primary = annot.primary);
                 value identifier = primary.identifier else null;
                 value declaration = identifierToDeclaration(identifier);
-                if (exists declaration) {
-                    return declaration.name;
-                }
-                return TreeUtil.name(identifier);
-            }
+                return if (exists declaration)
+                    then declaration.name
+                    else TreeUtil.name(identifier);         }
 
             Set<String> annotationsAsStringSet(Ast.AnnotationList annotationList)
                     => TreeSet {
-                        compare = (String x, String y) => x<=>y;
+                        compare(String x, String y) => x<=>y;
                         for (annotation in annotationList.annotations)
-                        if (!annotationName(annotation) in ["shared", "license", "by", "see", "doc"])
+                        if (!annotationName(annotation) in specialAnnotations)
                         nodeSigner.sign(annotation)
                     };
 
