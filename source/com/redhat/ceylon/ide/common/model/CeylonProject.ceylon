@@ -759,8 +759,8 @@ given NativeFile satisfies NativeResource {
 
     shared Boolean isCompilable(NativeFile file)
             => isCeylon(file)
-            || (isJava(file) && compileToJava)
-            || (isJavascript(file) && compileToJs);
+            || isJava(file) && compileToJava
+            || isJavascript(file) && compileToJs;
 
     shared default Boolean isCeylon(NativeFile file) =>
             vfsServices.getShortName(file).endsWith(".ceylon");
@@ -1025,8 +1025,7 @@ given NativeFile satisfies NativeResource {
             return existingFile;
         }
         else {
-            SoftReference<FileVirtualFileAlias>? virtualFileRef = virtualFileCache.get(nativeFile);
-            if (exists virtualFile=virtualFileRef?.get()) {
+            if (exists virtualFile=virtualFileCache.get(nativeFile)?.get()) {
                 return virtualFile;
             }
             value virtualFile = vfsServices.createVirtualFile(nativeFile, ideArtifact);
@@ -1037,8 +1036,7 @@ given NativeFile satisfies NativeResource {
 
 
     shared FolderVirtualFileAlias getOrCreateFolderVirtualFile(NativeFolder nativeFolder) {
-        SoftReference<FolderVirtualFileAlias>? virtualFolderRef = virtualFolderCache.get(nativeFolder);
-        if (exists virtualFile=virtualFolderRef?.get()) {
+        if (exists virtualFile=virtualFolderCache.get(nativeFolder)?.get()) {
             return virtualFile;
         }
         value virtualFile = vfsServices.createVirtualFolder(nativeFolder, ideArtifact);
@@ -1053,8 +1051,7 @@ given NativeFile satisfies NativeResource {
             isFileInRootFolder(file, false);
 
     Boolean isFileInRootFolder(NativeFile file, Boolean? sourceRoot=null) {
-        value parentFolder = vfsServices.getParent(file);
-        if (exists parentFolder) {
+        if (exists parentFolder = vfsServices.getParent(file)) {
             return isFolderInRootFolder(parentFolder, sourceRoot);
         }
         return false;
@@ -1077,11 +1074,11 @@ given NativeFile satisfies NativeResource {
         if (!vfsServices.isFolder(resource),
             is NativeFile file=resource) {
             return isSourceFile(file)
-            || isResourceFile(file);
+                || isResourceFile(file);
         }
         else {
-            assert(is NativeFolder folder=resource);
-            return isFolderInRootFolder(folder);
+            assert(is NativeFolder resource);
+            return isFolderInRootFolder(resource);
         }
     }
 
