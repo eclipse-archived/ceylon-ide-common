@@ -59,36 +59,36 @@ import java.lang {
 shared object addSatisfiesQuickFix {
     
     shared void addSatisfiesProposals(QuickFixData data) {
-        Node? node = determineNode(data.node);
-        if (!exists node) {
-            return;
-        }
-        
-        TypeDeclaration? typeDec = determineTypeDeclaration(node);
-        if (!exists typeDec) {
-            return;
-        }
-        
-        value isTypeParam = typeDec is TypeParameter;
-        value missingSatisfiedTypes
-            = let (types = determineMissingSatisfiedTypes(data.rootNode, node, typeDec))
-                if (isTypeParam) then types else types.filter(Type.\iinterface);
-        
-        //TODO: add extends clause if the type is a class 
-        //      which extends Basic
-        
-        if (missingSatisfiedTypes.empty) {
-            return;
-        }
-        
-        value changeText = correctionUtil.asIntersectionTypeString(missingSatisfiedTypes);
-        if (is AnyModifiableSourceFile unit = typeDec.unit, 
-            exists phasedUnit = unit.phasedUnit, 
-            exists declaration 
-                = determineContainer(phasedUnit.compilationUnit, typeDec)) {
-            
-            createProposals(data, typeDec, isTypeParam, changeText, 
-                declaration, node.unit.equals(unit));
+        value node = determineNode(data.node);
+        if (exists typeDec = determineTypeDeclaration(node)) {
+
+            value isTypeParam = typeDec is TypeParameter;
+            value missingSatisfiedTypes
+                    = let (types = determineMissingSatisfiedTypes(data.rootNode, node, typeDec))
+                    if (isTypeParam) then types else types.filter(Type.\iinterface);
+
+            //TODO: add extends clause if the type is a class
+            //      which extends Basic
+
+            if (missingSatisfiedTypes.empty) {
+                return;
+            }
+
+            value changeText = correctionUtil.asIntersectionTypeString(missingSatisfiedTypes);
+            if (is AnyModifiableSourceFile unit = typeDec.unit,
+                exists phasedUnit = unit.phasedUnit,
+                exists declaration
+                        = determineContainer(phasedUnit.compilationUnit, typeDec)) {
+
+                createProposals {
+                    data = data;
+                    typeDec = typeDec;
+                    isTypeParam = isTypeParam;
+                    changeText = changeText;
+                    declaration = declaration;
+                    sameFile = node.unit==unit;
+                };
+            }
         }
     }
     
@@ -100,27 +100,27 @@ shared object addSatisfiesQuickFix {
             case (is Tree.ClassDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
                     declaration.typeConstraintList,
-                    declaration.classBody.startIndex.intValue(), sameFile);
+                    declaration.classBody, sameFile);
             } case (is Tree.InterfaceDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data, 
                     declaration.typeConstraintList,
-                    declaration.interfaceBody.startIndex.intValue(), sameFile);
+                    declaration.interfaceBody, sameFile);
             } case (is Tree.MethodDefinition) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
                     declaration.typeConstraintList,
-                    declaration.block.startIndex.intValue(), sameFile);
+                    declaration.block, sameFile);
             } case (is Tree.ClassDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
                     declaration.typeConstraintList,
-                    declaration.classSpecifier.startIndex.intValue(), sameFile);
+                    declaration.classSpecifier, sameFile);
             } case (is Tree.InterfaceDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
                     declaration.typeConstraintList,
-                    declaration.typeSpecifier.startIndex.intValue(), sameFile);
+                    declaration.typeSpecifier, sameFile);
             } case (is Tree.MethodDeclaration) {
                 addConstraintSatisfiesProposals(typeDec, changeText, data,
                     declaration.typeConstraintList,
-                    declaration.specifierExpression.startIndex.intValue(), sameFile);
+                    declaration.specifierExpression, sameFile);
             }
             else {}
         } else {
@@ -128,19 +128,17 @@ shared object addSatisfiesQuickFix {
             case (is Tree.ClassDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
                     declaration.satisfiedTypes,
-                    if (!declaration.typeConstraintList exists)
-                    then declaration.classBody.startIndex.intValue()
-                    else declaration.typeConstraintList.startIndex.intValue(), sameFile);
+                    declaration.typeConstraintList else declaration.classBody,
+                    sameFile);
             } case (is Tree.ObjectDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
                     declaration.satisfiedTypes,
-                    declaration.classBody.startIndex.intValue(), sameFile);
+                    declaration.classBody, sameFile);
             } case (is Tree.InterfaceDefinition) {
                 addSatisfiesProposals2(typeDec, changeText, data, 
                     declaration.satisfiedTypes,
-                    if (!declaration.typeConstraintList exists)
-                    then declaration.interfaceBody.startIndex.intValue()
-                    else declaration.typeConstraintList.startIndex.intValue(), sameFile);
+                    declaration.typeConstraintList else declaration.interfaceBody,
+                    sameFile);
             }
             else {}
         }
@@ -148,14 +146,20 @@ shared object addSatisfiesQuickFix {
     
     void addConstraintSatisfiesProposals(TypeDeclaration typeParam, 
         String missingSatisfiedType, QuickFixData data, 
-        TypeConstraintList? typeConstraints, Integer typeContainerBodyStartIndex,
+        TypeConstraintList? typeConstraints, Node? typeContainerBody,
         Boolean sameFile) {
-        
+
+        value typeContainerBodyStartIndex =
+                typeContainerBody?.startIndex?.intValue();
+        if (!exists typeContainerBodyStartIndex) {
+            return;
+        }
+
         variable String? changeText = null;
         variable Integer? changeIndex = null;
         if (exists typeConstraints) {
             for (typeConstraint in typeConstraints.typeConstraints) {
-                if (typeConstraint.declarationModel.equals(typeParam)) {
+                if (typeConstraint.declarationModel==typeParam) {
                     changeText = " & " + missingSatisfiedType;
                     changeIndex = typeConstraint.endIndex.intValue();
                     break;
@@ -177,7 +181,7 @@ shared object addSatisfiesQuickFix {
                 description
                         = "Add generic type constraint '``typeParam.name`` satisfies ``missingSatisfiedType``'";
                 change = tfc;
-                selection = sameFile then DefaultRegion(ci, ct.size) else null;
+                selection = sameFile then DefaultRegion(ci, ct.size);
                 affectsOtherUnits = true;
             };
         }
@@ -185,8 +189,14 @@ shared object addSatisfiesQuickFix {
     
     void addSatisfiesProposals2(TypeDeclaration typeParam, String missingSatisfiedType,
         QuickFixData data, Tree.SatisfiedTypes? typeConstraints, 
-        Integer typeContainerBodyStartIndex, Boolean sameFile) {
-        
+        Node? typeContainerBody, Boolean sameFile) {
+
+        value typeContainerBodyStartIndex =
+                typeContainerBody?.startIndex?.intValue();
+        if (!exists typeContainerBodyStartIndex) {
+            return;
+        }
+
         String changeText;
         Integer changeIndex;
         if (exists typeConstraints) {
@@ -204,50 +214,45 @@ shared object addSatisfiesQuickFix {
             description
                     = "Add inherited interface '``typeParam.name`` satisfies ``missingSatisfiedType``'";
             change = tfc;
-            selection = sameFile then DefaultRegion(changeIndex, changeText.size) else null;
+            selection = sameFile then DefaultRegion(changeIndex, changeText.size);
             affectsOtherUnits = true;
         };
     }
     
-    Node? determineNode(variable Node node) {
-        if (is Tree.SpecifierExpression specifierExpression = node) {
-            node = specifierExpression.expression;
-        }
-        
-        if (is Tree.Expression expression = node) {
-            node = expression.term;
-        }
-        
-        return node;
-    }
+    Node determineNode(Node node)
+            => switch (node)
+            case (is Tree.SpecifierExpression) node.expression
+            case (is Tree.Expression) node.term
+            else node;
     
     TypeDeclaration? determineTypeDeclaration(Node node) {
 
         switch (node)
         case (is Tree.ClassOrInterface
                | Tree.TypeParameterDeclaration) {
-            if (is ClassOrInterface declaration
+            if (is ClassOrInterface declaration //TODO: huh? this looks wrong!!
                     = node.declarationModel) {
                 return declaration;
+            }
+            else {
+                return null;
             }
         } case (is Tree.ObjectDefinition) {
             return node.declarationModel.type.declaration;
         } case (is Tree.BaseType) {
             return node.declarationModel;
         } case (is Tree.Term) {
-            if (exists type = node.typeModel) {
-                return type.declaration;
-            }
+            return node.typeModel?.declaration;
         }
-        else {}
-        
-        return null;
+        else {
+            return null;
+        }
     }
     
     Node? determineContainer(Tree.CompilationUnit rootNode, TypeDeclaration typeDec) {
         value fdv = object extends FindDeclarationNodeVisitor(typeDec) {
             shared actual void visit(Tree.ObjectDefinition that) {
-                if (that.declarationModel.type.declaration.equals(typeDec)) {
+                if (that.declarationModel.type.declaration==typeDec) {
                     declarationNode = that;
                 }
                 
@@ -325,10 +330,12 @@ shared object addSatisfiesQuickFix {
         return missingSatisfiedTypes;
     }
     
-    List<TypeParameter> determineSatisfiedTypesTypeParams(Tree.CompilationUnit rootNode, Node typeParamNode, TypeDeclaration typeDec) {
+    List<TypeParameter> determineSatisfiedTypesTypeParams(Tree.CompilationUnit rootNode,
+            Node typeParamNode, TypeDeclaration typeDec) {
         value stTypeParams = ArrayList<TypeParameter>();
         object extends Visitor() {
-            void determineSatisfiedTypesTypeParams(TypeDeclaration typeParam, Declaration? stDecl, Tree.TypeArguments? args, Node typeParamNode) {
+            void determineSatisfiedTypesTypeParams(TypeDeclaration typeParam,
+                    Declaration? stDecl, Tree.TypeArguments? args, Node typeParamNode) {
                 if (is Tree.TypeArgumentList args) {
                     value stTypeArguments = args.types;
                     if (stTypeArguments.contains(typeParamNode),
@@ -351,13 +358,23 @@ shared object addSatisfiesQuickFix {
             overloaded
             shared actual void visit(Tree.SimpleType that) {
                 super.visit(that);
-                determineSatisfiedTypesTypeParams(typeDec, that.declarationModel, that.typeArgumentList, typeParamNode);
+                determineSatisfiedTypesTypeParams {
+                    typeParam = typeDec;
+                    stDecl = that.declarationModel;
+                    args = that.typeArgumentList;
+                    typeParamNode = typeParamNode;
+                };
             }
 
             overloaded
             shared actual void visit(Tree.StaticMemberOrTypeExpression that) {
                 super.visit(that);
-                determineSatisfiedTypesTypeParams(typeDec, that.declaration, that.typeArguments, typeParamNode);
+                determineSatisfiedTypesTypeParams {
+                    typeParam = typeDec;
+                    stDecl = that.declaration;
+                    args = that.typeArguments;
+                    typeParamNode = typeParamNode;
+                };
             }
             
         }.visit(rootNode);
