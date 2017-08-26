@@ -207,7 +207,7 @@ shared object addParameterQuickFix {
                 return;
             }
             
-            value [len, param] 
+            let ([len, param]
                     = definition {
                 sie = sie;
                 data = data;
@@ -216,7 +216,7 @@ shared object addParameterQuickFix {
                 decNode = decNode;
                 params = params;
                 paramList = paramList;
-            };
+            });
             value offset = paramList.endIndex.intValue() - 1;
             
             change.addEdit(InsertEdit {
@@ -224,12 +224,12 @@ shared object addParameterQuickFix {
                 text = param;
             });
             
-            value [shift, paramType] 
+            let ([shift, paramType]
                     = returnType {
                 decNode = decNode;
                 data = data;
                 change = change;
-            };
+            });
             
             value containerDesc 
                     = if (exists name = containerDec.name) 

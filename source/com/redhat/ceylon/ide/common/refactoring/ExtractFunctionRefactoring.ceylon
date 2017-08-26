@@ -445,12 +445,12 @@ shared class ExtractFunctionRefactoring(
                 = indent 
                 + platformServices.document.defaultIndent 
                 + platformServices.document.defaultIndent;
-        value [typeParams, constraints]
+        let ([typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                };
+                });
         
         value fixedTokens = JArrayList(tokens);
         for (tr in localThisRefs) {
@@ -790,12 +790,12 @@ shared class ExtractFunctionRefactoring(
                 indent +
                 platformServices.document.defaultIndent +
                 platformServices.document.defaultIndent;
-        value [typeParams, constraints]
+        let ([typeParams, constraints]
                 = typeParameters {
                     localTypes = localTypes;
                     extraIndent = extraIndent;
                     unit = unit;
-                };
+                });
         
         if (results.size == 1) {
             assert (exists _->rdec = results.first);
