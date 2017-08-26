@@ -443,7 +443,7 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
                 switch(change)
                 case(is [NativeResourceChange, NativeProject]) {
                     // Change outside project sources or resources
-                    value [nonModelChange, theChangeProject] = change;
+                    let ([nonModelChange, theChangeProject] = change);
                     changeProject = theChangeProject;
                     changeResource = nonModelChange.resource;
                     projectRelativePath = vfsServices.getProjectRelativePath(changeResource, changeProject);

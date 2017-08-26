@@ -113,7 +113,7 @@ shared object createTypeParameterQuickFix {
         if (!exists tuple) {
             return;
         }
-        value [decl, d] = tuple;
+        let ([decl, d] = tuple);
         
         value paramList = getTypeParameters(decl);
         variable String paramDef;

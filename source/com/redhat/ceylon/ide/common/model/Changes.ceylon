@@ -143,7 +143,7 @@ shared interface ChangeAware<NativeProject, NativeResource, NativeFolder, Native
     shared ResourceVirtualFileChange? toProjectChange(ChangeToConvert changeToConvert) { 
         switch(changeToConvert)
         case (is [NativeFileChange,FileVirtualFileAlias?(NativeFile)]) {
-            value [change, convert] = changeToConvert;
+            let ([change, convert] = changeToConvert);
             switch (change)
             case(is NativeFileContentChange) {
                 return ifExists(convert(change.resource), FileVirtualFileContentChange);
@@ -161,7 +161,7 @@ shared interface ChangeAware<NativeProject, NativeResource, NativeFolder, Native
             }
         }
         case (is [NativeFolderChange, FolderVirtualFileAlias?(NativeFolder)]) {
-            value [change, convert] = changeToConvert;
+            let ([change, convert] = changeToConvert);
             switch(change)
             case(is NativeFolderAddition) {
                 return ifExists(convert(change.resource), FolderVirtualFileAddition);

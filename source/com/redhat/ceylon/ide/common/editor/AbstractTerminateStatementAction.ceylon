@@ -59,7 +59,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 = platformServices.document.createTextChange(
                     "Terminate Statement", doc);
         change.initMultiEdit();
-        value [rootNode, tokens] = parse(doc);
+        let ([rootNode, tokens] = parse(doc));
         value lineRegion = doc.getLineRegion(line);
         value lineText = doc.getLineContent(line);
         value startOfCodeInLine 
@@ -87,7 +87,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                 = platformServices.document.createTextChange(
                     "Terminate Statement", doc);
         change.initMultiEdit();
-        value [rootNode, tokens] = parse(doc);
+        let ([rootNode, tokens] = parse(doc));
         value lineRegion = doc.getLineRegion(line);
         value lineText = doc.getLineContent(line);
         value endOfCodeInLine 

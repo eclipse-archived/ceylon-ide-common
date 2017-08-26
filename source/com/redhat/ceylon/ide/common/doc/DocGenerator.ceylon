@@ -154,8 +154,8 @@ shared interface DocGenerator {
     }
 
     Referenceable? getLinkedModelInternal(String link, TypeChecker typeChecker) {
-        value [protocol, *maybeAddress]
-                = link.split { ':'.equals; limit=1; }.sequence();
+        let ([protocol, *maybeAddress]
+                = link.split { ':'.equals; limit=1; }.sequence());
         if (exists address = maybeAddress[0]) {
             value bits = address.split('/'.equals).sequence();
             value moduleName = bits[0];

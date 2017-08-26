@@ -519,7 +519,7 @@ shared class PathTests() {
         assertEquals("0.0", inputs.size, expected.size);
         assertEquals("0.1", inputs.size, expectedNon.size);
         for(usecase in zip(inputs, zipPairs(expected, expectedNon))) {
-            value [path, expectedForPath, expectedNonForPath] = usecase;
+            let ([path, expectedForPath, expectedNonForPath] = usecase);
             variable Path result = path.makeUNC(true);
             assertTrue("1.0.`` path `` (``result``)", result.isUNC);
             assertEquals("1.1.``path``", expectedForPath, result.string);

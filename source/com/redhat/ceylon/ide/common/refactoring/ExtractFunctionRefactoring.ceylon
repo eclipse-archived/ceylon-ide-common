@@ -189,17 +189,15 @@ shared class ExtractFunctionRefactoring(
     //additional initialization for extraction of statements
     //as opposed to extraction of an expression
     
-    value [body, statements]
-            = bodyAndStatements {
+    let ([body, statements] = bodyAndStatements {
         node = node;
         rootNode = rootNode;
-    };
+    });
     
-    value [results, returns]
-            = resultsAndReturns {
+    let ([results, returns] = resultsAndReturns {
         body = body;
         statements = statements;
-    };
+    });
     
     value importProposals 
             = CommonImportProposals(document, rootNode);

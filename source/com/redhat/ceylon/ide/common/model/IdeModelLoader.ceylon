@@ -795,7 +795,7 @@ shared abstract class IdeModelLoader<NativeProject, NativeResource, NativeFolder
                                 isTypeHidden(mod, fqn)
                             } && typeExists(type))
                     .each ((member) {
-                            value [fqn,type] = member;
+                            let ([fqn,type] = member);
                             // Some languages like Scala generate classes like com.foo.package which we would
                             // quote to com.foo.$package, which does not exist, so we'd get a null leading to an NPE
                             // So ATM we just avoid it, presumably we don't support what it does anyways
