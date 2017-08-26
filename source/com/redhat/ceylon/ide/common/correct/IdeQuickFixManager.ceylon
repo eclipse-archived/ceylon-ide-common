@@ -311,6 +311,7 @@ shared object ideQuickFixManager {
         removeUnusedDeclarationQuickFix.addProposal(data, warning);
         addSuppressWarningsQuickFix.addProposal(data);
         syntaxDeprecationQuickFix.addProposal(data, warning);
+        replaceDeprecatedDeclaration.addProposal(data, warning);
     }
 
     shared void addQuickAssists(QuickFixData data, Tree.Statement? statement,

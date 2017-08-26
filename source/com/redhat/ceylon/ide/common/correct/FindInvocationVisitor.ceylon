@@ -17,6 +17,11 @@ shared class FindInvocationVisitor(Node node) extends Visitor() {
     variable Tree.InvocationExpression? current = null;
     shared variable TypedDeclaration? parameter = null;
 
+    shared Tree.InvocationExpression? visitCompilationUnit(Tree.CompilationUnit cu) {
+        cu.visit(this);
+        return result;
+    }
+
     overloaded
     shared actual void visit(Tree.ListedArgument that) {
         if (exists e = that.expression,
