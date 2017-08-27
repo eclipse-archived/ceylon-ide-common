@@ -871,13 +871,9 @@ shared class DeltaBuilderFactory(
                                                 nodesDiffer(oldMethod.typeConstraintList, newMethod.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldMethod.typeParameterList, newMethod.typeParameterList, "typeParameterList"),
                                                 oldMethod.parameterLists.size() != newMethod.parameterLists.size(),
-                                                anyPair {
-                                                    firstIterable => {*oldMethod.parameterLists};
-                                                    secondIterable => {*newMethod.parameterLists};
-                                                    selecting(Ast.ParameterList oldParamList,
-                                                              Ast.ParameterList newParamlist)
-                                                            => nodesDiffer(oldParamList, newParamlist, "parameterLists");
-                                                }
+                                                anyPair({ *oldMethod.parameterLists }, { *newMethod.parameterLists })
+                                                ((oldParamList, newParamlist)
+                                                            => nodesDiffer(oldParamList, newParamlist, "parameterLists"))
                                             };
                                     },
                                     lookForChanges {
@@ -895,13 +891,9 @@ shared class DeltaBuilderFactory(
                                                 Ast.Variable newVariable)
                                             => any {
                                                 oldVariable.parameterLists.size() != oldVariable.parameterLists.size(),
-                                                anyPair {
-                                                    firstIterable => {*oldVariable.parameterLists};
-                                                    secondIterable => {*newVariable.parameterLists};
-                                                    selecting(Ast.ParameterList oldParamList,
-                                                              Ast.ParameterList newParamlist)
-                                                            => nodesDiffer(oldParamList, newParamlist,"parameterLists");
-                                                }
+                                                anyPair({ *oldVariable.parameterLists }, { *newVariable.parameterLists })
+                                                ((oldParamList, newParamlist)
+                                                            => nodesDiffer(oldParamList, newParamlist, "parameterLists"))
                                             };
                                     }
                                 };
