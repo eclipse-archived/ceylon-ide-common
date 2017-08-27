@@ -35,7 +35,8 @@ class TopLevelDeclarationDeltaMockup(changedElementString, changes, childrenDelt
 }
 
 suppressWarnings("expressionTypeNothing")
-class NestedDeclarationDeltaMockup(changedElementString, changes, childrenDeltas) satisfies NestedDeclarationDelta {
+class NestedDeclarationDeltaMockup(changedElementString, changes, childrenDeltas)
+        satisfies NestedDeclarationDelta {
     changedElement => nothing;
     shared actual String changedElementString;
     shared actual {NestedDeclarationDelta.PossibleChange*} changes;
@@ -44,7 +45,8 @@ class NestedDeclarationDeltaMockup(changedElementString, changes, childrenDeltas
 }
 
 suppressWarnings("expressionTypeNothing")
-class RegularCompilationUnitDeltaMockup(changedElementString, changes, childrenDeltas) satisfies RegularCompilationUnitDelta {
+class RegularCompilationUnitDeltaMockup(changedElementString, changes, childrenDeltas)
+        satisfies RegularCompilationUnitDelta {
     changedElement => nothing;
     shared actual String changedElementString;
     shared actual {RegularCompilationUnitDelta.PossibleChange*} changes;
@@ -52,4 +54,7 @@ class RegularCompilationUnitDeltaMockup(changedElementString, changes, childrenD
     shared actual Boolean equals(Object that) => (super of AbstractDelta).equals(that);
 }
 
-alias CompilationUnitDeltaMockup => ModuleDescriptorDeltaMockup | PackageDescriptorDeltaMockup | RegularCompilationUnitDeltaMockup;
+alias CompilationUnitDeltaMockup
+        => ModuleDescriptorDeltaMockup
+        | PackageDescriptorDeltaMockup
+        | RegularCompilationUnitDeltaMockup;
