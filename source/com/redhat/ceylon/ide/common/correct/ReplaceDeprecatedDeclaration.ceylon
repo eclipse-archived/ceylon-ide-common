@@ -12,6 +12,9 @@ import com.redhat.ceylon.ide.common.util {
 import com.redhat.ceylon.model.typechecker.model {
     Function
 }
+import com.redhat.ceylon.compiler.typechecker.tree {
+    Tree
+}
 
 "Replaces usages of deprecated declarations with known alternatives.
  For example:
@@ -40,22 +43,22 @@ shared object replaceDeprecatedDeclaration {
     }
     
     void replaceJavaClass(QuickFixData data, UsageWarning warning) {
-        value node = data.node;
-        if (is Function decl = nodes.getReferencedModel(node),
-            exists newText = replacements.get(decl.qualifiedNameString)
-            /*exists invocation = FindInvocationVisitor(data.node).visitCompilationUnit(data.rootNode),
-            exists model = invocation.typeModel,
-            model.typeArgumentList.size() > 0*/) {
+        if (is Tree.Identifier id = nodes.getIdentifyingNode(data.node),
+            is Function decl = nodes.getReferencedModel(data.node),
+            exists newText = replacements.get(decl.qualifiedNameString)) {
             
             value change = platformServices.document.createTextChange {
-                name = "Replace deprecated function call";
+                name = "Replace Deprecated Function";
                 input = data.phasedUnit;
             };
-            value oldText = nodes.text(data.tokens, node);
-            //value newText = "Types.classForType<``model.typeArgumentList.get(0).asSourceCodeString(node.unit)``>()";
-            
-            change.addEdit(ReplaceEdit(node.startIndex.intValue(), node.distance.intValue(), newText));
-            data.addQuickFix("Replace '``oldText``' with '``newText``'", change);
+            value oldText = nodes.text(data.tokens, id);
+
+            change.addEdit(ReplaceEdit {
+                start = id.startIndex.intValue();
+                length = id.distance.intValue();
+                text = newText;
+            });
+            data.addQuickFix("Replace '``oldText``()' with '``newText``()'", change);
         }
     }
 }

@@ -1,36 +1,25 @@
 import ceylon.collection {
     HashSet
 }
-import ceylon.language.meta.model {
-    Function,
-    Class
-}
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
 }
 import com.redhat.ceylon.ide.common.platform {
     platformServices,
-    InsertEdit,
-    platformUtils
+    InsertEdit
 }
 import com.redhat.ceylon.model.typechecker.model {
     Type,
     Declaration,
     FunctionOrValue,
-    ModelUtil,
     TypeDeclaration
 }
 
 import java.lang {
     Types {
         nativeString
-    },
-    JString=String,
-    JLong=Long,
-    JDouble=Double,
-    JFloat=Float,
-    JInteger=Integer
+    }
 }
 
 "Tries to fix `argument must be assignable to parameter` errors by wrapping the
@@ -94,72 +83,76 @@ shared object wrapExpressionQuickFix {
     void wrapTerm(QuickFixData data, Tree.Term term, Type actualType, Type expectedType) {
         value unit = data.rootNode.unit;
 
-        function findDeclaration(<Function<>|Class<>> wrapper) {
-            value qName = wrapper is Function<>
-            then wrapper.declaration.qualifiedName + "_"
-            else wrapper.declaration.qualifiedName;
-
-            for (imp in data.rootNode.unit.imports) {
-                if (imp.declaration.qualifiedNameString == wrapper.declaration.qualifiedName) {
-                    return imp.declaration;
-                }
-            }
-
-            try {
-                value candidates = unit.\ipackage.\imodule
-                    .getAvailableDeclarations(unit, wrapper.declaration.name, 0, null);
-
-                if (exists dwp = candidates.get(nativeString(qName))
-                    else candidates.get(nativeString(qName.replace("::", ".")))) {
-                    return dwp.declaration;
-                }
-            } catch (e) {
-                if (!platformUtils.isOperationCanceledException(e)) {
-                    throw e;
-                }
-            }
-
-            return null;
+        "Tries to match [[type]] with [[actualType]] and the 
+         [[candidate]] wrapper with [[expectedType]]."
+        function matchTypes(Type type, Type candidate) 
+                => actualType.isExactly(type) 
+                && candidate.isSubtypeOf(expectedType);
+        
+        value javaLang = unit.\ipackage.\imodule.getPackage("java.lang");
+        function javaLangDeclaration(String name) 
+                => if (is TypeDeclaration td = javaLang.getMember(name, null, false)) 
+                then td else unit.nothingDeclaration;
+        
+        if (matchTypes(unit.stringType, unit.javaStringDeclaration.type)) {
+            addToJavaProposal(data, term, unit.javaStringDeclaration, "JString");
+            addToJavaProposal(data, term, javaLangDeclaration("Types"),
+                "Types", "Types.nativeString");
         }
 
-        "Tries to match [[type]] with [[actualType]] and the [[candidate]] wrapper with
-         [[expectedType]]. If both tests match, returns the typechecker [[Declaration]]
-         corresponding to [[candidate]]."
-        function matchTypes(Type type, <Function<>|Class<>> candidate) {
-            if (actualType.isExactly(type),
-                is TypeDeclaration declaration = findDeclaration(candidate),
-                !ModelUtil.intersectionType(expectedType, declaration.type, unit).nothing) {
-
-                return declaration;
-            }
-
-            return null;
+        if (exists int = javaLangDeclaration("Integer"),
+            matchTypes(unit.integerType, int.type)) {
+            addToJavaProposal(data, term, int, "JInteger");
         }
 
-        if (exists jStringDeclaration = matchTypes(unit.stringType, `JString`)) {
-            addProposalInternal(data, term, jStringDeclaration, "Types.nativeString");
-            addProposalInternal(data, term, jStringDeclaration, "JString");
+        if (exists long = javaLangDeclaration("Long"),
+            matchTypes(unit.integerType, long.type)) {
+            addToJavaProposal(data, term, long, "JLong");
         }
 
-        if (exists jIntegerDeclaration = matchTypes(unit.integerType, `JInteger`)) {
-            addProposalInternal(data, term, jIntegerDeclaration, "JInteger");
+        if (exists float = javaLangDeclaration("Float"),
+            matchTypes(unit.floatType, float.type)) {
+            addToJavaProposal(data, term, float, "JFloat");
         }
 
-        if (exists jLongDeclaration = matchTypes(unit.integerType, `JLong`)) {
-            addProposalInternal(data, term, jLongDeclaration, "JLong");
+        if (exists double = javaLangDeclaration("Double"),
+            matchTypes(unit.floatType, double.type)) {
+            addToJavaProposal(data, term, double, "JDouble");
+        }
+        
+        if (exists boolean = javaLangDeclaration("Boolean"),
+            matchTypes(unit.booleanType, boolean.type)) {
+            addToJavaProposal(data, term, boolean, "JBoolean");
         }
 
-        if (exists jFloatDeclaration = matchTypes(unit.floatType, `JFloat`)) {
-            addProposalInternal(data, term, jFloatDeclaration, "JFloat");
+        if (matchTypes(unit.javaStringDeclaration.type, unit.stringType)) {
+            addToCeylonProposal(data, term, "string");
         }
 
-        if (exists jDoubleDeclaration = matchTypes(unit.floatType, `JDouble`)) {
-            addProposalInternal(data, term, jDoubleDeclaration, "JDouble");
+        if (exists long = javaLangDeclaration("Long"),
+            matchTypes(long.type, unit.integerType)) {
+            addToCeylonProposal(data, term, "longValue()");
         }
+        
+        if (exists int = javaLangDeclaration("Integer"),
+            matchTypes(int.type, unit.integerType)) {
+            addToCeylonProposal(data, term, "intValue()");
+        }
+
+        if (exists float = javaLangDeclaration("Float"),
+            matchTypes(float.type, unit.floatType)) {
+            addToCeylonProposal(data, term, "floatValue()");
+        }
+        
+        if (exists double = javaLangDeclaration("Double"),
+            matchTypes(double.type, unit.floatType)) {
+            addToCeylonProposal(data, term, "doubleValue()");
+        }
+        
     }
 
-    void addProposalInternal(QuickFixData data, Tree.Term term, Declaration declaration,
-        String aliasName = declaration.name) {
+    void addToJavaProposal(QuickFixData data, Tree.Term term, Declaration declaration,
+        String aliasName = declaration.name, String? explicitText = null) {
 
         value change = platformServices.document.createTextChange {
             name = "Wrap expression";
@@ -172,23 +165,46 @@ shared object wrapExpressionQuickFix {
 
         importProposals.importDeclaration(decs, declaration, data.rootNode);
 
-        value aliasedDeclarations = decs.empty
-            then emptyMap
-            else map {declaration -> nativeString(aliasName)};
-        value name = decs.empty
-            then unit.getAliasedName(declaration) // already imported
-            else aliasName;
+        Boolean alreadyImported = decs.empty;
 
-        importProposals.applyImportsWithAliases(change, aliasedDeclarations, data.rootNode, data.document);
+        importProposals.applyImportsWithAliases {
+            change = change;
+            declarations
+                = alreadyImported
+                then emptyMap  // already imported
+                else map {declaration -> nativeString(aliasName)};
+            cu = data.rootNode;
+            doc = data.document;
+        };
+
+        value text = explicitText
+            else (alreadyImported
+                then unit.getAliasedName(declaration) // already imported
+                else aliasName);
 
         change.addEdit(InsertEdit {
             start = term.startIndex.intValue();
-            text = name + "(";
+            text = text + "(";
         });
         change.addEdit(InsertEdit {
             start = term.stopIndex.intValue() + 1;
             text = ")";
         });
-        data.addQuickFix("Wrap expression with '``name``()'", change);
+        data.addQuickFix("Wrap expression with '``text``()'", change);
+    }
+    
+    void addToCeylonProposal(QuickFixData data, Tree.Term term, 
+        String memberName) {
+        
+        value change = platformServices.document.createTextChange {
+            name = "Wrap expression";
+            input = data.document;
+        };
+        
+        change.addEdit(InsertEdit {
+            start = term.endIndex.intValue();
+            text = "." + memberName;
+        });
+        data.addQuickFix("Convert expression with '``memberName``'", change);
     }
 }
