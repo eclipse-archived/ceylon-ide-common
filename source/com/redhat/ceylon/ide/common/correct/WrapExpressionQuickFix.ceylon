@@ -126,7 +126,7 @@ shared object wrapExpressionQuickFix {
          [[expectedType]]. If both tests match, returns the typechecker [[Declaration]]
          corresponding to [[candidate]]."
         function matchTypes(Type type, <Function<>|Class<>> candidate) {
-            if (actualType == type,
+            if (actualType.isExactly(type),
                 is TypeDeclaration declaration = findDeclaration(candidate),
                 !ModelUtil.intersectionType(expectedType, declaration.type, unit).nothing) {
 
@@ -137,7 +137,7 @@ shared object wrapExpressionQuickFix {
         }
 
         if (exists jStringDeclaration = matchTypes(unit.stringType, `JString`)) {
-            //TODO: add proposal for Types.nativeString()
+            addProposalInternal(data, term, jStringDeclaration, "Types.nativeString");
             addProposalInternal(data, term, jStringDeclaration, "JString");
         }
 
