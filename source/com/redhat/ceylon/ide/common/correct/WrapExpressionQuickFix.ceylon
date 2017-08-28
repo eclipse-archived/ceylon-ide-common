@@ -89,9 +89,9 @@ shared object wrapExpressionQuickFix {
                 => actualType.isExactly(type) 
                 && candidate.isSubtypeOf(expectedType);
         
-        value javaLang = unit.\ipackage.\imodule.getPackage("java.lang");
+        value javaLang = unit.\ipackage.\imodule?.getPackage("java.lang");
         function javaLangDeclaration(String name) 
-                => if (is TypeDeclaration td = javaLang.getMember(name, null, false)) 
+                => if (is TypeDeclaration td = javaLang?.getMember(name, null, false))
                 then td else unit.nothingDeclaration;
         
         if (matchTypes(unit.stringType, unit.javaStringDeclaration.type)) {
@@ -163,7 +163,11 @@ shared object wrapExpressionQuickFix {
 
         value decs = HashSet<Declaration>();
 
-        importProposals.importDeclaration(decs, declaration, data.rootNode);
+        importProposals.importDeclaration {
+            declarations = decs;
+            declaration = declaration;
+            rootNode = data.rootNode;
+        };
 
         Boolean alreadyImported = decs.empty;
 
