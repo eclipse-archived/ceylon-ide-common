@@ -125,6 +125,21 @@ shared object convertSwitchExpressionToStatementQuickFix {
                         .append("}")
                         .append(delim);
             }
+            if (exists elseClause = op.switchCaseList.elseClause) {
+                String term = doc.getNodeText(elseClause.expression);
+                replace.append(baseIndent)
+                        .append("else {")
+                        .append(delim)
+                        .append(baseIndent)
+                        .append(indent)
+                        .append(action)
+                        .append(removeEnclosingParenthesis(term))
+                        .append(";")
+                        .append(delim)
+                        .append(baseIndent)
+                        .append("}")
+                        .append(delim);
+            }
             
             value change 
                     = platformServices.document.createTextChange {
