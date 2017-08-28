@@ -25,15 +25,24 @@ shared object convertSwitchStatementToExpressionQuickFix {
             }
             value caseStatementLists 
                     = cases.map((cc)=>cc.block.statements);
+            value elseStatementList
+                    = statement.switchCaseList.elseClause?.block?.statements;
             if (!caseStatementLists.every((statements) => statements.size()==1)) {
+                return;
+            }
+            if (exists elseStatementList, !elseStatementList.size()==1) {
                 return;
             }
             value caseStatements 
                     = caseStatementLists.map((statements) => statements.get(0));
+            value elseStatement 
+                    = if (exists elseStatementList) then elseStatementList[0] else null;
             value returns 
-                    = caseStatements.every((statement) => statement is Tree.Return);
+                    = caseStatements.every((statement) => statement is Tree.Return)
+                    && elseStatement is Tree.Return;
             value specifications
-                    = caseStatements.every((statement) => statement is Tree.SpecifierStatement);
+                    = caseStatements.every((statement) => statement is Tree.SpecifierStatement)
+                    && elseStatement is Tree.SpecifierStatement;
             
             value document = data.document;
             Integer start;
@@ -60,6 +69,16 @@ shared object convertSwitchStatementToExpressionQuickFix {
                 })) {
                     return;
                 }
+                if (exists elseStatement) {
+                    assert (is Tree.SpecifierStatement elseStatement);
+                    if (exists dec = elseStatement.declaration, 
+                        dec == declaration) {
+                        //ok
+                    }
+                    else {
+                        return;
+                    }
+                }
                 if (is Tree.AttributeDeclaration prev 
                         = findPreviousStatement(data, statement),
                     prev.declarationModel==declaration) {
@@ -83,8 +102,10 @@ shared object convertSwitchStatementToExpressionQuickFix {
             
             value expressions = caseStatements.map((statement) 
                 => switch (statement) 
-                case (is Tree.Return) statement.expression
-                case (is Tree.SpecifierStatement) statement.specifierExpression?.expression 
+                case (is Tree.Return) 
+                    statement.expression
+                case (is Tree.SpecifierStatement) 
+                    statement.specifierExpression?.expression 
                 else null);
             if (expressions.any((expr) => !expr exists)) {
                 return;
@@ -98,6 +119,23 @@ shared object convertSwitchStatementToExpressionQuickFix {
                         = if (hasLowerPrecedenceThenElse(resultExpression))
                         then "(``term``)" else term;
                 builder.append(" case (").append(caseText).append(" ").append(resultText);
+            }
+            if (exists elseStatement) {
+                value expression 
+                    = switch (elseStatement) 
+                    case (is Tree.Return) 
+                        elseStatement.expression
+                    case (is Tree.SpecifierStatement) 
+                        elseStatement.specifierExpression?.expression 
+                    else null;
+                if (!exists expression) {
+                    return;
+                }
+                String term = document.getNodeText(expression);
+                value resultText 
+                        = if (hasLowerPrecedenceThenElse(expression))
+                        then "(``term``)" else term;
+                builder.append(" else ").append(resultText);
             }
             builder.append(";");
             
