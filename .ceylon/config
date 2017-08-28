@@ -8,9 +8,11 @@ fullyexportmavendependencies=false
 
 [compiler]
 source=source
-source=test-source
+resource=resource
 
 [repositories]
 lookup=./repo
 lookup=../ceylon-sdk/modules
+lookup=../ceylon.formatter/modules/
+lookup=../ceylon.tool.converter.java2ceylon
 lookup=./modules
