@@ -45,7 +45,7 @@ object syntaxDeprecationQuickFix {
             token.type == CeylonLexer.valueModifier) {
 
             value change = platformServices.document.createTextChange {
-                name = "Replace value with let";
+                name = "Replace Value with Let";
                 input = data.phasedUnit;
             };
             change.initMultiEdit();
@@ -94,7 +94,7 @@ object syntaxDeprecationQuickFix {
 
                 value typeName = type.getName(data.rootNode.unit);
                 value change = platformServices.document.createTextChange {
-                    name = "Qualify static member with type";
+                    name = "Qualify Static Member with Type";
                     input = data.phasedUnit;
                 };
                 change.addEdit(ReplaceEdit {

@@ -20,7 +20,7 @@ shared object removeUnusedDeclarationQuickFix {
             exists decl = nodes.findDeclaration(data.rootNode, data.node)) {
 
             value change = platformServices.document.createTextChange {
-                name = "Remove unused declaration";
+                name = "Remove Unused Declaration";
                 input = data.phasedUnit;
             };
             

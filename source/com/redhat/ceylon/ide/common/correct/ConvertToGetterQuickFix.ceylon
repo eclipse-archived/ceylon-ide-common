@@ -29,7 +29,7 @@ shared object convertToGetterQuickFix {
                 change.initMultiEdit();
                 value offset = sie.startIndex.intValue();
                 value char = change.document.getText(offset-1, 1).first else ' ';
-                value space = if (char == ' ') then "" else " ";
+                value space = char == ' ' then "" else " ";
                 
                 change.addEdit(ReplaceEdit {
                     start = offset;
@@ -39,7 +39,7 @@ shared object convertToGetterQuickFix {
                 // change.addEdit(new ReplaceEdit(offset, 1, space + "{ return" + spaceAfter));
                 // change.addEdit(new InsertEdit(decNode.getStopIndex()+1, " }"));
 
-                value desc = "Convert '" + dec.name + "' to getter";
+                value desc = "Convert '``dec.name``' to getter";
                 data.addQuickFix {
                     description = desc;
                     change = change;

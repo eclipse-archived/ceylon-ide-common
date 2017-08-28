@@ -14,7 +14,7 @@ shared object fillInArgumentNameQuickFix {
             !id.token exists) {
             value change 
                     = platformServices.document.createTextChange {
-                name = "Fill in argument name";
+                name = "Fill in Argument Name";
                 input = data.phasedUnit;
             };
             change.initMultiEdit();

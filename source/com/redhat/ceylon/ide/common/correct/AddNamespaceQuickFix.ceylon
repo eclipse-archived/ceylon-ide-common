@@ -20,7 +20,7 @@ shared object addNamespaceQuickFix {
     shared void addProposal(QuickFixData data, UsageWarning warning ) {
         if (warning.warningName == Warning.missingImportPrefix.name()) {
             value change = platformServices.document.createTextChange {
-                name = "Add namespace";
+                name = "Add Namespace";
                 input = data.phasedUnit;
             };
             change.addEdit(InsertEdit(data.node.startIndex.intValue(), "maven:"));
