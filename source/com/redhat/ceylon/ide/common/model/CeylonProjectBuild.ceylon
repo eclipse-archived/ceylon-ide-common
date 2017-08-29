@@ -979,6 +979,13 @@ shared class CeylonProjectBuild<NativeProject, NativeResource, NativeFolder, Nat
             state.backendMessages.add(message);
         }
     }
+
+    shared BinaryGenerator binaryGenerator(
+            Boolean generate(CeylonProjectBuildAlias build,
+                             Set<FileVirtualFileAlias> filesToBuild))
+        => object extends BinaryGenerator() {
+            build = generate;
+        };
     
     shared void performBinaryGeneration(BaseProgressMonitor monitor, BinaryGenerator generator) =>
         synchronize(this, () {
