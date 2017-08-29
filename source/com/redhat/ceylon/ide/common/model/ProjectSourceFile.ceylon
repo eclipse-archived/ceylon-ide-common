@@ -34,8 +34,7 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    Error,
-    Types
+    Error
 }
 import java.lang.ref {
     WeakReference
@@ -152,7 +151,7 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
         } catch(AssertionError e) {
             e.printStackTrace();
         } catch(Error e) {
-            if (Types.classForInstance(e).name ==
+            if (className(e) ==
                 "com.redhat.ceylon.compiler.java.runtime.metamodel.ModelError") {
                 e.printStackTrace();
             } else {
