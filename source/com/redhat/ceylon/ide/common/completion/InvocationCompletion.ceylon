@@ -753,7 +753,7 @@ shared abstract class InvocationCompletionProposal
                     exitPosition = loc + text.size;
                 };
             }
-        } catch (Exception e) {
+        } catch (e) {
             e.printStackTrace();
         }
     }

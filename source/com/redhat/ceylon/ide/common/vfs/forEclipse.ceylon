@@ -47,13 +47,7 @@ shared class IFileVirtualFile(nativeResource)
     shared actual String name => nothing;
     shared actual String path => nothing;
     shared actual String charset {
-        try {
-            return nativeResource.project.defaultCharset; // in the future, we could return the charset of the file
-        }
-        catch (Exception e) {
-            throw RuntimeException(e);
-        }
-
+        return nativeResource.project.defaultCharset; // in the future, we could return the charset of the file
     }
 }
 

@@ -40,9 +40,6 @@ import java.io {
     Reader,
     InputStreamReader
 }
-import java.lang {
-    RuntimeException
-}
 import java.util {
     List
 }
@@ -50,7 +47,6 @@ import java.util {
 import org.antlr.runtime {
     ANTLRStringStream,
     CommonTokenStream,
-    RecognitionException,
     CommonToken
 }
 import com.redhat.ceylon.ide.common.platform {
@@ -86,28 +82,14 @@ shared interface SourceCodeParser {
     
     shared ParseResult parseSourceCode(
         Reader sourceCode) {
-        ANTLRStringStream input;
-        try {
-            input = NewlineFixingStringStream.fromReader(sourceCode);
-        }
-        catch (RuntimeException e) {
-            throw e;
-        }
-        catch (Exception e) {
-            throw RuntimeException(e);
-        }
-        CeylonLexer lexer = buildLexer(input);
-        CommonTokenStream tokenStream = buildTokenStream(lexer);
-        
-        CeylonParser parser = buildParser(tokenStream);
-        Tree.CompilationUnit cu;
-        try {
-            cu = parser.compilationUnit();
-        }
-        catch (RecognitionException e) {
-            throw RuntimeException(e);
-        }
-        
+        value input = NewlineFixingStringStream.fromReader(sourceCode);
+
+        value lexer = buildLexer(input);
+        value tokenStream = buildTokenStream(lexer);
+
+        value parser = buildParser(tokenStream);
+        value cu = parser.compilationUnit();
+
         value lexerErrors = lexer.errors;
         for (le in lexerErrors) {
             cu.addLexError(le);

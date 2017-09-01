@@ -187,7 +187,7 @@ shared object convertSwitchToIfQuickFix {
                             value start = v.startIndex.intValue();
                             value len = v.distance.intValue();
                             var = doc.getText(start, len);
-                        } catch (Exception e) {
+                        } catch (e) {
                             e.printStackTrace();
                             return;
                         }
@@ -197,7 +197,7 @@ shared object convertSwitchToIfQuickFix {
                             value start = t.startIndex.intValue();
                             value len = t.distance.intValue();
                             type = "is " + doc.getText(start, len);
-                        } catch (Exception e) {
+                        } catch (e) {
                             e.printStackTrace();
                             return;
                         }
@@ -212,7 +212,7 @@ shared object convertSwitchToIfQuickFix {
                             } else {
                                 return;
                             }
-                        } catch (Exception e) {
+                        } catch (e) {
                             e.printStackTrace();
                             return;
                         }
@@ -224,7 +224,7 @@ shared object convertSwitchToIfQuickFix {
                             value start = e.startIndex.intValue();
                             value len = e.distance.intValue();
                             var = doc.getText(start, len);
-                        } catch (Exception e) {
+                        } catch (e) {
                             e.printStackTrace();
                             return;
                         }

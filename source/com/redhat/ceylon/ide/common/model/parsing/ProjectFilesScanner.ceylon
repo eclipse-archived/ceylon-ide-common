@@ -111,7 +111,7 @@ shared class ProjectFilesScanner<NativeProject, NativeResource, NativeFolder, Na
                             
                             typeChecker.phasedUnits.addPhasedUnit(virtualFile, newPhasedUnit);
                         } 
-                        catch (Exception e) {
+                        catch (e) {
                             e.printStackTrace();
                         }
                     }

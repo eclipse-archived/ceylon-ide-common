@@ -2,11 +2,7 @@ import java.io {
     File,
     InputStream,
     FileInputStream,
-    FileNotFoundException,
     FilenameFilter
-}
-import java.lang {
-    RuntimeException
 }
 import java.util {
     Arrays
@@ -53,13 +49,8 @@ shared class LocalFileVirtualFile(file)
         return theParent;
     }
 
-    throws(`class RuntimeException`)
     shared actual InputStream inputStream {
-        try {
-            return FileInputStream( file );
-        } catch (FileNotFoundException e) {
-            throw RuntimeException(e);
-        }
+        return FileInputStream( file );
     }
 
     equals(Object that) => (super of FileVirtualFile<Nothing,File,File,File>).equals(that);

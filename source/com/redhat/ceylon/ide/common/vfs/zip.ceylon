@@ -19,9 +19,6 @@ import java.io {
     FilterInputStream,
     File
 }
-import java.lang {
-    RuntimeException
-}
 import java.util {
     Collections,
     ArrayList,
@@ -82,7 +79,6 @@ shared class ZipFolderVirtualFile(entryName, String rootPath) satisfies BaseFold
     \iexists() => true;
 }
 
-throws(`class RuntimeException`)
 shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     ZipEntry entry;
     shared String entryName = entry.name;
@@ -109,15 +105,10 @@ shared class ZipEntryVirtualFile(entry, zipFile) satisfies BaseFileVirtualFile {
     }
     
     shared actual InputStream inputStream {
-        try {
-            return object extends FilterInputStream(zipFile.getInputStream( entry )) {
-                // Do nothing since the ZipInputStream will be closed by the ZipFile.close call
-                close() => noop();
-            };
-        }
-        catch (IOException e) {
-            throw RuntimeException(e);
-        }
+        return object extends FilterInputStream(zipFile.getInputStream( entry )) {
+            // Do nothing since the ZipInputStream will be closed by the ZipFile.close call
+            close() => noop();
+        };
     }
     
     string => StringBuilder()
@@ -188,15 +179,14 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtua
             .appendCharacter('\'')
             .appendCharacter('}').
             string;
-    
-    throws(`class RuntimeException`)
+
     shared actual void close() {
         if (closeable) {
             try {
                 zipFile.close();
             }
             catch (IOException e) {
-                throw RuntimeException(e);
+                throw Exception("error closing", e);
             }
         }
     }

@@ -36,7 +36,7 @@ shared abstract class CeylonBinaryUnit<NativeProject, JavaClassRoot, JavaElement
                                 sourceUnitRelativePath);
                 }
             }
-        } catch (Exception e) {
+        } catch (e) {
             e.printStackTrace();
         }
         return null;

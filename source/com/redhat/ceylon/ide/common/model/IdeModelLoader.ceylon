@@ -82,7 +82,6 @@ import java.lang {
     },
     ObjectArray,
     JString=String,
-    RuntimeException,
     overloaded
 }
 import java.util {
@@ -496,7 +495,7 @@ shared abstract class BaseIdeModelLoader(
            variable Declaration? result = null;
            try {
                result = super.convertToDeclaration(ideModule, typeName, declarationType);
-           } catch(RuntimeException e) {
+           } catch (e) {
                platformUtils.log(Status._ERROR, "Cannot convert type name \"``typeName``\" to a Declaration", e);
            }
 

@@ -118,7 +118,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             try {
                 sourceArtifact = repositoryManager.getArtifactResult(artifactContext);
             }
-            catch (Exception e) {
+            catch (e) {
                 exceptionOnGetArtifact = e;
             }
             if (exists existingSourceArtifact=sourceArtifact) {
@@ -154,7 +154,7 @@ shared abstract class BaseIdeModuleSourceMapper(Context theContext, BaseIdeModul
             }
             super.resolveModule(artifact, theModule, moduleImport, dependencyTree, phasedUnitsOfDependencies, forCompiledModule);
         }
-        catch (Exception e) {
+        catch (e) {
             if (is BaseIdeModule theModule) {
                 logModuleResolvingError(theModule, e);
                 theModule.setResolutionException(e);

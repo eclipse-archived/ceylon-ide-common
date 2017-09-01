@@ -93,7 +93,6 @@ import java.lang {
         nativeString
     },
     InterruptedException,
-    RuntimeException,
     IllegalStateException,
     ByteArray,
     System,
@@ -488,7 +487,7 @@ shared abstract class BaseCeylonProject() {
 
      To avoid deadlock, it always takes a time limit,
      after which the it stops waiting for the source 
-     model availability and throws a [[RuntimeException|java.lang::RuntimeException]] Exception.
+     model availability and throws an exception.
      The thrown exception is the one produced by 
      [[IdeUtils.newOperationCanceledException|com.redhat.ceylon.ide.common.platform::IdeUtils.newOperationCanceledException]]
      "
@@ -518,12 +517,6 @@ shared abstract class BaseCeylonProject() {
                 "The thread was interrupted while waiting for the source model ``
                 if (readonly) then "read" else "write"
                 `` lock of project ``name``");
-        } catch(Exception e) {
-            if (is RuntimeException e) {
-                throw e;
-            } else {
-                throw RuntimeException(e);
-            }
         }
     }
 }

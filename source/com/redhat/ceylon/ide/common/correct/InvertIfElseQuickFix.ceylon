@@ -116,7 +116,7 @@ shared object invertIfElseQuickFix {
                 change = change;
                 selection = DefaultRegion(ifExpr.startIndex.intValue());
             };
-        } catch (Exception e) {
+        } catch (e) {
             e.printStackTrace();
         }
     }

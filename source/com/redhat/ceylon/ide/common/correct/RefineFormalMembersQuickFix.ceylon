@@ -153,7 +153,7 @@ shared object refineFormalMembersQuickFix {
                         importProposals.importSignatureTypes(d, rootNode, already);
                         ambiguousNames.add(d.name);
                     }
-                } catch (Exception e) {
+                } catch (e) {
                     e.printStackTrace();
                 }
             }
@@ -172,7 +172,7 @@ shared object refineFormalMembersQuickFix {
                             importProposals.importSignatureTypes(m, rootNode, already);
                         }
                     }
-                } catch (Exception e) {
+                } catch (e) {
                     e.printStackTrace();
                 }
             }

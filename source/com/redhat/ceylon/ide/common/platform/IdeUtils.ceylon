@@ -3,10 +3,10 @@ import com.redhat.ceylon.common.log {
 }
 
 import java.lang {
-    RuntimeException,
     ClassLoader,
     Types
 }
+
 shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
     String _string;
     shared new _OK { _string = "OK"; }
@@ -20,10 +20,9 @@ shared class Status of _OK | _INFO| _DEBUG  | _WARNING | _ERROR {
 shared interface IdeUtils {
     shared formal void log(Status status, String message, Exception? e=null);
     
-    "Creates a [[RuntimeException|java.lang::RuntimeException]]
-     with the exception type typically used in an IDE platform in case of 
-     operation cancellation."
-    shared formal RuntimeException newOperationCanceledException(String message="");
+    "Creates an exception with the exception type typically used in an IDE
+     platform in case of operation cancellation."
+    shared formal Exception newOperationCanceledException(String message="");
     
     "returns [[true]] if [[exception]] is of the exception type typically used
      in an IDE platform in case of operation cancellation."
@@ -58,7 +57,7 @@ shared class DefaultIdeUtils() satisfies IdeUtils {
     }
     
     class OperationCancelledException(String? description=null, Throwable? cause=null) 
-            extends RuntimeException(description, cause) {}
+            extends Exception(description, cause) {}
     
     newOperationCanceledException(String message) 
             => OperationCancelledException("Operation Cancelled : ``message``");

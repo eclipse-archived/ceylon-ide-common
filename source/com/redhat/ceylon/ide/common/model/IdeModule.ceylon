@@ -89,8 +89,7 @@ import java.lang {
     Types {
         nativeString
     },
-    JString=String,
-    RuntimeException
+    JString=String
 }
 import java.lang.ref {
     WeakReference,
@@ -885,9 +884,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
     resolutionFailed => resolutionException exists;
     
     shared actual void setResolutionException(Exception resolutionException) {
-        if (is RuntimeException resolutionException) {
-            this.resolutionException = resolutionException;
-        }
+        this.resolutionException = resolutionException;
     }
     
     shared actual {IdeModuleAlias*} moduleInReferencingProjects {

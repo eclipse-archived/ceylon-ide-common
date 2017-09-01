@@ -134,7 +134,7 @@ shared class ModulesScanner<NativeProject, NativeResource, NativeFolder, NativeF
                         currentModule.isProjectModule = true;
                     }
                 }
-                catch (Exception e) {
+                catch (e) {
                     e.printStackTrace();
                 }
             }

@@ -351,7 +351,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                         }
                     }
                 }
-            } catch (Exception e) {
+            } catch (e) {
                 e.printStackTrace();
             }
         }
@@ -376,7 +376,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                         }
                     }
                 }
-            } catch (Exception e) {
+            } catch (e) {
                 e.printStackTrace();
             }
         }
@@ -400,7 +400,7 @@ shared abstract class AbstractTerminateStatementAction<Document=DefaultDocument>
                         }
                     }
                 }
-            } catch (Exception e) {
+            } catch (e) {
                 e.printStackTrace();
             }
         }

@@ -247,7 +247,7 @@ shared abstract class RefinementCompletionProposal
                 linkedModeModel.addEditableRegion(loc + pos, 7, 0, props);
                 linkedModeModel.install(this, 1, loc + text.size);
             }
-        } catch (Exception e) {
+        } catch (e) {
             e.printStackTrace();
         }
     }

@@ -17,7 +17,6 @@ import com.redhat.ceylon.model.typechecker.model {
 }
 
 import java.lang {
-    RuntimeException,
     Types
 }
 
@@ -50,7 +49,7 @@ shared object testPlatform satisfies PlatformServices {
 }
 
 object testIdeUtils satisfies IdeUtils {
-    class MyException(String message) extends RuntimeException(message) {}
+    class MyException(String message) extends Exception(message) {}
 
     isExceptionToPropagateInVisitors(Exception exception)
             => false;

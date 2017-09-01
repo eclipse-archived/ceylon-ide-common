@@ -60,7 +60,7 @@ shared object fillInArgumentNameQuickFix {
                                     change.addEdit(DeleteEdit(offset, 1));
                                 }
                             }
-                        } catch (Exception ex) {
+                        } catch (ex) {
                         }
                     }
                 } else {

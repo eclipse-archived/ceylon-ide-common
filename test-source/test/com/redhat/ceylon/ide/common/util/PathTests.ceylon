@@ -532,7 +532,7 @@ shared class PathTests() {
         try {
             Path("C:\\/eclipse");
         }
-        catch (Exception e) {
+        catch (e) {
             fail("1.0", e);
         }
         try {
@@ -543,7 +543,7 @@ shared class PathTests() {
                 assertEquals("2.2", "ive", path.segment(0));
             }
         }
-        catch (Exception e) {
+        catch (e) {
             fail("2.99", e);
         }
     }
