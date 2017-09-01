@@ -232,7 +232,7 @@ shared abstract class BaseIdeModelLoader(
        variable JList<Declaration> members;
        try {
            members = declaration.members;
-       } catch(Exception e) {
+       } catch (e) {
            members = Collections.emptyList<Declaration>();
        }
        allDeclarations.addAll(members);

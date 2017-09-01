@@ -147,10 +147,10 @@ shared class ProjectSourceFile<NativeProject, NativeResource, NativeFolder, Nati
                         phasedUnit, lastPhasedUnit);
             }
             
-        } catch(Exception e) {
-        } catch(AssertionError e) {
+        } catch (e) {
+        } catch (AssertionError e) {
             e.printStackTrace();
-        } catch(Error e) {
+        } catch (Error e) {
             if (className(e) ==
                 "com.redhat.ceylon.compiler.java.runtime.metamodel.ModelError") {
                 e.printStackTrace();

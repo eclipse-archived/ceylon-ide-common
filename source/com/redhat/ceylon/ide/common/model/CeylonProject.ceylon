@@ -211,12 +211,12 @@ shared abstract class BaseCeylonProject() {
 				try {
 					result = super.getOverrides(absoluteFile);
 				}
-                catch(Overrides.InvalidOverrideException e) {
+                catch (Overrides.InvalidOverrideException e) {
 					overridesException = e;
 					overridesLine = e.line;
 					overridesColumn = e.column;
 				}
-                catch(IllegalStateException e) {
+                catch (IllegalStateException e) {
 					switch (cause = e.cause)
                     case (is SAXParseException) {
 						value parseException =  cause;
@@ -231,7 +231,7 @@ shared abstract class BaseCeylonProject() {
 						overridesException = e;
 					}
 				}
-                catch(Exception e) {
+                catch (e) {
 					overridesException = e;
 				}
 				
