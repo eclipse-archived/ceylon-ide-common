@@ -198,7 +198,7 @@ shared interface ModuleCompletion {
                                 cpc = ctx;
                             };
                         } else {
-                            for (version in mod.versions.descendingSet()) {
+                            for (version in mod.versions) {
                                 platformServices.completion.newModuleProposal {
                                     offset = offset;
                                     prefix = prefix;
