@@ -85,16 +85,9 @@ shared interface ModuleCompletion {
 
         moduleImportVisitor.visit(ctx.parsedRootNode);
 
-        String? existingNamespace;
-        if (exists imp = im,
-            exists ns = imp.namespace) {
-            existingNamespace = ns.text;
-        }
-        else {
-            existingNamespace = null;
-        }
+        value existingNamespace = im?.namespace?.text;
 
-        if (existingNamespace is Null, addNamespaceProposals) {
+        if (!existingNamespace exists && addNamespaceProposals) {
             addNamespaceCompletions(ctx, offset, prefix);
         }
 
@@ -195,7 +188,7 @@ shared interface ModuleCompletion {
                                     withBody = withBody;
                                     name = name;
                                     version = mod.lastVersion.version;
-                                    namespace = namespace is Null then mod.lastVersion.namespace else null;
+                                    namespace = !namespace exists then mod.lastVersion.namespace;
                                 };
                                 mod = mod;
                                 withBody = withBody;
@@ -214,7 +207,7 @@ shared interface ModuleCompletion {
                                         withBody = withBody;
                                         name = name;
                                         version = version.version;
-                                        namespace = namespace is Null then mod.lastVersion.namespace else null;
+                                        namespace = !namespace exists then mod.lastVersion.namespace;
                                     };
                                     mod = mod;
                                     withBody = withBody;
@@ -235,8 +228,9 @@ shared interface ModuleCompletion {
         if (mod == Module.languageModuleName) {
             return true;
         }
-        value md = cpc.parsedRootNode.moduleDescriptors[0];
-        if (exists iml = md?.importModuleList) {
+
+        if (exists md = cpc.parsedRootNode.moduleDescriptors[0],
+            exists iml = md.importModuleList) {
             for (im in iml.importModules) {
                 if (exists path = nodes.getImportedModuleName(im),
                     path == mod) {
@@ -258,9 +252,10 @@ shared interface ModuleCompletion {
             name = "\"``name``\"";
         }
         
-        value ns = if (exists namespace, !isImplicitNamespace(namespace))
-        then namespace + ":"
-        else "";
+        value ns
+                = if (exists namespace, !isImplicitNamespace(namespace))
+                then namespace + ":"
+                else "";
         
         return withBody then "``ns````name`` \"``version``\";" else name;
     }
@@ -323,7 +318,6 @@ shared abstract class ModuleProposal
             value x = selection.start;
             value y = selection.length;
             linkedMode.addEditableRegion(x, y, 0, proposals);
-            
             linkedMode.install(this, 1, x + y + 2);
         }
     }
