@@ -654,16 +654,32 @@ shared interface DocGenerator {
         value mod = imp.\imodule;
         if (!mod.nameAsString.empty && mod.nameAsString!="default") {
             //value label = "<span>Depends on&nbsp;``color(buf.string, Colors.annotations)````color("import", Colors.keywords)`` ``buildLink(mod, mod.nameAsString)``"
-            value label 
+            value depLabel = if (exists label = moduleLabel(mod)) then " (``label``)" else "";
+            value label
                     = "<span>``imp.export then "Exports" else "Imports"``&nbsp;``buildLink(mod, mod.nameAsString)``"
-                    + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>.</span>";
+                    + "&nbsp;<tt>``color("\"" + mod.version + "\"", Colors.strings)``</tt>``depLabel``</span>";
             addIconAndText(buffer, Icons.imports, label);
         }
         
     }
+
+    String? moduleLabel(Module mod) {
+        for (ann in mod.annotations) {
+            if (ann.name=="label",
+                exists arg = ann.positionalArguments[0]) {
+                return arg.string;
+            }
+        }
+        else {
+            return null;
+        }
+    }
     
     // see addAdditionalModuleInfo(StringBuilder buffer, Module mod)
     void addAdditionalModuleInfo(Module mod, StringBuilder buffer) {
+        if (exists label = moduleLabel(mod)) {
+            buffer.append("<p><b>``label``</b></p>");
+        }
         if (mod.java) {
             buffer.append("<p>This module is implemented in Java.</p>");
         }
