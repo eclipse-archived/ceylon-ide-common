@@ -64,7 +64,7 @@ shared abstract class BaseIdeModuleManager(shared default BaseCeylonProjects mod
 
     shared default BaseCeylonProject? ceylonProject = theCeylonProject;
 
-    shared variable default late BaseIdeModuleSourceMapper moduleSourceMapper;
+    shared variable late BaseIdeModuleSourceMapper moduleSourceMapper;
 
     shared MutableSet<String> sourceModules;
     shared Boolean loadDependenciesFromModelLoaderFirst;
