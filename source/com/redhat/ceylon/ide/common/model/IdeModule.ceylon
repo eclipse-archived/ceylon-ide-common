@@ -34,7 +34,8 @@ import com.redhat.ceylon.compiler.typechecker.io {
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer,
-    CeylonParser
+    CeylonParser,
+    CeylonInterpolatingLexer
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
@@ -935,7 +936,7 @@ shared abstract class IdeModule<NativeProject, NativeResource, NativeFolder, Nat
                         if (exists archiveEntry) {
                             assert (exists project = moduleManager.ceylonProject);
                             CeylonLexer lexer = CeylonLexer(NewlineFixingStringStream.fromStream(archiveEntry.inputStream, project.defaultCharset));
-                            CommonTokenStream tokenStream = CommonTokenStream(lexer);
+                            CommonTokenStream tokenStream = CommonTokenStream(CeylonInterpolatingLexer(lexer));
                             CeylonParser parser = CeylonParser(tokenStream);
                             Tree.CompilationUnit cu = parser.compilationUnit();
                             value theTokens = unsafeCast<JList<CommonToken>>(tokenStream.tokens);

@@ -6,7 +6,8 @@ import com.redhat.ceylon.compiler.typechecker.context {
 }
 import com.redhat.ceylon.compiler.typechecker.parser {
     CeylonLexer,
-    CeylonParser
+    CeylonParser,
+    CeylonInterpolatingLexer
 }
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree
@@ -67,8 +68,8 @@ shared interface SourceCodeParser {
     
     function buildTokenStream(CeylonLexer lexer) => 
             if (exists custom = platformServices.parser().buildCustomizedTokenStream)
-    then custom(lexer)
-    else CommonTokenStream(lexer);
+    then custom(CeylonInterpolatingLexer(lexer))
+    else CommonTokenStream(CeylonInterpolatingLexer(lexer));
     
     function buildParser(CommonTokenStream tokenStream) => 
             if (exists custom = platformServices.parser().buildCustomizedParser)
@@ -140,9 +141,9 @@ shared class ProjectSourceParser<NativeProject, NativeResource, NativeFolder, Na
     unitFile,
     srcDir)
         satisfies CeylonSourceParser<ProjectPhasedUnit<NativeProject, NativeResource, NativeFolder, NativeFile>>
-        & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
-        & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
+                & ModelAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & TypecheckerAliases<NativeProject, NativeResource, NativeFolder, NativeFile>
+                & VfsAliases<NativeProject,NativeResource, NativeFolder, NativeFile>
 
         given NativeProject satisfies Object
         given NativeResource satisfies Object
