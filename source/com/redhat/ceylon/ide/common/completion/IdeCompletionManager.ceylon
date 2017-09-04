@@ -629,6 +629,7 @@ shared object completionManager
             || type == Lexer.uidentifier
             || type == Lexer.aidentifier
             || type == Lexer.pidentifier
+            //|| type == Lexer.it
             || escaping.isKeyword(token.text);
     }
 
@@ -726,8 +727,8 @@ shared object completionManager
 
 //        value before = system.milliseconds;
 
-        value cu = ctx.lastCompilationUnit;
-        value ol = nodes.getOccurrenceLocation(cu, node, offset);
+        value rootNode = ctx.lastCompilationUnit;
+        value ol = nodes.getOccurrenceLocation(rootNode, node, offset);
         value unit = node.unit;
         value addParameterTypesInCompletions 
                 = ctx.options.parameterTypesInCompletion;
@@ -746,7 +747,7 @@ shared object completionManager
         }
         case (is Tree.ArgumentList) {
             value fiv = FindInvocationVisitor(node);
-            fiv.visit(cu);
+            fiv.visit(rootNode);
             if (exists ie = fiv.result) {
                 addParametersProposal {
                     offset = offset;
@@ -762,7 +763,7 @@ shared object completionManager
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
                 if (isTypeParameterOfCurrentDeclaration(node, dec)) {
-                    addReferenceProposal(cu, offset, prefix, ctx,
+                    addReferenceProposal(rootNode, offset, prefix, ctx,
                         dwp, null, scope, ol, false);
                 }
             }
@@ -826,7 +827,7 @@ shared object completionManager
                 offset = offset;
                 prefix = prefix;
                 previousNode = node;
-                rootNode = cu;
+                rootNode = rootNode;
             };
         }
         else if (is Tree.TypeDeclaration node,
@@ -866,8 +867,8 @@ shared object completionManager
             }
 
             value isPackageOrModuleDescriptor
-                    = isModuleDescriptor(cu) 
-                    || isPackageDescriptor(cu);
+                    = isModuleDescriptor(rootNode)
+                    || isPackageDescriptor(rootNode);
 
             for (dwp in sortedProposals) {
                 value dec = dwp.declaration;
@@ -875,9 +876,10 @@ shared object completionManager
                 if (!dec.toplevel,
                     !dec.classOrInterfaceMember, 
                     dec.unit == unit,
-                    exists decNode = nodes.getReferencedNode(dec, cu),
-                    exists id = nodes.getIdentifyingNode(decNode), 
-                    offset < id.startIndex.intValue()) {
+                    exists decNode = nodes.getReferencedNode(dec, rootNode),
+                    exists id = nodes.getIdentifyingNode(decNode),
+                    exists start = id.startIndex,
+                    offset < start.intValue()) {
                     continue;
                 }
 
@@ -892,7 +894,7 @@ shared object completionManager
                         isParameterOfNamedArgInvocation(scope, dwp),
                         isDirectlyInsideNamedArgumentList(ctx, node, token)) {
                     value fiv = FindInvocationVisitor2(scope);
-                    cu.visit(fiv);
+                    rootNode.visit(fiv);
                     value ref 
                             = if (exists ie = fiv.result, 
                                   is Tree.MemberOrTypeExpression p = ie.primary,
@@ -1036,7 +1038,7 @@ shared object completionManager
                                 then (() => getQualifiedProducedReference(node, dec))
                                 else (() => getRefinedProducedReference(scope, dec));
                         addReferenceProposal {
-                            cu = cu;
+                            cu = rootNode;
                             offset = offset;
                             prefix = prefix;
                             ctx = ctx;
@@ -1132,7 +1134,7 @@ shared object completionManager
             }
         }
         if (previousTokenType==Lexer.objectDefinition) {
-            addKeywordProposals(ctx, cu, offset, prefix, 
+            addKeywordProposals(ctx, rootNode, offset, prefix,
                 node, ol, false, tokenType);
         }
 
