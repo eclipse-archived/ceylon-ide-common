@@ -84,26 +84,33 @@ shared object addSuppressWarningsQuickFix {
 
             overloaded
             shared actual void visit(Tree.Declaration that) {
-                value \iouter = current;
-                current = that;
-                super.visit(that);
-                current = \iouter;
+                if (that is Tree.Variable
+                          | Tree.TypeConstraint
+                          | Tree.TypeParameterDeclaration) {
+                    super.visit(that);
+                }
+                else {
+                    value last = current;
+                    current = that;
+                    super.visit(that);
+                    current = last;
+                }
             }
 
             overloaded
             shared actual void visit(Tree.ModuleDescriptor that) {
-                value \iouter = current;
+                value last = current;
                 current = that;
                 super.visit(that);
-                current = \iouter;
+                current = last;
             }
 
             overloaded
             shared actual void visit(Tree.PackageDescriptor that) {
-                value \iouter = current;
+                value last = current;
                 current = that;
                 super.visit(that);
-                current = \iouter;
+                current = last;
             }
             
             shared actual void visitAny(Node that) {
