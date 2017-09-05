@@ -224,9 +224,9 @@ shared abstract class RefinementCompletionProposal
         value decs = HashSet<Declaration>();
         value cu = ctx.lastCompilationUnit;
         if (explicitReturnType) {
-            importProposals.importSignatureTypes(declaration, cu, decs);
+            importProposals.importSignatureTypes(declaration, cu, decs, scope);
         } else {
-            importProposals.importParameterTypes(declaration, cu, decs);
+            importProposals.importParameterTypes(declaration, cu, decs, scope);
         }
         
         value il = importProposals.applyImports(change, decs, cu, document);

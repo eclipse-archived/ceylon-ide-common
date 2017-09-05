@@ -761,10 +761,18 @@ shared object completionManager
 
         if (is Tree.TypeConstraint node) {
             for (dwp in sortedProposals) {
-                value dec = dwp.declaration;
-                if (isTypeParameterOfCurrentDeclaration(node, dec)) {
-                    addReferenceProposal(rootNode, offset, prefix, ctx,
-                        dwp, null, scope, ol, false);
+                if (isTypeParameterOfCurrentDeclaration(node, dwp.declaration)) {
+                    addReferenceProposal {
+                        cu = rootNode;
+                        offset = offset;
+                        prefix = prefix;
+                        ctx = ctx;
+                        dwp = dwp;
+                        reference = null;
+                        scope = scope;
+                        ol = ol;
+                        isMember = false;
+                    };
                 }
             }
         }

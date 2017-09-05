@@ -33,6 +33,8 @@ shared abstract class IdeUnit
             => ceylonModule.ceylonProject
                 ?.modules?.javaLangPackage 
                 else super.javaLangPackage;
+    assign javaLangPackage
+            => super.javaLangPackage = javaLangPackage;
     
     shared actual formal String? sourceFileName;
     shared actual formal String? sourceRelativePath;

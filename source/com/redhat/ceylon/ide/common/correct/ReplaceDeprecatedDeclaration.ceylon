@@ -60,14 +60,14 @@ shared object replaceDeprecatedDeclaration {
 
             value unit = data.rootNode.unit;
             if (exists typesDec
-                    = unit.\ipackage.\imodule
-                    ?.getPackage("java.lang")
+                    = unit.javaLangPackage
                     ?.getMember("Types", null, false)) {
                 value decs = HashSet<Declaration>();
                 importProposals.importDeclaration {
                     declarations = decs;
                     declaration = typesDec;
                     rootNode = data.rootNode;
+                    scope = id.scope;
                 };
                 importProposals.applyImports {
                     change = change;

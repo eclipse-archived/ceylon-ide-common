@@ -38,7 +38,8 @@ shared object typeCompletion {
         
         value td = infType.declaration;
         value supertypes
-                = if (ModelUtil.isTypeUnknown(infType) || infType.typeConstructor)
+                = if (ModelUtil.isTypeUnknown(infType)
+                        || infType.typeConstructor)
                 then [] else CeylonList(td.supertypeDeclarations);
         variable value size = supertypes.size;
         
@@ -80,19 +81,19 @@ shared object typeCompletion {
             };
         }
         
-        value sortedSupertypes = supertypes.sort((TypeDeclaration x, TypeDeclaration y) {
-            if (x.inherits(y)) {
-                return larger;
-            }
-            if (y.inherits(x)) {
-                return smaller;
-            }
-            return y.name.compare(x.name);
-        });
+        value sortedSupertypes
+                = supertypes.sort((x, y) {
+                    if (x.inherits(y)) {
+                        return smaller;
+                    }
+                    if (y.inherits(x)) {
+                        return larger;
+                    }
+                    return x.name <=> y.name;
+                });
         
-        variable value j = sortedSupertypes.size - 1;
-        while (j >= 0) {
-            value type = infType.getSupertype(sortedSupertypes.get(j));
+        for (supertype in sortedSupertypes) {
+            value type = infType.getSupertype(supertype);
             platformServices.completion.newTypeProposal {
                 proposals = proposals;
                 rootNode = rootNode;
@@ -101,13 +102,12 @@ shared object typeCompletion {
                 text = type.asSourceCodeString(unit);
                 desc = type.asString(unit);
             };
-            
-            j--;
         }
         
         return proposals;
     }
 }
+
 shared abstract class TypeProposal
         (Integer offset, Type? type, String text, String desc, Tree.CompilationUnit rootNode)
         extends AbstractCompletionProposal(offset, "", desc, text) {
@@ -120,8 +120,17 @@ shared abstract class TypeProposal
             importProposals.importType(decs, type, rootNode);
         }
         
-        value il = importProposals.applyImports(change, decs, rootNode, document);
-        change.addEdit(ReplaceEdit(offset, getCurrentLength(document), text));
+        value il = importProposals.applyImports {
+            change = change;
+            declarations = decs;
+            rootNode = rootNode;
+            doc = document;
+        };
+        change.addEdit(ReplaceEdit {
+            start = offset;
+            length = getCurrentLength(document);
+            text = text;
+        });
 
         return DefaultRegion(offset+il, text.size);
     }

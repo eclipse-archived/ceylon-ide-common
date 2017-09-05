@@ -31,11 +31,12 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Functional,
     Function,
-    FunctionOrValue,
     Module,
     Type,
     TypeDeclaration,
-    TypedDeclaration
+    TypedDeclaration,
+    Scope,
+    ImportScope
 }
 
 import java.lang {
@@ -45,16 +46,17 @@ import java.lang {
 
 shared object importProposals {
     
-    function findImportCandidates(Module mod, String name, Tree.CompilationUnit rootNode)
+    function findImportCandidates(Module mod, String name,
+            Tree.CompilationUnit rootNode)
             => set {
                 for (pkg in mod.allVisiblePackages)
                 if (!pkg.nameAsString.empty)
-                if (exists d = pkg.getMember(name, null, false)) 
-                d
+                if (exists member = pkg.getMember(name, null, false))
+                member
             };
     
-    void findCandidateDeclarations(Node id, QuickFixData data, 
-        Boolean hint) {
+    void findCandidateDeclarations(QuickFixData data,
+            Node id, Boolean hint) {
         value rootNode = data.rootNode;
         value candidates 
                 = findImportCandidates {
@@ -80,7 +82,7 @@ shared object importProposals {
                 data.addQuickFix {
                     description = description;
                     void change() {
-                        findCandidateDeclarations(id, data, false);
+                        findCandidateDeclarations(data, id, false);
                         changeReferenceQuickFix.findChangeReferenceProposals(data);
                     }
                     kind = QuickFixKind.addImport;
@@ -88,12 +90,13 @@ shared object importProposals {
                     asynchronous = true;
                 };
             } else {
-                findCandidateDeclarations(id, data, true);
+                findCandidateDeclarations(data, id, true);
             }
         }
     }
 
-    void createImportProposal(QuickFixData data, Declaration declaration, Boolean hint) {
+    void createImportProposal(QuickFixData data,
+            Declaration declaration, Boolean hint) {
         
         value change 
                 = platformServices.document.createTextChange {
@@ -133,20 +136,22 @@ shared object importProposals {
         {String*}? aliases,
         Declaration? declarationBeingDeleted,
         CommonDocument doc) {
-        String delim = doc.defaultLineDelimiter;
-        
+
+        value delim = doc.defaultLineDelimiter;
+        value defaultIndent = platformServices.document.defaultIndent;
+
         value edits = ArrayList<InsertEdit>();
         value packages = declarations
                 .map((decl) => decl.unit.\ipackage)
                 .distinct;
 
         for (p in packages) {
-            StringBuilder text = StringBuilder();
+            value text = StringBuilder();
             if (!exists aliases) {
                 for (d in declarations) {
                     if (d.unit.\ipackage == p) {
                         text.appendCharacter(',').append(delim)
-                            .append(platformServices.document.defaultIndent)
+                            .append(defaultIndent)
                             .append(escaping.escapeName(d));
                     }
                 }
@@ -155,7 +160,7 @@ shared object importProposals {
                 for (d in declarations) {
                     value theAlias = aliasIter.next();
                     if (d.unit.\ipackage == p) {
-                        text.append(",").append(delim).append(platformServices.document.defaultIndent);
+                        text.append(",").append(delim).append(defaultIndent);
                         if (!is Finished theAlias, theAlias != d.name) {
                             text.append(theAlias).appendCharacter('=');
                         }
@@ -165,11 +170,11 @@ shared object importProposals {
             }
             
             if (exists importNode = findImportNode(rootNode, p.nameAsString)) {
-                Tree.ImportMemberOrTypeList imtl = importNode.importMemberOrTypeList;
+                value imtl = importNode.importMemberOrTypeList;
                 if (imtl.importWildcard exists) {
                     // Do Nothing
                 } else {
-                    Integer insertPosition 
+                    value insertPosition
                             = getBestImportMemberInsertPosition(importNode);
                     if (exists declarationBeingDeleted,
                         imtl.importMemberOrTypes.size() == 1,
@@ -180,7 +185,7 @@ shared object importProposals {
                     edits.add(InsertEdit(insertPosition, text.string));
                 }
             } else {
-                Integer insertPosition 
+                value insertPosition
                         = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
                 text.insert(0, "import " + escaping.escapePackageName(p)
@@ -211,16 +216,17 @@ shared object importProposals {
         for (d in declarations) {
             set.add(d);
         }
-        StringBuilder text = StringBuilder();
+        value text = StringBuilder();
+        value defaultIndent = platformServices.document.defaultIndent;
         if (!exists aliases) {
             for (d in declarations) {
-                text.append(",").append(delim).append(platformServices.document.defaultIndent).append(d.name);
+                text.append(",").append(delim).append(defaultIndent).append(d.name);
             }
         } else {
             value aliasIter = aliases.iterator();
             for (d in declarations) {
                 value al = aliasIter.next();
-                text.append(",").append(delim).append(platformServices.document.defaultIndent);
+                text.append(",").append(delim).append(defaultIndent);
                 if (!is Finished al, al != d.name) {
                     text.append(al).appendCharacter('=');
                 }
@@ -246,22 +252,27 @@ shared object importProposals {
                 assert (exists endIndex = imtl.endIndex);
                 value start = startIndex.intValue();
                 value end = endIndex.intValue();
-                String formattedImport = formatImportMembers(delim, platformServices.document.defaultIndent, set, imtl);
+                value formattedImport = formatImportMembers {
+                    delim = delim;
+                    indent = platformServices.document.defaultIndent;
+                    set = set;
+                    imtl = imtl;
+                };
                 result.add(ReplaceEdit(start, end - start, formattedImport));
             }
         }
         value pack = rootNode.unit.\ipackage;
         if (pack.qualifiedNameString != newPackageName) {
             if (exists importNode = findImportNode(rootNode, newPackageName)) {
-                Tree.ImportMemberOrTypeList imtl = importNode.importMemberOrTypeList;
+                value imtl = importNode.importMemberOrTypeList;
                 if (imtl.importWildcard exists) {
                     // Do Nothing
                 } else {
-                    Integer insertPosition = getBestImportMemberInsertPosition(importNode);
+                    value insertPosition = getBestImportMemberInsertPosition(importNode);
                     result.add(InsertEdit(insertPosition, text.string));
                 }
             } else {
-                Integer insertPosition = getBestImportInsertPosition(rootNode);
+                value insertPosition = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
                 text.insert(0, "import " + newPackageName + " {" + delim).append(delim + "}");
                 if (insertPosition == 0) {
@@ -274,17 +285,19 @@ shared object importProposals {
         }
         return result;
     }
-    shared String formatImportMembers(String delim, String indent, Set<Declaration> set, Tree.ImportMemberOrTypeList imtl) {
-        StringBuilder sb = StringBuilder().append("{").append(delim);
+    shared String formatImportMembers(String delim, String indent,
+            Set<Declaration> set,
+            Tree.ImportMemberOrTypeList imtl) {
+        value text = StringBuilder().append("{").append(delim);
         for (imt in imtl.importMemberOrTypes) {
             if (exists dec = imt.declarationModel, !dec in set) {
-                sb.append(indent);
+                text.append(indent);
                 if (exists theAlias = imt.\ialias) {
                     String aliasText = theAlias.identifier.text;
-                    sb.append(aliasText).appendCharacter('=');
+                    text.append(aliasText).appendCharacter('=');
                 }
                 value id = imt.identifier.text;
-                sb.append(id).appendCharacter(',').append(delim);
+                text.append(id).appendCharacter(',').append(delim);
             }
         }
         
@@ -292,9 +305,9 @@ shared object importProposals {
         // a Java StringBuilder :
         //
         //     sb.setLength(sb.length() - 1 - delim.length());
-        sb.deleteTerminal(1 + delim.size);
-        sb.append(delim).appendCharacter('}');
-        return sb.string;
+        text.deleteTerminal(1 + delim.size);
+        text.append(delim).appendCharacter('}');
+        return text.string;
     }
     
     shared Integer getBestImportInsertPosition(Tree.CompilationUnit cu) {
@@ -329,16 +342,31 @@ shared object importProposals {
         }
     }
     
-    shared Integer applyImportsInternal(TextChange change, {Declaration*} declarations, {String*}? aliases, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted) {
-        variable Integer il = 0;
-        for (ie in importEdits(cu, declarations, aliases, declarationBeingDeleted, doc)) {
+    shared Integer applyImportsInternal(TextChange change,
+            {Declaration*} declarations,
+            {String*}? aliases,
+            Tree.CompilationUnit cu,
+            CommonDocument doc,
+            Declaration? declarationBeingDeleted) {
+        variable value il = 0;
+        for (ie in importEdits {
+            rootNode = cu;
+            declarations = declarations;
+            aliases = aliases;
+            declarationBeingDeleted = declarationBeingDeleted;
+            doc = doc;
+        }) {
             il += ie.text.size;
             change.addEdit(ie);
         }
         return il;
     }
     
-    shared Integer applyImports(TextChange change, Set<Declaration> declarations, Tree.CompilationUnit rootNode, CommonDocument doc, Declaration? declarationBeingDeleted = null)
+    shared Integer applyImports(TextChange change,
+            Set<Declaration> declarations,
+            Tree.CompilationUnit rootNode,
+            CommonDocument doc,
+            Declaration? declarationBeingDeleted = null)
             => applyImportsInternal { 
                 change = change; 
                 declarations = declarations; 
@@ -348,7 +376,11 @@ shared object importProposals {
                 declarationBeingDeleted = declarationBeingDeleted; 
             };
     
-    shared Integer applyImportsWithAliases(TextChange change, Map<Declaration,JString> declarations, Tree.CompilationUnit cu, CommonDocument doc, Declaration? declarationBeingDeleted = null)
+    shared Integer applyImportsWithAliases(TextChange change,
+            Map<Declaration,JString> declarations,
+            Tree.CompilationUnit cu,
+            CommonDocument doc,
+            Declaration? declarationBeingDeleted = null)
             => applyImportsInternal { 
                 change = change; 
                 declarations = declarations.keys; 
@@ -358,96 +390,171 @@ shared object importProposals {
                 declarationBeingDeleted = declarationBeingDeleted;
             };
     
-    shared void importSignatureTypes(Declaration declaration, Tree.CompilationUnit rootNode, MutableSet<Declaration> declarations) {
+    shared void importSignatureTypes(Declaration declaration,
+            Tree.CompilationUnit rootNode,
+            MutableSet<Declaration> declarations,
+            Scope? scope = null) {
         if (is TypedDeclaration declaration) {
             TypedDeclaration td = declaration;
-            importType(declarations, td.type, rootNode);
+            importType(declarations, td.type, rootNode, scope);
         }
         if (is Functional declaration) {
-            Functional fun = declaration;
-            for (pl in fun.parameterLists) {
+            for (pl in declaration.parameterLists) {
                 for (p in pl.parameters) {
-                    importSignatureTypes(p.model, rootNode, declarations);
+                    importSignatureTypes {
+                        declaration = p.model;
+                        rootNode = rootNode;
+                        declarations = declarations;
+                        scope = scope;
+                    };
                 }
             }
         }
     }
     
-    shared void importTypes(MutableSet<Declaration> declarations, {Type*}? types, Tree.CompilationUnit rootNode) {
+    shared void importTypes(
+            MutableSet<Declaration> declarations,
+            {Type*}? types,
+            Tree.CompilationUnit rootNode,
+            Scope? scope = null) {
         if (exists types) {
             for (type in types) {
-                importType(declarations, type, rootNode);
+                importType {
+                    declarations = declarations;
+                    type = type;
+                    rootNode = rootNode;
+                    scope = scope;
+                };
             }
         }
     }
-    shared void importType(MutableSet<Declaration> declarations, Type? type, Tree.CompilationUnit rootNode) {
+    shared void importType(MutableSet<Declaration> declarations,
+            Type? type,
+            Tree.CompilationUnit rootNode,
+            Scope? scope = null) {
         if (exists type) {
             if (type.unknown || type.nothing) {
                 // Do Nothing
             } else if (type.union) {
                 for (t in type.caseTypes) {
-                    importType(declarations, t, rootNode);
+                    importType {
+                        declarations = declarations;
+                        type = t;
+                        rootNode = rootNode;
+                        scope = scope;
+                    };
                 }
             } else if (type.intersection) {
                 for (t in type.satisfiedTypes) {
-                    importType(declarations, t, rootNode);
+                    importType {
+                        declarations = declarations;
+                        type = t;
+                        rootNode = rootNode;
+                        scope = scope;
+                    };
                 }
             } else {
-                importType(declarations, type.qualifyingType, rootNode);
+                importType {
+                    declarations = declarations;
+                    type = type.qualifyingType;
+                    rootNode = rootNode;
+                    scope = scope;
+                };
                 TypeDeclaration td = type.declaration;
                 if (type.classOrInterface && td.toplevel) {
-                    importDeclaration(declarations, td, rootNode);
+                    importDeclaration {
+                        declarations = declarations;
+                        declaration = td;
+                        rootNode = rootNode;
+                        scope = scope;
+                    };
                     for (arg in type.typeArgumentList) {
-                        importType(declarations, arg, rootNode);
+                        importType {
+                            declarations = declarations;
+                            type = arg;
+                            rootNode = rootNode;
+                            scope = scope;
+                        };
                     }
                 }
             }
         }
     }
     
-    shared void importDeclaration(MutableSet<Declaration> declarations, Declaration declaration, Tree.CompilationUnit rootNode) {
+    shared void importDeclaration(MutableSet<Declaration> declarations,
+            Declaration declaration, Tree.CompilationUnit rootNode,
+            Scope? scope = null) {
         if (!declaration.parameter) {
             value p = declaration.unit.\ipackage;
             value pack = rootNode.unit.\ipackage;
             if (!p.nameAsString.empty
                         && p!=pack
-                        && p.nameAsString!=Module.languageModuleName
+                        && !p.languagePackage
                         && (!declaration.classOrInterfaceMember 
                             || declaration.static)) {
-                if (!isImported(declaration, rootNode)) {
-                    declarations.add(declaration);
+                if (isImported(declaration, rootNode.unit)) {
+                    return;
                 }
+                variable Scope? parent = scope;
+                while (exists current = parent) {
+                    if (is ImportScope current,
+                        isImported(declaration, current)) {
+                        return;
+                    }
+                    parent = current.container;
+                }
+                declarations.add(declaration);
             }
         }
     }
     
-    shared Boolean isImported(Declaration declaration, Tree.CompilationUnit rootNode) {
-        for (i in rootNode.unit.imports) {
-            if (exists abstraction = nodes.getAbstraction(declaration), i.declaration == abstraction) {
-                return true;
+    shared Boolean isImported(Declaration declaration, ImportScope importScope) {
+        if (exists imports = importScope.imports) {
+//            value abstraction = nodes.getAbstraction(declaration);
+            for (imp in imports) {
+                if (imp.declaration.qualifiedNameString
+                    == declaration.qualifiedNameString) {
+                    return true;
+                }
+            } else {
+                return false;
             }
+        } else {
+            return false;
         }
-        return false;
     }
     
-    shared void importCallableParameterParamTypes(Declaration declaration, MutableSet<Declaration> decs, Tree.CompilationUnit cu) {
+    shared void importCallableParameterParamTypes(Declaration declaration,
+            MutableSet<Declaration> decs,
+            Tree.CompilationUnit cu, Scope scope) {
         if (is Functional declaration) {
-            Functional fun = declaration;
-            value pls = fun.parameterLists;
+            value pls = declaration.parameterLists;
             if (!pls.empty) {
                 for (p in pls.get(0).parameters) {
-                    FunctionOrValue pm = p.model;
-                    importParameterTypes(pm, cu, decs);
+                    importParameterTypes {
+                        dec = p.model;
+                        cu = cu;
+                        decs = decs;
+                        scope = scope;
+                    };
                 }
             }
         }
     }
     
-    shared void importParameterTypes(Declaration dec, Tree.CompilationUnit cu, MutableSet<Declaration> decs) {
+    shared void importParameterTypes(Declaration dec,
+            Tree.CompilationUnit cu,
+            MutableSet<Declaration> decs,
+            Scope scope) {
         if (is Function dec) {
             for (ppl in dec.parameterLists) {
                 for (pp in ppl.parameters) {
-                    importSignatureTypes(pp.model, cu, decs);
+                    importSignatureTypes {
+                        declaration = pp.model;
+                        rootNode = cu;
+                        declarations = decs;
+                        scope = scope;
+                    };
                 }
             }
         }

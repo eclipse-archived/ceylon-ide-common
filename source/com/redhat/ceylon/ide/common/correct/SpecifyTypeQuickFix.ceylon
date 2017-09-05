@@ -30,8 +30,9 @@ import com.redhat.ceylon.model.typechecker.model {
 
 shared object specifyTypeQuickFix {
     
-    shared DefaultRegion? specifyType(Tree.CompilationUnit rootNode, CommonDocument document, Tree.Type typeNode,
-        Boolean inEditor, Type type) {
+    shared DefaultRegion? specifyType(Tree.CompilationUnit rootNode,
+            CommonDocument document, Tree.Type typeNode,
+            Boolean inEditor, Type type) {
         
         value offset = typeNode.startIndex.intValue();
         value length = typeNode.distance.intValue();
@@ -51,6 +52,7 @@ shared object specifyTypeQuickFix {
                     declarations = decs;
                     type = infType;
                     rootNode = rootNode;
+                    scope = typeNode.scope;
                 };
                 value il = importProposals.applyImports {
                     change = change;

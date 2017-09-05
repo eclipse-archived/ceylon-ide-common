@@ -20,7 +20,7 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
     value imports = HashSet<Declaration>();
     
     shared Boolean isImported(Declaration declaration)
-            => importProposals.isImported(declaration, rootNode);
+            => importProposals.isImported(declaration, rootNode.unit);
 
     shared List<InsertEdit> importEdits(
         {Declaration*} declarations,
@@ -63,5 +63,10 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
             };
         
     shared Integer apply(TextChange change) 
-            => importProposals.applyImports(change, imports, rootNode, document);
+            => importProposals.applyImports {
+                change = change;
+                declarations = imports;
+                rootNode = rootNode;
+                doc = document;
+            };
 }

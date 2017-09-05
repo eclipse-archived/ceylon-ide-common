@@ -24,7 +24,6 @@ import com.redhat.ceylon.model.typechecker.model {
     Unit,
     Declaration,
     Package,
-    Module,
     Functional,
     DeclarationWithProximity,
     Scope,
@@ -189,7 +188,8 @@ JList<Parameter> getParameters(ParameterList pl,
         return Arrays.asList(
             for (p in ps)
             if (!p.defaulted
-                || (namedInvocation && spreadable(p, ps)))
+                || namedInvocation
+                && spreadable(p, ps))
             p);
     }
 }
@@ -218,13 +218,13 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
     String qname = decl.qualifiedNameString;
     
     if (exists pkg = decl.unit.\ipackage, 
-        Module.languageModuleName.equals(pkg.nameAsString) 
-            || (if (exists unit) then pkg.equals(unit.\ipackage) else false)) {
+        pkg.languagePackage
+            || (if (exists unit) then pkg==unit.\ipackage else false)) {
         if (decl.toplevel) {
             return decl.nameAsString;
         } else {
             if (exists loc = qname.firstInclusion("::")) {
-                return qname.spanFrom(loc + 2);
+                return qname[loc+2...];
             } else {
                 return qname;
             }
@@ -235,13 +235,13 @@ String getTextForDocLink(Unit? unit, Declaration decl) {
 }
 
 Boolean isEmptyModuleDescriptor(Tree.CompilationUnit? cu) 
-        => if (isModuleDescriptor(cu), exists cu, cu.moduleDescriptors.empty) 
-            then true else false;
+        => if (exists cu, isModuleDescriptor(cu))
+        then cu.moduleDescriptors.empty
+        else false;
 
 Boolean isEmptyPackageDescriptor(Tree.CompilationUnit? cu) 
-        => if (exists cu, exists u = cu.unit)
-        then u.filename == "package.ceylon"
-          && cu.packageDescriptors.empty
+        => if (exists cu, isPackageDescriptor(cu))
+        then cu.packageDescriptors.empty
         else false;
 
 String fullPath(Integer offset, String prefix, Tree.ImportPath? path) {

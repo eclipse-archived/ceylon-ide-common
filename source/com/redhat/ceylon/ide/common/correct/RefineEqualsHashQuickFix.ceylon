@@ -97,7 +97,7 @@ shared object refineEqualsHashQuickFix {
             for (d in overloads(dec)) {
                 if (ci.isInheritedFromSupertype(d)) {
                     appendRefinementText(data, isInterface, indent, result, ci, unit, d);
-                    importProposals.importSignatureTypes(d, data.rootNode, already);
+                    importProposals.importSignatureTypes(d, data.rootNode, already, ci);
                 }
             }
         }

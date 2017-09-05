@@ -562,13 +562,13 @@ shared abstract class InvocationCompletionProposal
         change.initMultiEdit();
         
         if (exists qualifyingValue) {
-            importProposals.importDeclaration(decs, qualifyingValue, cu);
+            importProposals.importDeclaration(decs, qualifyingValue, cu, scope);
         }
         if (!qualified) {
-            importProposals.importDeclaration(decs, declaration, cu);
+            importProposals.importDeclaration(decs, declaration, cu, scope);
         }
         if (positionalInvocation || namedInvocation) {
-            importProposals.importCallableParameterParamTypes(declaration, decs, cu);
+            importProposals.importCallableParameterParamTypes(declaration, decs, cu, scope);
         }
         value il = importProposals.applyImports(change, decs, cu, document);
         change.addEdit(createEdit(document));

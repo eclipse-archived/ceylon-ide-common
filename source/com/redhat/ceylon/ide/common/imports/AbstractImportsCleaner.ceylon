@@ -181,6 +181,10 @@ shared interface AbstractImportsCleaner {
         value builder = StringBuilder();
         variable String? lastToplevel = null;
         value delim = doc.defaultLineDelimiter;
+        value indent
+                = if (exists importList)
+                then doc.getIndent(importList)
+                else "";
         for (packageName->imports in packages) {
             value wildcard = hasWildcard(imports);
             value list = getUsedImportElements {
@@ -215,10 +219,19 @@ shared interface AbstractImportsCleaner {
                 builder.append("import ")
                         .append(escapedPackageName)
                         .append(" {");
-                appendImportElements(packageName, list,
-                    unused, proposed,
-                    wildcard, builder, doc);
-                builder.append(delim).append("}");
+                appendImportElements {
+                    packageName = packageName;
+                    elements = list;
+                    unused = unused;
+                    proposed = proposed;
+                    hasWildcard = wildcard;
+                    builder = builder;
+                    doc = doc;
+                    baseIndent = indent;
+                };
+                builder.append(delim)
+                        .append(indent)
+                        .append("}");
             }
         }
         
@@ -254,9 +267,9 @@ shared interface AbstractImportsCleaner {
     
     void appendImportElements(String packageName, List<Tree.ImportMemberOrType> elements,
         List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
-        StringBuilder builder, CommonDocument doc) {
+        StringBuilder builder, CommonDocument doc, String baseIndent) {
         
-        value indent = platformServices.document.defaultIndent;
+        value indent = baseIndent + platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         for (i in elements) {
@@ -264,9 +277,9 @@ shared interface AbstractImportsCleaner {
                 isErrorFree(i)) {
                 
                 builder.append(delim).append(indent);
-                value \ialias = i.importModel.\ialias;
-                if (!\ialias.equals(d.name)) {
-                    value escapedAlias = escaping.escapeAliasedName(d, \ialias);
+                value aliaz = i.importModel.\ialias;
+                if (!aliaz==d.name) {
+                    value escapedAlias = escaping.escapeAliasedName(d, aliaz);
                     builder.append(escapedAlias).append("=");
                 }
                 
@@ -278,7 +291,7 @@ shared interface AbstractImportsCleaner {
         
         for (d in proposed) {
             value pack = d.unit.\ipackage;
-            if (pack.nameAsString.equals(packageName)) {
+            if (pack.nameAsString==packageName) {
                 builder.append(delim)
                         .append(indent);
                 builder.append(escaping.escapeName(d)).append(",");

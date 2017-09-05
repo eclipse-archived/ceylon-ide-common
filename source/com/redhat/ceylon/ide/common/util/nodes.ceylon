@@ -116,8 +116,8 @@ shared object nodes {
         return fsv.statement;
     }
     
-    shared Declaration? getAbstraction(Declaration? d)
-            => if (exists d, ModelUtil.isOverloadedVersion(d))
+    shared Declaration getAbstraction(Declaration d)
+            => if (ModelUtil.isOverloadedVersion(d))
                then d.container.getDirectMember(d.name, null, false)
                else d;
     

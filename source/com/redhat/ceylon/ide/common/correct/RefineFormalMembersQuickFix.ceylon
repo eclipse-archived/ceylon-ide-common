@@ -150,7 +150,7 @@ shared object refineFormalMembersQuickFix {
                         if (is Function d, d.realFunction exists) then false else true) {
 
                         appendRefinementText(data, isInterface, indent, result, ci, unit, d);
-                        importProposals.importSignatureTypes(d, rootNode, already);
+                        importProposals.importSignatureTypes(d, rootNode, already, body.scope);
                         ambiguousNames.add(d.name);
                     }
                 } catch (e) {
@@ -169,7 +169,7 @@ shared object refineFormalMembersQuickFix {
                         
                         if (doesntRefine && ambiguousNames.add(m.name)) {
                             appendRefinementText(data, isInterface, indent, result, ci, unit, m);
-                            importProposals.importSignatureTypes(m, rootNode, already);
+                            importProposals.importSignatureTypes(m, rootNode, already, ci);
                         }
                     }
                 } catch (e) {

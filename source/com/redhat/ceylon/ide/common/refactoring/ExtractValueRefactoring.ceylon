@@ -227,6 +227,7 @@ shared interface ExtractValueRefactoring<IRegion>
                     declarations = imports;
                     type = type;
                     rootNode = rootNode;
+                    scope = core.scope;
                 };
             }
             else {
