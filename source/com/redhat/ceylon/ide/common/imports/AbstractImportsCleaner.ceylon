@@ -10,12 +10,14 @@ import com.redhat.ceylon.compiler.typechecker.analyzer {
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
     TreeUtil,
-    Node
+    Node,
+    Visitor
 }
 import com.redhat.ceylon.ide.common.platform {
     CommonDocument,
     platformServices,
-    ReplaceEdit
+    ReplaceEdit,
+    TextChange
 }
 import com.redhat.ceylon.ide.common.util {
     escaping
@@ -24,6 +26,9 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Package
 }
+import java.lang {
+    overloaded
+}
 
 shared interface AbstractImportsCleaner {
     
@@ -31,75 +36,143 @@ shared interface AbstractImportsCleaner {
      be imported between the different `proposals`"
     shared formal Declaration? select(List<Declaration> proposals);
     
-    shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
-        CommonDocument doc) {
-        
-        if (exists rootNode) {
-            value change = platformServices.document.createTextChange("Organize Imports", doc);
-        
-            value imp = imports(rootNode, doc);
-            value importList = rootNode.importList;
-            if (!(imp.trimmed.empty && importList.imports.empty)) {
-                Integer start;
-                Integer length;
-                String extra;
-                value il = importList;
-                if (il.imports.empty) {
-                    start = 0;
-                    length = 0;
-                    extra = doc.defaultLineDelimiter;
-                } else {
-                    start = il.startIndex.intValue();
-                    length = il.distance.intValue();
-                    extra = "";
-                }
-                
-                Boolean changed = doc.getText(start, length) != imp + extra;
-                if (changed) {
-                    change.addEdit(ReplaceEdit(start, length, imp + extra));
-                    change.apply();
-                }
-                return changed;
+    function cleanImportList(Tree.ImportList importList,
+            Node scope, CommonDocument doc, TextChange change) {
+
+        value imp
+                = imports {
+                    importList = importList;
+                    scope = scope;
+                    doc = doc;
+                };
+        if (!imp.trimmed.empty || !importList.imports.empty) {
+            Integer start;
+            Integer length;
+            String extra;
+            if (importList.imports.empty) {
+                start = 0;
+                length = 0;
+                extra = doc.defaultLineDelimiter;
+            } else {
+                start = importList.startIndex.intValue();
+                length = importList.distance.intValue();
+                extra = "";
+            }
+
+            value changed
+                    = doc.getText(start, length)
+                        != imp + extra;
+            if (changed) {
+                change.addEdit(ReplaceEdit {
+                    start = start;
+                    length = length;
+                    text = imp + extra;
+                });
+                return true;
+            }
+            else {
+                return false;
             }
         }
+        else {
+            return false;
+        }
+    }
+
+    shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
+        CommonDocument doc) {
+
+        variable value result = false;
+
+        if (exists rootNode) {
+            value change = platformServices.document.createTextChange("Organize Imports", doc);
+            value importList = rootNode.importList;
+
+            result = cleanImportList {
+                importList = importList;
+                scope = rootNode;
+                doc = doc;
+                change = change;
+            };
+
+            object extends Visitor() {
+                variable Tree.Body? body = null;
+                shared actual overloaded
+                void visit(Tree.Body that) {
+                    value old = body;
+                    body = that;
+                    super.visit(that);
+                    body = old;
+                }
+                shared actual overloaded
+                void visit(Tree.ImportList that) {
+                    super.visit(that);
+                    if (!that===importList,
+                        exists body=this.body) {
+                        result = cleanImportList {
+                            importList = that;
+                            scope = body;
+                            doc = doc;
+                            change = change;
+                        };
+                    }
+                }
+            }.visit(rootNode);
+
+            if (result) {
+                change.apply();
+            }
+
+        }
         
-        return false;
+        return result;
     }
     
-    String imports(Tree.CompilationUnit cu, CommonDocument doc) {
+    String imports(Tree.ImportList? importList,
+            Node scope, CommonDocument doc) {
         value proposals = ArrayList<Declaration>();
         value unused = ArrayList<Declaration>();
         
-        ImportProposalsVisitor(cu, proposals, select).visit(cu);
-        DetectUnusedImportsVisitor(unused).visit(cu);
+        ImportProposalsVisitor(scope, proposals, select).visitAny(scope);
+        DetectUnusedImportsVisitor(unused).visitAny(scope);
         
-        return reorganizeImports(cu.importList, unused, proposals, doc);
+        return reorganizeImports {
+            importList = importList;
+            unused = unused;
+            proposed = proposals;
+            doc = doc;
+        };
     }
 
     // Formerly CleanImportsHandler.imports(List<Declaration>, IDocument)
     shared String createImports(List<Declaration> proposed, CommonDocument doc)
-            => reorganizeImports(null, [], proposed, doc);
+            => reorganizeImports {
+                importList = null;
+                unused = [];
+                proposed = proposed;
+                doc = doc;
+            };
     
-    shared String reorganizeImports(Tree.ImportList? til, List<Declaration> unused,
-        List<Declaration> proposed, CommonDocument doc) {
+    shared String reorganizeImports(Tree.ImportList? importList,
+            List<Declaration> unused,
+            List<Declaration> proposed,
+            CommonDocument doc) {
         
         value packages = naturalOrderTreeMap<String,MutableList<Tree.Import>>({});
-        if (exists til) {
-            for (i in til.imports) {
-                value pn = packageName(i);
-                if (exists pn) {
-                    value imps = packages.get(pn)
-                        else ArrayList<Tree.Import>();
-                    
+        if (exists importList) {
+            for (imp in importList.imports) {
+                if (exists pn = packageName(imp)) {
+                    value imps
+                            = packages[pn]
+                            else ArrayList<Tree.Import>();
+                    imps.add(imp);
                     packages[pn] = imps;
-                    imps.add(i);
                 }
             }
         }
         
-        for (d in proposed) {
-            value p = d.unit.\ipackage;
-            value pn = p.nameAsString;
+        for (dec in proposed) {
+            value pn = dec.unit.\ipackage.nameAsString;
             if (!packages.defines(pn)) {
                 packages[pn] = ArrayList<Tree.Import>(0);
             }
@@ -109,22 +182,31 @@ shared interface AbstractImportsCleaner {
         variable String? lastToplevel = null;
         value delim = doc.defaultLineDelimiter;
         for (packageName->imports in packages) {
-            value _hasWildcard = hasWildcard(imports);
-            value list = getUsedImportElements(imports, unused, _hasWildcard, packages);
-            if (_hasWildcard || !list.empty
+            value wildcard = hasWildcard(imports);
+            value list = getUsedImportElements {
+                imports = imports;
+                unused = unused;
+                hasWildcard = wildcard;
+                packages = packages;
+            };
+            if (wildcard
+                || !list.empty
                 || imports.empty) { //in this last case there is no existing import, but imports are proposed
-                lastToplevel = appendBreakIfNecessary(lastToplevel, packageName, builder, doc);
-                value packageModel = if (imports.empty)
-                                     then null //TODO: what to do in this case? look up the Package where?
-                                     else imports.get(0)?.importPath?.model;
+                lastToplevel = appendBreakIfNecessary {
+                    lastToplevel = lastToplevel;
+                    currentPackage = packageName;
+                    builder = builder;
+                    doc = doc;
+                };
+                value packageModel
+                        = if (imports.empty)
+                        then null //TODO: what to do in this case? look up the Package where?
+                        else imports.get(0)?.importPath?.model;
 
-                String escapedPackageName;
-                if (is Package packageModel) {
-                    value p = packageModel;
-                    escapedPackageName = escaping.escapePackageName(p);
-                } else {
-                    escapedPackageName = packageName;
-                }
+                String escapedPackageName
+                        = if (is Package packageModel)
+                        then escaping.escapePackageName(packageModel)
+                        else packageName;
                 
                 if (!builder.empty) {
                     builder.append(delim);
@@ -135,7 +217,7 @@ shared interface AbstractImportsCleaner {
                         .append(" {");
                 appendImportElements(packageName, list,
                     unused, proposed,
-                    _hasWildcard, builder, doc);
+                    wildcard, builder, doc);
                 builder.append(delim).append("}");
             }
         }
@@ -144,22 +226,24 @@ shared interface AbstractImportsCleaner {
     }
     
     Boolean hasWildcard(List<Tree.Import> imports) {
-        variable value hasWildcard = false;
-        for (Tree.Import? i in imports) {
-            hasWildcard = hasWildcard 
-                    || i?.importMemberOrTypeList?.importWildcard exists;
+        for (imp in imports) {
+            if (imp.importMemberOrTypeList?.importWildcard exists) {
+                return true;
+            }
         }
-        
-        return hasWildcard;
+        else {
+            return false;
+        }
     }
     
     String appendBreakIfNecessary(String? lastToplevel,
         String currentPackage, StringBuilder builder, CommonDocument doc) {
         
         value index = currentPackage.firstOccurrence('.');
-        value topLevel = if (!exists index)
-                         then currentPackage
-                         else currentPackage.spanTo(index - 1);
+        value topLevel
+                = if (!exists index)
+                 then currentPackage
+                 else currentPackage.spanTo(index - 1);
         
         if (exists lastToplevel, !topLevel.equals(lastToplevel)) {
             builder.append(doc.defaultLineDelimiter);
@@ -227,9 +311,9 @@ shared interface AbstractImportsCleaner {
                     if (!d in unused) {
                         found = true;
                         builder.append(delim).append(indent).append(indent);
-                        value \ialias = nimt.importModel.\ialias;
-                        if (!\ialias.equals(d.name)) {
-                            value escapedAlias = escaping.escapeAliasedName(d, \ialias);
+                        value aliaz = nimt.importModel.\ialias;
+                        if (!aliaz==d.name) {
+                            value escapedAlias = escaping.escapeAliasedName(d, aliaz);
                             builder.append(escapedAlias).append("=");
                         }
                         
@@ -257,13 +341,14 @@ shared interface AbstractImportsCleaner {
     }
     
     Boolean hasRealErrors(Node node) {
-        for (m in node.errors) {
-            if (is AnalysisError m) {
+        for (message in node.errors) {
+            if (message is AnalysisError) {
                 return true;
             }
         }
-        
-        return false;
+        else {
+            return false;
+        }
     }
     
     List<Tree.ImportMemberOrType> getUsedImportElements(List<Tree.Import> imports,
@@ -275,28 +360,26 @@ shared interface AbstractImportsCleaner {
             for (imt in ti.importMemberOrTypeList.importMemberOrTypes) {
                 if (exists dm = imt.declarationModel,
                     isErrorFree(imt)) {
-                    
-                    Tree.ImportMemberOrTypeList? nimtl = imt.importMemberOrTypeList;
-                    
+
+                    value nimtl = imt.importMemberOrTypeList;
+
                     if (dm in unused) {
                         if (exists nimtl) {
                             for (nimt in nimtl.importMemberOrTypes) {
                                 if (exists ndm = nimt.declarationModel,
-                                    isErrorFree(nimt)) {
-                                    
-                                    if (!ndm in unused) {
-                                        list.add(imt);
-                                        break;
-                                    }
+                                    isErrorFree(nimt) && !ndm in unused) {
+                                    list.add(imt);
+                                    break;
                                 }
                             }
-                            
+
                             if (nimtl.importWildcard exists) {
                                 list.add(imt);
                             }
                         }
                     } else {
-                        if (!hasWildcard || imt.\ialias exists
+                        if (!hasWildcard
+                            || imt.\ialias exists
                             || nimtl exists
                             || preventAmbiguityDueWildcards(dm, packages)) {
                             
@@ -322,15 +405,16 @@ shared interface AbstractImportsCleaner {
         value containerName = d.container.qualifiedNameString;
         
         for (packageName -> importList in importsMap) {
-            if (!packageName.equals(containerName), hasWildcard(importList)) {
-                if (exists p2 = mod.getPackage(packageName)) {
-                    if (exists d2 = p2.getMember(d.name, null, false), 
-                        d2.toplevel, d2.shared,
-                        !d2.anonymous, !isImportedWithAlias(d2, importList)) {
-                        
-                        return true;
-                    }
-                }
+            if (packageName!=containerName
+                    && hasWildcard(importList),
+                exists p2 = mod.getPackage(packageName),
+                exists d2 = p2.getMember(d.name, null, false),
+                d2.toplevel
+                && d2.shared
+                && !d2.anonymous
+                && !isImportedWithAlias(d2, importList)) {
+
+                return true;
             }
         }
         
@@ -341,20 +425,18 @@ shared interface AbstractImportsCleaner {
         for (i in importList) {
             for (imt in i.importMemberOrTypeList.importMemberOrTypes) {
                 value name = imt.identifier.text;
-                if (d.name.equals(name), imt.\ialias exists) {
+                if (d.name==name && imt.\ialias exists) {
                     return true;
                 }
             }
         }
-        
-        return false;
-    }
-    
-    String? packageName(Tree.Import i) {
-        if (exists path = i.importPath) {
-            return TreeUtil.formatPath(path.identifiers);
-        } else {
-            return null;
+        else {
+            return false;
         }
     }
+    
+    String? packageName(Tree.Import i)
+            => if (exists path = i.importPath)
+            then TreeUtil.formatPath(path.identifiers)
+            else null;
 }

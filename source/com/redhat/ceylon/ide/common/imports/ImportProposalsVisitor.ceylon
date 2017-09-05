@@ -5,7 +5,8 @@ import ceylon.collection {
 
 import com.redhat.ceylon.compiler.typechecker.tree {
     Tree,
-    Visitor
+    Visitor,
+    Node
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration
@@ -14,16 +15,19 @@ import java.lang {
     overloaded
 }
 
-class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> proposals,
-        Declaration? chooseDeclaration(List<Declaration> decls))
+class ImportProposalsVisitor(Node scope, proposals,
+        chooseDeclaration)
         extends Visitor() {
+
+    MutableList<Declaration> proposals;
+    Declaration? chooseDeclaration(List<Declaration> decls);
 
     overloaded
     shared actual void visit(Tree.BaseMemberOrTypeExpression that) {
         super.visit(that);
         if (!that.declaration exists) {
             value name = that.identifier.text;
-            addProposal(cu, proposals, name);
+            addProposal(proposals, name);
         }
     }
 
@@ -32,12 +36,11 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
         super.visit(that);
         if (!that.declarationModel exists) {
             value name = that.identifier.text;
-            addProposal(cu, proposals, name);
+            addProposal(proposals, name);
         }
     }
     
-    void addProposal(Tree.CompilationUnit cu,
-        MutableList<Declaration> proposals, String name) {
+    void addProposal(MutableList<Declaration> proposals, String name) {
         
         for (p in proposals) {
             if (p.name==name) {
@@ -45,7 +48,7 @@ class ImportProposalsVisitor(Tree.CompilationUnit cu, MutableList<Declaration> p
             }
         }
         
-        if (exists mod = cu.unit?.\ipackage?.\imodule) { //can be null in IntelliJ for some reason!
+        if (exists mod = scope.unit?.\ipackage?.\imodule) { //can be null in IntelliJ for some reason!
             value possibles = ArrayList<Declaration>();
             
             for (p in mod.allVisiblePackages) {
