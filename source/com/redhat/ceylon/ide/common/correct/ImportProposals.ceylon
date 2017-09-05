@@ -145,31 +145,39 @@ shared object importProposals {
                 .map((decl) => decl.unit.\ipackage)
                 .distinct;
 
-        for (p in packages) {
+        for (pack in packages) {
             value text = StringBuilder();
+
+            value importNode = findImportNode(rootNode, pack.nameAsString);
+
+            value indent
+                    = if (exists importNode)
+                    then doc.getIndent(importNode) + defaultIndent
+                    else defaultIndent;
+
             if (!exists aliases) {
-                for (d in declarations) {
-                    if (d.unit.\ipackage == p) {
+                for (dec in declarations) {
+                    if (dec.unit.\ipackage == pack) {
                         text.appendCharacter(',').append(delim)
-                            .append(defaultIndent)
-                            .append(escaping.escapeName(d));
+                            .append(indent)
+                            .append(escaping.escapeName(dec));
                     }
                 }
             } else {
                 value aliasIter = aliases.iterator();
-                for (d in declarations) {
+                for (dec in declarations) {
                     value theAlias = aliasIter.next();
-                    if (d.unit.\ipackage == p) {
-                        text.append(",").append(delim).append(defaultIndent);
-                        if (!is Finished theAlias, theAlias != d.name) {
+                    if (dec.unit.\ipackage == pack) {
+                        text.append(",").append(delim).append(indent);
+                        if (!is Finished theAlias, theAlias != dec.name) {
                             text.append(theAlias).appendCharacter('=');
                         }
-                        text.append(escaping.escapeName(d));
+                        text.append(escaping.escapeName(dec));
                     }
                 }
             }
             
-            if (exists importNode = findImportNode(rootNode, p.nameAsString)) {
+            if (exists importNode) {
                 value imtl = importNode.importMemberOrTypeList;
                 if (imtl.importWildcard exists) {
                     // Do Nothing
@@ -188,7 +196,7 @@ shared object importProposals {
                 value insertPosition
                         = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
-                text.insert(0, "import " + escaping.escapePackageName(p)
+                text.insert(0, "import " + escaping.escapePackageName(pack)
                             + " {" + delim).append(delim + "}");
                 if (insertPosition == 0) {
                     text.append(delim);
