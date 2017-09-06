@@ -326,14 +326,13 @@ shared object importProposals {
         }
     }
     
-    shared Tree.Import? findImportNode(Tree.CompilationUnit cu, String packageName) {
+    shared Tree.Import? findImportNode(Tree.CompilationUnit rootNode, String packageName) {
         value visitor = FindImportNodeVisitor(packageName);
-        cu.visit(visitor);
+        rootNode.visit(visitor);
         return visitor.result;
     }
-    
-    shared Integer getBestImportMemberInsertPosition(Tree.Import importNode) {
-        value imtl = importNode.importMemberOrTypeList;
+
+    function getBestImportMemberInsertPosition2(Tree.ImportMemberOrTypeList imtl) {
         if (exists wildcard = imtl.importWildcard) {
             assert (exists startIndex = wildcard.startIndex);
             return startIndex.intValue();
@@ -349,6 +348,13 @@ shared object importProposals {
             }
         }
     }
+
+    shared Integer getBestImportMemberInsertPosition(Tree.Import|Tree.ImportMemberOrType importNode)
+            => switch (importNode)
+            case (is Tree.Import)
+                getBestImportMemberInsertPosition2(importNode.importMemberOrTypeList)
+            case (is Tree.ImportMemberOrType)
+                getBestImportMemberInsertPosition2(importNode.importMemberOrTypeList);
     
     shared Integer applyImportsInternal(TextChange change,
             {Declaration*} declarations,

@@ -272,8 +272,8 @@ shared object ideQuickFixManager {
                     super.visit(that);
                     if (exists type = that.type,
                         type == node,
-                        exists p = that.invocationExpression?.primary) {
-                        createQuickFix.addCreateProposals(data, p);
+                        exists primary = that.invocationExpression?.primary) {
+                        createQuickFix.addCreateProposals(data, primary);
                     }
                 }
             }.visit(data.rootNode);
@@ -323,6 +323,8 @@ shared object ideQuickFixManager {
         
         convertToNamedArgumentsQuickFix.addProposal(data, currentOffset);
         convertToPositionalArgumentsQuickFix.addProposal(data, currentOffset);
+
+        addStaticImportQuickFix.addProposal(data);
         
         if (is Tree.BinaryOperatorExpression oe) {
             operatorQuickFix.addReverseOperatorProposal(data,  oe);
