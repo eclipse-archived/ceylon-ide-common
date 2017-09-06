@@ -346,7 +346,7 @@ shared object importProposals {
     }
     
     shared Tree.Import? findImportNode(Tree.CompilationUnit rootNode,
-            String packageName, Scope? scope = null) {
+            String packageName, Scope? scope) {
         value visitor = FindImportNodeVisitor(packageName, scope);
         rootNode.visit(visitor);
         return visitor.result;
