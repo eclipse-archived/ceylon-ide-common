@@ -418,7 +418,7 @@ shared object importProposals {
             Map<Declaration,JString> declarations,
             Tree.CompilationUnit cu,
             CommonDocument doc,
-            Scope scope,
+            Scope? scope = null,
             Declaration? declarationBeingDeleted = null)
             => applyImportsInternal { 
                 change = change; 
