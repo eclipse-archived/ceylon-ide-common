@@ -112,7 +112,7 @@ shared object refineEqualsHashQuickFix {
             result.append(delim).append(bodyIndent);
         }
         
-        importProposals.applyImports(change, already, data.rootNode, document);
+        importProposals.applyImports(change, already, data.rootNode, document, ci);
         change.addEdit(InsertEdit(offset, result.string));
         
         return change;

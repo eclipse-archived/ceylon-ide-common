@@ -178,6 +178,7 @@ shared object wrapExpressionQuickFix {
                 then emptyMap  // already imported
                 else map {declaration -> nativeString(aliasName)};
             cu = data.rootNode;
+            scope = data.node.scope;
             doc = data.document;
         };
 

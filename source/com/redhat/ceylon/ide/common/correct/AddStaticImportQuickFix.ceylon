@@ -24,12 +24,18 @@ shared object addStaticImportQuickFix {
                         importProposals.findImportNode {
                             rootNode = data.rootNode;
                             packageName = dec.unit.\ipackage.nameAsString;
+                            scope = qmte.scope;
                         },
                 exists imtl = importNode.importMemberOrTypeList) {
                 for (imt in imtl.importMemberOrTypes) {
                     if (exists id = imt.declarationModel,
                         id.name == dec.name) {
-                        addStaticImportProposal(data, imt, qmte.identifier, prim);
+                        addStaticImportProposal {
+                            data = data;
+                            imt = imt;
+                            id = qmte.identifier;
+                            primary = prim;
+                        };
                     }
                 }
             }
@@ -41,12 +47,18 @@ shared object addStaticImportQuickFix {
                         importProposals.findImportNode {
                             rootNode = data.rootNode;
                             packageName = dec.unit.\ipackage.nameAsString;
+                            scope = qmte.scope;
                         },
                 exists imtl = importNode.importMemberOrTypeList) {
                 for (imt in imtl.importMemberOrTypes) {
                     if (exists id = imt.declarationModel,
                         id.name == dec.name) {
-                        addStaticImportProposal(data, imt, qmte.identifier, prim);
+                        addStaticImportProposal {
+                            data = data;
+                            imt = imt;
+                            id = qmte.identifier;
+                            primary = prim;
+                        };
                     }
                 }
             }

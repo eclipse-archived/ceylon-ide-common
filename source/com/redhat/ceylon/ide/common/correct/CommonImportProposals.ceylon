@@ -12,7 +12,8 @@ import com.redhat.ceylon.ide.common.platform {
 }
 import com.redhat.ceylon.model.typechecker.model {
     Declaration,
-    Type
+    Type,
+    Scope
 }
 
 shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit rootNode) {
@@ -25,12 +26,14 @@ shared class CommonImportProposals(CommonDocument document, Tree.CompilationUnit
     shared List<InsertEdit> importEdits(
         {Declaration*} declarations,
         {String*}? aliases = null,
+        Scope? scope = null,
         Declaration? declarationBeingDeleted = null)
             => importProposals.importEdits {
                 rootNode = rootNode;
                 declarations = declarations;
                 aliases = aliases;
                 declarationBeingDeleted = declarationBeingDeleted;
+                scope = scope;
                 doc = document;
             };
     

@@ -265,36 +265,44 @@ shared interface AbstractImportsCleaner {
         return topLevel;
     }
     
-    void appendImportElements(String packageName, List<Tree.ImportMemberOrType> elements,
-        List<Declaration> unused, List<Declaration> proposed, Boolean hasWildcard,
-        StringBuilder builder, CommonDocument doc, String baseIndent) {
+    void appendImportElements(String packageName,
+            List<Tree.ImportMemberOrType> elements,
+            List<Declaration> unused, List<Declaration> proposed,
+            Boolean hasWildcard, StringBuilder builder,
+            CommonDocument doc, String baseIndent) {
         
         value indent = baseIndent + platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
-        for (i in elements) {
-            if (exists d = i.declarationModel,
-                isErrorFree(i)) {
+        for (imt in elements) {
+            if (exists d = imt.declarationModel,
+                isErrorFree(imt)) {
                 
                 builder.append(delim).append(indent);
-                value aliaz = i.importModel.\ialias;
+                value aliaz = imt.importModel.\ialias;
                 if (!aliaz==d.name) {
                     value escapedAlias = escaping.escapeAliasedName(d, aliaz);
                     builder.append(escapedAlias).append("=");
                 }
                 
                 builder.append(escaping.escapeName(d));
-                appendNestedImportElements(i, unused, builder, doc);
+                appendNestedImportElements {
+                    imt = imt;
+                    unused = unused;
+                    builder = builder;
+                    doc = doc;
+                    baseIndent = indent;
+                };
                 builder.append(",");
             }
         }
         
-        for (d in proposed) {
-            value pack = d.unit.\ipackage;
+        for (dec in proposed) {
+            value pack = dec.unit.\ipackage;
             if (pack.nameAsString==packageName) {
                 builder.append(delim)
                         .append(indent);
-                builder.append(escaping.escapeName(d)).append(",");
+                builder.append(escaping.escapeName(dec)).append(",");
             }
         }
         
@@ -309,43 +317,46 @@ shared interface AbstractImportsCleaner {
     }
     
     void appendNestedImportElements(Tree.ImportMemberOrType imt,
-        List<Declaration> unused, StringBuilder builder, CommonDocument doc) {
+            List<Declaration> unused, StringBuilder builder,
+            CommonDocument doc, String baseIndent) {
         
-        value indent = platformServices.document.defaultIndent;
+        value indent = baseIndent + platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
-        if (imt.importMemberOrTypeList exists) {
+        if (exists imtl = imt.importMemberOrTypeList ) {
             builder.append(" {");
             variable value found = false;
-            for (nimt in imt.importMemberOrTypeList.importMemberOrTypes) {
-                if (exists d = nimt.declarationModel,
-                    isErrorFree(nimt)) {
-                    
-                    if (!d in unused) {
-                        found = true;
-                        builder.append(delim).append(indent).append(indent);
-                        value aliaz = nimt.importModel.\ialias;
-                        if (!aliaz==d.name) {
-                            value escapedAlias = escaping.escapeAliasedName(d, aliaz);
-                            builder.append(escapedAlias).append("=");
-                        }
-                        
-                        builder.append(escaping.escapeName(d)).append(",");
+            for (nimt in imtl.importMemberOrTypes) {
+                if (exists dec = nimt.declarationModel,
+                    isErrorFree(nimt) && !dec in unused) {
+
+                    found = true;
+                    builder.append(delim)
+                            .append(indent);
+                    value aliaz = nimt.importModel.\ialias;
+                    if (!aliaz==dec.name) {
+                        value escapedAlias
+                                = escaping.escapeAliasedName(dec, aliaz);
+                        builder.append(escapedAlias).append("=");
                     }
+
+                    builder.append(escaping.escapeName(dec)).append(",");
                 }
             }
             
-            if (imt.importMemberOrTypeList.importWildcard exists) {
+            if (imtl.importWildcard exists) {
                 found = true;
                 builder.append(delim)
-                        .append(indent).append(indent)
-                        .append("...,");
+                        .append(indent)
+                        .append("...,"); //this last comma will be deleted below
             }
             
             if (found) {
                 // remove trailing ","
                 builder.deleteTerminal(1);
-                builder.append(delim).append(indent).append("}");
+                builder.append(delim)
+                        .append(baseIndent)
+                        .append("}");
             } else {
                 // remove the " {"
                 builder.deleteTerminal(2);

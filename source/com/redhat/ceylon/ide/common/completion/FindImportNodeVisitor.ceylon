@@ -5,8 +5,13 @@ import com.redhat.ceylon.compiler.typechecker.tree {
         formatPath
     }
 }
+import com.redhat.ceylon.model.typechecker.model {
+    Scope,
+    ModelUtil
+}
 
-shared class FindImportNodeVisitor(String packageName) extends Visitor() {
+shared class FindImportNodeVisitor(String packageName, Scope? scope)
+        extends Visitor() {
 
     shared variable Tree.Import? result = null;
 
@@ -14,9 +19,11 @@ shared class FindImportNodeVisitor(String packageName) extends Visitor() {
         if (result exists) {
             return;
         }
-        value path = formatPath(that.importPath.identifiers);
-        if (path == packageName) {
-            result = that;
+        if (!scope exists || ModelUtil.contains(that.scope, scope)) {
+            value path = formatPath(that.importPath.identifiers);
+            if (path == packageName) {
+                result = that;
+            }
         }
     }
 

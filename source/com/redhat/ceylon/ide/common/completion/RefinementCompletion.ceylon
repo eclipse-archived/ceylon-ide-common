@@ -229,7 +229,7 @@ shared abstract class RefinementCompletionProposal
             importProposals.importParameterTypes(declaration, cu, decs, scope);
         }
         
-        value il = importProposals.applyImports(change, decs, cu, document);
+        value il = importProposals.applyImports(change, decs, cu, document, scope);
         change.addEdit(createEdit(document));
         offset += il;
         return change;

@@ -570,7 +570,7 @@ shared abstract class InvocationCompletionProposal
         if (positionalInvocation || namedInvocation) {
             importProposals.importCallableParameterParamTypes(declaration, decs, cu, scope);
         }
-        value il = importProposals.applyImports(change, decs, cu, document);
+        value il = importProposals.applyImports(change, decs, cu, document, scope);
         change.addEdit(createEdit(document));
         offset += il;
         return change;

@@ -134,7 +134,8 @@ shared List<InsertEdit> pasteImports(Map<Declaration,String> references,
         rootNode = rootNode; 
         declarations = filtered.keys; 
         aliases = filtered.items; 
-        declarationBeingDeleted = null; 
+        declarationBeingDeleted = null;
+        scope = null;
         doc = doc; 
     };
 }

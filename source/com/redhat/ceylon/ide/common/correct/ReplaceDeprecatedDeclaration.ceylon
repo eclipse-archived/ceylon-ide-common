@@ -73,6 +73,7 @@ shared object replaceDeprecatedDeclaration {
                     change = change;
                     declarations = decs;
                     rootNode = data.rootNode;
+                    scope = id.scope;
                     doc = data.document;
                 };
             }

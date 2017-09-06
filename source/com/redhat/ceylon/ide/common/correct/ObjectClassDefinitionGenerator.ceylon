@@ -133,9 +133,7 @@ shared class ObjectClassDefinitionGenerator(
             type = returnType;
         };
         if (exists parameters) {
-            importProposals.importTypes {
-                for (p in parameters.values()) p
-            };
+            importProposals.importTypes { *parameters.values() };
         }
         if (exists returnType) {
             importMembers(importProposals);

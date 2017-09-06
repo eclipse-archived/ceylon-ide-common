@@ -110,6 +110,7 @@ shared object importProposals {
             declarations = {declaration};
             aliases = null;
             declarationBeingDeleted = null;
+            scope = data.node.scope;
             doc = change.document;
         };
         
@@ -135,20 +136,26 @@ shared object importProposals {
         {Declaration*} declarations,
         {String*}? aliases,
         Declaration? declarationBeingDeleted,
+        Scope? scope,
         CommonDocument doc) {
 
         value delim = doc.defaultLineDelimiter;
         value defaultIndent = platformServices.document.defaultIndent;
 
         value edits = ArrayList<InsertEdit>();
-        value packages = declarations
+        value packages
+                = declarations
                 .map((decl) => decl.unit.\ipackage)
                 .distinct;
 
         for (pack in packages) {
             value text = StringBuilder();
 
-            value importNode = findImportNode(rootNode, pack.nameAsString);
+            value importNode = findImportNode {
+                rootNode = rootNode;
+                packageName = pack.nameAsString;
+                scope = scope;
+            };
 
             value indent
                     = if (exists importNode)
@@ -241,7 +248,12 @@ shared object importProposals {
                 text.append(d.name);
             }
         }
-        if (exists oldImportNode = findImportNode(rootNode, oldPackageName),
+        if (exists oldImportNode
+                = findImportNode {
+                    rootNode = rootNode;
+                    packageName = oldPackageName;
+                    scope = rootNode.scope;
+                },
             exists imtl = oldImportNode.importMemberOrTypeList) {
             variable value remaining = 0;
             for (imt in imtl.importMemberOrTypes) {
@@ -271,16 +283,23 @@ shared object importProposals {
         }
         value pack = rootNode.unit.\ipackage;
         if (pack.qualifiedNameString != newPackageName) {
-            if (exists importNode = findImportNode(rootNode, newPackageName)) {
+            if (exists importNode
+                    = findImportNode {
+                        rootNode = rootNode;
+                        packageName = newPackageName;
+                        scope = rootNode.scope;
+                    }) {
                 value imtl = importNode.importMemberOrTypeList;
                 if (imtl.importWildcard exists) {
                     // Do Nothing
                 } else {
-                    value insertPosition = getBestImportMemberInsertPosition(importNode);
+                    value insertPosition
+                            = getBestImportMemberInsertPosition(importNode);
                     result.add(InsertEdit(insertPosition, text.string));
                 }
             } else {
-                value insertPosition = getBestImportInsertPosition(rootNode);
+                value insertPosition
+                        = getBestImportInsertPosition(rootNode);
                 text.delete(0, 2);
                 text.insert(0, "import " + newPackageName + " {" + delim).append(delim + "}");
                 if (insertPosition == 0) {
@@ -326,8 +345,9 @@ shared object importProposals {
         }
     }
     
-    shared Tree.Import? findImportNode(Tree.CompilationUnit rootNode, String packageName) {
-        value visitor = FindImportNodeVisitor(packageName);
+    shared Tree.Import? findImportNode(Tree.CompilationUnit rootNode,
+            String packageName, Scope? scope) {
+        value visitor = FindImportNodeVisitor(packageName, scope);
         rootNode.visit(visitor);
         return visitor.result;
     }
@@ -361,6 +381,7 @@ shared object importProposals {
             {String*}? aliases,
             Tree.CompilationUnit cu,
             CommonDocument doc,
+            Scope? scope,
             Declaration? declarationBeingDeleted) {
         variable value il = 0;
         for (ie in importEdits {
@@ -368,6 +389,7 @@ shared object importProposals {
             declarations = declarations;
             aliases = aliases;
             declarationBeingDeleted = declarationBeingDeleted;
+            scope = scope;
             doc = doc;
         }) {
             il += ie.text.size;
@@ -380,26 +402,30 @@ shared object importProposals {
             Set<Declaration> declarations,
             Tree.CompilationUnit rootNode,
             CommonDocument doc,
+            Scope? scope = null,
             Declaration? declarationBeingDeleted = null)
             => applyImportsInternal { 
                 change = change; 
                 declarations = declarations; 
                 aliases = null; 
                 cu = rootNode; 
-                doc = doc; 
-                declarationBeingDeleted = declarationBeingDeleted; 
+                doc = doc;
+                scope = scope;
+                declarationBeingDeleted = declarationBeingDeleted;
             };
     
     shared Integer applyImportsWithAliases(TextChange change,
             Map<Declaration,JString> declarations,
             Tree.CompilationUnit cu,
             CommonDocument doc,
+            Scope scope,
             Declaration? declarationBeingDeleted = null)
             => applyImportsInternal { 
                 change = change; 
                 declarations = declarations.keys; 
                 aliases = declarations.items.map(JString.string); 
-                cu = cu; 
+                cu = cu;
+                scope = scope;
                 doc = doc; 
                 declarationBeingDeleted = declarationBeingDeleted;
             };

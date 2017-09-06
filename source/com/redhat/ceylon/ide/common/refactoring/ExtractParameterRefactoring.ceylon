@@ -196,11 +196,11 @@ shared interface ExtractParameterRefactoring<IRegion>
         
         value shift 
                 = importProposals.applyImports {
-            change = tfc;
-            declarations = imports;
-            rootNode = rootNode;
-            doc = doc;
-        };
+                    change = tfc;
+                    declarations = imports;
+                    rootNode = rootNode;
+                    doc = doc;
+                };
         
         value start = parameterList.endIndex.intValue() - 1;
         value termStart = term.startIndex.intValue();

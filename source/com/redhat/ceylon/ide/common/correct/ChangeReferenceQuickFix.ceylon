@@ -42,9 +42,9 @@ shared object changeReferenceQuickFix {
         
         value importProposals 
                 = CommonImportProposals {
-            document = data.document;
-            rootNode = data.rootNode;
-        };
+                    document = data.document;
+                    rootNode = data.rootNode;
+                };
 
         if (dec.toplevel,
             !importProposals.isImported(dec),
@@ -66,7 +66,10 @@ shared object changeReferenceQuickFix {
                     offset = problemOffset;
                 };
                 if (!isLocation(ol, OccurrenceLocation.\iIMPORT)) {
-                    for (ie in importProposals.importEdits({dec})) {
+                    for (ie in importProposals.importEdits {
+                        scope = data.node.scope;
+                        dec
+                    }) {
                         importsLength += ie.text.size;
                         change.addEdit(ie);
                     }

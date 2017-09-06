@@ -182,7 +182,7 @@ shared object refineFormalMembersQuickFix {
             result.append(delim).append(bodyIndent);
         }
         
-        importProposals.applyImports(change, already, rootNode, document);
+        importProposals.applyImports(change, already, rootNode, document, ci);
         change.addEdit(InsertEdit(offset, result.string));
         
         return change;

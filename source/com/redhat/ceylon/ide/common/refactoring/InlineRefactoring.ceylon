@@ -372,11 +372,10 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
         return change;
     }
 
-    Boolean affectsUnit(Unit unit) {
-        return editorData.delete && unit == editorData.declaration.unit
-                || !editorData.justOne  
-                || unit == editorData.node.unit;
-    }
+    Boolean affectsUnit(Unit unit)
+            => editorData.delete && unit == editorData.declaration.unit
+            || !editorData.justOne
+            || unit == editorData.node.unit;
 
     Boolean addImports(TextChange change, Tree.Declaration declarationNode,
         Tree.CompilationUnit rootNode) {
@@ -395,8 +394,8 @@ shared interface InlineRefactoring satisfies AbstractRefactoring<CompositeChange
                     value refPack = dec.unit.\ipackage;
                     importedFromDeclarationPackage = 
                             importedFromDeclarationPackage
-                            || refPack.equals(decPack)
-                            && !decPack.equals(filePack); //unnecessary
+                            || refPack == decPack
+                            && !decPack == filePack; //unnecessary
                 }
             }
         }

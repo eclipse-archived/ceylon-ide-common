@@ -58,6 +58,7 @@ shared object specifyTypeQuickFix {
                     change = change;
                     declarations = decs;
                     rootNode = rootNode;
+                    scope = typeNode.scope;
                     doc = document;
                 };
                 value typeName 

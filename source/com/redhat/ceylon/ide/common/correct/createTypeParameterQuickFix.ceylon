@@ -212,6 +212,7 @@ shared object createTypeParameterQuickFix {
             change = change;
             declarations = HashSet<Declaration>();
             rootNode = phasedUnit.compilationUnit;
+            scope = decNode.scope;
             doc = doc;
         };
         

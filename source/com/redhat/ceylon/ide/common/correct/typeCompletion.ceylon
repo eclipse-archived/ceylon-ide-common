@@ -22,7 +22,6 @@ import com.redhat.ceylon.ide.common.refactoring {
 }
 import com.redhat.ceylon.model.typechecker.model {
     ModelUtil,
-    TypeDeclaration,
     Type,
     Declaration
 }
@@ -124,6 +123,7 @@ shared abstract class TypeProposal
             change = change;
             declarations = decs;
             rootNode = rootNode;
+            scope = rootNode.scope; //TODO: this is wrong!
             doc = document;
         };
         change.addEdit(ReplaceEdit {

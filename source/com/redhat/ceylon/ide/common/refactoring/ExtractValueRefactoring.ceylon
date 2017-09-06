@@ -252,11 +252,12 @@ shared interface ExtractValueRefactoring<IRegion>
         
         value shift 
                 = importProposals.applyImports {
-            change = tfc;
-            declarations = imports;
-            rootNode = rootNode;
-            doc = doc;
-        };
+                    change = tfc;
+                    declarations = imports;
+                    rootNode = rootNode;
+                    scope = core.scope;
+                    doc = doc;
+                };
         
         value nstart = term.startIndex.intValue();
         value nlength = term.distance.intValue();
