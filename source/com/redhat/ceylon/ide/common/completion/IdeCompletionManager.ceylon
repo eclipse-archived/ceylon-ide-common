@@ -567,6 +567,7 @@ shared object completionManager
     // see CeylonCompletionProcessor.getTokenNode()
     Node getTokenNode(CommonToken token,
         Tree.CompilationUnit rootNode, Integer offset) {
+
         variable value node
                 = nodes.findNode {
                     node = rootNode;
@@ -574,49 +575,44 @@ shared object completionManager
                     endOffset = token.stopIndex + 1;
                     tokens = null;
                 };
-        if (is Tree.StringLiteral sl = node, !sl.docLinks.empty) {
-            node = nodes.findNode(sl, null, offset, offset);
+
+        if (is Tree.StringLiteral sl = node,
+            !sl.docLinks.empty) {
+            node = nodes.findNode {
+                node = sl;
+                tokens = null;
+                startOffset = offset;
+                endOffset = offset;
+            };
         }
+
         value tokenType = token.type;
         if (tokenType == Lexer.rbrace && !node is Tree.IterableType
-            || tokenType == Lexer.semicolon) {
+            || tokenType == Lexer.semicolon,
+            exists statement = node) {
 
             //We are to the right of a } or ;
             //so the returned node is the previous
             //statement/declaration. Look for the
             //containing body.
-            class BodyVisitor extends Visitor {
-                Node node;
-                variable Node currentBody;
-                shared variable Node? result = null;
+            object extends Visitor() {
+                variable Node currentBody = rootNode;
 
-                shared new (Node node, Node root) extends Visitor() {
-                    this.node = node;
-                    currentBody = root;
-                }
-                
                 shared actual void visitAny(Node that) {
-                    if (that === node) {
-                        result = currentBody;
+                    if (that === statement) {
+                        node = currentBody;
                     } else {
-                        Node cb = currentBody;
-                        if (is Tree.Body that) {
-                            currentBody = that;
-                        }
-                        if (is Tree.NamedArgumentList that) {
+                        value body = currentBody;
+                        if (that is Tree.Body
+                                  | Tree.NamedArgumentList) {
                             currentBody = that;
                         }
                         super.visitAny(that);
-                        currentBody = cb;
+                        currentBody = body;
                     }
                 }
-            }
-            
-            if (exists n = node) {
-                BodyVisitor mv = BodyVisitor(n, rootNode);
-                mv.visit(rootNode);
-                node = mv.result;
-            }
+            }.visit(rootNode);
+
         }
         
         return node else rootNode; //we're in whitespace at the start of the file

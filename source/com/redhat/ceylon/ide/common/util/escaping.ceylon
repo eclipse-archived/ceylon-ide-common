@@ -14,7 +14,7 @@ import java.lang {
 
 shared object escaping {
     
-    shared {String+} keywords = {"import", "assert",
+    shared Set<String> keywords = set {"import", "assert",
         "alias", "class", "interface", "object", "given", "value", "assign", "void", "function", 
         "assembly", "module", "package", "of", "extends", "satisfies", "abstracts", "in", "out", 
         "return", "break", "continue", "throw", "if", "else", "switch", "case", "for", "while", 
@@ -22,7 +22,7 @@ shared object escaping {
         "dynamic", "new", "let"};
     
     shared String concatenateKeywords(String delim)
-        => delim.join(keywords);
+            => delim.join(keywords);
     
     shared Boolean isKeyword(String|JString identifier) 
             => identifier.string in keywords;
