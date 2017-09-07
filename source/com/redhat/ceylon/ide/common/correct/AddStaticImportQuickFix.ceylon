@@ -70,9 +70,9 @@ shared object addStaticImportQuickFix {
             Tree.Primary primary) {
         value change
                 = platformServices.document.createTextChange {
-                    name = "Add Static Import";
-                    input = data.phasedUnit;
-                };
+            name = "Add Static Import";
+            input = data.phasedUnit;
+        };
         value doc = change.document;
         change.initMultiEdit();
 
@@ -82,16 +82,28 @@ shared object addStaticImportQuickFix {
         value delim = doc.defaultLineDelimiter;
         value imtl = imt.importMemberOrTypeList;
 
-        change.addEdit(InsertEdit {
-            start =
-                if (exists imtl)
-                then importProposals.getBestImportMemberInsertPosition(imt)
-                else imt.endIndex.intValue();
-            text =
-                if (exists imtl)
-                then "," + delim + indent + extra + name
-                else " {" + delim + indent + extra + name + delim + indent + "}";
-        });
+        variable value alreadyImported = false;
+        if (exists ms = imtl?.importMemberOrTypes) {
+            for (m in ms) {
+                if (doc.getNodeText(m.identifier) == name) {
+                    alreadyImported = true;
+                    break;
+                }
+            }
+        }
+
+        if (!alreadyImported) {
+            change.addEdit(InsertEdit {
+                start =
+                    if (exists imtl)
+                    then importProposals.getBestImportMemberInsertPosition(imt)
+                    else imt.endIndex.intValue();
+                text =
+                    if (exists imtl)
+                    then "," + delim + indent + extra + name
+                    else " {" + delim + indent + extra + name + delim + indent + "}";
+            });
+        }
 
         change.addEdit(DeleteEdit {
             start = primary.startIndex.intValue();
