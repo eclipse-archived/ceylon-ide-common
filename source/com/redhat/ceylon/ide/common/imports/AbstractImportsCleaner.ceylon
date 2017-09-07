@@ -26,6 +26,7 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Package
 }
+
 import java.lang {
     overloaded
 }
@@ -36,7 +37,7 @@ shared interface AbstractImportsCleaner {
      be imported between the different `proposals`"
     shared formal Declaration? select(List<Declaration> proposals);
     
-    function cleanImportList(Tree.ImportList importList,
+    void cleanImportList(Tree.ImportList importList,
             Node scope, CommonDocument doc, TextChange change) {
 
         value imp
@@ -68,27 +69,18 @@ shared interface AbstractImportsCleaner {
                     length = length;
                     text = imp + extra;
                 });
-                return true;
             }
-            else {
-                return false;
-            }
-        }
-        else {
-            return false;
         }
     }
 
     shared Boolean cleanImports(Tree.CompilationUnit? rootNode,
         CommonDocument doc) {
 
-        variable value result = false;
-
         if (exists rootNode) {
             value change = platformServices.document.createTextChange("Organize Imports", doc);
             value importList = rootNode.importList;
 
-            result = cleanImportList {
+            cleanImportList {
                 importList = importList;
                 scope = rootNode;
                 doc = doc;
@@ -109,7 +101,7 @@ shared interface AbstractImportsCleaner {
                     super.visit(that);
                     if (!that===importList,
                         exists body=this.body) {
-                        result = cleanImportList {
+                        cleanImportList {
                             importList = that;
                             scope = body;
                             doc = doc;
@@ -119,13 +111,13 @@ shared interface AbstractImportsCleaner {
                 }
             }.visit(rootNode);
 
-            if (result) {
+            if (change.hasEdits) {
                 change.apply();
+                return true;
             }
-
         }
-        
-        return result;
+
+        return false;
     }
     
     String imports(Tree.ImportList? importList,
