@@ -179,7 +179,7 @@ shared interface AbstractImportsCleaner {
                 else "";
         for (packageName->imports in packages) {
             value wildcard = hasWildcard(imports);
-            value list = getUsedImportElements {
+            value list = usedImportElements {
                 imports = imports;
                 unused = unused;
                 hasWildcard = wildcard;
@@ -367,7 +367,7 @@ shared interface AbstractImportsCleaner {
         }
     }
     
-    List<Tree.ImportMemberOrType> getUsedImportElements(List<Tree.Import> imports,
+    List<Tree.ImportMemberOrType> usedImportElements(List<Tree.Import> imports,
         List<Declaration> unused, Boolean hasWildcard,
         Map<String,List<Tree.Import>> packages) {
         
