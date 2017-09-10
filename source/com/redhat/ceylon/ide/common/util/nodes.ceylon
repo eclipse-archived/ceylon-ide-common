@@ -4,9 +4,6 @@ import ceylon.collection {
     SetMutator
 }
 
-import com.redhat.ceylon.compiler.typechecker.parser {
-    CeylonLexer
-}
 import com.redhat.ceylon.compiler.typechecker.tree {
     Node,
     Tree,
@@ -372,25 +369,24 @@ shared object nodes {
         }
         case (is Tree.DocLink) {
             if (!node.base exists) {
-                if (node.\imodule exists) {
-                    return node.\imodule;
+                if (exists m = node.\imodule) {
+                    return m;
                 }
-                
-                if (node.pkg exists) {
-                    return node.pkg;
+                if (exists p =node.pkg) {
+                    return p;
                 }
             }
         }
         else {}
         
-        variable value dec = getReferencedDeclaration(node);
-        if (is FunctionOrValue mv = dec) {
-            if (mv.shortcutRefinement) {
-                dec = mv.refinedDeclaration;
-            }
+        value dec = getReferencedDeclaration(node);
+        if (is FunctionOrValue mv = dec,
+            mv.shortcutRefinement) {
+            return mv.refinedDeclaration;
         }
-        
-        return dec;
+        else {
+            return dec;
+        }
     }
     
     shared Referenceable? getReferencedExplicitDeclaration(Node? node, Tree.CompilationUnit? rn) {
@@ -546,17 +542,7 @@ shared object nodes {
                 = getTokenIterator(tokens, 
                         DefaultRegion(start, length))) {
             while (tokenIterator.hasNext()) {
-                value token = tokenIterator.next();
-                value type = token.type;
-                value text = token.text;
-                if (type == CeylonLexer.lidentifier, 
-                        getTokenLength(token) > text.size) {
-                    exp.append("\\i");
-                } else if (type == CeylonLexer.uidentifier, 
-                        getTokenLength(token) > text.size) {
-                    exp.append("\\I");
-                }
-                exp.append(text);
+                exp.append(tokenIterator.next().text);
             }
         }
         return exp.string;
