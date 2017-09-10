@@ -23,7 +23,8 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration,
     Unit,
     TypedDeclaration,
-    ModelUtil
+    ModelUtil,
+    FunctionOrValue
 }
 
 import java.lang {
@@ -59,6 +60,10 @@ shared abstract class AbstractNavigation<Target,NativeFile>() {
         while (is TypedDeclaration d = dec,
                exists od = d.originalDeclaration) {
             dec = od;
+        }
+        if (is FunctionOrValue d = dec,
+            exists opd = d.originalParameterDeclaration) {
+            dec = opd;
         }
         return dec;
     }
