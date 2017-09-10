@@ -13,12 +13,13 @@ import com.redhat.ceylon.model.typechecker.model {
     Declaration
 }
 
+import java.lang {
+    overloaded
+}
+
 import org.antlr.runtime {
     CommonToken,
     Token
-}
-import java.lang {
-    overloaded
 }
 
 shared class RequiredTypeVisitor(Node node, Token? token)
@@ -103,21 +104,23 @@ shared class RequiredTypeVisitor(Node node, Token? token)
             } else {
                 pos = pas.size(); //default to the last argument if incomplete
                 for (i in 0:pas.size()) {
-                    value pa = pas.get(i);
-                    if (exists t = token) {
-                        assert (is CommonToken t);
-                        value tokenEnd = t.stopIndex + 1;
-                        if (pa.endIndex.intValue() >= tokenEnd) {
+                    value pa = pas[i];
+                    if (exists token) {
+                        assert (is CommonToken token);
+                        value tokenEnd = token.stopIndex + 1;
+                        if (exists end = pa?.endIndex,
+                            end.intValue() >= tokenEnd) {
                             pos = i;
                             break;
                         }
                     }
                     else {
-                        if (node.startIndex.intValue() 
-                                >= pa.startIndex.intValue(),
+                        if (exists start = pa?.startIndex,
+                            exists end = pa?.endIndex,
+                            node.startIndex.intValue()
+                                >= start.intValue(),
                             node.endIndex.intValue() 
-                               <= pa.endIndex.intValue()) {
-                            
+                                <= end.intValue()) {
                             pos = i;
                             break;
                         }
