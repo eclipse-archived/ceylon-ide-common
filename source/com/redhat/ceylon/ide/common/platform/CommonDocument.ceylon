@@ -71,12 +71,12 @@ shared class DefaultDocument(_text)
     
     getLineStartOffset(Integer line)
             => if (line == 1) then 0
-            else lines[0..line - 2].fold(0)
-                ((size, str) => size + str.size);
+            else lines[0..line - 2].fold(0,
+                (size, str) => size + str.size);
     
     getLineEndOffset(Integer line)
-            => lines[0..line - 1].fold(0)
-                ((size, str) => size + str.size);
+            => lines[0..line - 1].fold(0,
+                (size, str) => size + str.size);
     
     shared actual Integer getLineOfOffset(Integer offset) {
         variable value size = 0;

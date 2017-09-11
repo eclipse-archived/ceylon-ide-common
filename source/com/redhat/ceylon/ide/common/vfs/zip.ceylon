@@ -207,20 +207,20 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtua
     void initializeChildren(ZipFile zipFile) {
         value path = zipFile.name;
         value lastIndex = path.lastIndexWhere(File.separator.equals);
-        name = if (exists lastIndex) then path.spanFrom(lastIndex+1) else path;
+        name = if (exists lastIndex) then path[lastIndex+1...] else path;
         
         function buildParents(String entry) 
                 => let(parents = entry.split('/'.equals).filter(not(String.empty)).exceptLast)
         if (exists firstParent = parents.first)
         then
         if (nonempty restOfParents = parents.rest.sequence())
-        then restOfParents.scan(firstParent + "/")((path, nextParent) 
-            => "".join { path, nextParent + "/"})
+        then restOfParents.scan(firstParent + "/",
+                    (path, nextParent) => "".join { path, nextParent + "/" })
         else { firstParent + "/"}
         else {};
         
         value entries = zipFile.entries();
-        value entryNames = TreeSet<String>((x,y) => x<=> y);
+        value entryNames = TreeSet<String>((x,y) => x<=>y);
         while ( entries.hasMoreElements() ) {
             value entryName = entries.nextElement().name;
             // Also add the ancestor directories (for the case directories are not in the archive)
@@ -229,7 +229,10 @@ shared class ZipFileVirtualFile satisfies ClosableVirtualFile & BaseFolderVirtua
             entryNames.addAll(parentEntriesNames);
         }
         
-        BaseFolderVirtualFile addToParentfolder(JList<BaseResourceVirtualFile> directChildren, LinkedList<ZipFolderVirtualFile> directoryStack, String entryName, BaseResourceVirtualFile file) {
+        BaseFolderVirtualFile addToParentfolder(JList<BaseResourceVirtualFile> directChildren,
+                LinkedList<ZipFolderVirtualFile> directoryStack, String entryName,
+                BaseResourceVirtualFile file) {
+
             variable ZipFolderVirtualFile? up = directoryStack.peekLast();
             
             function isChildOf(String entryName, ZipFolderVirtualFile? lastFolder)

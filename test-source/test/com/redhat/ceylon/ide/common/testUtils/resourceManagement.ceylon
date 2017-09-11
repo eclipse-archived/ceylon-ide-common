@@ -18,11 +18,9 @@ shared Integer calculateContentOffset([String*] lines,
     "Exactly one line should be found"
     assert(exists searchedLine = searchedLines.first,
         searchedLines.size == 1);
-    return lines.take(searchedLine.key)
-            .fold(0)(
-        (p, l)
-                => p + l.size + 1)
-            + findColumn(searchedLine.item);
+    return lines.take(searchedLine.key).fold(0,
+            (p, l) => p + l.size + 1)
+                    + findColumn(searchedLine.item);
 }
 suppressWarnings("expressionTypeNothing")
 shared Integer lineColumnToOffset([String*]lines,

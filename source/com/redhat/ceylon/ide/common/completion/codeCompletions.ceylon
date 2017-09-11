@@ -504,7 +504,7 @@ shared void appendTypeParametersWithArguments(Declaration d,
     if (d.parameterized) {
         result.append("<");
 
-        { *d.typeParameters }.fold(true)((isFirst, tp) {
+        { *d.typeParameters }.fold(true, (isFirst, tp) {
             if (!isFirst) {
                 result.append(", ");
             }
