@@ -871,8 +871,8 @@ shared class DeltaBuilderFactory(
                                                 nodesDiffer(oldMethod.typeConstraintList, newMethod.typeConstraintList, "typeConstraintList"),
                                                 nodesDiffer(oldMethod.typeParameterList, newMethod.typeParameterList, "typeParameterList"),
                                                 oldMethod.parameterLists.size() != newMethod.parameterLists.size(),
-                                                anyPair({ *oldMethod.parameterLists }, { *newMethod.parameterLists })
-                                                ((oldParamList, newParamlist)
+                                                anyPair({ *oldMethod.parameterLists }, { *newMethod.parameterLists },
+                                                    (oldParamList, newParamlist)
                                                             => nodesDiffer(oldParamList, newParamlist, "parameterLists"))
                                             };
                                     },
@@ -891,8 +891,8 @@ shared class DeltaBuilderFactory(
                                                 Ast.Variable newVariable)
                                             => any {
                                                 oldVariable.parameterLists.size() != oldVariable.parameterLists.size(),
-                                                anyPair({ *oldVariable.parameterLists }, { *newVariable.parameterLists })
-                                                ((oldParamList, newParamlist)
+                                                anyPair({ *oldVariable.parameterLists }, { *newVariable.parameterLists },
+                                                    (oldParamList, newParamlist)
                                                             => nodesDiffer(oldParamList, newParamlist, "parameterLists"))
                                             };
                                     }

@@ -55,10 +55,10 @@ shared interface AbstractDelta
             return changedElementString == that.changedElementString
                 && childrenDeltas.size == that.childrenDeltas.size
                 && changes.size == that.changes.size
-                && !anyPair(childrenDeltas, that.childrenDeltas)
-                        ((first, second) => first != second)
-                && !anyPair(changes, that.changes)
-                        ((first, second) => first != second);
+                && !anyPair(childrenDeltas, that.childrenDeltas,
+                        (first, second) => first != second)
+                && !anyPair(changes, that.changes,
+                        (first, second) => first != second);
         }
         else {
             return false;
