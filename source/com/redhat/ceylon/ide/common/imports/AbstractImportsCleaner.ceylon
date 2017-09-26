@@ -312,7 +312,9 @@ shared interface AbstractImportsCleaner {
             List<Declaration> unused, StringBuilder builder,
             CommonDocument doc, String baseIndent) {
         
-        value indent = baseIndent + platformServices.document.defaultIndent;
+        value indent
+                = baseIndent
+                + platformServices.document.defaultIndent;
         value delim = doc.defaultLineDelimiter;
         
         if (exists imtl = imt.importMemberOrTypeList ) {
@@ -326,7 +328,7 @@ shared interface AbstractImportsCleaner {
                     builder.append(delim)
                             .append(indent);
                     value aliaz = nimt.importModel.\ialias;
-                    if (!aliaz==dec.name) {
+                    if (aliaz!=dec.name) {
                         value escapedAlias
                                 = escaping.escapeAliasedName(dec, aliaz);
                         builder.append(escapedAlias).append("=");
