@@ -409,10 +409,9 @@ shared interface AbstractImportsCleaner {
         return list;
     }
     
-    Boolean isErrorFree(Tree.ImportMemberOrType imt) {
-        return !hasRealErrors(imt.identifier)
-                && !hasRealErrors(imt);
-    }
+    Boolean isErrorFree(Tree.ImportMemberOrType imt)
+            => !hasRealErrors(imt.identifier)
+            && !hasRealErrors(imt);
     
     Boolean preventAmbiguityDueWildcards(Declaration d, 
         Map<String,List<Tree.Import>> importsMap) {
