@@ -40,7 +40,7 @@
     <target name="ceylondefs" unless="ceylondefined">
         <property name="ceylondefined" value="true" />
 
-        <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+        <typedef resource="org/eclipse/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
 
         <reposet id="reposet.compile.source">
             <repo url="${out.repo}"/>
@@ -62,11 +62,11 @@
         </reposet>
     
         <moduleset id="modules.source">
-            <module name="com.redhat.ceylon.ide.common"/>
+            <module name="org.eclipse.ceylon.ide.common"/>
         </moduleset>
     
         <moduleset id="modules.test">
-            <module name="test.com.redhat.ceylon.ide.common"/>
+            <module name="test.org.eclipse.ceylon.ide.common"/>
         </moduleset>
     </target>
     
@@ -132,7 +132,7 @@
     <target name="publish-internal" depends="compile">
         <copy todir="${ceylon.repo.dir}" overwrite="true">
             <fileset dir="${out.repo}">
-                <include name="com/redhat/ceylon/ide/common/**"/>
+                <include name="org/eclipse/ceylon/ide/common/**"/>
             </fileset>
         </copy>
     </target>
@@ -203,14 +203,14 @@
     <!-- Rule to setup a plugins directory with required bundles -->
     <target name="osgi-p2-quick" depends="ceylondefs,osgi-quick">
         <mkdir dir="${osgi.dist.features}"/>
-        <ceylon-osgi-version ceylonversion="${module.com.redhat.ceylon.ide.common.version}" propertyname="osgiVersion" addtimestamp="true"/>
+        <ceylon-osgi-version ceylonversion="${module.org.eclipse.ceylon.ide.common.version}" propertyname="osgiVersion" addtimestamp="true"/>
         <ant target="generateFeatures" inheritall="true">
-            <property name="feature.id" value="com.redhat.ceylon.ide.common.feature"/>
+            <property name="feature.id" value="org.eclipse.ceylon.ide.common.feature"/>
             <property name="feature.version" value="${osgiVersion}"/>
             <property name="xslFileName" value="generatePluginFeature.xsl"/>
         </ant>
         <ant target="generateFeatures" inheritall="true">
-            <property name="feature.id" value="com.redhat.ceylon.ide.common.dependencies.feature"/>
+            <property name="feature.id" value="org.eclipse.ceylon.ide.common.dependencies.feature"/>
             <property name="feature.version" value="${osgiVersion}"/>
             <property name="xslFileName" value="generateFixedDependenciesFeature.xsl"/>
         </ant>
@@ -223,7 +223,7 @@
             nodefaultrepositories="true"
             out="${osgi.dist}"
             repositoryName="Ceylon IDE Common Code"
-            categoryPrefix="com.redhat.ceylon.ide.common"
+            categoryPrefix="org.eclipse.ceylon.ide.common"
             categories="${osgi.p2}/category.xml"
             fork="true">
             <moduleset refid="modules.source"/>
@@ -298,7 +298,7 @@
 	<target name="ide" depends="osgi-p2"/>
     <target name="ide-quick" depends="osgi-p2-quick">
         <property name="archivePath" 
-            value="${out.repo}/com/redhat/ceylon/ide/common/${module.com.redhat.ceylon.ide.common.version}/com.redhat.ceylon.ide.common-${module.com.redhat.ceylon.ide.common.version}.car"/>
+            value="${out.repo}/org/eclipse/ceylon/ide/common/${module.org.eclipse.ceylon.ide.common.version}/org.eclipse.ceylon.ide.common-${module.org.eclipse.ceylon.ide.common.version}.car"/>
         <antcall target="bundle-proxy">
             <param name="archivePath" value="${archivePath}"/>
         </antcall>
