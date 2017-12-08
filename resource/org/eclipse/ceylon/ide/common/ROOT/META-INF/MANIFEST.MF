@@ -1,0 +1,4 @@
+Eclipse-BundleShape: jar
+Bundle-ClassPath: .
+Premain-Class: org.eclipse.ceylon.ide.common.debug.agent.DebugAgent
+Agent-Class: org.eclipse.ceylon.ide.common.debug.agent.DebugAgent

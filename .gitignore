@@ -1,0 +1,6 @@
+/bin/
+/.exploded/
+/modules/
+**/.DS_Store
+.idea/libraries/
+.idea/workspace.xml

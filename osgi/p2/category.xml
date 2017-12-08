@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <category-def name="module-bundles" label="Ceylon IDE Common Code - All Bundles">
+      <description>Ceylon modules providing common code for IDEs, available as OSGI bundles</description>
+   </category-def>
+   <category-def name="only-dependencies-bundles" label="Ceylon IDE Common Code - Only Binary Dependencies">
+      <description>Fixed binary dependencies of the Ceylon IDE Common Code -  Only needed to compile the IDE by using the bundle proxy projects</description>
+   </category-def>
+   <feature id="org.eclipse.ceylon.ide.common.feature" version="0.0.0">
+      <category name="module-bundles"/>
+   </feature>
+   <feature id="org.eclipse.ceylon.ide.common.dependencies.feature" version="0.0.0">
+      <category name="only-dependencies-bundles"/>
+   </feature>
+</site>

@@ -1,0 +1,3 @@
+shared void anonymousFunctions() {
+    "".each()
+}
