@@ -10,7 +10,7 @@
 import ceylon.collection {
     HashMap,
     HashSet,
-    unlinked
+    Stability { unlinked }
 }
 import ceylon.interop.java {
     CeylonIterator

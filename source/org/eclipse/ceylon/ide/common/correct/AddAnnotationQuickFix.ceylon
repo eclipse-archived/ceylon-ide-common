@@ -448,7 +448,7 @@ shared object addAnnotationQuickFix {
             if (exists name = dec.name) {
                 return "Make '``name``' " + annotation + containerDesc;
             }    
-            else if (ModelUtil.isConstructor(dec)) {
+            else if (dec.constructor) {
                 return "Make default constructor " + annotation + containerDesc;
             }
             else {

@@ -951,7 +951,7 @@ shared object completionManager
                         inexactMatches = inexactMatches;
                     },
                     !isQualifiedType(node) 
-                            || ModelUtil.isConstructor(dec) 
+                            || dec.constructor 
                             || dec.static,
                     if (is Constructor scope)
                         then !isLocation(ol, OL.\iextends) 
@@ -1405,7 +1405,7 @@ shared object completionManager
                     && (if (is Class dec) then (!dec.final && dec.typeParameters.empty) else false);
 
             isCorrectLocation ||= isLocation(ol, OL.\iextends)
-                    && ModelUtil.isConstructor(dec)
+                    && dec.constructor
                     && (if (is Class c = dec.container) then (!c.final && c.typeParameters.empty) else false);
 
             isCorrectLocation ||= isLocation(ol, OL.classAlias) && (dec is Class);
@@ -1430,7 +1430,7 @@ shared object completionManager
         variable value isCorrectLocation = true;
         isCorrectLocation &&= !isLocation(ol, OL.\iextends)
                             || (if (is Class dec) then !dec.final || dec.hasStaticMembers() else false) //TODO: should be hasStaticClasses()
-                            || ModelUtil.isConstructor(dec)
+                            || dec.constructor
                                 && (if (is Class c = dec.container) then !c.final || c.hasStaticMembers() else false); //TODO: should be hasStaticClasses()
 
         isCorrectLocation &&= !isLocation(ol, OL.classAlias)
@@ -1502,16 +1502,17 @@ shared object completionManager
                     &&*/ isValueCaseOfSwitch(requiredType, dec);
 
     Boolean isDelegatableConstructor(Scope scope, Declaration dec) {
-        if (ModelUtil.isConstructor(dec)) {
+        if (dec.constructor) {
             Scope? container = dec.container;
             Scope? outerScope = scope.container;
-            if (container is Null || outerScope is Null) {
+            if (!exists container) {
                 return false;
             }
-            assert(exists outerScope);
-            assert(exists container);
+            if (!exists outerScope) {
+                return false;
+            }
             if (outerScope == container) {
-                return !scope.equals(dec); //local constructor
+                return scope!=dec; //local constructor
             } else {
                 return if (exists id = scope.getInheritingDeclaration(dec)) 
                     then id.equals(outerScope) 

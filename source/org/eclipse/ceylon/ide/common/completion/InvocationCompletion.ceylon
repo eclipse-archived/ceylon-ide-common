@@ -190,7 +190,7 @@ shared interface InvocationCompletion {
                           if (member.shared && member.name exists,
                               //constructors
                               member is FunctionOrValue
-                              && ModelUtil.isConstructor(member)
+                              && member.constructor
                               //Java static members
                            || member is FunctionOrValue|Class
                               && member.static)
@@ -1005,7 +1005,7 @@ shared abstract class InvocationCompletionProposal
             }
             for (m in dec.members) {
                 if (m is FunctionOrValue 
-                    && ModelUtil.isConstructor(m) 
+                    && m.constructor 
                     && m.shared && m.name exists) {
                     newNestedCompletionProposal {
                         props = props;

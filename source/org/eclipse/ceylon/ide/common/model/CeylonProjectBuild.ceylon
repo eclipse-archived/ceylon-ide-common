@@ -9,7 +9,7 @@
  ********************************************************************************/
 import ceylon.collection {
     HashSet,
-    unlinked,
+    Stability { unlinked },
     LinkedList,
     ArrayList
 }

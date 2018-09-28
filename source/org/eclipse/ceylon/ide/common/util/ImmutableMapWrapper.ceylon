@@ -9,7 +9,7 @@
  ********************************************************************************/
 import ceylon.collection {
     MutableMap,
-    unlinked,
+    Stability { unlinked },
     HashMap,
     Hashtable
 }

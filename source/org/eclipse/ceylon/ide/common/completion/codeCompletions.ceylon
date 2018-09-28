@@ -571,7 +571,7 @@ void appendDeclarationHeader(Declaration decl, Reference? pr, Unit unit,
         return;
     }
     
-    if (isConstructor(decl)) {
+    if (decl.constructor) {
         builder.append("new");
     } else {
         switch (decl)
@@ -710,7 +710,7 @@ Value? getUniqueMemberForHash(Unit unit, ClassOrInterface ci) {
     for (m in ci.members) {
         if (is Value m,
             exists name = m.name,
-            !isObjectField(m) && !isConstructor(m),
+            !isObjectField(m) && !m.constructor,
             !m.transient && !nt.isSubtypeOf(m.type)) {
             if (result exists) {
                 //not unique!
@@ -811,7 +811,7 @@ void appendMembersToEquals(Unit unit, String indent, StringBuilder result,
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
-            !isObjectField(m) && !isConstructor(m),
+            !isObjectField(m) && !m.constructor,
             !m.transient,
             intersectionType(unit.nullType, m.type, unit).nothing) {
             if (found) {
@@ -838,7 +838,7 @@ void appendMembersToHash(Unit unit, String indent, StringBuilder result,
     for (m in ci.members) {
         if (is Value m, 
             exists name = m.name,
-            !isObjectField(m) && !isConstructor(m),
+            !isObjectField(m) && !m.constructor,
             !m.transient,
             intersectionType(unit.nullType, m.type, unit).nothing) {
             result.append("hash = 31*hash + ").append(name);

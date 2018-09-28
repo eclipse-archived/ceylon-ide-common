@@ -133,7 +133,7 @@ shared object removeAnnotationQuickFix {
         String nameWithQuotesAndSpace;
         if (exists name = dec.name) {
             nameWithQuotesAndSpace = "'``name``' ";
-        } else if (ModelUtil.isConstructor(dec)) {
+        } else if (dec.constructor) {
             nameWithQuotesAndSpace = "default constructor ";
         } else {
             nameWithQuotesAndSpace = "";

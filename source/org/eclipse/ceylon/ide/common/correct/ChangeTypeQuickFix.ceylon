@@ -207,7 +207,7 @@ shared object changeTypeQuickFix {
             return;
         }
         
-        if (ModelUtil.isConstructor(dec)) {
+        if (dec.constructor) {
             return;
         }
         

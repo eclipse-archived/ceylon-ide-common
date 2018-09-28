@@ -10,7 +10,7 @@
 import ceylon.collection {
     MutableSet,
     HashSet,
-    unlinked,
+    Stability { unlinked },
     Hashtable
 }
 
